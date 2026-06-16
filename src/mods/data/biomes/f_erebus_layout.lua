@@ -1,0 +1,137 @@
+local layout = {}
+
+local function option(key, label, opts)
+    opts = opts or {}
+    return {
+        key = key,
+        label = label,
+        exitCount = opts.exitCount,
+        availability = opts.availability,
+        maxCreationsThisRun = opts.maxCreationsThisRun,
+        maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
+    }
+end
+
+local function combat(roomKey, opts)
+    return option(roomKey, "Combat " .. string.sub(roomKey, -2), opts)
+end
+
+local function indexByKey(items)
+    local lookup = {}
+    for _, item in ipairs(items) do
+        lookup[item.key] = item
+    end
+    return lookup
+end
+
+local function pickByKey(lookup, keys)
+    local values = {}
+    for _, key in ipairs(keys) do
+        values[#values + 1] = lookup[key]
+    end
+    return values
+end
+
+layout.openingRooms = {
+    option("F_Opening01", "Opening 1", { exitCount = 1 }),
+    option("F_Opening02", "Opening 2", { exitCount = 1 }),
+    option("F_Opening03", "Opening 3", { exitCount = 1 }),
+}
+
+layout.prebossRoom = option("F_PreBoss01", "Preboss", {
+    exitCount = 1,
+    availability = {
+        biomeDepth = { exact = 10 },
+    },
+})
+
+layout.combatRooms = {
+    combat("F_Combat01", { exitCount = 1, availability = { biomeEncounterDepth = { max = 5 } } }),
+    combat("F_Combat02", { exitCount = 2, availability = { biomeEncounterDepth = { max = 5 } } }),
+    combat("F_Combat03", { exitCount = 2, availability = { biomeEncounterDepth = { max = 5 } } }),
+    combat("F_Combat04", { exitCount = 2, availability = { biomeEncounterDepth = { max = 5 } } }),
+    combat("F_Combat05", { exitCount = 2, availability = { biomeEncounterDepth = { min = 5 } } }),
+    combat("F_Combat06", { exitCount = 2 }),
+    combat("F_Combat07", { exitCount = 2 }),
+    combat("F_Combat08", { exitCount = 2, availability = { biomeEncounterDepth = { max = 5 } } }),
+    combat("F_Combat09", { exitCount = 1, availability = { biomeEncounterDepth = { max = 4 } } }),
+    combat("F_Combat10", { exitCount = 1, availability = { biomeEncounterDepth = { max = 5 } } }),
+    combat("F_Combat11", { exitCount = 2, availability = { biomeEncounterDepth = { min = 5 } } }),
+    combat("F_Combat12", { exitCount = 2, availability = { biomeEncounterDepth = { min = 5 } } }),
+    combat("F_Combat13", { exitCount = 2 }),
+    combat("F_Combat14", { exitCount = 2, availability = { biomeEncounterDepth = { min = 5 } } }),
+    combat("F_Combat15", { exitCount = 2, availability = { biomeEncounterDepth = { min = 5 } } }),
+    combat("F_Combat16", { exitCount = 2, availability = { biomeEncounterDepth = { min = 5 } } }),
+    combat("F_Combat17", { exitCount = 2, availability = { biomeEncounterDepth = { min = 5 } } }),
+    combat("F_Combat18", { exitCount = 2, availability = { biomeEncounterDepth = { min = 5 } } }),
+    combat("F_Combat19", { exitCount = 2, availability = { biomeEncounterDepth = { max = 5 } } }),
+    combat("F_Combat20", { exitCount = 2, availability = { biomeEncounterDepth = { min = 5 } } }),
+    combat("F_Combat21", { exitCount = 2, availability = { biomeEncounterDepth = { max = 5 } } }),
+    combat("F_Combat22", { exitCount = 2, availability = { biomeEncounterDepth = { max = 5 } } }),
+}
+
+layout.combatRoomsByKey = indexByKey(layout.combatRooms)
+
+layout.trialCombatRooms = pickByKey(layout.combatRoomsByKey, {
+    "F_Combat05", "F_Combat06", "F_Combat07",
+    "F_Combat11", "F_Combat12", "F_Combat13",
+    "F_Combat14", "F_Combat15", "F_Combat16",
+    "F_Combat17", "F_Combat18", "F_Combat20",
+})
+
+layout.storyRooms = {
+    option("F_Story01", "Arachne", {
+        exitCount = 2,
+        availability = {
+            biomeDepth = { min = 4, max = 8 },
+        },
+        maxCreationsThisRun = 1,
+    }),
+}
+
+layout.fountainRooms = {
+    option("F_Reprieve01", "Fountain", {
+        exitCount = 2,
+        availability = {
+            biomeDepth = { min = 4, max = 8 },
+        },
+        maxCreationsThisRun = 1,
+    }),
+}
+
+layout.shopRooms = {
+    option("F_Shop01", "Shop", {
+        exitCount = 2,
+        availability = {
+            biomeDepth = { min = 4, max = 6 },
+        },
+        maxCreationsThisRun = 1,
+    }),
+}
+
+layout.minibossRooms = {
+    option("F_MiniBoss01", "Root-Stalker", {
+        exitCount = 1,
+        availability = { biomeDepth = { min = 4, max = 6 } },
+        maxCreationsThisRun = 1,
+        maxAppearancesThisBiome = 1,
+    }),
+    option("F_MiniBoss02", "Shadow-Spiller", {
+        exitCount = 1,
+        availability = {
+            biomeDepth = { min = 4, max = 6 },
+        },
+        maxCreationsThisRun = 1,
+        maxAppearancesThisBiome = 1,
+    }),
+    option("F_MiniBoss03", "Master-Slicer", {
+        exitCount = 1,
+        availability = {
+            biomeDepth = { min = 4, max = 6 },
+        },
+        maxCreationsThisRun = 1,
+        maxAppearancesThisBiome = 1,
+    }),
+}
+
+return layout

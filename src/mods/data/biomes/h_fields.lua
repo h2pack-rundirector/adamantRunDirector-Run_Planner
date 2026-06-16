@@ -1,0 +1,81 @@
+return function(importer)
+    local layout = importer("mods/data/biomes/h_fields_layout.lua")()
+    local rewards = importer("mods/data/rewards.lua")(importer)
+    local routeRules = importer("mods/data/route_rules.lua")
+
+    return {
+        key = "H",
+        label = "Fields",
+        region = "Underworld",
+        adapter = "fieldsCageRoute",
+        slotLayout = {
+            coordinate = "FieldsRoutePick",
+            routeStartPick = 1,
+            routeEndPick = 4,
+            default = {
+                kind = "fieldsPick",
+                alternate = "VanillaSafe",
+            },
+            fixedBeforeRoute = {
+                {
+                    key = "Intro",
+                    label = "Intro",
+                    roomKey = layout.introRoom.key,
+                    reward = rewards.none(),
+                    locked = true,
+                },
+            },
+            fixedAfterRoute = {
+                {
+                    key = "Preboss",
+                    label = "Preboss Shop",
+                    roomKey = layout.prebossRoom.key,
+                    reward = rewards.shop("WorldShop"),
+                },
+            },
+        },
+        fields = {
+            routePicks = 4,
+            routeCount = {
+                counter = "RoomsEntered",
+                requiredBeforePreboss = 4,
+                countedRooms = "CombatMinibossBridge",
+            },
+            combatRooms = layout.combatRooms,
+            combatRoomsByKey = layout.combatRoomsByKey,
+            minibossRooms = layout.minibossRooms,
+            minibossRoomsByKey = layout.minibossRoomsByKey,
+            bridge = layout.bridge,
+            cageRewardPolicy = layout.cageRewardPolicy,
+        },
+        roles = {
+            {
+                key = "Vanilla",
+                label = "Vanilla",
+                reward = rewards.none(),
+            },
+            {
+                key = "Combat",
+                label = "Combat",
+                mapOptions = layout.combatRooms,
+                reward = rewards.fieldsCages({ rewardStore = "RunProgress" }),
+                cageRewardPolicy = "H_FieldsCageRewards",
+            },
+            {
+                key = "Miniboss",
+                label = "Miniboss",
+                roomOptions = layout.minibossRooms,
+                reward = rewards.roomStore("RunProgress", { allowedRewardTypes = { "Boon" } }),
+                routeRules = routeRules.role("Miniboss"),
+                reserve = true,
+            },
+            {
+                key = "Bridge",
+                label = "Bridge",
+                roomOptions = { layout.bridgeRoom },
+                reward = rewards.fieldsBridge(),
+                reserve = true,
+            },
+        },
+    }
+end

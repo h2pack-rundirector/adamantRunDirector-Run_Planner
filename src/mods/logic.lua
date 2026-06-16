@@ -5,7 +5,7 @@ function logic.bind(data) -- luacheck: ignore data
 end
 
 function logic.registerHooks(moduleRef) -- luacheck: ignore moduleRef
-    -- Route hooks will be added once the route-slot schema is settled.
+    -- Route hooks will be added once the route-depth schema is settled.
 end
 
 function logic.attach(moduleRef)

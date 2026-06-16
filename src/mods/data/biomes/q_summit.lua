@@ -1,0 +1,62 @@
+return function(importer)
+    local layout = importer("mods/data/biomes/q_summit_layout.lua")
+    local rewards = importer("mods/data/rewards.lua")(importer)
+    local routeRules = importer("mods/data/route_rules.lua")
+
+    return {
+        key = "Q",
+        label = "Summit",
+        region = "Surface",
+        adapter = "scriptedFixedLinear",
+        slotLayout = {
+            coordinate = "BiomeDepthCache",
+            depthRange = { min = 1, max = 7 },
+            routeStartDepth = 2,
+            routeEndDepth = 6,
+            default = {
+                kind = "route",
+                alternate = "VanillaSafe",
+            },
+            special = {
+                [1] = {
+                    kind = "intro",
+                    roomKey = layout.introRoom.key,
+                    locked = true,
+                },
+                [7] = {
+                    kind = "preboss",
+                    roomKey = layout.prebossRoom.key,
+                    branches = {
+                        {
+                            key = "Shop",
+                            label = "Shop",
+                            reward = rewards.shop("Q_WorldShop"),
+                        },
+                    },
+                },
+            },
+        },
+        vanillaDepthHints = layout.vanillaDepthHints,
+        roles = {
+            {
+                key = "Vanilla",
+                label = "Vanilla",
+                reward = rewards.none(),
+            },
+            {
+                key = "Combat",
+                label = "Combat",
+                mapOptions = layout.combatRooms,
+                reward = rewards.none(),
+            },
+            {
+                key = "Miniboss",
+                label = "Miniboss",
+                roomOptions = layout.minibossRooms,
+                reward = rewards.roomStore("TyphonBossRewards"),
+                routeRules = routeRules.role("Miniboss", { maxSelectionsPerBiome = 2 }),
+                reserve = true,
+            },
+        },
+    }
+end

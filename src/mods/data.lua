@@ -2,6 +2,11 @@ local data = {}
 
 data.PLAN_MODE_VALUES = { "Prefer", "Strict" }
 
+function data.loadBiomes(importer)
+    importer = importer or import
+    return importer("mods/data/biomes.lua").load(importer)
+end
+
 function data.buildStorage()
     return {
         { type = "bool", alias = "RoomRoutingEnabled", default = false },
