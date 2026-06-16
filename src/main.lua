@@ -21,8 +21,14 @@ local function init()
     import_as_fallback(rom.game)
 
     local data = import("mods/data.lua")
+    local catalog = data.loadCatalog()
+    local routeControls = data.buildControls(catalog)
     local logic = import("mods/logic.lua").bind(data)
-    local ui = import("mods/ui.lua").bind(data)
+    local ui = import("mods/ui.lua").bind({
+        catalog = catalog,
+        data = data,
+        routeControlTabs = data.routeControlTabs(catalog),
+    })
 
     local module = lib.createModule({
         pluginGuid = PLUGIN_GUID,
@@ -37,6 +43,8 @@ local function init()
     end
 
     module.data.define(data.buildStorage())
+    module.controls.defineTemplates(data.loadControlTemplates())
+    module.controls.define(routeControls)
     module.ui.tab(ui.drawTab)
     module.ui.quickContent(ui.drawQuickContent)
     module.fallbackUi.attachGuiOnce(function(fallbackUi)

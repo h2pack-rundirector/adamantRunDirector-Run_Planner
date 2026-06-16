@@ -2,9 +2,33 @@ local data = {}
 
 data.PLAN_MODE_VALUES = { "Prefer", "Strict" }
 
+function data.loadControlTemplates(importer)
+    importer = importer or import
+    return importer("mods/controls/templates.lua")
+end
+
 function data.loadBiomes(importer)
     importer = importer or import
     return importer("mods/data/biomes.lua").load(importer)
+end
+
+function data.loadCatalog(importer)
+    return data.loadBiomes(importer)
+end
+
+function data.buildControls(catalog, importer)
+    importer = importer or import
+    return importer("mods/data/controls.lua").build(catalog)
+end
+
+function data.routeControlNames(catalog, importer)
+    importer = importer or import
+    return importer("mods/data/controls.lua").routeControlNames(catalog)
+end
+
+function data.routeControlTabs(catalog, importer)
+    importer = importer or import
+    return importer("mods/data/controls.lua").routeControlTabs(catalog)
 end
 
 function data.buildStorage()
