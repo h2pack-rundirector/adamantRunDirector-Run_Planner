@@ -1,8 +1,3 @@
--- =============================================================================
--- ADAMANT MODULE TEMPLATE
--- =============================================================================
--- Copy this file as src/main.lua in a new module repo.
--- Fill in the SCAFFOLD_TODO sections below.
 -- luacheck: globals rom import_as_fallback modutil lib _PLUGIN game
 
 local mods = rom.mods
@@ -35,7 +30,7 @@ local function init()
         id = MODULE_ID,
         name = "Run Planner",
         shortName = "Run Planner",
-        tooltip = "SCAFFOLD_TODO: tooltip for Run Planner",
+        tooltip = "Plan biome room and reward routing by depth.",
     })
     if not module then
         return

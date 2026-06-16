@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "adamantRunDirector"
 name = "Run_Planner"
-description = "SCAFFOLD_TODO: description for Run Planner"
+description = "Plan biome room and reward routing by depth."
 versionNumber = "0.0.1"
 websiteUrl = "https://github.com/h2pack-rundirector/adamantRunDirector-Run_Planner"
 containsNsfwContent = false

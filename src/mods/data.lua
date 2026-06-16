@@ -1,21 +1,12 @@
-﻿-- =============================================================================
--- DATA / STORAGE
--- =============================================================================
--- This file is imported from main.lua inside init(), after once_loaded.game has fired.
--- Use it for:
--- - storage definitions
--- - static option lists
--- - lookup tables derived from game data after game script import
-
 local data = {}
 
-data.MODE_VALUES = { "Vanilla", "Chaos", "Custom" }
+data.PLAN_MODE_VALUES = { "Prefer", "Strict" }
 
 function data.buildStorage()
     return {
-        { type = "bool", alias = "FeatureEnabled", default = false },
-        { type = "string", alias = "Mode", default = "Vanilla", maxLen = 32 },
-        { type = "string", alias = "FilterText", persist = false, hash = false, default = "", maxLen = 64 },
+        { type = "bool", alias = "RoomRoutingEnabled", default = false },
+        { type = "bool", alias = "RewardRoutingEnabled", default = false },
+        { type = "string", alias = "PlanMode", default = "Prefer", maxLen = 16 },
     }
 end
 
