@@ -3,12 +3,24 @@ local runtime = deps.runtime
 
 local ui = {}
 
+local function conditionMatches(condition, fields)
+    return fields:read(condition.alias) == condition.value
+end
+
 local function isControlVisible(control, fields)
     local condition = control and control.visibleWhen
     if condition == nil then
         return true
     end
-    return fields:read(condition.alias) == condition.value
+    for _, item in ipairs(condition.all or {}) do
+        if not conditionMatches(item, fields) then
+            return false
+        end
+    end
+    if condition.all ~= nil then
+        return true
+    end
+    return conditionMatches(condition, fields)
 end
 
 function ui.draw(draw, surface, fields)

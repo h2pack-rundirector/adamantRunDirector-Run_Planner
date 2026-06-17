@@ -1,6 +1,8 @@
 local catalog = {}
 
 local VANILLA_VALUE = ""
+local MAJOR_VALUE = "Major"
+local MINOR_VALUE = "Minor"
 
 local function copyList(source)
     local copy = {}
@@ -82,7 +84,7 @@ end
 local function dropdown(alias, key, label, values, labels, opts)
     opts = opts or {}
     local controlWidth = opts.controlWidth or 160
-    return {
+    local control = {
         alias = alias,
         key = key,
         kind = opts.kind or key,
@@ -98,6 +100,10 @@ local function dropdown(alias, key, label, values, labels, opts)
         },
         visibleWhen = opts.visibleWhen,
     }
+    if opts.rewardStore ~= nil then
+        control.rewardStore = opts.rewardStore
+    end
+    return control
 end
 
 local function noSurface(context)
@@ -146,6 +152,55 @@ local function roomStoreSurface(self, context)
                 kind = "boonSource",
                 controlWidth = 170,
                 visibleWhen = { alias = "Reward1Key", value = "Boon" },
+            }),
+        },
+    }
+end
+
+local function majorMinorSurface(self, context)
+    local majorRewardStore = context.majorRewardStore or "RunProgress"
+    local minorRewardStore = context.minorRewardStore or "MetaProgress"
+    local majorValues, majorLabels = uniqueNames(self.definitions.rewardStores[majorRewardStore])
+    local minorValues, minorLabels = uniqueNames(self.definitions.rewardStores[minorRewardStore])
+    local godValues, godLabels = godSourceOptions(self.definitions)
+    local rewardClassValues = { VANILLA_VALUE, MAJOR_VALUE, MINOR_VALUE }
+    local rewardClassLabels = {
+        [VANILLA_VALUE] = "Vanilla",
+        [MAJOR_VALUE] = "Major",
+        [MINOR_VALUE] = "Minor",
+    }
+
+    return {
+        kind = "majorMinor",
+        context = context,
+        majorRewardStore = majorRewardStore,
+        minorRewardStore = minorRewardStore,
+        controls = {
+            dropdown("Reward1Key", "rewardClass", "Reward", rewardClassValues, rewardClassLabels, {
+                kind = "rewardClass",
+                controlWidth = 110,
+            }),
+            dropdown("Reward2Key", "rewardType", "", majorValues, majorLabels, {
+                kind = "rewardType",
+                controlWidth = 170,
+                rewardStore = majorRewardStore,
+                visibleWhen = { alias = "Reward1Key", value = MAJOR_VALUE },
+            }),
+            dropdown("Reward3Key", "boonSource", "God", godValues, godLabels, {
+                kind = "boonSource",
+                controlWidth = 170,
+                visibleWhen = {
+                    all = {
+                        { alias = "Reward1Key", value = MAJOR_VALUE },
+                        { alias = "Reward2Key", value = "Boon" },
+                    },
+                },
+            }),
+            dropdown("Reward4Key", "rewardType", "", minorValues, minorLabels, {
+                kind = "rewardType",
+                controlWidth = 170,
+                rewardStore = minorRewardStore,
+                visibleWhen = { alias = "Reward1Key", value = MINOR_VALUE },
             }),
         },
     }
@@ -227,16 +282,17 @@ local function surfaceFor(self, context)
         return noSurface(context)
     elseif context.kind == "roomStore" then
         return roomStoreSurface(self, context)
+    elseif context.kind == "majorMinor" then
+        return majorMinorSurface(self, context)
     elseif context.kind == "forcedReward" then
         return forcedRewardSurface(self, context)
     elseif context.kind == "shop" then
         return shopSurface(self, context)
     elseif context.kind == "shipWheel" then
-        return roomStoreSurface(self, {
-            kind = "roomStore",
-            rewardStore = context.defaultRewardStore or "RunProgress",
-            eligibleRewardTypes = context.eligibleRewardTypes,
-            ineligibleRewardTypes = context.ineligibleRewardTypes,
+        return majorMinorSurface(self, {
+            kind = "majorMinor",
+            majorRewardStore = context.defaultRewardStore or "RunProgress",
+            minorRewardStore = "MetaProgress",
         })
     end
     return noSurface(context)

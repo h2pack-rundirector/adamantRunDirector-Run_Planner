@@ -87,6 +87,8 @@ function runtime.create(fields, instance)
         return {
             rowIndex = rowIndex,
             coordinate = slot.coordinate,
+            slotKind = slot.kind or "route",
+            roomKey = slot.roomKey,
             slotLabel = slot.label,
             roleKey = roleKey,
             role = role,

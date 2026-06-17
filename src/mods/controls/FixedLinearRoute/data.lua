@@ -62,6 +62,18 @@ local function slotDepth(slot)
     return slot and slot.coordinate or nil
 end
 
+local function slotForRow(instance, rowIndex)
+    return instance.routeSlots[math.floor(tonumber(rowIndex) or 0)]
+end
+
+local function isPrebossSlot(slot)
+    return slot ~= nil and slot.kind == "preboss"
+end
+
+local function firstBranchKey(slot)
+    return slot and slot.branchValues and slot.branchValues[1] or ""
+end
+
 local function isInRange(value, range)
     if range == nil or value == nil then
         return true
@@ -160,7 +172,7 @@ local function forcedRuleForSlot(instance, slot)
 end
 
 local function forcedRuleForRow(instance, rowIndex)
-    return forcedRuleForSlot(instance, instance.routeSlots[math.floor(tonumber(rowIndex) or 0)])
+    return forcedRuleForSlot(instance, slotForRow(instance, rowIndex))
 end
 
 local function isRoleAllowedByForcedRule(instance, rowIndex, roleKey)
@@ -183,6 +195,20 @@ local function isOptionAllowedByForcedRule(instance, rowIndex, roleKey, optionKe
         return true
     end
     return rule.optionKeysByKey[optionKey] == true
+end
+
+local function rewardContext(role, option)
+    if option ~= nil and option.reward ~= nil then
+        return option.reward
+    end
+    return role and role.reward or nil
+end
+
+local function isOnlyEligible(values, expected)
+    if values == nil or values[1] == nil then
+        return false
+    end
+    return values[1] == expected and values[2] == nil
 end
 
 local function hasAvailableConcreteOption(instance, role, rows, rowIndex, slot)
@@ -236,10 +262,47 @@ local function buildRouteSlots(instance)
         instance.routeSlots[rowIndex] = {
             rowIndex = rowIndex,
             coordinate = depth,
+            kind = "route",
             label = "Depth " .. tostring(depth),
         }
     end
+
+    local specialDepths = {}
+    for depth, slot in pairs(slotLayout.special or {}) do
+        if slot.kind == "preboss" then
+            specialDepths[#specialDepths + 1] = math.floor(tonumber(depth) or 0)
+        end
+    end
+    table.sort(specialDepths)
+    for _, depth in ipairs(specialDepths) do
+        local special = slotLayout.special[depth]
+        local branches = shallowCopyList(special.branches)
+        local rowIndex = #instance.routeSlots + 1
+        local slot = {
+            rowIndex = rowIndex,
+            coordinate = depth,
+            kind = "preboss",
+            label = special.label or ("Depth " .. tostring(depth) .. " Preboss"),
+            roomKey = special.roomKey,
+            branches = branches,
+            branchesByKey = buildLookup(branches),
+            branchValues = {},
+            branchLabels = {},
+        }
+        for _, branch in ipairs(branches) do
+            addChoice(slot.branchValues, slot.branchLabels, branch.key, branch.label)
+        end
+        instance.routeSlots[rowIndex] = slot
+    end
     instance.routeRowCount = #instance.routeSlots
+end
+
+local function addBranchLabels(instance)
+    for _, slot in ipairs(instance.routeSlots or {}) do
+        for _, branch in ipairs(slot.branches or {}) do
+            instance.roleLabels[branch.key] = branch.label or branch.key
+        end
+    end
 end
 
 local function findFirstAvailableOption(instance, rows, rowIndex, role)
@@ -252,8 +315,12 @@ local function findFirstAvailableOption(instance, rows, rowIndex, role)
     return nil, nil
 end
 
-local function readRoleKey(rows, rowIndex)
+local function readRoleKey(instance, rows, rowIndex)
     local roleKey = rows and rows:read(rowIndex, "RoleKey") or nil
+    local slot = instance ~= nil and slotForRow(instance, rowIndex) or nil
+    if isPrebossSlot(slot) and (roleKey == nil or roleKey == "" or roleKey == VANILLA_ROLE_KEY) then
+        return firstBranchKey(slot)
+    end
     if roleKey == nil or roleKey == "" then
         return VANILLA_ROLE_KEY
     end
@@ -288,7 +355,7 @@ end
 
 local function buildRewardRows()
     local rows = {
-        { key = "RoleKey", type = "string", default = "Vanilla", maxLen = 32 },
+        { key = "RoleKey", type = "string", default = "", maxLen = 32 },
         { key = "OptionKey", type = "string", default = "", maxLen = 64 },
         { key = "VariantKey", type = "string", default = "", maxLen = 64 },
     }
@@ -320,6 +387,7 @@ function data.prepare(instance)
 
     buildRouteSlots(instance)
     buildRoleChoices(instance)
+    addBranchLabels(instance)
     return instance
 end
 
@@ -341,12 +409,16 @@ function data.optionListForRole(role)
 end
 
 function data.isOptionAvailable(instance, rows, rowIndex, roleKey, optionKey)
+    if isPrebossSlot(slotForRow(instance, rowIndex)) then
+        return false
+    end
+
     local role = instance.rolesByKey[roleKey]
     if role == nil then
         return false
     end
 
-    local slot = instance.routeSlots[math.floor(tonumber(rowIndex) or 0)]
+    local slot = slotForRow(instance, rowIndex)
     if optionKey == "" then
         return shouldOfferAutoOption(role, optionListForRole(role))
             and hasAvailableConcreteOption(instance, role, rows, rowIndex, slot)
@@ -362,6 +434,11 @@ function data.isOptionAvailable(instance, rows, rowIndex, roleKey, optionKey)
 end
 
 function data.isRoleAvailable(instance, rows, rowIndex, roleKey)
+    local slot = slotForRow(instance, rowIndex)
+    if isPrebossSlot(slot) then
+        return slot.branchesByKey[roleKey] ~= nil
+    end
+
     local role = instance.rolesByKey[roleKey]
     if role == nil then
         return false
@@ -386,16 +463,27 @@ function data.isRoleAvailable(instance, rows, rowIndex, roleKey)
     return findFirstAvailableOption(instance, rows, rowIndex, role) ~= nil
 end
 
-function data.readRoleKey(rows, rowIndex)
-    return readRoleKey(rows, rowIndex)
+function data.readRoleKey(instanceOrRows, rowsOrIndex, rowIndex)
+    if rowIndex ~= nil then
+        return readRoleKey(instanceOrRows, rowsOrIndex, rowIndex)
+    end
+    return readRoleKey(nil, instanceOrRows, rowsOrIndex)
 end
 
 function data.resolveRole(instance, rows, rowIndex)
-    local roleKey = readRoleKey(rows, rowIndex)
+    local roleKey = readRoleKey(instance, rows, rowIndex)
+    local slot = slotForRow(instance, rowIndex)
+    if isPrebossSlot(slot) then
+        return roleKey, slot.branchesByKey[roleKey]
+    end
     return roleKey, instance.rolesByKey[roleKey]
 end
 
 function data.resolveOption(instance, rows, rowIndex, roleKey)
+    if isPrebossSlot(slotForRow(instance, rowIndex)) then
+        return "", nil
+    end
+
     local role = instance.rolesByKey[roleKey]
     if role == nil then
         return readOptionKey(rows, rowIndex) or "", nil
@@ -455,9 +543,79 @@ local function previousRoomExitCountStatus(instance, rows, rowIndex, requirement
     return validStatus()
 end
 
+local function addGodLootSelection(selections, countedLookup, lootName)
+    if lootName ~= nil and lootName ~= "" and countedLookup[lootName] then
+        selections[lootName] = true
+    end
+end
+
+local function collectRewardGodLoot(instance, rows, rowIndex, selections, countedLookup)
+    local roleKey, role = data.resolveRole(instance, rows, rowIndex)
+    if role == nil or roleKey == VANILLA_ROLE_KEY then
+        return
+    end
+
+    local validation = data.validateRow(instance, rows, rowIndex)
+    if not validation.valid then
+        return
+    end
+
+    local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
+    local context = rewardContext(role, option)
+    if context == nil then
+        return
+    end
+
+    local reward1 = rows:read(rowIndex, "Reward1Key") or ""
+    local reward2 = rows:read(rowIndex, "Reward2Key") or ""
+    local reward3 = rows:read(rowIndex, "Reward3Key") or ""
+
+    if context.kind == "majorMinor" or context.kind == "shipWheel" then
+        if reward1 == "Major" and reward2 == "Boon" then
+            addGodLootSelection(selections, countedLookup, reward3)
+        end
+    elseif context.kind == "roomStore" then
+        if isOnlyEligible(context.eligibleRewardTypes, "Boon") then
+            addGodLootSelection(selections, countedLookup, reward1)
+        elseif reward1 == "Boon" then
+            addGodLootSelection(selections, countedLookup, reward2)
+        end
+    elseif context.kind == "forcedReward" then
+        if context.rewardType == "Boon" then
+            addGodLootSelection(selections, countedLookup, reward1)
+        elseif context.rewardType == "Devotion" then
+            addGodLootSelection(selections, countedLookup, reward1)
+            addGodLootSelection(selections, countedLookup, reward2)
+        end
+    end
+end
+
+local function priorDistinctGodLootStatus(instance, rows, rowIndex, requirement)
+    local countedLookup = buildKeyLookup(requirement.countedLootNames)
+    local selections = {}
+    local count = 0
+
+    for priorIndex = 1, rowIndex - 1 do
+        collectRewardGodLoot(instance, rows, priorIndex, selections, countedLookup)
+    end
+
+    for _ in pairs(selections) do
+        count = count + 1
+    end
+    if count < requirement.minDistinct then
+        return routeRequirementStatus(
+            "prior_distinct_god_loot",
+            "Requires at least " .. tostring(requirement.minDistinct) .. " prior planned god rewards"
+        )
+    end
+    return validStatus()
+end
+
 local function routeRequirementItemStatus(instance, rows, rowIndex, requirement)
     if requirement.kind == "previousRoomExitCount" then
         return previousRoomExitCountStatus(instance, rows, rowIndex, requirement)
+    elseif requirement.kind == "priorDistinctGodLoot" then
+        return priorDistinctGodLootStatus(instance, rows, rowIndex, requirement)
     end
     return routeRequirementStatus(
         "unknown_route_requirement",
@@ -465,8 +623,8 @@ local function routeRequirementItemStatus(instance, rows, rowIndex, requirement)
     )
 end
 
-routeRequirementsStatus = function(instance, rows, rowIndex, role)
-    for _, requirement in ipairs(role.routeRequirements or {}) do
+local function checkRouteRequirements(instance, rows, rowIndex, requirements)
+    for _, requirement in ipairs(requirements or {}) do
         local status = routeRequirementItemStatus(instance, rows, rowIndex, requirement)
         if not status.valid then
             return status
@@ -475,10 +633,26 @@ routeRequirementsStatus = function(instance, rows, rowIndex, role)
     return validStatus()
 end
 
+routeRequirementsStatus = function(instance, rows, rowIndex, role, option)
+    local status = checkRouteRequirements(instance, rows, rowIndex, role.routeRequirements)
+    if not status.valid then
+        return status
+    end
+
+    local context = rewardContext(role, option)
+    if context == nil then
+        return validStatus()
+    end
+    return checkRouteRequirements(instance, rows, rowIndex, context.routeRequirements)
+end
+
 function data.validateRow(instance, rows, rowIndex)
     local roleKey, role = data.resolveRole(instance, rows, rowIndex)
     if role == nil then
         return invalidStatus("unknown_role", "Unknown route role: " .. tostring(roleKey))
+    end
+    if isPrebossSlot(slotForRow(instance, rowIndex)) then
+        return validStatus()
     end
     if roleKey == VANILLA_ROLE_KEY then
         return validStatus()
@@ -493,6 +667,10 @@ function data.validateRow(instance, rows, rowIndex)
     end
     if not isRoleWithinSelectionCap(instance, role, rows, rowIndex) then
         return invalidStatus("role_limit", tostring(role.label or roleKey) .. " is already planned for this biome")
+    end
+    local roleRequirementStatus = routeRequirementsStatus(instance, rows, rowIndex, role)
+    if not roleRequirementStatus.valid then
+        return invalidStatus(roleRequirementStatus.code, roleRequirementStatus.message)
     end
 
     local options = optionListForRole(role)
@@ -515,7 +693,7 @@ function data.validateRow(instance, rows, rowIndex)
         return invalidStatus("option_unavailable", tostring(role.label or roleKey) .. " is not valid at this depth")
     end
 
-    local requirementStatus = routeRequirementsStatus(instance, rows, rowIndex, role)
+    local requirementStatus = routeRequirementsStatus(instance, rows, rowIndex, role, option)
     if not requirementStatus.valid then
         return invalidStatus(requirementStatus.code, requirementStatus.message)
     end
@@ -524,6 +702,14 @@ end
 
 function data.fillRoleValues(instance, rows, rowIndex, values)
     clearList(values)
+    local slot = slotForRow(instance, rowIndex)
+    if isPrebossSlot(slot) then
+        for _, branchKey in ipairs(slot.branchValues or {}) do
+            values[#values + 1] = branchKey
+        end
+        return values
+    end
+
     for _, role in ipairs(instance.roles or {}) do
         if data.isRoleAvailable(instance, rows, rowIndex, role.key) then
             values[#values + 1] = role.key
@@ -534,6 +720,10 @@ end
 
 function data.fillOptionValues(instance, rows, rowIndex, roleKey, values)
     clearList(values)
+    if isPrebossSlot(slotForRow(instance, rowIndex)) then
+        return values
+    end
+
     local role = instance.rolesByKey[roleKey]
     if role == nil then
         return values

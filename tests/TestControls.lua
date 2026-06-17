@@ -92,9 +92,15 @@ function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
     })
     local storage = template.storage(instance)
 
-    lu.assertEquals(instance.routeRowCount, 9)
+    lu.assertEquals(instance.routeRowCount, 10)
     lu.assertEquals(instance.routeSlots[1].coordinate, 1)
     lu.assertEquals(instance.routeSlots[9].coordinate, 9)
+    lu.assertEquals(instance.routeSlots[10].coordinate, 10)
+    lu.assertEquals(instance.routeSlots[10].kind, "preboss")
+    lu.assertEquals(instance.routeSlots[10].branchValues, {
+        "Shop",
+        "MajorReward",
+    })
     lu.assertEquals(instance.roleValues, {
         "Vanilla",
         "Combat",
@@ -112,13 +118,39 @@ function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(#storage, 1)
     lu.assertEquals(storage[1].key, "Rows")
     lu.assertEquals(storage[1].type, "table")
-    lu.assertEquals(storage[1].minRows, 9)
-    lu.assertEquals(storage[1].defaultRows, 9)
-    lu.assertEquals(storage[1].maxRows, 9)
+    lu.assertEquals(storage[1].minRows, 10)
+    lu.assertEquals(storage[1].defaultRows, 10)
+    lu.assertEquals(storage[1].maxRows, 10)
     lu.assertEquals(storage[1].row[1].key, "RoleKey")
+    lu.assertEquals(storage[1].row[1].default, "")
     lu.assertEquals(storage[1].row[2].key, "OptionKey")
     lu.assertEquals(storage[1].row[3].key, "VariantKey")
     lu.assertEquals(storage[1].row[9].key, "Reward6Key")
+end
+
+function TestRunPlannerControls.testFixedLinearPrebossRowsUseBranchChoices()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local rows = fakeRows({})
+    local values = {}
+
+    data.fillRoleValues(instance, rows, 10, values)
+    lu.assertEquals(values, {
+        "Shop",
+        "MajorReward",
+    })
+
+    data.fillOptionValues(instance, rows, 10, "Shop", values)
+    lu.assertEquals(values, {})
+
+    local roleKey, branch = data.resolveRole(instance, rows, 10)
+    lu.assertEquals(roleKey, "Shop")
+    lu.assertEquals(branch.label, "Shop")
+    lu.assertTrue(data.validateRow(instance, rows, 10).valid)
 end
 
 function TestRunPlannerControls.testFixedLinearRuntimeBuildsValidatedSnapshot()
@@ -197,6 +229,39 @@ function TestRunPlannerControls.testFixedLinearRuntimeBuildsValidatedSnapshot()
     lu.assertNil(snapshot.rows[4].option)
 end
 
+function TestRunPlannerControls.testFixedLinearRuntimeSnapshotsPrebossBranchRows()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteQ",
+        biome = catalog.lookup.Q,
+    })
+    local control = template.createRuntime({
+        Rows = fakeRows({
+            { RoleKey = "" },
+            { RoleKey = "" },
+            { RoleKey = "Miniboss", OptionKey = "Q_MiniBoss02" },
+            { RoleKey = "" },
+            { RoleKey = "" },
+            { RoleKey = "Miniboss", OptionKey = "Q_MiniBoss03" },
+            { RoleKey = "" },
+        }),
+    }, instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertTrue(snapshot.valid)
+    lu.assertFalse(snapshot.disabled)
+    lu.assertEquals(#snapshot.rows, 7)
+    lu.assertEquals(snapshot.rows[7].coordinate, 7)
+    lu.assertEquals(snapshot.rows[7].slotKind, "preboss")
+    lu.assertEquals(snapshot.rows[7].roomKey, "Q_PreBoss01")
+    lu.assertEquals(snapshot.rows[7].roleKey, "Shop")
+    lu.assertEquals(snapshot.rows[7].role.label, "Shop")
+    lu.assertTrue(snapshot.rows[7].valid)
+    lu.assertEquals(snapshot.rows[7].rewardKind, "shop")
+    lu.assertEquals(#snapshot.rows[7].rewardPicks, 0)
+end
+
 function TestRunPlannerControls.testSingleRoomRolesDefaultToConcreteOption()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
@@ -245,9 +310,11 @@ function TestRunPlannerControls.testCombatRewardSurfaceHidesTrialReward()
     }, instance)
     local surface = control:rewardSurface(1)
 
-    lu.assertEquals(surface.kind, "roomStore")
-    lu.assertFalse(hasValue(surface.controls[1].values, "Devotion"))
-    lu.assertTrue(hasValue(surface.controls[1].values, "RoomMoneyDrop"))
+    lu.assertEquals(surface.kind, "majorMinor")
+    lu.assertEquals(surface.controls[1].values, { "", "Major", "Minor" })
+    lu.assertFalse(hasValue(surface.controls[2].values, "Devotion"))
+    lu.assertTrue(hasValue(surface.controls[2].values, "RoomMoneyDrop"))
+    lu.assertTrue(hasValue(surface.controls[4].values, "GiftDrop"))
 end
 
 function TestRunPlannerControls.testFixedLinearAvailabilityFiltersRolesByRouteRow()
@@ -457,6 +524,87 @@ function TestRunPlannerControls.testFixedLinearAvailabilityChecksPreviousRoomExi
     lu.assertTrue(hasValue(values, "Midshop"))
 end
 
+function TestRunPlannerControls.testFixedLinearAvailabilityChecksTrialRewardRequirements()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local values = {}
+
+    data.fillRoleValues(instance, fakeRows({
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat02",
+            Reward1Key = "Major",
+            Reward2Key = "Boon",
+            Reward3Key = "ZeusUpgrade",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat04",
+        },
+    }), 5, values)
+    lu.assertFalse(hasValue(values, "Trial"))
+
+    data.fillRoleValues(instance, fakeRows({
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat02",
+            Reward1Key = "Major",
+            Reward2Key = "Boon",
+            Reward3Key = "AresUpgrade",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat03",
+            Reward1Key = "Major",
+            Reward2Key = "Boon",
+            Reward3Key = "ZeusUpgrade",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat04",
+        },
+    }), 5, values)
+    lu.assertFalse(hasValue(values, "Trial"))
+
+    data.fillRoleValues(instance, fakeRows({
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat02",
+            Reward1Key = "Major",
+            Reward2Key = "Boon",
+            Reward3Key = "ZeusUpgrade",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat03",
+            Reward1Key = "Major",
+            Reward2Key = "Boon",
+            Reward3Key = "ApolloUpgrade",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat04",
+        },
+    }), 5, values)
+    lu.assertTrue(hasValue(values, "Trial"))
+end
+
 function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesPreviousRoomExitRequirement()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
@@ -488,6 +636,51 @@ function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesPreviousRoomExi
     lu.assertTrue(snapshot.rows[3].valid)
     lu.assertFalse(snapshot.rows[4].valid)
     lu.assertEquals(snapshot.rows[4].invalidCode, "previous_room_exit_count")
+end
+
+function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesTrialRewardRequirements()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime({
+        Rows = fakeRows({
+            {
+                RoleKey = "Combat",
+                OptionKey = "F_Combat02",
+                Reward1Key = "Major",
+                Reward2Key = "Boon",
+                Reward3Key = "ZeusUpgrade",
+            },
+            {
+                RoleKey = "Vanilla",
+            },
+            {
+                RoleKey = "Vanilla",
+            },
+            {
+                RoleKey = "Combat",
+                OptionKey = "F_Combat04",
+            },
+            {
+                RoleKey = "Trial",
+                OptionKey = "F_Combat05",
+                Reward1Key = "ZeusUpgrade",
+                Reward2Key = "ApolloUpgrade",
+            },
+        }),
+    }, instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(#snapshot.invalidRows, 1)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
+    lu.assertEquals(snapshot.invalidRows[1].code, "prior_distinct_god_loot")
+    lu.assertFalse(snapshot.rows[5].valid)
+    lu.assertEquals(snapshot.rows[5].invalidCode, "prior_distinct_god_loot")
 end
 
 function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesOutOfRangeAndDuplicateRows()

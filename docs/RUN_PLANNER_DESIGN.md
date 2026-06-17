@@ -27,13 +27,13 @@ Current working depths:
 
 | Biome | Route | Depth range | Planned route depths | Notes |
 | --- | --- | --- | --- | --- |
-| `F` | Erebus | `0..10` | `1..9` | Starter biome. Depth `0` is one of `F_Opening01/02/03`. Preboss offers shop and non-shop major reward branches. |
-| `G` | Oceanus | `1..8` | `1..7` | `G_Intro` is a locked entry before the planned row list. Preboss offers shop and non-shop major reward branches. |
+| `F` | Erebus | `0..10` | `1..9` | Starter biome. Depth `0` is one of `F_Opening01/02/03`. Preboss offers shop and non-shop `RunProgress` branches. |
+| `G` | Oceanus | `1..8` | `1..7` | `G_Intro` is a locked entry before the planned row list. Preboss offers shop and non-shop `RunProgress` branches. |
 | `H` | Fields | Route picks | Picks `1..4` | `H_Intro`, then four preboss picks, then `H_PreBoss01`. Combat maps expose reward cages rather than a single room reward. |
 | `I` | Tartarus | Clockwork | Rows `1..11` | `I_Intro` initializes five required `ClockworkGoal` rewards and a vanilla non-goal reward budget of `3..6`. |
 | `N` | Ephyra | Hub pylon | Picks `1..6` | Fixed `N_Opening01` into `N_PreHub01`, then hub pylon picks from `N_Hub`. Preboss is shop-only after six pylons. |
 | `O` | Thessaly | `1..7` | `1..6` | `O_Intro` is a locked entry before the planned row list. Combat route depths use ship multi-encounter policy. Preboss is shop-only. |
-| `P` | Olympus | `1..9` | `1..8` | `P_Intro` is a locked entry before the planned row list. Preboss offers shop and non-shop major reward branches. |
+| `P` | Olympus | `1..9` | `1..8` | `P_Intro` is a locked entry before the planned row list. Preboss offers shop and non-shop `RunProgress` branches. |
 | `Q` | Summit | `1..7` | `1..6` | `Q_Intro` is a locked entry before the planned row list. Scripted fixed route. Preboss is shop-only. |
 
 ## Vanilla Facts To Preserve
@@ -168,9 +168,9 @@ The depth role controls which additional fields are valid.
 | Role | Map selection | Reward selection | Notes |
 | --- | --- | --- | --- |
 | `Vanilla` | None | None | Leave depth to vanilla, except reservations still protect future planned rooms. |
-| `Combat` | Optional combat room map | Store-defined reward primitive when the room has rewards | Standard generated combat room. Some biomes, such as `Q`, have no combat reward. |
+| `Combat` | Optional combat room map | Major/Minor reward split when the room uses `ChooseNextRewardStore`; special stores otherwise | Standard generated combat room. Some biomes, such as `Q`, have no combat reward. |
 | `Story` | Fixed story room | None | Story rooms are one-time/special and should be reserved when planned. |
-| `Fountain` | Fixed fountain room | Store-defined reward primitive when eligible | Must preserve room-specific reward rules. |
+| `Fountain` | Fixed fountain room | Major/Minor reward split when the room uses `ChooseNextRewardStore`; special stores otherwise | Must preserve room-specific reward rules. |
 | `Midshop` | Fixed shop room | Shop inventory control | This is shop option control, not normal `ForcedReward`. |
 | `Trial` | Optional trial-capable combat map | `Devotion` | Trial/devotion rewards are a special path. |
 | `Miniboss` | Specific miniboss room | Store-defined reward primitive | Most minibosses restrict `RunProgress` to `Boon`; `Q` uses `TyphonBossRewards`. |
@@ -206,11 +206,12 @@ Biome Q also uses forced-depth role gates for miniboss depths. At depths 3 and
 the room selection pass. The planner keeps `Vanilla` available as an opt-out,
 but explicit planned roles at those depths must be `Miniboss`.
 
-Reward declarations use vanilla reward contexts instead of invented planner
-categories:
+Reward declarations use vanilla reward contexts, plus narrow planner adapters
+for vanilla mechanisms that need player-facing language:
 
 ```lua
 reward = { kind = "none" }
+reward = { kind = "majorMinor", majorRewardStore = "RunProgress", minorRewardStore = "MetaProgress" }
 reward = { kind = "roomStore", rewardStore = "RunProgress" }
 reward = {
     kind = "roomStore",
@@ -227,6 +228,12 @@ reward = { kind = "shipWheel", storeSource = "ChooseNextRewardStore" }
 The context tells UI/runtime which vanilla mechanism owns the reward. The
 player-facing choice should be the actual primitive inside that context, such
 as `Boon`, `WeaponUpgrade`, `TalentBigDrop`, or `StackUpgradeTriple`.
+Contexts using vanilla `ChooseNextRewardStore` are exposed as the community
+language of `Major` and `Minor`: `Major` maps to `RunProgress`, while `Minor`
+maps to `MetaProgress`. This applies to ordinary F/G/P combat and fountain
+routes, O fountain routes, and O ship-wheel combat rewards. It does not apply
+to preboss non-shop rewards, minibosses, Tartarus extension rewards, Ephyra hub
+rewards, Fields cages, shops, or trials.
 Room-store contexts can also carry `eligibleRewardTypes` and
 `ineligibleRewardTypes`; those mirror vanilla room-level `EligibleRewards` and
 `IneligibleRewards` filtering after the broad reward store is selected.
@@ -326,7 +333,7 @@ For `F/G/P`, the preboss depth has two branches:
             Minor = "MaxManaDrop",
         },
     },
-    majorReward = {
+    runProgressReward = {
         kind = "PrebossNoShop",
         rewardPick = {
             rewardType = "StackUpgrade",
@@ -403,7 +410,9 @@ F = {
     depthRange = { min = 0, max = 10 },
     routeStartDepth = 1,
     routeEndDepth = 9,
-    preboss = "shopAndReward",
+    special = {
+        [10] = { kind = "preboss", branches = { "Shop", "MajorReward" } },
+    },
 }
 
 G = {
@@ -412,7 +421,9 @@ G = {
     depthRange = { min = 1, max = 8 },
     routeStartDepth = 1,
     routeEndDepth = 7,
-    preboss = "shopAndReward",
+    special = {
+        [8] = { kind = "preboss", branches = { "Shop", "MajorReward" } },
+    },
 }
 
 P = {
@@ -421,7 +432,9 @@ P = {
     depthRange = { min = 1, max = 9 },
     routeStartDepth = 1,
     routeEndDepth = 8,
-    preboss = "shopAndReward",
+    special = {
+        [9] = { kind = "preboss", branches = { "Shop", "MajorReward" } },
+    },
 }
 
 Q = {
@@ -430,7 +443,9 @@ Q = {
     depthRange = { min = 1, max = 7 },
     routeStartDepth = 1,
     routeEndDepth = 6,
-    preboss = "shopOnly",
+    special = {
+        [7] = { kind = "preboss", branches = { "Shop" } },
+    },
 }
 ```
 

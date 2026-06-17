@@ -9,7 +9,9 @@ Part of the [Run Director modpack](https://github.com/h2pack-rundirector/run-dir
 
 Run Planner will let players describe a biome as a sequence of route slots, such
 as combat, story, shop, fountain, trial, or miniboss rooms, with optional reward
-preferences for eligible combat and fountain-style rooms.
+preferences for eligible combat and fountain-style rooms. Normal route rewards
+use the community-facing Major/Minor split; special rooms keep their own reward
+surfaces.
 
 ## Gameplay Impact
 

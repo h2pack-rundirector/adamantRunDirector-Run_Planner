@@ -76,6 +76,14 @@ local function roomStoreReward(rewardStore, opts)
     return reward
 end
 
+local function majorMinorReward()
+    return {
+        kind = "majorMinor",
+        majorRewardStore = "RunProgress",
+        minorRewardStore = "MetaProgress",
+    }
+end
+
 local function forcedReward(rewardType, opts)
     opts = opts or {}
     local reward = {
@@ -342,7 +350,8 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
 
     lu.assertNotNil(biomes.lookup.F.rolesByKey.Trial)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.mapOptions[1].key, "F_Combat01")
-    lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.reward, roomStoreReward("RunProgress"))
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.reward, majorMinorReward())
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Fountain.reward, majorMinorReward())
     assertOneShotRole(biomes.lookup.F.rolesByKey.Story)
     assertOneShotRole(biomes.lookup.F.rolesByKey.Fountain)
     assertOneShotRole(biomes.lookup.F.rolesByKey.Midshop)
@@ -354,14 +363,16 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     }))
     lu.assertEquals(biomes.lookup.F.rolesByKey.Miniboss.routeRules, oneShotRouteRules())
 
-    lu.assertEquals(biomes.lookup.G.rolesByKey.Combat.reward, roomStoreReward("RunProgress"))
+    lu.assertEquals(biomes.lookup.G.rolesByKey.Combat.reward, majorMinorReward())
+    lu.assertEquals(biomes.lookup.G.rolesByKey.Fountain.reward, majorMinorReward())
     assertOneShotRole(biomes.lookup.G.rolesByKey.Story)
     assertOneShotRole(biomes.lookup.G.rolesByKey.Fountain)
     assertOneShotRole(biomes.lookup.G.rolesByKey.Midshop)
     assertOneShotRole(biomes.lookup.G.rolesByKey.Trial)
 
     lu.assertNil(biomes.lookup.P.rolesByKey.Trial)
-    lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.reward, roomStoreReward("RunProgress"))
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.reward, majorMinorReward())
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Fountain.reward, majorMinorReward())
     assertOneShotRole(biomes.lookup.P.rolesByKey.Story)
     assertOneShotRole(biomes.lookup.P.rolesByKey.Fountain)
     assertOneShotRole(biomes.lookup.P.rolesByKey.Midshop)
@@ -375,6 +386,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     lu.assertEquals(biomes.lookup.O.adapter, "multiEncounterFixed")
     lu.assertEquals(biomes.lookup.O.rolesByKey.Combat.reward, shipWheelReward())
     lu.assertEquals(biomes.lookup.O.rolesByKey.Combat.encounterPolicy, "O_CombatData")
+    lu.assertEquals(biomes.lookup.O.rolesByKey.Fountain.reward, majorMinorReward())
     assertOneShotRole(biomes.lookup.O.rolesByKey.Story)
     assertOneShotRole(biomes.lookup.O.rolesByKey.Fountain)
     assertOneShotRole(biomes.lookup.O.rolesByKey.Midshop)

@@ -58,6 +58,15 @@ function rewards.roomStore(rewardStore, opts)
     return context
 end
 
+function rewards.majorMinor(opts)
+    opts = opts or {}
+    return {
+        kind = "majorMinor",
+        majorRewardStore = opts.majorRewardStore or "RunProgress",
+        minorRewardStore = opts.minorRewardStore or "MetaProgress",
+    }
+end
+
 function rewards.rewardSet(name)
     local set = REWARD_SETS[name]
     if set == nil then

@@ -3,12 +3,24 @@ local catalog = deps.catalog
 
 local runtime = {}
 
+local function conditionMatches(condition, fields)
+    return fields:read(condition.alias) == condition.value
+end
+
 local function isControlVisible(control, fields)
     local condition = control and control.visibleWhen
     if condition == nil then
         return true
     end
-    return fields:read(condition.alias) == condition.value
+    for _, item in ipairs(condition.all or {}) do
+        if not conditionMatches(item, fields) then
+            return false
+        end
+    end
+    if condition.all ~= nil then
+        return true
+    end
+    return conditionMatches(condition, fields)
 end
 
 function runtime.snapshot(surface, fields)
@@ -21,12 +33,16 @@ function runtime.snapshot(surface, fields)
         if isControlVisible(control, fields) then
             local value = fields:read(control.alias) or ""
             if value ~= "" then
-                picks[#picks + 1] = {
+                local pick = {
                     key = control.key,
                     kind = control.kind,
                     alias = control.alias,
                     value = value,
                 }
+                if control.rewardStore ~= nil then
+                    pick.rewardStore = control.rewardStore
+                end
+                picks[#picks + 1] = pick
             end
         end
     end

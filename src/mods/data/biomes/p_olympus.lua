@@ -53,7 +53,7 @@ return function(importer)
                 key = "Combat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,
-                reward = rewards.roomStore("RunProgress"),
+                reward = rewards.majorMinor(),
             },
             {
                 key = "Story",
@@ -67,7 +67,7 @@ return function(importer)
                 key = "Fountain",
                 label = "Fountain",
                 roomOptions = layout.fountainRooms,
-                reward = rewards.roomStore("RunProgress"),
+                reward = rewards.majorMinor(),
                 routeRules = routeRules.role("Fountain"),
                 reserve = true,
             },
