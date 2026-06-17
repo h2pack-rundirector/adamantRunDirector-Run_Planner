@@ -29,12 +29,12 @@ return function(importer)
                     branches = {
                         {
                             key = "Shop",
-                            label = "Shop",
+                            label = "Preboss Shop",
                             reward = rewards.shop("WorldShop"),
                         },
                         {
                             key = "MajorReward",
-                            label = "Major Reward",
+                            label = "Preboss Room",
                             reward = rewards.roomStore("RunProgress", {
                                 ineligibleRewardTypes = rewards.rewardSet("PreBossRoomBans"),
                             }),

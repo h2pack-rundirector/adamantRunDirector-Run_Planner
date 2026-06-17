@@ -20,8 +20,12 @@ return function(importer)
             special = {
                 [0] = {
                     kind = "opening",
+                    key = "Opening",
                     label = "Opening",
                     roomOptions = layout.openingRooms,
+                    reward = rewards.roomStore("RunProgress", {
+                        ineligibleRewardTypes = rewards.rewardSet("OpeningRoomBans"),
+                    }),
                     locked = true,
                 },
                 [10] = {
@@ -30,12 +34,12 @@ return function(importer)
                     branches = {
                         {
                             key = "Shop",
-                            label = "Shop",
+                            label = "Preboss Shop",
                             reward = rewards.shop("WorldShop"),
                         },
                         {
                             key = "MajorReward",
-                            label = "Major Reward",
+                            label = "Preboss Room",
                             reward = rewards.roomStore("RunProgress", {
                                 ineligibleRewardTypes = rewards.rewardSet("PreBossRoomBans"),
                             }),

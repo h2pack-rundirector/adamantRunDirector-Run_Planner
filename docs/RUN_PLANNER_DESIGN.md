@@ -18,8 +18,9 @@ Planner depths use vanilla `BiomeDepthCache` directly:
   hand off to the next biome with `NextRoomSet`.
 - Non-starter biome intros are locked entry rooms outside the planned row list.
   They can still lead to a first planned door room at `BiomeDepthCache == 1`.
-- `F` is special: its opening room is locked depth `0` because vanilla
-  explicitly sets `BiomeDepthCache = 0` for the starter room.
+- `F` is special: its opening room is routeable depth `0` because vanilla
+  explicitly sets `BiomeDepthCache = 0` for the starter room. Normal runs use
+  `RunProgress` with `OpeningRoomBans` there.
 - Normal planned route depths are the depths between the locked entry/opening
   and the preboss.
 
@@ -27,7 +28,7 @@ Current working depths:
 
 | Biome | Route | Depth range | Planned route depths | Notes |
 | --- | --- | --- | --- | --- |
-| `F` | Erebus | `0..10` | `1..9` | Starter biome. Depth `0` is one of `F_Opening01/02/03`. Preboss offers shop and non-shop `RunProgress` branches. |
+| `F` | Erebus | `0..10` | `0, 1..9` | Starter biome. Depth `0` is one of `F_Opening01/02/03` with `RunProgress` reward controls. Preboss offers shop and non-shop `RunProgress` branches. |
 | `G` | Oceanus | `1..8` | `1..7` | `G_Intro` is a locked entry before the planned row list. Preboss offers shop and non-shop `RunProgress` branches. |
 | `H` | Fields | Route picks | Picks `1..4` | `H_Intro`, then four preboss picks, then `H_PreBoss01`. Combat maps expose reward cages rather than a single room reward. |
 | `I` | Tartarus | Clockwork | Rows `1..11` | `I_Intro` initializes five required `ClockworkGoal` rewards and a vanilla non-goal reward budget of `3..6`. |
@@ -365,6 +366,12 @@ For `Q` and `O`, the preboss depth only has the shop branch:
 `IneligibleRewards` so `RoomMoneyDrop` is not exposed. `Devotion` is absent
 from planner reward stores and is exposed only through the `Trial` role.
 
+Fixed-linear route controls render each declared preboss branch as its own
+terminal row instead of rendering one depth with a branch selector. In the UI,
+`Shop` is labeled `Preboss Shop`; `MajorReward` is labeled `Preboss Room`.
+The row snapshot keeps the mechanical `branchKey` so runtime logic does not
+depend on the display label.
+
 ## Shop Surfaces
 
 Shop control should model all store options, not only the boon option.
@@ -411,6 +418,7 @@ F = {
     routeStartDepth = 1,
     routeEndDepth = 9,
     special = {
+        [0] = { kind = "opening", roomOptions = { "F_Opening01", "F_Opening02", "F_Opening03" } },
         [10] = { kind = "preboss", branches = { "Shop", "MajorReward" } },
     },
 }
@@ -497,7 +505,8 @@ The main declaration file is the source of truth for route and role semantics:
 - `slotLayout.coordinate`: currently `BiomeDepthCache`.
 - `slotLayout.depthRange`: inclusive vanilla depth range modeled by the biome.
 - `slotLayout.routeStartDepth` and `slotLayout.routeEndDepth`: normal planned
-  route depths. Locked intro/opening and preboss depths sit outside this range.
+  route depths. Locked intros and preboss depths sit outside this range. The
+  `F` opening is also outside this range, but is rendered as a fixed special row.
 - `slotLayout.default`: default depth behavior, currently `VanillaSafe`
   alternate generation.
 - `slotLayout.special`: per-depth overrides such as intro/opening and preboss

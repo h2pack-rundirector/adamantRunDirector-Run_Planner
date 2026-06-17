@@ -12,6 +12,14 @@ local function isControlVisible(control, fields)
     if condition == nil then
         return true
     end
+    for _, item in ipairs(condition.any or {}) do
+        if conditionMatches(item, fields) then
+            return true
+        end
+    end
+    if condition.any ~= nil then
+        return false
+    end
     for _, item in ipairs(condition.all or {}) do
         if not conditionMatches(item, fields) then
             return false

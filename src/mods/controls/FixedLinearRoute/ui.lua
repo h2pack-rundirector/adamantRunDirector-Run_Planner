@@ -18,7 +18,6 @@ local OPTION_OPTS = {
 }
 local ROLE_COLUMN_X = 80
 local OPTION_COLUMN_X = 230
-local REWARD_COLUMN_X = ROLE_COLUMN_X
 
 local function copyBaseOpts(base)
     local copy = {}
@@ -33,6 +32,7 @@ local function resetRowDetails(fields, rowIndex)
     fields.Rows:reset(rowIndex, "VariantKey")
     for index = 1, data.REWARD_SLOT_COUNT do
         fields.Rows:reset(rowIndex, "Reward" .. tostring(index) .. "Key")
+        fields.Rows:reset(rowIndex, "Reward" .. tostring(index) .. "LootKey")
     end
 end
 
@@ -45,7 +45,7 @@ local function getRoleOpts(control, instance, rowIndex)
         opts.displayValues = instance.roleLabels
         control._roleOptsByRow[rowIndex] = opts
     end
-    data.fillRoleValues(instance, control:fields().Rows, rowIndex, opts.values)
+    opts.values = data.roleValuesForRow(instance, control:fields().Rows, rowIndex)
     return opts
 end
 
@@ -65,10 +65,10 @@ local function getOptionOpts(control, instance, rowIndex, roleKey)
     if opts == nil then
         opts = copyBaseOpts(OPTION_OPTS)
         opts.values = {}
-        opts.displayValues = instance.optionLabelsByRole[roleKey] or {}
+        opts.displayValues = data.optionLabelsForRow(instance, rowIndex, roleKey)
         optsByRole[roleKey] = opts
     end
-    data.fillOptionValues(instance, control:fields().Rows, rowIndex, roleKey, opts.values)
+    opts.values = data.optionValuesForRow(instance, control:fields().Rows, rowIndex, roleKey)
     return opts
 end
 
@@ -96,19 +96,19 @@ local function optionLabelAddsInformation(role, option)
     return tostring(option.label or option.key or "") ~= tostring(role.label or role.key or "")
 end
 
-local function drawStaticOptionLabel(draw, role, option)
+local function drawStaticOptionLabel(draw, role, option, columnX)
     if not optionLabelAddsInformation(role, option) then
         return
     end
 
     draw.imgui.SameLine()
-    draw.imgui.SetCursorPosX(OPTION_COLUMN_X)
+    draw.imgui.SetCursorPosX(columnX or OPTION_COLUMN_X)
     draw.imgui.AlignTextToFramePadding()
     draw.imgui.Text(tostring(option.label or option.key or ""))
 end
 
-local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey)
-    local role = instance.rolesByKey[roleKey]
+local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey, columnX)
+    local _, role = data.resolveRole(instance, control:fields().Rows, rowIndex)
     local options = data.optionListForRole(role)
     if role == nil or #options == 0 then
         return
@@ -123,13 +123,13 @@ local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey)
         and optionOpts.values[1] ~= ""
         and (storedOptionKey == "" or storedOptionKey == optionOpts.values[1])
     then
-        drawStaticOptionLabel(draw, role, role.optionsByKey and role.optionsByKey[optionOpts.values[1]] or nil)
-        return
+        drawStaticOptionLabel(draw, role, role.optionsByKey and role.optionsByKey[optionOpts.values[1]] or nil, columnX)
+        return false
     end
 
     draw.imgui.SameLine()
-    draw.imgui.SetCursorPosX(OPTION_COLUMN_X)
-    draw.widgets.dropdown(
+    draw.imgui.SetCursorPosX(columnX or OPTION_COLUMN_X)
+    return draw.widgets.dropdown(
         control:rowField(rowIndex, "OptionKey"),
         optionOpts
     )
@@ -152,18 +152,28 @@ local function drawRouteRow(draw, control, instance, rowIndex)
     end
 
     local imgui = draw.imgui
-    local roleField = control:rowField(rowIndex, "RoleKey")
     local currentRoleKey = data.readRoleKey(instance, control:fields().Rows, rowIndex)
 
     imgui.AlignTextToFramePadding()
     imgui.Text(slot.label)
-    imgui.SameLine()
-    imgui.SetCursorPosX(ROLE_COLUMN_X)
-    if draw.widgets.dropdown(roleField, getRoleOpts(control, instance, rowIndex)) then
-        resetRowDetails(control:fields(), rowIndex)
-        currentRoleKey = data.readRoleKey(instance, control:fields().Rows, rowIndex)
+
+    if data.isFixedIdentityRow(instance, rowIndex) then
+        if drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey, ROLE_COLUMN_X) then
+            control:invalidateReadPass()
+        end
+    else
+        local roleField = control:rowField(rowIndex, "RoleKey")
+        imgui.SameLine()
+        imgui.SetCursorPosX(ROLE_COLUMN_X)
+        if draw.widgets.dropdown(roleField, getRoleOpts(control, instance, rowIndex)) then
+            resetRowDetails(control:fields(), rowIndex)
+            control:invalidateReadPass()
+            currentRoleKey = data.readRoleKey(instance, control:fields().Rows, rowIndex)
+        end
+        if drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey) then
+            control:invalidateReadPass()
+        end
     end
-    drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey)
     drawRowValidation(draw, control, instance, rowIndex)
 
     local surface = control:rewardSurface(rowIndex)
@@ -171,7 +181,6 @@ local function drawRouteRow(draw, control, instance, rowIndex)
         and rewardRuntime ~= nil
         and rewardRuntime.hasControls(surface)
     then
-        imgui.SetCursorPosX(REWARD_COLUMN_X)
         rewardUi.draw(draw, surface, rewardFields(control, rowIndex))
     end
 end
@@ -216,12 +225,13 @@ end
 ui.views = {}
 
 function ui.views.planner(draw, control, instance)
-    draw.widgets.text(instance.label)
-    draw.widgets.separator()
-    for rowIndex = 1, control:rowCount() do
+    local rowCount = control:rowCount()
+    control:beginReadPass()
+    for rowIndex = 1, rowCount do
         drawRouteRow(draw, control, instance, rowIndex)
-        drawRouteRowSeparator(draw.imgui, rowIndex, control:rowCount())
+        drawRouteRowSeparator(draw.imgui, rowIndex, rowCount)
     end
+    control:endReadPass()
 end
 
 ui.views.default = ui.views.planner

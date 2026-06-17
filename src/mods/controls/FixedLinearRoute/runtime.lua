@@ -14,6 +14,14 @@ local function readRewards(rows, rowIndex)
     return rewards
 end
 
+local function readRewardLoot(rows, rowIndex)
+    local loot = {}
+    for index = 1, data.REWARD_SLOT_COUNT do
+        loot[index] = rows:read(rowIndex, "Reward" .. tostring(index) .. "LootKey") or ""
+    end
+    return loot
+end
+
 local function rewardFields(rows, rowIndex)
     return {
         read = function(_, alias)
@@ -36,7 +44,28 @@ local function rewardSurface(role, option)
     return rewardRuntime.surfaceFor(rewardContext(role, option))
 end
 
+local function prewarmRewardSurface(role, option)
+    rewardSurface(role, option)
+end
+
+local function prewarmRewardSurfaces(instance)
+    for _, role in ipairs(instance.roles or {}) do
+        prewarmRewardSurface(role)
+        for _, option in ipairs(data.optionListForRole(role)) do
+            prewarmRewardSurface(role, option)
+        end
+    end
+    for _, slot in ipairs(instance.routeSlots or {}) do
+        prewarmRewardSurface(slot.role)
+        for _, branch in ipairs(slot.branches or {}) do
+            prewarmRewardSurface(branch)
+        end
+    end
+end
+
 function runtime.create(fields, instance)
+    prewarmRewardSurfaces(instance)
+
     local control = {}
 
     function control:name()
@@ -74,6 +103,18 @@ function runtime.create(fields, instance)
         return rewardSurface(self:role(rowIndex), self:option(rowIndex))
     end
 
+    function control:beginReadPass()
+        data.beginReadPass(instance)
+    end
+
+    function control:invalidateReadPass()
+        data.invalidateReadPass(instance)
+    end
+
+    function control:endReadPass()
+        data.endReadPass(instance)
+    end
+
     function control:rowSnapshot(rowIndex)
         local slot = self:slot(rowIndex)
         if slot == nil then
@@ -89,6 +130,7 @@ function runtime.create(fields, instance)
             coordinate = slot.coordinate,
             slotKind = slot.kind or "route",
             roomKey = slot.roomKey,
+            branchKey = slot.branchKey,
             slotLabel = slot.label,
             roleKey = roleKey,
             role = role,
@@ -99,6 +141,7 @@ function runtime.create(fields, instance)
             invalidReason = validation.message,
             variantKey = fields.Rows:read(rowIndex, "VariantKey") or "",
             rewards = readRewards(fields.Rows, rowIndex),
+            rewardLoot = readRewardLoot(fields.Rows, rowIndex),
             rewardKind = surface and surface.kind or "none",
             rewardPicks = rewardRuntime and rewardRuntime.snapshot(surface, rewardFields(fields.Rows, rowIndex)) or {},
         }
@@ -107,6 +150,7 @@ function runtime.create(fields, instance)
     function control:buildSnapshot()
         local rows = {}
         local invalidRows = {}
+        self:beginReadPass()
         for rowIndex = 1, self:rowCount() do
             local row = self:rowSnapshot(rowIndex)
             rows[#rows + 1] = row
@@ -119,6 +163,7 @@ function runtime.create(fields, instance)
                 }
             end
         end
+        self:endReadPass()
         return {
             controlName = instance.name,
             biomeKey = instance.biomeKey,

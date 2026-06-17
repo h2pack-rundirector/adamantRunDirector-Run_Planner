@@ -29,7 +29,7 @@ return function(importer)
                     branches = {
                         {
                             key = "Shop",
-                            label = "Shop",
+                            label = "Preboss Shop",
                             reward = rewards.shop("WorldShop"),
                         },
                     },

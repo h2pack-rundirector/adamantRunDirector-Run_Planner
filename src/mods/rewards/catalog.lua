@@ -3,6 +3,16 @@ local catalog = {}
 local VANILLA_VALUE = ""
 local MAJOR_VALUE = "Major"
 local MINOR_VALUE = "Minor"
+local SHOP_BOON_SOURCE_VALUES = {
+    RandomLoot = true,
+    BoostedRandomLoot = true,
+}
+local SHOP_OPTION_LABELS = {
+    RandomLoot = "Boon",
+    BoostedRandomLoot = "Boosted Boon",
+    BlindBoxLoot = "Mystery Boon",
+    ShopHermesUpgrade = "Hermes",
+}
 
 local function copyList(source)
     local copy = {}
@@ -52,10 +62,11 @@ local function displayLabel(key)
     return label
 end
 
-local function uniqueNames(items, eligible, ineligible)
+local function uniqueNames(items, eligible, ineligible, labelFor)
     local values = {}
     local labels = {}
     local seen = {}
+    labelFor = labelFor or displayLabel
 
     addOption(values, labels, VANILLA_VALUE, "Vanilla")
     for _, name in ipairs(items or {}) do
@@ -65,10 +76,14 @@ local function uniqueNames(items, eligible, ineligible)
             and (ineligible == nil or not ineligible[name])
         then
             seen[name] = true
-            addOption(values, labels, name, displayLabel(name))
+            addOption(values, labels, name, labelFor(name))
         end
     end
     return values, labels
+end
+
+local function shopOptionLabel(name)
+    return SHOP_OPTION_LABELS[name] or displayLabel(name)
 end
 
 local function godSourceOptions(definitions)
@@ -97,11 +112,16 @@ local function dropdown(alias, key, label, values, labels, opts)
             values = values,
             displayValues = labels,
             controlWidth = controlWidth,
+            labelWidth = opts.labelWidth,
+            controlGap = opts.controlGap,
         },
         visibleWhen = opts.visibleWhen,
     }
     if opts.rewardStore ~= nil then
         control.rewardStore = opts.rewardStore
+    end
+    if opts.rowIndex ~= nil then
+        control.rowIndex = opts.rowIndex
     end
     return control
 end
@@ -252,11 +272,14 @@ end
 local function shopSurface(self, context)
     local shop = self.definitions.shops[context.shopProfile] or {}
     local controls = {}
+    local godValues, godLabels = godSourceOptions(self.definitions)
 
     for index, slot in ipairs(shop.slots or {}) do
-        local values, labels = uniqueNames(slot.options)
+        local rewardAlias = "Reward" .. tostring(index) .. "Key"
+        local lootAlias = "Reward" .. tostring(index) .. "LootKey"
+        local values, labels = uniqueNames(slot.options, nil, nil, shopOptionLabel)
         controls[#controls + 1] = dropdown(
-            "Reward" .. tostring(index) .. "Key",
+            rewardAlias,
             slot.key,
             slot.label,
             values,
@@ -264,14 +287,41 @@ local function shopSurface(self, context)
             {
                 kind = "shopOption",
                 controlWidth = 170,
+                labelWidth = 130,
+                rowIndex = index,
             }
         )
+        for _, itemName in ipairs(slot.options or {}) do
+            if SHOP_BOON_SOURCE_VALUES[itemName] then
+                controls[#controls + 1] = dropdown(
+                    lootAlias,
+                    slot.key .. "Loot",
+                    "God",
+                    godValues,
+                    godLabels,
+                    {
+                        kind = "boonSource",
+                        controlWidth = 170,
+                        labelWidth = 45,
+                        rowIndex = index,
+                        visibleWhen = {
+                            any = {
+                                { alias = rewardAlias, value = "RandomLoot" },
+                                { alias = rewardAlias, value = "BoostedRandomLoot" },
+                            },
+                        },
+                    }
+                )
+                break
+            end
+        end
     end
 
     return {
         kind = "shop",
         context = context,
         shopProfile = context.shopProfile,
+        rowHeader = "Reward",
         controls = controls,
     }
 end
