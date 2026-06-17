@@ -53,12 +53,24 @@ local function loadHubPylonTemplate()
     return template
 end
 
+local function loadMultiEncounterTemplate()
+    local template
+    withTestImport(function()
+        template = testImport("mods/controls/templates.lua").MultiEncounterFixedRoute
+    end)
+    return template
+end
+
 local function loadFixedLinearData()
     return testImport("mods/controls/FixedLinearRoute/data.lua", nil, loadRouteDeps())
 end
 
 local function loadHubPylonData()
     return testImport("mods/controls/HubPylonRoute/data.lua", nil, loadRouteDeps())
+end
+
+local function loadMultiEncounterData()
+    return testImport("mods/controls/MultiEncounterFixedRoute/data.lua", nil, loadRouteDeps())
 end
 
 local function hasValue(values, expected)
@@ -81,12 +93,13 @@ local function fakeRows(rows)
     }
 end
 
-local function routeFields(rows, sideRows, sideRewardRows)
+local function routeFields(rows, sideRows, sideRewardRows, encounterRewardRows)
     return {
         Rooms = fakeRows(rows or {}),
         Rewards = fakeRows(rows or {}),
         SideRooms = fakeRows(sideRows or {}),
         SideRewards = fakeRows(sideRewardRows or {}),
+        EncounterRewards = fakeRows(encounterRewardRows or {}),
     }
 end
 
@@ -98,6 +111,7 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
         "RouteF",
         "RouteG",
         "RouteN",
+        "RouteO",
         "RouteP",
         "RouteQ",
     })
@@ -107,17 +121,18 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
     })
     lu.assertEquals(data.routeControlTabs(catalog, testImport).Surface, {
         { key = "N", label = "Ephyra", controlName = "RouteN" },
+        { key = "O", label = "Thessaly", controlName = "RouteO" },
         { key = "P", label = "Olympus", controlName = "RouteP" },
         { key = "Q", label = "Summit", controlName = "RouteQ" },
     })
     lu.assertEquals(controls.RouteF.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteG.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteN.template, "HubPylonRoute")
+    lu.assertEquals(controls.RouteO.template, "MultiEncounterFixedRoute")
     lu.assertEquals(controls.RouteP.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteQ.template, "FixedLinearRoute")
     lu.assertNil(controls.RouteH)
     lu.assertNil(controls.RouteI)
-    lu.assertNil(controls.RouteO)
 end
 
 function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
@@ -266,6 +281,82 @@ function TestRunPlannerControls.testHubPylonStorageMatchesEphyraRouteRows()
     lu.assertEquals(routeData.sideRoomRowIndex(instance, 4, 3), 3)
     lu.assertEquals(routeData.sideRoomRowIndex(instance, 9, 1), 16)
     lu.assertNil(routeData.sideRoomRowIndex(instance, 1, 1))
+end
+
+function TestRunPlannerControls.testMultiEncounterStorageMatchesThessalyRouteRows()
+    local catalog = loadCatalog()
+    local routeData = loadMultiEncounterData()
+    local template = loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local storage = template.storage(instance)
+
+    lu.assertEquals(instance.routeRowCount, 7)
+    lu.assertEquals(instance.routeSlots[1].coordinate, 1)
+    lu.assertEquals(instance.routeSlots[1].kind, "route")
+    lu.assertEquals(instance.routeSlots[1].label, "Depth 1")
+    lu.assertEquals(instance.routeSlots[6].coordinate, 6)
+    lu.assertEquals(instance.routeSlots[7].coordinate, 7)
+    lu.assertEquals(instance.routeSlots[7].kind, "preboss")
+    lu.assertEquals(instance.routeSlots[7].label, "Preboss Shop")
+    lu.assertEquals(instance.routeSlots[7].branchKey, "Shop")
+    lu.assertEquals(instance.roleValues, {
+        "Vanilla",
+        "Combat",
+        "Story",
+        "Fountain",
+        "Midshop",
+        "Trial",
+        "Miniboss",
+    })
+    lu.assertEquals(instance.optionValuesByRole.Story, { "O_Story01" })
+    lu.assertEquals(instance.optionValuesByRole.Combat[1], "")
+
+    lu.assertEquals(#storage, 3)
+    lu.assertEquals(storage[1].key, "Rooms")
+    lu.assertEquals(storage[1].type, "table")
+    lu.assertEquals(storage[1].minRows, 7)
+    lu.assertEquals(storage[1].defaultRows, 7)
+    lu.assertEquals(storage[1].maxRows, 7)
+    lu.assertEquals(storage[1].row[1].key, "RoleKey")
+    lu.assertEquals(storage[1].row[2].key, "OptionKey")
+    lu.assertEquals(storage[1].row[3].key, "VariantKey")
+    lu.assertEquals(storage[2].key, "Rewards")
+    lu.assertEquals(storage[2].minRows, 7)
+    lu.assertEquals(storage[2].row[1].key, "Reward1Key")
+    lu.assertEquals(storage[2].row[12].key, "Reward6LootKey")
+    lu.assertEquals(storage[3].key, "EncounterRewards")
+    lu.assertEquals(storage[3].minRows, 12)
+    lu.assertEquals(storage[3].defaultRows, 12)
+    lu.assertEquals(storage[3].maxRows, 12)
+    lu.assertEquals(storage[3].row[1].key, "Reward1Key")
+    lu.assertEquals(storage[3].row[12].key, "Reward6LootKey")
+    lu.assertEquals(routeData.encounterRewardRowIndex(instance, 1, 1), 1)
+    lu.assertEquals(routeData.encounterRewardRowIndex(instance, 1, 2), 2)
+    lu.assertEquals(routeData.encounterRewardRowIndex(instance, 6, 2), 12)
+    lu.assertNil(routeData.encounterRewardRowIndex(instance, 7, 1))
+
+    lu.assertEquals(routeData.variantLabelsForRow(instance, "Combat"), {
+        [""] = "Vanilla",
+        TwoCombats = "2 Combats",
+        ThreeCombats = "3 Combats",
+    })
+    lu.assertEquals(routeData.variantValuesForRow(instance, 1, "Combat"), {
+        "",
+        "TwoCombats",
+    })
+    lu.assertEquals(routeData.variantValuesForRow(instance, 2, "Combat"), {
+        "",
+        "TwoCombats",
+        "ThreeCombats",
+    })
+    lu.assertEquals(routeData.variantValuesForRow(instance, 6, "Combat"), {
+        "",
+        "TwoCombats",
+    })
+    lu.assertEquals(routeData.variantValuesForRow(instance, 2, "Story"), {})
 end
 
 function TestRunPlannerControls.testFixedLinearOpeningRowUsesFixedRoomChoice()
@@ -568,6 +659,157 @@ function TestRunPlannerControls.testFixedLinearRuntimeBuildsValidatedSnapshot()
     lu.assertFalse(snapshot.rows[4].valid)
     lu.assertEquals(snapshot.rows[4].optionKey, "Q_MiniBoss03")
     lu.assertNil(snapshot.rows[4].option)
+end
+
+function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot()
+    local catalog = loadCatalog()
+    local template = loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local control = template.createRuntime(routeFields({
+            {
+                RoleKey = "Combat",
+                OptionKey = "O_Combat01",
+                VariantKey = "",
+            },
+            {
+                RoleKey = "Combat",
+                OptionKey = "O_Combat02",
+                VariantKey = "ThreeCombats",
+            },
+            {
+                RoleKey = "Fountain",
+                OptionKey = "O_Reprieve01",
+                Reward1Key = "Minor",
+                Reward4Key = "GiftDrop",
+            },
+            {
+                RoleKey = "Combat",
+                OptionKey = "O_Combat05",
+                VariantKey = "TwoCombats",
+            },
+            {
+                RoleKey = "Miniboss",
+                OptionKey = "O_MiniBoss01",
+                Reward1Key = "AphroditeUpgrade",
+            },
+            {
+                RoleKey = "Vanilla",
+            },
+            {},
+        }, nil, nil, {
+            {
+                Reward1Key = "Major",
+                Reward2Key = "Boon",
+                Reward3Key = "PoseidonUpgrade",
+            },
+            {},
+            {
+                Reward1Key = "Major",
+                Reward2Key = "Boon",
+                Reward3Key = "ZeusUpgrade",
+            },
+            {
+                Reward1Key = "Minor",
+                Reward4Key = "GiftDrop",
+            },
+            {},
+            {},
+            {
+                Reward1Key = "Major",
+                Reward2Key = "Boon",
+                Reward3Key = "HestiaUpgrade",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertEquals(snapshot.biomeKey, "O")
+    lu.assertEquals(snapshot.adapter, "multiEncounterFixed")
+    lu.assertTrue(snapshot.valid)
+    lu.assertFalse(snapshot.disabled)
+    lu.assertEquals(#snapshot.rows, 7)
+
+    lu.assertEquals(snapshot.rows[1].coordinate, 1)
+    lu.assertEquals(snapshot.rows[1].roleKey, "Combat")
+    lu.assertEquals(snapshot.rows[1].optionKey, "O_Combat01")
+    lu.assertEquals(snapshot.rows[1].variantKey, "")
+    lu.assertEquals(snapshot.rows[1].variant.sourceKey, "Vanilla")
+    lu.assertNil(snapshot.rows[1].realCombatCount)
+    lu.assertEquals(snapshot.rows[1].rewardKind, "none")
+    lu.assertEquals(snapshot.rows[1].rewardPicks, {})
+    lu.assertEquals(snapshot.rows[1].encounterRewardLegs, {})
+
+    lu.assertEquals(snapshot.rows[2].coordinate, 2)
+    lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
+    lu.assertEquals(snapshot.rows[2].optionKey, "O_Combat02")
+    lu.assertEquals(snapshot.rows[2].variantKey, "ThreeCombats")
+    lu.assertEquals(snapshot.rows[2].variant.sourceKey, "ThreeCombats")
+    lu.assertEquals(snapshot.rows[2].variant.label, "3 Combats")
+    lu.assertEquals(snapshot.rows[2].realCombatCount, 3)
+    lu.assertEquals(snapshot.rows[2].encounterPolicyKey, "O_CombatData")
+    lu.assertEquals(snapshot.rows[2].rewardKind, "none")
+    lu.assertEquals(snapshot.rows[2].rewardPicks, {})
+    lu.assertEquals(#snapshot.rows[2].encounterRewardLegs, 2)
+    lu.assertEquals(snapshot.rows[2].encounterRewardLegs[1].key, "Combat1")
+    lu.assertEquals(snapshot.rows[2].encounterRewardLegs[1].label, "First Combat")
+    lu.assertEquals(snapshot.rows[2].encounterRewardLegs[1].rewardKind, "majorMinor")
+    lu.assertEquals(snapshot.rows[2].encounterRewardLegs[1].rewardPicks[1].value, "Major")
+    lu.assertEquals(snapshot.rows[2].encounterRewardLegs[1].rewardPicks[2].value, "Boon")
+    lu.assertEquals(snapshot.rows[2].encounterRewardLegs[1].rewardPicks[3].value, "ZeusUpgrade")
+    lu.assertEquals(snapshot.rows[2].encounterRewardLegs[2].key, "Combat2")
+    lu.assertEquals(snapshot.rows[2].encounterRewardLegs[2].label, "Second Combat")
+    lu.assertEquals(snapshot.rows[2].encounterRewardLegs[2].rewardKind, "majorMinor")
+    lu.assertEquals(snapshot.rows[2].encounterRewardLegs[2].rewardPicks[1].value, "Minor")
+    lu.assertEquals(snapshot.rows[2].encounterRewardLegs[2].rewardPicks[2].value, "GiftDrop")
+
+    lu.assertEquals(snapshot.rows[3].roleKey, "Fountain")
+    lu.assertEquals(snapshot.rows[3].variantKey, "")
+    lu.assertNil(snapshot.rows[3].variant)
+    lu.assertNil(snapshot.rows[3].encounterPolicyKey)
+    lu.assertEquals(snapshot.rows[3].rewardKind, "majorMinor")
+    lu.assertEquals(snapshot.rows[3].rewardPicks[1].value, "Minor")
+    lu.assertEquals(snapshot.rows[3].rewardPicks[2].value, "GiftDrop")
+
+    lu.assertEquals(snapshot.rows[4].roleKey, "Combat")
+    lu.assertEquals(snapshot.rows[4].variantKey, "TwoCombats")
+    lu.assertEquals(snapshot.rows[4].realCombatCount, 2)
+    lu.assertEquals(snapshot.rows[4].rewardKind, "none")
+    lu.assertEquals(#snapshot.rows[4].encounterRewardLegs, 1)
+    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[1].key, "Combat1")
+    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[1].rewardPicks[3].value, "HestiaUpgrade")
+
+    lu.assertEquals(snapshot.rows[7].slotKind, "preboss")
+    lu.assertEquals(snapshot.rows[7].roomKey, "O_PreBoss01")
+    lu.assertEquals(snapshot.rows[7].branchKey, "Shop")
+    lu.assertEquals(snapshot.rows[7].roleKey, "Shop")
+    lu.assertEquals(snapshot.rows[7].role.label, "Preboss Shop")
+    lu.assertEquals(snapshot.rows[7].rewardKind, "shop")
+end
+
+function TestRunPlannerControls.testMultiEncounterRuntimeInvalidatesUnavailableCombatCount()
+    local catalog = loadCatalog()
+    local template = loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local control = template.createRuntime(routeFields({
+            {
+                RoleKey = "Combat",
+                OptionKey = "O_Combat01",
+                VariantKey = "ThreeCombats",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(#snapshot.invalidRows, 1)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 1)
+    lu.assertEquals(snapshot.invalidRows[1].code, "variant_unavailable")
+    lu.assertEquals(snapshot.rows[1].invalidCode, "variant_unavailable")
 end
 
 function TestRunPlannerControls.testFixedLinearRuntimeSnapshotsPrebossBranchRows()

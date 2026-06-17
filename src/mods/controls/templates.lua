@@ -31,4 +31,8 @@ return {
         route = route,
         rewards = rewards,
     }),
+    MultiEncounterFixedRoute = import("mods/controls/MultiEncounterFixedRoute/MultiEncounterFixedRoute.lua", nil, {
+        route = route,
+        rewards = rewards,
+    }),
 }

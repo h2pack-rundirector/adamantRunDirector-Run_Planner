@@ -258,6 +258,46 @@ separate data-layer pass. The current catalog should stay honest: it normalizes
 planner-owned surfaces, with vanilla data used as source reference rather than
 runtime truth.
 
+## Runtime Dependency Tree
+
+Runtime should apply planned values as a dependency tree, not as one flat chain.
+A `Vanilla` value stops only the dependent subtree below that value; sibling
+branches remain usable when vanilla rules allow them.
+
+Planner-facing tree:
+
+```text
+Slot
+  Role
+    Room option / map
+    Encounter variant
+      Encounter reward legs
+    Reward
+      Reward class
+        Major reward type
+          Boon god
+        Minor reward type
+```
+
+Runtime invariants:
+
+- `Role = Vanilla` disables all room, map, encounter, and reward planning for
+  that slot.
+- `Combat` with a vanilla room/map option can still have a planned reward. The
+  user may mean "any valid combat room, but force this reward."
+- `Reward class = Vanilla` disables reward type and reward-specific descendants
+  such as boon god.
+- `Major reward type = Boon` with `God = Vanilla` means force a boon while
+  leaving the god source to vanilla/random selection, if that route supports
+  that partial override.
+- For O multi-encounter combat rows, `Encounter variant = Vanilla` disables
+  encounter reward legs. `TwoCombats` enables the first reward-bearing combat
+  leg, and `ThreeCombats` enables the first and second reward-bearing combat
+  legs.
+- Hidden or stale stored descendant values are ignored whenever their parent is
+  vanilla or otherwise inactive. Runtime should not require inactive storage to
+  be empty.
+
 `Boon` needs a second selection layer for Olympian god source. The
 player-facing picker should show the god source, not stop at the generic
 reward type:
