@@ -150,8 +150,9 @@ function runtime.create(fields, instance)
         return instance.biomeKey
     end
 
-    function control:setRouteContext(routeContext)
+    function control:setRouteContext(routeContext, routeKey)
         instance.routeContext = routeContext
+        instance.routeKey = routeKey
     end
 
     function control:label()
@@ -160,6 +161,10 @@ function runtime.create(fields, instance)
 
     function control:rowCount()
         return fields.Rooms:count()
+    end
+
+    function control:routeRows()
+        return routeRows
     end
 
     function control:slot(rowIndex)

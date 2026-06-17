@@ -92,7 +92,7 @@ local function drawRegionTab(ctx, region, childId, routeContext)
     if controlName ~= nil then
         local control = ctx.controls.get(controlName)
         if routeContext ~= nil then
-            routeContext:bindControl(control)
+            routeContext:bindControl(control, region)
         end
         draw.control(control, "planner")
     end
@@ -147,7 +147,8 @@ function ui.drawTab(_, ctx)
     draw.widgets.checkbox(state.get("RewardRoutingEnabled"), rewardRoutingOpts)
     draw.widgets.dropdown(state.get("PlanMode"), planModeOpts)
     draw.widgets.separator()
-    drawRouteTabs(ctx, beginRouteContext(ctx))
+    local routeContext = beginRouteContext(ctx)
+    drawRouteTabs(ctx, routeContext)
 end
 
 return ui

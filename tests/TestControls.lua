@@ -101,6 +101,17 @@ local function loadRunContext()
     return testImport("mods/route/run_context.lua")
 end
 
+local function routeDefinitions(routes)
+    local lookup = {}
+    for _, route in ipairs(routes or {}) do
+        lookup[route.key] = route
+    end
+    return {
+        ordered = routes,
+        lookup = lookup,
+    }
+end
+
 local function hasValue(values, expected)
     for _, value in ipairs(values) do
         if value == expected then
@@ -130,6 +141,120 @@ local function routeFields(rows, sideRows, sideRewardRows, encounterRewardRows, 
         EncounterRewards = fakeRows(encounterRewardRows or {}),
         CageRewards = fakeRows(cageRewardRows or {}),
     }
+end
+
+local function fakeUiRows(rowCount)
+    local rows = {}
+    local fields = {}
+    for rowIndex = 1, rowCount do
+        rows[rowIndex] = {}
+        fields[rowIndex] = {}
+    end
+
+    return {
+        count = function()
+            return rowCount
+        end,
+        read = function(_, rowIndex, alias)
+            return rows[rowIndex] and rows[rowIndex][alias] or nil
+        end,
+        get = function(_, rowIndex, alias)
+            local rowFields = fields[rowIndex]
+            if rowFields == nil then
+                return nil
+            end
+
+            local field = rowFields[alias]
+            if field == nil then
+                field = {
+                    read = function()
+                        return rows[rowIndex] and rows[rowIndex][alias] or nil
+                    end,
+                    write = function(_, value)
+                        if rows[rowIndex] then
+                            rows[rowIndex][alias] = value
+                        end
+                    end,
+                }
+                rowFields[alias] = field
+            end
+            return field
+        end,
+        reset = function(_, rowIndex, alias)
+            if rows[rowIndex] then
+                rows[rowIndex][alias] = nil
+            end
+        end,
+    }
+end
+
+local function routeUiFields(storage)
+    local fields = {}
+    for _, root in ipairs(storage or {}) do
+        if root.type == "table" then
+            fields[root.key] = fakeUiRows(root.defaultRows or root.maxRows or root.minRows or 0)
+        end
+    end
+    return fields
+end
+
+local function noOpDraw()
+    local imgui = {
+        BeginTabBar = function()
+            return false
+        end,
+        BeginTabItem = function()
+            return false
+        end,
+        EndTabBar = function()
+        end,
+        EndTabItem = function()
+        end,
+        GetCursorPosX = function()
+            return 0
+        end,
+    }
+    for _, name in ipairs({
+        "AlignTextToFramePadding",
+        "Text",
+        "SameLine",
+        "SetCursorPosX",
+        "Spacing",
+        "Separator",
+    }) do
+        imgui[name] = function()
+        end
+    end
+
+    return {
+        imgui = imgui,
+        widgets = {
+            dropdown = function()
+                return false
+            end,
+        },
+    }
+end
+
+local function createUiControl(template, biome, name)
+    local instance = template.prepare({
+        name = name or ("Route" .. biome.key),
+        biome = biome,
+    })
+    return template.createUi(routeUiFields(template.storage(instance)), instance), instance
+end
+
+local function measureAllocKb(iterations, callback)
+    callback()
+    collectgarbage("collect")
+    collectgarbage("stop")
+    local before = collectgarbage("count")
+    for _ = 1, iterations do
+        callback()
+    end
+    local after = collectgarbage("count")
+    collectgarbage("restart")
+    return after - before
 end
 
 function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
@@ -166,6 +291,102 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
     lu.assertEquals(controls.RouteO.template, "MultiEncounterFixedRoute")
     lu.assertEquals(controls.RouteP.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteQ.template, "FixedLinearRoute")
+end
+
+function TestRunPlannerControls.testRouteTemplateViewsSupportNoOpUiTraversal()
+    local catalog = loadCatalog()
+    local cases = {
+        { key = "F", template = loadFixedLinearTemplate() },
+        { key = "G", template = loadFixedLinearTemplate() },
+        { key = "H", template = loadFieldsCageTemplate() },
+        { key = "I", template = loadClockworkGoalTemplate() },
+        { key = "N", template = loadHubPylonTemplate() },
+        { key = "O", template = loadMultiEncounterTemplate() },
+        { key = "P", template = loadFixedLinearTemplate() },
+        { key = "Q", template = loadFixedLinearTemplate() },
+    }
+    local draw = noOpDraw()
+    local viewNames = { "rooms", "rewards", "sideRooms" }
+
+    for _, case in ipairs(cases) do
+        local control, instance = createUiControl(case.template, catalog.lookup[case.key], "Route" .. case.key)
+        for _, viewName in ipairs(viewNames) do
+            local view = case.template.views[viewName]
+            if view ~= nil then
+                view(draw, control, instance)
+            end
+        end
+    end
+end
+
+function TestRunPlannerControls.testRouteTemplateViewAllocationsStayBounded()
+    local catalog = loadCatalog()
+    local draw = noOpDraw()
+    local iterations = 100
+    local cases = {
+        {
+            key = "F",
+            template = loadFixedLinearTemplate(),
+            budgets = { rooms = 160, rewards = 128 },
+        },
+        {
+            key = "G",
+            template = loadFixedLinearTemplate(),
+            budgets = { rooms = 128, rewards = 128 },
+        },
+        {
+            key = "H",
+            template = loadFieldsCageTemplate(),
+            budgets = { rooms = 96, rewards = 96 },
+        },
+        {
+            key = "I",
+            template = loadClockworkGoalTemplate(),
+            budgets = { rooms = 192, rewards = 160 },
+        },
+        {
+            key = "N",
+            template = loadHubPylonTemplate(),
+            budgets = { rooms = 96, rewards = 128, sideRooms = 96 },
+        },
+        {
+            key = "O",
+            template = loadMultiEncounterTemplate(),
+            budgets = { rooms = 128, rewards = 96 },
+        },
+        {
+            key = "P",
+            template = loadFixedLinearTemplate(),
+            budgets = { rooms = 96, rewards = 128 },
+        },
+        {
+            key = "Q",
+            template = loadFixedLinearTemplate(),
+            budgets = { rooms = 96, rewards = 96 },
+        },
+    }
+
+    for _, case in ipairs(cases) do
+        local control, instance = createUiControl(case.template, catalog.lookup[case.key], "Route" .. case.key)
+        for viewName, budgetKb in pairs(case.budgets) do
+            local view = case.template.views[viewName]
+            local allocatedKb = measureAllocKb(iterations, function()
+                view(draw, control, instance)
+            end)
+
+            lu.assertTrue(
+                allocatedKb < budgetKb,
+                string.format(
+                    "Route%s %s traversal allocated %.1f KB across %d no-op draws; budget %.1f KB",
+                    case.key,
+                    viewName,
+                    allocatedKb,
+                    iterations,
+                    budgetKb
+                )
+            )
+        end
+    end
 end
 
 function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
@@ -1046,6 +1267,71 @@ function TestRunPlannerControls.testHubPylonRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[10].rewardKind, "shop")
 end
 
+function TestRunPlannerControls.testHubPylonPolicyAllowsDuplicateBoonSources()
+    local catalog = loadCatalog()
+    local template = loadHubPylonTemplate()
+    local instance = template.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {},
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "N_Combat12",
+                Reward1Key = "Boon",
+                Reward2Key = "ZeusUpgrade",
+            },
+            {
+                RoleKey = "Combat",
+                OptionKey = "N_Combat13",
+                Reward1Key = "Boon",
+                Reward2Key = "ZeusUpgrade",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertTrue(snapshot.valid)
+    lu.assertFalse(snapshot.disabled)
+    lu.assertEquals(#snapshot.invalidRows, 0)
+    lu.assertEquals(snapshot.rows[4].rewardPicks[2].value, "ZeusUpgrade")
+    lu.assertEquals(snapshot.rows[5].rewardPicks[2].value, "ZeusUpgrade")
+end
+
+function TestRunPlannerControls.testHubPylonPolicyRejectsDuplicateNonBoonRewards()
+    local catalog = loadCatalog()
+    local template = loadHubPylonTemplate()
+    local instance = template.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {},
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "N_Combat12",
+                Reward1Key = "MaxHealthDropBig",
+            },
+            {
+                RoleKey = "Combat",
+                OptionKey = "N_Combat13",
+                Reward1Key = "MaxHealthDropBig",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(#snapshot.invalidRows, 1)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
+    lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_reward_type")
+    lu.assertEquals(snapshot.rows[5].invalidCode, "duplicate_reward_type")
+end
+
 function TestRunPlannerControls.testFixedLinearPrebossRowsUseBranchChoices()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
@@ -1478,6 +1764,83 @@ function TestRunPlannerControls.testFieldsCageRuntimeInvalidatesForcedCageReward
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
     lu.assertEquals(snapshot.invalidRows[1].code, "cage_count_requires_map")
     lu.assertEquals(snapshot.rows[2].invalidCode, "cage_count_requires_map")
+end
+
+function TestRunPlannerControls.testFieldsCagePolicyRejectsDuplicateBoonSourcesInSameCageSet()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat04",
+                VariantKey = "ThreeRewards",
+            },
+        }, nil, nil, nil, {
+            {
+                Reward1Key = "Boon",
+                Reward2Key = "PoseidonUpgrade",
+            },
+            {
+                Reward1Key = "Boon",
+                Reward2Key = "PoseidonUpgrade",
+            },
+            {
+                Reward1Key = "HermesUpgrade",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(#snapshot.invalidRows, 1)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_boon_source")
+    lu.assertEquals(snapshot.rows[2].invalidCode, "duplicate_boon_source")
+end
+
+function TestRunPlannerControls.testFieldsCagePolicyRejectsDuplicateNonBoonRewardsInUiRowValidation()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local fields = routeFields({
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat04",
+                VariantKey = "TwoRewards",
+            },
+        }, nil, nil, nil, {
+            {
+                Reward1Key = "MaxHealthDrop",
+            },
+            {
+                Reward1Key = "MaxHealthDrop",
+            },
+        })
+    local runtimeControl = template.createRuntime(fields, instance)
+    local uiControl = template.createUi(fields, instance)
+
+    local row = runtimeControl:rowSnapshot(2)
+    lu.assertTrue(row.valid)
+
+    local validation = uiControl:uiRowValidation(2)
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "duplicate_reward_type")
+
+    local snapshot = runtimeControl:buildSnapshot()
+    lu.assertFalse(snapshot.valid)
+    lu.assertEquals(#snapshot.invalidRows, 1)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_reward_type")
+    lu.assertEquals(snapshot.rows[2].invalidCode, "duplicate_reward_type")
 end
 
 function TestRunPlannerControls.testFieldsCageAvailabilityFiltersEchoToThirdPick()
@@ -1984,6 +2347,130 @@ function TestRunPlannerControls.testClockworkGoalTrialRequirementsUsePriorUnderw
 
     iInstance.routeContext = routeContext
     lu.assertTrue(hasValue(data.roleValuesForRow(iInstance, rows, 3), "Trial"))
+end
+
+function TestRunPlannerControls.testRouteContextScopesPriorGodLootByRoute()
+    local catalog = loadCatalog()
+    local fixedTemplate = loadFixedLinearTemplate()
+    local fInstance = fixedTemplate.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local fControl = fixedTemplate.createRuntime(routeFields({
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat02",
+            Reward1Key = "Major",
+            Reward2Key = "Boon",
+            Reward3Key = "ZeusUpgrade",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat03",
+            Reward1Key = "Major",
+            Reward2Key = "Boon",
+            Reward3Key = "ApolloUpgrade",
+        },
+    }), fInstance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "WithErebus",
+                label = "With Erebus",
+                biomes = { "F", "I" },
+            },
+            {
+                key = "TartarusOnly",
+                label = "Tartarus Only",
+                biomes = { "I" },
+            },
+        }),
+        controlResolver = function(controlName)
+            if controlName == "RouteF" then
+                return fControl
+            end
+            return nil
+        end,
+    })
+
+    local data = loadClockworkGoalData()
+    local iInstance = data.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local rows = fakeRows({
+        {},
+        {
+            RoleKey = "Goal",
+            OptionKey = "I_Combat01",
+        },
+        {},
+    })
+    iInstance.routeContext = routeContext
+
+    iInstance.routeKey = "TartarusOnly"
+    lu.assertFalse(hasValue(data.roleValuesForRow(iInstance, rows, 3), "Trial"))
+
+    iInstance.routeKey = "WithErebus"
+    lu.assertTrue(hasValue(data.roleValuesForRow(iInstance, rows, 3), "Trial"))
+end
+
+function TestRunPlannerControls.testMultiEncounterTrialRequirementsUsePriorSurfaceBiomes()
+    local catalog = loadCatalog()
+    local hubTemplate = loadHubPylonTemplate()
+    local nInstance = hubTemplate.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local nControl = hubTemplate.createRuntime(routeFields({
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat12",
+            Reward1Key = "Boon",
+            Reward2Key = "ZeusUpgrade",
+        },
+        {
+            RoleKey = "Story",
+            OptionKey = "N_Story01",
+        },
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "N_MiniBoss02",
+            Reward1Key = "AphroditeUpgrade",
+        },
+    }), nInstance)
+    local routeContext = loadRunContext().create({
+        routes = catalog.routes,
+        controlResolver = function(controlName)
+            if controlName == "RouteN" then
+                return nControl
+            end
+            return nil
+        end,
+    })
+
+    local data = loadMultiEncounterData()
+    local oInstance = data.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local rows = fakeRows({
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat01",
+        },
+        {},
+    })
+
+    lu.assertFalse(hasValue(data.roleValuesForRow(oInstance, rows, 3), "Trial"))
+
+    oInstance.routeContext = routeContext
+    lu.assertTrue(hasValue(data.roleValuesForRow(oInstance, rows, 3), "Trial"))
 end
 
 function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesPreviousRoomExitRequirement()

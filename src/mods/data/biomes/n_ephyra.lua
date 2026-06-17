@@ -68,6 +68,7 @@ return function(importer)
             storyRoomsByKey = layout.storyRoomsByKey,
             hubDoorRooms = layout.hubDoorRooms,
             subroomRewardStores = layout.subroomRewardStores,
+            offerPolicy = "N_HubPylons",
             minibossAvailability = {
                 mode = "oneOf",
                 rooms = { "N_MiniBoss01", "N_MiniBoss02" },

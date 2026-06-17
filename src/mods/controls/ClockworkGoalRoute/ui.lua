@@ -4,6 +4,7 @@ local deps = ...
 local data = deps.data
 local rewardRuntime = deps.rewardRuntime
 local rewardUi = deps.rewardUi
+local routeStatusUi = deps.routeStatusUi
 local runtime = deps.runtime
 
 local ui = {}
@@ -153,8 +154,7 @@ local function drawRowValidation(draw, control, instance, rowIndex)
         return
     end
 
-    draw.imgui.SameLine()
-    draw.imgui.Text("Invalid")
+    routeStatusUi.drawInvalid(draw, validation)
 end
 
 local function drawRouteRowHeader(imgui, slot)
@@ -266,21 +266,9 @@ end
 
 function ui.create(fields, instance)
     local control = runtime.create(fields, instance)
-    local routeRows = {
-        read = function(_, rowIndex, alias)
-            if data.isRewardAlias(alias) then
-                return fields.Rewards:read(rowIndex, alias)
-            end
-            return fields.Rooms:read(rowIndex, alias)
-        end,
-    }
 
     function control:fields()
         return fields
-    end
-
-    function control:routeRows()
-        return routeRows
     end
 
     function control:roomField(rowIndex, rowAlias)

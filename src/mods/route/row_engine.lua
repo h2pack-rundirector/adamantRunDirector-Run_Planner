@@ -323,7 +323,7 @@ function rowEngine.create(adapter)
         if not isRoleWithinSelectionCap(instance, role, rows, rowIndex) then
             return false
         end
-        if not requirements.status(routeApi, instance, rows, rowIndex, role).valid then
+        if not requirements.isSatisfied(routeApi, instance, rows, rowIndex, role) then
             return false
         end
 

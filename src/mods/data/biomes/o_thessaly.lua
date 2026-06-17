@@ -78,7 +78,10 @@ return function(importer)
                 key = "Trial",
                 label = "Trial",
                 roomOptions = layout.trialRooms,
-                reward = rewards.devotion({ rewardStore = "RunProgress" }),
+                reward = rewards.devotion({
+                    rewardStore = "RunProgress",
+                    previousRoomExitCount = false,
+                }),
                 routeRules = routeRules.role("Trial"),
                 reserve = true,
             },

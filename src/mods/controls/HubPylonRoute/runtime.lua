@@ -3,6 +3,8 @@
 local deps = ...
 local data = deps.data
 local rewardRuntime = deps.rewardRuntime
+local rewardOfferPolicies = deps.rewardOfferPolicies
+local rewardOfferRules = deps.rewardOfferRules
 
 local runtime = {}
 
@@ -156,6 +158,57 @@ local function sideRoomSnapshot(fields, sideRowIndex, sideIndex, sideDoor)
     }
 end
 
+local function invalidRowKey(rowIndex, code)
+    return tostring(rowIndex or "") .. ":" .. tostring(code or "")
+end
+
+local function appendInvalidRow(invalidRows, seenInvalids, invalid)
+    if invalid == nil or invalid.rowIndex == nil then
+        return
+    end
+
+    local key = invalidRowKey(invalid.rowIndex, invalid.code)
+    if seenInvalids[key] then
+        return
+    end
+    seenInvalids[key] = true
+    invalidRows[#invalidRows + 1] = invalid
+end
+
+local function collectPylonRows(rows)
+    local items = {}
+    for _, row in ipairs(rows or {}) do
+        if row ~= nil and row.valid and row.slotKind == "pylonPick" then
+            items[#items + 1] = row
+        end
+    end
+    return items
+end
+
+local function applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
+    if rewardOfferRules == nil or rewardOfferPolicies == nil then
+        return
+    end
+
+    local policyKey = instance.biome
+        and instance.biome.hub
+        and instance.biome.hub.offerPolicy
+    local policy = rewardOfferRules.policyForScope(rewardOfferPolicies, policyKey, "biome.pylonRows")
+    if policy == nil then
+        return
+    end
+
+    for _, invalid in ipairs(rewardOfferRules.validateOffer(policy, collectPylonRows(rows))) do
+        local row = rows[invalid.rowIndex]
+        if row ~= nil and row.valid then
+            row.valid = false
+            row.invalidCode = invalid.code
+            row.invalidReason = invalid.message
+        end
+        appendInvalidRow(invalidRows, seenInvalids, invalid)
+    end
+end
+
 local function sideRoomSnapshots(instance, fields, routeRows, rowIndex)
     local sideRooms = {}
     for sideIndex = 1, data.sideDoorCountForRow(instance, routeRows, rowIndex) do
@@ -182,8 +235,9 @@ function runtime.create(fields, instance)
         return instance.biomeKey
     end
 
-    function control:setRouteContext(routeContext)
+    function control:setRouteContext(routeContext, routeKey)
         instance.routeContext = routeContext
+        instance.routeKey = routeKey
     end
 
     function control:label()
@@ -192,6 +246,10 @@ function runtime.create(fields, instance)
 
     function control:rowCount()
         return fields.Rooms:count()
+    end
+
+    function control:routeRows()
+        return routeRows
     end
 
     function control:slot(rowIndex)
@@ -262,19 +320,21 @@ function runtime.create(fields, instance)
     function control:buildSnapshot()
         local rows = {}
         local invalidRows = {}
+        local seenInvalids = {}
         self:beginReadPass()
         for rowIndex = 1, self:rowCount() do
             local row = self:rowSnapshot(rowIndex)
             rows[#rows + 1] = row
             if row ~= nil and not row.valid then
-                invalidRows[#invalidRows + 1] = {
+                appendInvalidRow(invalidRows, seenInvalids, {
                     rowIndex = row.rowIndex,
                     coordinate = row.coordinate,
                     code = row.invalidCode,
                     message = row.invalidReason,
-                }
+                })
             end
         end
+        applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
         self:endReadPass()
         return {
             controlName = instance.name,

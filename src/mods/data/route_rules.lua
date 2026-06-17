@@ -110,11 +110,15 @@ function routeRules.devotionPick()
     }
 end
 
-function routeRules.devotionRequirements()
-    return {
+function routeRules.devotionRequirements(opts)
+    opts = opts or {}
+    local requirements = {
         routeRules.priorDistinctGodLoot(2),
-        routeRules.previousRoomExitCount(2),
     }
+    if opts.previousRoomExitCount ~= false then
+        requirements[#requirements + 1] = routeRules.previousRoomExitCount(2)
+    end
+    return requirements
 end
 
 return routeRules

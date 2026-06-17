@@ -8,6 +8,7 @@ local ui = import("mods/controls/FixedLinearRoute/ui.lua", nil, {
     data = data,
     rewardRuntime = deps.rewards.runtime,
     rewardUi = deps.rewards.ui,
+    routeStatusUi = deps.routeStatusUi,
     runtime = runtime,
 })
 

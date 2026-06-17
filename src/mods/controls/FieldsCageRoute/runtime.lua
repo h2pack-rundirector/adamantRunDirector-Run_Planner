@@ -3,6 +3,8 @@
 local deps = ...
 local data = deps.data
 local rewardRuntime = deps.rewardRuntime
+local rewardOfferPolicies = deps.rewardOfferPolicies
+local rewardOfferRules = deps.rewardOfferRules
 
 local runtime = {}
 
@@ -109,7 +111,7 @@ local function cageRewardPicks(surface, cageRewardRows, cageRewardRowIndex)
     return picks
 end
 
-local function cageRewardSnapshot(fields, instance, rowIndex, cageIndex, leg)
+local function cageRewardSnapshot(fields, instance, rowIndex, coordinate, cageIndex, leg)
     local cageRewardRowIndex = data.cageRewardRowIndex(instance, rowIndex, cageIndex)
     if leg == nil or cageRewardRowIndex == nil then
         return nil
@@ -117,6 +119,8 @@ local function cageRewardSnapshot(fields, instance, rowIndex, cageIndex, leg)
 
     local surface = rewardSurfaceForContext(leg.reward)
     return {
+        rowIndex = rowIndex,
+        coordinate = coordinate,
         cageIndex = cageIndex,
         key = leg.key,
         label = leg.label,
@@ -129,14 +133,63 @@ end
 
 local function cageRewardSnapshots(fields, instance, routeRows, rowIndex)
     local snapshots = {}
+    local slot = instance.routeSlots and instance.routeSlots[rowIndex] or nil
     for cageIndex = 1, data.cageRewardCountForRow(instance, routeRows, rowIndex) do
         local leg = data.cageRewardLegForRow(instance, routeRows, rowIndex, cageIndex)
-        local snapshot = cageRewardSnapshot(fields, instance, rowIndex, cageIndex, leg)
+        local snapshot = cageRewardSnapshot(fields, instance, rowIndex, slot and slot.coordinate or nil, cageIndex, leg)
         if snapshot ~= nil then
             snapshots[#snapshots + 1] = snapshot
         end
     end
     return snapshots
+end
+
+local function invalidRowKey(rowIndex, code)
+    return tostring(rowIndex or "") .. ":" .. tostring(code or "")
+end
+
+local function appendInvalidRow(invalidRows, seenInvalids, invalid)
+    if invalid == nil or invalid.rowIndex == nil then
+        return
+    end
+
+    local key = invalidRowKey(invalid.rowIndex, invalid.code)
+    if seenInvalids[key] then
+        return
+    end
+    seenInvalids[key] = true
+    invalidRows[#invalidRows + 1] = invalid
+end
+
+local function policyForScope(instance, scope)
+    if rewardOfferRules == nil or rewardOfferPolicies == nil then
+        return nil
+    end
+
+    local policyKey = instance.biome
+        and instance.biome.fields
+        and instance.biome.fields.offerPolicy
+    return rewardOfferRules.policyForScope(rewardOfferPolicies, policyKey, scope)
+end
+
+local function applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
+    local policy = policyForScope(instance, "row.cageRewards")
+    if policy == nil then
+        return
+    end
+
+    for _, row in ipairs(rows) do
+        if row ~= nil and row.valid then
+            for _, invalid in ipairs(rewardOfferRules.validateOffer(policy, row.cageRewards)) do
+                if row.valid then
+                    row.valid = false
+                    row.invalidCode = invalid.code
+                    row.invalidReason = invalid.message
+                end
+                appendInvalidRow(invalidRows, seenInvalids, invalid)
+            end
+        end
+    end
 end
 
 function runtime.create(fields, instance)
@@ -153,8 +206,9 @@ function runtime.create(fields, instance)
         return instance.biomeKey
     end
 
-    function control:setRouteContext(routeContext)
+    function control:setRouteContext(routeContext, routeKey)
         instance.routeContext = routeContext
+        instance.routeKey = routeKey
     end
 
     function control:label()
@@ -163,6 +217,10 @@ function runtime.create(fields, instance)
 
     function control:rowCount()
         return fields.Rooms:count()
+    end
+
+    function control:routeRows()
+        return routeRows
     end
 
     function control:slot(rowIndex)
@@ -239,19 +297,21 @@ function runtime.create(fields, instance)
     function control:buildSnapshot()
         local rows = {}
         local invalidRows = {}
+        local seenInvalids = {}
         self:beginReadPass()
         for rowIndex = 1, self:rowCount() do
             local row = self:rowSnapshot(rowIndex)
             rows[#rows + 1] = row
             if row ~= nil and not row.valid then
-                invalidRows[#invalidRows + 1] = {
+                appendInvalidRow(invalidRows, seenInvalids, {
                     rowIndex = row.rowIndex,
                     coordinate = row.coordinate,
                     code = row.invalidCode,
                     message = row.invalidReason,
-                }
+                })
             end
         end
+        applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
         self:endReadPass()
         return {
             controlName = instance.name,

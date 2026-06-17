@@ -177,6 +177,12 @@ local function activeReadPass(instance)
     return nil
 end
 
+local function clearMap(map)
+    for key in pairs(map) do
+        map[key] = nil
+    end
+end
+
 local function countCache(instance, rows)
     local pass = activeReadPass(instance)
     if pass == nil then
@@ -184,14 +190,18 @@ local function countCache(instance, rows)
     end
 
     local cache = instance._clockworkCountCache
-    if cache == nil or cache.pass ~= pass or cache.rows ~= rows then
+    if cache == nil then
         cache = {
-            pass = pass,
-            rows = rows,
             priorGoals = {},
             priorNonGoals = {},
         }
         instance._clockworkCountCache = cache
+    end
+    if cache.pass ~= pass or cache.rows ~= rows then
+        cache.pass = pass
+        cache.rows = rows
+        clearMap(cache.priorGoals)
+        clearMap(cache.priorNonGoals)
     end
     return cache
 end

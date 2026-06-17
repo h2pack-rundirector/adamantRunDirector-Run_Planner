@@ -8,6 +8,44 @@ local function status(code, message)
     return common.invalidStatus(code, message)
 end
 
+local function clearMap(map)
+    for key in pairs(map) do
+        map[key] = nil
+    end
+end
+
+local function scratchSelections(instance)
+    local scratch = instance._routeRequirementSelections
+    if scratch == nil then
+        scratch = {}
+        instance._routeRequirementSelections = scratch
+    else
+        clearMap(scratch)
+    end
+    return scratch
+end
+
+local function previousRoomExitCountSatisfied(route, instance, rows, rowIndex, requirement)
+    local previousIndex = rowIndex - 1
+    if previousIndex < 1 then
+        return false
+    end
+
+    local previousValidation = route.validateRow(instance, rows, previousIndex)
+    if not previousValidation.valid then
+        return false
+    end
+
+    local previousRoleKey = route.resolveRole(instance, rows, previousIndex)
+    if previousRoleKey == common.VANILLA_ROLE_KEY then
+        return false
+    end
+
+    local _, previousOption = route.resolveOption(instance, rows, previousIndex, previousRoleKey)
+    local exitCount = previousOption and tonumber(previousOption.exitCount) or nil
+    return exitCount ~= nil and exitCount >= requirement.minCount
+end
+
 local function previousRoomExitCountStatus(route, instance, rows, rowIndex, requirement)
     local previousIndex = rowIndex - 1
     if previousIndex < 1 then
@@ -106,33 +144,46 @@ end
 local function collectRouteContextGodLoot(instance, countedLookup, selections, stopAtCount)
     local routeContext = instance and instance.routeContext or nil
     if routeContext ~= nil and routeContext.collectPriorGodLoot ~= nil then
-        routeContext:collectPriorGodLoot(instance.biomeKey, countedLookup, selections, stopAtCount)
+        routeContext:collectPriorGodLoot(instance.routeKey, instance.biomeKey, countedLookup, selections, stopAtCount)
     end
 end
 
-local function priorDistinctGodLootStatus(route, instance, rows, rowIndex, requirement)
+local function priorDistinctGodLootSatisfied(route, instance, rows, rowIndex, requirement, selections)
     local countedLookup = requirement.countedLootLookup or common.buildKeyLookup(requirement.countedLootNames)
-    local selections = {}
+    selections = selections or scratchSelections(instance)
 
     collectRouteContextGodLoot(instance, countedLookup, selections, requirement.minDistinct)
     local count = selectionCount(selections)
     if count >= requirement.minDistinct then
-        return common.validStatus()
+        return true
     end
 
     for priorIndex = 1, rowIndex - 1 do
         count = count + collectRewardGodLoot(route, instance, rows, priorIndex, selections, countedLookup)
         if count >= requirement.minDistinct then
-            return common.validStatus()
+            return true
         end
     end
-    if count < requirement.minDistinct then
-        return status(
-            "prior_distinct_god_loot",
-            "Requires at least " .. tostring(requirement.minDistinct) .. " prior planned god rewards"
-        )
+    return false
+end
+
+local function priorDistinctGodLootStatus(route, instance, rows, rowIndex, requirement)
+    if priorDistinctGodLootSatisfied(route, instance, rows, rowIndex, requirement) then
+        return common.validStatus()
     end
-    return common.validStatus()
+    return status(
+        "prior_distinct_god_loot",
+        "Requires at least " .. tostring(requirement.minDistinct) .. " prior planned god rewards"
+    )
+end
+
+local function itemSatisfied(route, instance, rows, rowIndex, requirement)
+    if requirement.kind == "previousRoomExitCount" then
+        return previousRoomExitCountSatisfied(route, instance, rows, rowIndex, requirement)
+    elseif requirement.kind == "priorDistinctGodLoot" then
+        return priorDistinctGodLootSatisfied(route, instance, rows, rowIndex, requirement)
+    end
+    return false
 end
 
 local function itemStatus(route, instance, rows, rowIndex, requirement)
@@ -157,6 +208,15 @@ local function listStatus(route, instance, rows, rowIndex, requirementList)
     return common.validStatus()
 end
 
+local function listSatisfied(route, instance, rows, rowIndex, requirementList)
+    for _, requirement in ipairs(requirementList or EMPTY_LIST) do
+        if not itemSatisfied(route, instance, rows, rowIndex, requirement) then
+            return false
+        end
+    end
+    return true
+end
+
 function requirements.status(route, instance, rows, rowIndex, role, option)
     local result = listStatus(route, instance, rows, rowIndex, role.routeRequirements)
     if not result.valid then
@@ -168,6 +228,18 @@ function requirements.status(route, instance, rows, rowIndex, role, option)
         return common.validStatus()
     end
     return listStatus(route, instance, rows, rowIndex, context.routeRequirements)
+end
+
+function requirements.isSatisfied(route, instance, rows, rowIndex, role, option)
+    if not listSatisfied(route, instance, rows, rowIndex, role.routeRequirements) then
+        return false
+    end
+
+    local context = common.rewardContext(role, option)
+    if context == nil then
+        return true
+    end
+    return listSatisfied(route, instance, rows, rowIndex, context.routeRequirements)
 end
 
 function requirements.prepareList(requirementList)

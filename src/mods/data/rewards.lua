@@ -88,9 +88,10 @@ function rewards.forcedReward(rewardType, opts)
 end
 
 function rewards.devotion(opts)
+    opts = opts or {}
     local context = rewards.forcedReward("Devotion", opts)
     context.pick = routeRules.devotionPick()
-    context.routeRequirements = routeRules.devotionRequirements()
+    context.routeRequirements = routeRules.devotionRequirements(opts)
     return context
 end
 

@@ -6,18 +6,25 @@ local function routeControlName(biomeKey)
     return "Route" .. tostring(biomeKey or "")
 end
 
-local function buildRouteInfoByBiome(routes)
+local function buildRouteInfo(routes)
+    local routeInfoByRoute = {}
     local routeInfoByBiome = {}
     for _, route in ipairs(routes and routes.ordered or EMPTY_LIST) do
+        local routeInfos = {}
+        routeInfoByRoute[route.key] = routeInfos
         for index, routeBiomeKey in ipairs(route.biomes or EMPTY_LIST) do
-            routeInfoByBiome[routeBiomeKey] = {
+            local info = {
                 route = route,
                 index = index,
                 controlName = routeControlName(routeBiomeKey),
             }
+            routeInfos[routeBiomeKey] = info
+            if routeInfoByBiome[routeBiomeKey] == nil then
+                routeInfoByBiome[routeBiomeKey] = info
+            end
         end
     end
-    return routeInfoByBiome
+    return routeInfoByRoute, routeInfoByBiome
 end
 
 local function addGodLootSelection(selections, countedLookup, lootName)
@@ -91,14 +98,24 @@ local function collectRowGodLoot(row, countedLookup, selections)
     return count
 end
 
-local function controlSnapshot(context, biomeKey)
-    if context.snapshotByBiome[biomeKey] ~= nil then
-        return context.snapshotByBiome[biomeKey]
+local function routeSnapshotCache(context, routeKey)
+    local snapshots = context.snapshotByRoute[routeKey]
+    if snapshots == nil then
+        snapshots = {}
+        context.snapshotByRoute[routeKey] = snapshots
+    end
+    return snapshots
+end
+
+local function controlSnapshot(context, routeKey, biomeKey)
+    local snapshots = routeSnapshotCache(context, routeKey)
+    if snapshots[biomeKey] ~= nil then
+        return snapshots[biomeKey]
     end
 
-    local control = context:controlForBiome(biomeKey)
+    local control = context:controlForBiome(routeKey, biomeKey)
     local snapshot = control ~= nil and control.read ~= nil and control:read("snapshot") or nil
-    context.snapshotByBiome[biomeKey] = snapshot or false
+    snapshots[biomeKey] = snapshot or false
     return snapshot
 end
 
@@ -110,36 +127,50 @@ end
 
 function runContext.create(opts)
     opts = opts or {}
+    local routeInfoByRoute, routeInfoByBiome = buildRouteInfo(opts.routes)
     local context = {
         routes = opts.routes or {},
-        routeInfoByBiome = buildRouteInfoByBiome(opts.routes),
+        routeInfoByRoute = routeInfoByRoute,
+        routeInfoByBiome = routeInfoByBiome,
         controlResolver = opts.controlResolver,
         controls = opts.controls,
-        snapshotByBiome = {},
+        snapshotByRoute = {},
     }
 
     function context:beginPass(controls)
         self.controls = controls or self.controls
-        clearMap(self.snapshotByBiome)
+        clearMap(self.snapshotByRoute)
     end
 
-    function context:bindControl(control)
+    function context:bindControl(control, routeKey)
         if control ~= nil and control.setRouteContext ~= nil then
-            control:setRouteContext(self)
+            control:setRouteContext(self, routeKey)
         end
         return control
     end
 
-    function context:controlForBiome(biomeKey)
-        local info = self.routeInfoByBiome[biomeKey]
+    function context:routeInfo(routeKey, biomeKey)
+        if biomeKey == nil then
+            biomeKey = routeKey
+            routeKey = nil
+        end
+
+        if routeKey ~= nil and self.routeInfoByRoute[routeKey] ~= nil then
+            return self.routeInfoByRoute[routeKey][biomeKey]
+        end
+        return self.routeInfoByBiome[biomeKey]
+    end
+
+    function context:controlForBiome(routeKey, biomeKey)
+        local info = self:routeInfo(routeKey, biomeKey)
         if info == nil then
             return nil
         end
         if self.controlResolver ~= nil then
-            return self:bindControl(self.controlResolver(info.controlName, biomeKey))
+            return self:bindControl(self.controlResolver(info.controlName, biomeKey, info.route.key), info.route.key)
         end
         if self.controls ~= nil and self.controls.get ~= nil then
-            return self:bindControl(self.controls.get(info.controlName))
+            return self:bindControl(self.controls.get(info.controlName), info.route.key)
         end
         return nil
     end
@@ -147,24 +178,32 @@ function runContext.create(opts)
     function context:attachControls()
         for _, route in ipairs(self.routes.ordered or EMPTY_LIST) do
             for _, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
-                self:controlForBiome(biomeKey)
+                self:controlForBiome(route.key, biomeKey)
             end
         end
     end
 
-    function context:collectPriorGodLoot(biomeKey, countedLookup, selections, stopAtCount)
+    function context:collectPriorGodLoot(routeKey, biomeKey, countedLookup, selections, stopAtCount)
+        if type(biomeKey) == "table" then
+            stopAtCount = selections
+            selections = countedLookup
+            countedLookup = biomeKey
+            biomeKey = routeKey
+            routeKey = nil
+        end
+
         if countedLookup == nil or selections == nil then
             return selections
         end
 
-        local info = self.routeInfoByBiome[biomeKey]
+        local info = self:routeInfo(routeKey, biomeKey)
         if info == nil then
             return selections
         end
 
         local count = selectionCount(selections)
         for index = 1, info.index - 1 do
-            local snapshot = controlSnapshot(self, info.route.biomes[index])
+            local snapshot = controlSnapshot(self, info.route.key, info.route.biomes[index])
             for _, row in ipairs(snapshot and snapshot.rows or EMPTY_LIST) do
                 count = count + collectRowGodLoot(row, countedLookup, selections)
                 if stopAtCount ~= nil and count >= stopAtCount then
@@ -192,17 +231,26 @@ function runContext.create(opts)
         end
 
         for _, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
-            local snapshot = controlSnapshot(self, biomeKey)
+            local snapshot = controlSnapshot(self, route.key, biomeKey)
             snapshots[#snapshots + 1] = snapshot
-            for _, invalidRow in ipairs(snapshot and snapshot.invalidRows or EMPTY_LIST) do
+            if not snapshot then
                 invalidRows[#invalidRows + 1] = {
                     biomeKey = biomeKey,
-                    controlName = snapshot.controlName,
-                    rowIndex = invalidRow.rowIndex,
-                    coordinate = invalidRow.coordinate,
-                    code = invalidRow.code,
-                    message = invalidRow.message,
+                    controlName = routeControlName(biomeKey),
+                    code = "missing_control",
+                    message = "Missing route control: " .. tostring(biomeKey),
                 }
+            else
+                for _, invalidRow in ipairs(snapshot.invalidRows or EMPTY_LIST) do
+                    invalidRows[#invalidRows + 1] = {
+                        biomeKey = biomeKey,
+                        controlName = snapshot.controlName,
+                        rowIndex = invalidRow.rowIndex,
+                        coordinate = invalidRow.coordinate,
+                        code = invalidRow.code,
+                        message = invalidRow.message,
+                    }
+                end
             end
         end
 

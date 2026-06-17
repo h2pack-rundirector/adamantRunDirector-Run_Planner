@@ -150,12 +150,15 @@ local function devotionPick()
 end
 
 local function devotionReward(opts)
+    opts = opts or {}
     local reward = forcedReward("Devotion", opts)
     reward.pick = devotionPick()
     reward.routeRequirements = {
         devotionRequirement(),
-        previousExitCountRequirement(),
     }
+    if opts.previousRoomExitCount ~= false then
+        reward.routeRequirements[#reward.routeRequirements + 1] = previousExitCountRequirement()
+    end
     return reward
 end
 
@@ -415,7 +418,10 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     assertOneShotRole(biomes.lookup.O.rolesByKey.Midshop)
     assertOneShotRole(biomes.lookup.O.rolesByKey.Trial)
     lu.assertEquals(biomes.lookup.O.rolesByKey.Trial.roomOptions[1].key, "O_Devotion01")
-    lu.assertEquals(biomes.lookup.O.rolesByKey.Trial.reward, devotionReward({ rewardStore = "RunProgress" }))
+    lu.assertEquals(biomes.lookup.O.rolesByKey.Trial.reward, devotionReward({
+        rewardStore = "RunProgress",
+        previousRoomExitCount = false,
+    }))
     lu.assertEquals(biomes.lookup.O.rolesByKey.Miniboss.roomOptions[2].key, "O_MiniBoss02")
     lu.assertEquals(biomes.lookup.O.rolesByKey.Miniboss.routeRules, oneShotRouteRules())
 
