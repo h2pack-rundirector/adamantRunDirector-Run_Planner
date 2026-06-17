@@ -11,9 +11,9 @@ return function(importer)
         slotLayout = {
             coordinate = "ClockworkGoalRoute",
             routeStartRow = 1,
-            routeEndRow = 11,
+            routeEndRow = 12,
             requiredGoalRewards = 5,
-            maxRouteRows = 11,
+            maxRouteRows = 12,
             default = {
                 kind = "goal",
                 alternate = "VanillaSafe",
@@ -23,9 +23,7 @@ return function(importer)
                     key = "Intro",
                     label = "Intro",
                     roomKey = "I_Intro",
-                    reward = rewards.roomStore("RunProgress", {
-                        ineligibleRewardTypes = rewards.rewardSet("OpeningRoomBans"),
-                    }),
+                    reward = rewards.none(),
                     locked = true,
                 },
             },
@@ -43,7 +41,8 @@ return function(importer)
         },
         clockwork = {
             requiredGoalRewards = 5,
-            maxRouteRows = 11,
+            maxRouteRows = 12,
+            forcedFirstRouteRole = "Goal",
             goalReward = "ClockworkGoal",
             remainingGoalCounter = "RemainingClockworkGoals",
             extensionRewardBudget = {
@@ -94,7 +93,7 @@ return function(importer)
                 key = "Trial",
                 label = "Trial",
                 mapOptions = layout.combatRooms,
-                reward = rewards.devotion({ rewardStore = "TartarusRewards" }),
+                reward = rewards.devotion({ rewardStore = "RunProgress" }),
                 routeRules = routeRules.role("Trial"),
                 countsNonGoalReward = true,
                 reserve = true,

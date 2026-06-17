@@ -30,14 +30,6 @@ local function rewardFields(rewardRows, rowIndex)
     }
 end
 
-local function encounterRewardFields(encounterRewardRows, encounterRewardRowIndex)
-    return {
-        read = function(_, alias)
-            return encounterRewardRows:read(encounterRewardRowIndex, alias)
-        end,
-    }
-end
-
 local function createRouteRows(fields)
     return {
         read = function(_, rowIndex, alias)
@@ -50,6 +42,9 @@ local function createRouteRows(fields)
 end
 
 local function rewardContext(role, option)
+    if role ~= nil and role.reward ~= nil and role.reward.kind == "forcedReward" then
+        return role.reward
+    end
     if option ~= nil and option.reward ~= nil then
         return option.reward
     end
@@ -61,13 +56,6 @@ local function rewardSurface(role, option)
         return nil
     end
     return rewardRuntime.surfaceFor(rewardContext(role, option))
-end
-
-local function rewardSurfaceForContext(context)
-    if rewardRuntime == nil then
-        return nil
-    end
-    return rewardRuntime.surfaceFor(context)
 end
 
 local function prewarmRewardSurface(role, option)
@@ -83,57 +71,25 @@ local function prewarmRewardSurfaces(instance)
     end
     for _, slot in ipairs(instance.routeSlots or {}) do
         prewarmRewardSurface(slot.role)
-        for _, branch in ipairs(slot.branches or {}) do
-            prewarmRewardSurface(branch)
-        end
-    end
-    for _, policy in pairs(instance.encounterPoliciesByKey or {}) do
-        for _, leg in ipairs(policy.rewardLegs or {}) do
-            rewardSurfaceForContext(leg.reward)
-        end
     end
 end
 
-local function encounterRewardPicks(surface, encounterRewardRows, encounterRewardRowIndex)
-    local picks = rewardRuntime
-        and rewardRuntime.snapshot(surface, encounterRewardFields(encounterRewardRows, encounterRewardRowIndex))
-        or {}
-    for _, pick in ipairs(picks) do
-        pick.storageAlias = pick.alias
+local function rowRoomKey(slot, option)
+    if option ~= nil and option.key ~= nil and option.key ~= "" then
+        return option.key
     end
-    return picks
+    return slot and slot.roomKey or nil
 end
 
-local function encounterRewardLegSnapshot(fields, instance, rowIndex, legIndex, leg)
-    local encounterRewardRowIndex = data.encounterRewardRowIndex(instance, rowIndex, legIndex)
-    if leg == nil then
-        return nil
+local function roomOptions(slot)
+    local options = {}
+    for index, option in ipairs(slot and slot.roomOptions or {}) do
+        options[index] = {
+            key = option.key,
+            label = option.label,
+        }
     end
-    local surface = rewardSurfaceForContext(leg.reward)
-    if encounterRewardRowIndex == nil then
-        return nil
-    end
-    return {
-        legIndex = legIndex,
-        key = leg.key,
-        label = leg.label,
-        rewards = readRewards(fields.EncounterRewards, encounterRewardRowIndex),
-        rewardLoot = readRewardLoot(fields.EncounterRewards, encounterRewardRowIndex),
-        rewardKind = surface and surface.kind or "none",
-        rewardPicks = encounterRewardPicks(surface, fields.EncounterRewards, encounterRewardRowIndex),
-    }
-end
-
-local function encounterRewardLegSnapshots(fields, instance, routeRows, rowIndex)
-    local snapshots = {}
-    for legIndex = 1, data.encounterRewardLegCountForRow(instance, routeRows, rowIndex) do
-        local leg = data.encounterRewardLegForRow(instance, routeRows, rowIndex, legIndex)
-        local snapshot = encounterRewardLegSnapshot(fields, instance, rowIndex, legIndex, leg)
-        if snapshot ~= nil then
-            snapshots[#snapshots + 1] = snapshot
-        end
-    end
-    return snapshots
+    return options
 end
 
 function runtime.create(fields, instance)
@@ -178,11 +134,7 @@ function runtime.create(fields, instance)
     end
 
     function control:rewardSurface(rowIndex)
-        local role = self:role(rowIndex)
-        if role ~= nil and role.encounterPolicy ~= nil then
-            return nil
-        end
-        return rewardSurface(role, self:option(rowIndex))
+        return rewardSurface(self:role(rowIndex), self:option(rowIndex))
     end
 
     function control:beginReadPass()
@@ -205,29 +157,27 @@ function runtime.create(fields, instance)
 
         local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
         local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
-        local variantKey, variant = data.resolveVariant(instance, routeRows, rowIndex, roleKey)
         local validation = data.validateRow(instance, routeRows, rowIndex)
-        local encounterRewardLegs = encounterRewardLegSnapshots(fields, instance, routeRows, rowIndex)
-        local surface = role ~= nil and role.encounterPolicy == nil and rewardSurface(role, option) or nil
+        local surface = rewardSurface(role, option)
         return {
             rowIndex = rowIndex,
             coordinate = slot.coordinate,
+            routeRow = slot.routeRow,
             slotKind = slot.kind or "route",
-            roomKey = slot.roomKey,
-            branchKey = slot.branchKey,
+            roomKey = rowRoomKey(slot, option),
+            roomOptions = roomOptions(slot),
             slotLabel = slot.label,
             roleKey = roleKey,
             role = role,
             optionKey = optionKey,
             option = option,
+            countsGoalReward = role ~= nil and role.countsGoalReward == true,
+            countsNonGoalReward = role ~= nil and role.countsNonGoalReward == true
+                or option ~= nil and option.countsNonGoalReward == true,
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,
-            variantKey = variantKey,
-            variant = variant,
-            encounterPolicyKey = role and role.encounterPolicy or nil,
-            realCombatCount = variant and variant.realCombatCount or nil,
-            encounterRewardLegs = encounterRewardLegs,
+            variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
             rewards = readRewards(fields.Rewards, rowIndex),
             rewardLoot = readRewardLoot(fields.Rewards, rowIndex),
             rewardKind = surface and surface.kind or "none",
@@ -251,6 +201,9 @@ function runtime.create(fields, instance)
                 }
             end
         end
+        local goalCount = data.countGoals(instance, routeRows)
+        local nonGoalCount = data.countNonGoals(instance, routeRows)
+        local storyCount = data.countStories(instance, routeRows)
         self:endReadPass()
         return {
             controlName = instance.name,
@@ -259,6 +212,13 @@ function runtime.create(fields, instance)
             valid = invalidRows[1] == nil,
             disabled = invalidRows[1] ~= nil,
             invalidRows = invalidRows,
+            clockwork = {
+                goalCount = goalCount,
+                requiredGoalRewards = data.requiredGoalRewards(instance),
+                nonGoalRewardCount = nonGoalCount,
+                maxNonGoalRewards = data.maxNonGoalRewards(instance),
+                storyCount = storyCount,
+            },
             rows = rows,
         }
     end

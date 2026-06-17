@@ -223,6 +223,17 @@ function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
     lu.assertEquals(biomes.ordered[7].key, "P")
     lu.assertEquals(biomes.ordered[8].key, "Q")
 
+    lu.assertEquals(biomes.routes.ordered[1], {
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G", "H", "I" },
+    })
+    lu.assertEquals(biomes.routes.ordered[2], {
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N", "O", "P", "Q" },
+    })
+
     lu.assertEquals(biomes.lookup.F.slotLayout.coordinate, "BiomeDepthCache")
     lu.assertEquals(biomes.lookup.F.slotLayout.depthRange, { min = 0, max = 10 })
     lu.assertEquals(biomes.lookup.F.slotLayout.routeStartDepth, 1)
@@ -240,7 +251,7 @@ function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
     lu.assertEquals(biomes.lookup.I.adapter, "clockworkGoal")
     lu.assertEquals(biomes.lookup.I.slotLayout.coordinate, "ClockworkGoalRoute")
     lu.assertEquals(biomes.lookup.I.slotLayout.routeStartRow, 1)
-    lu.assertEquals(biomes.lookup.I.slotLayout.routeEndRow, 11)
+    lu.assertEquals(biomes.lookup.I.slotLayout.routeEndRow, 12)
     lu.assertEquals(biomes.lookup.I.slotLayout.requiredGoalRewards, 5)
 
     lu.assertEquals(biomes.lookup.N.adapter, "hubPylon")
@@ -425,7 +436,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
         ineligibleRewardTypes = REWARD_SETS.ClockworkExtensionCombatBans,
     }))
     lu.assertEquals(biomes.lookup.I.rolesByKey.Trial.mapOptions[1].key, "I_Combat01")
-    lu.assertEquals(biomes.lookup.I.rolesByKey.Trial.reward, devotionReward({ rewardStore = "TartarusRewards" }))
+    lu.assertEquals(biomes.lookup.I.rolesByKey.Trial.reward, devotionReward({ rewardStore = "RunProgress" }))
     assertOneShotRole(biomes.lookup.I.rolesByKey.Trial)
     lu.assertEquals(biomes.lookup.I.rolesByKey.Story.roomOptions[1].key, "I_Story01")
     assertOneShotRole(biomes.lookup.I.rolesByKey.Story)
@@ -519,15 +530,14 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     local tartarus = biomes.lookup.I
 
     lu.assertEquals(tartarus.slotLayout.fixedBeforeRoute[1].roomKey, "I_Intro")
-    lu.assertEquals(tartarus.slotLayout.fixedBeforeRoute[1].reward, roomStoreReward("RunProgress", {
-        ineligibleRewardTypes = REWARD_SETS.OpeningRoomBans,
-    }))
+    lu.assertEquals(tartarus.slotLayout.fixedBeforeRoute[1].reward, noneReward())
     lu.assertEquals(tartarus.slotLayout.fixedAfterGoals[1].roomOptions[1].key, "I_PreBoss01")
     lu.assertEquals(tartarus.slotLayout.fixedAfterGoals[1].roomOptions[2].key, "I_PreBoss02")
     lu.assertEquals(tartarus.slotLayout.fixedAfterGoals[1].reward, shopReward("I_WorldShop"))
 
     lu.assertEquals(tartarus.clockwork.requiredGoalRewards, 5)
-    lu.assertEquals(tartarus.clockwork.maxRouteRows, 11)
+    lu.assertEquals(tartarus.clockwork.maxRouteRows, 12)
+    lu.assertEquals(tartarus.clockwork.forcedFirstRouteRole, "Goal")
     lu.assertEquals(tartarus.clockwork.goalReward, "ClockworkGoal")
     lu.assertEquals(tartarus.clockwork.remainingGoalCounter, "RemainingClockworkGoals")
     lu.assertEquals(tartarus.clockwork.extensionRewardBudget, {
@@ -560,6 +570,8 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].reward, noneReward())
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].countsNonGoalReward, false)
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].exitCount, 1)
+    lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].availability.biomeDepth, { min = 2 })
+    lu.assertTrue(tartarus.clockwork.extensionRoom.specialOptions.story[1].requiresExistingIExit)
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.fountain[1].key, "I_Reprieve01")
     lu.assertEquals(
         tartarus.clockwork.extensionRoom.specialOptions.fountain[1].reward,

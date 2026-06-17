@@ -18,6 +18,9 @@ Planner depths use vanilla `BiomeDepthCache` directly:
   hand off to the next biome with `NextRoomSet`.
 - Non-starter biome intros are locked entry rooms outside the planned row list.
   They can still lead to a first planned door room at `BiomeDepthCache == 1`.
+- Dream Run / Dream Dive intro reward overrides are intentionally out of scope
+  for the first route planner pass. Non-starter intros are modeled as no-reward
+  entries unless the normal run route uses that room as an actual reward surface.
 - `F` is special: its opening room is routeable depth `0` because vanilla
   explicitly sets `BiomeDepthCache = 0` for the starter room. Normal runs use
   `RunProgress` with `OpeningRoomBans` there.
@@ -31,7 +34,7 @@ Current working depths:
 | `F` | Erebus | `0..10` | `0, 1..9` | Starter biome. Depth `0` is one of `F_Opening01/02/03` with `RunProgress` reward controls. Preboss offers shop and non-shop `RunProgress` branches. |
 | `G` | Oceanus | `1..8` | `1..7` | `G_Intro` is a locked entry before the planned row list. Preboss offers shop and non-shop `RunProgress` branches. |
 | `H` | Fields | Route picks | Picks `1..4` | `H_Intro`, then four preboss picks, then `H_PreBoss01`. Combat maps expose reward cages rather than a single room reward. |
-| `I` | Tartarus | Clockwork | Rows `1..11` | `I_Intro` initializes five required `ClockworkGoal` rewards and a vanilla non-goal reward budget of `3..6`. |
+| `I` | Tartarus | Clockwork | Rows `1..12` | `I_Intro` initializes five required `ClockworkGoal` rewards and a vanilla non-goal reward budget of `3..6`; story can consume a route row without advancing either counter. |
 | `N` | Ephyra | Hub pylon | Picks `1..6` | Fixed `N_Opening01` into `N_PreHub01`, then hub pylon picks from `N_Hub`. Preboss is shop-only after six pylons. |
 | `O` | Thessaly | `1..7` | `1..6` | `O_Intro` is a locked entry before the planned row list. Combat route depths use ship multi-encounter policy. Preboss is shop-only. |
 | `P` | Olympus | `1..9` | `1..8` | `P_Intro` is a locked entry before the planned row list. Preboss offers shop and non-shop `RunProgress` branches. |
@@ -357,6 +360,20 @@ Biome layout files should not repeat these as per-room conditions. They should
 only declare room-local facts such as depth windows, exit counts, one-time room
 limits, and adapter-specific metadata.
 
+## Run Routes
+
+`mods/data/routes.lua` owns the normal run route order:
+
+- `Underworld`: `F`, `G`, `H`, `I`
+- `Surface`: `N`, `O`, `P`, `Q`
+
+Route controls remain biome-owned, but run-level conditions use a per-draw route
+context. The context can snapshot earlier biomes in the same route and expose
+facts such as prior devotion-counted god rewards. Biome templates should not
+hard-code route order; they should ask the requirement layer for run-level
+facts. Future Dream Dive handling can add another route provider without
+rewriting the biome adapters.
+
 ## Preboss Depths
 
 Preboss should be treated as a special depth type, not just another normal room
@@ -512,7 +529,7 @@ I = {
     kind = "clockworkGoal",
     fixedBeforeRoute = { "I_Intro" },
     routeStartRow = 1,
-    routeEndRow = 11,
+    routeEndRow = 12,
     requiredGoalRewards = 5,
     extensionRewardBudget = { min = 3, max = 6 },
 }
@@ -645,18 +662,20 @@ paths. `I_Intro` initializes:
 
 The player must take five `ClockworkGoal` rewards before `I_PreBoss01` or
 `I_PreBoss02` can appear. The planner should therefore render a flat route
-tape of up to 11 rows:
+tape of up to 12 rows:
 
 ```text
-Row 1: Goal
+Row 1: Goal (forced by the biome declaration)
 Row 2: Extension or Goal
 Row 3: Extension or Goal
 ...
-Row 11: Extension or Goal
+Row 12: Story, Extension, or Goal
 ```
 
 Rows below the fifth planned goal are inactive because the preboss follows once
 `RemainingClockworkGoals` reaches zero.
+The first route row is not user-selectable as Vanilla or an extension: Tartarus
+forces the first offered combat reward to `ClockworkGoal`.
 
 The UI should not use nested extension controls. A selected room/map has
 `supportsExtensionChoice`; if true, the next route row may be an extension. If

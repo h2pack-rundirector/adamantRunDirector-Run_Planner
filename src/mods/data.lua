@@ -12,6 +12,11 @@ function data.loadBiomes(importer)
     return importer("mods/data/biomes.lua").load(importer)
 end
 
+function data.loadRoutes(importer)
+    importer = importer or import
+    return importer("mods/data/routes.lua").load()
+end
+
 function data.loadCatalog(importer)
     return data.loadBiomes(importer)
 end

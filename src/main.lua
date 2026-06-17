@@ -27,6 +27,7 @@ local function init()
     local ui = import("mods/ui.lua").bind({
         catalog = catalog,
         data = data,
+        routeContext = import("mods/route/run_context.lua"),
         routeControlTabs = data.routeControlTabs(catalog),
     })
 

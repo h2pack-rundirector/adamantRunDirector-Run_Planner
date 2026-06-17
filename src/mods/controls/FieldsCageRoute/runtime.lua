@@ -153,6 +153,10 @@ function runtime.create(fields, instance)
         return instance.biomeKey
     end
 
+    function control:setRouteContext(routeContext)
+        instance.routeContext = routeContext
+    end
+
     function control:label()
         return instance.label
     end

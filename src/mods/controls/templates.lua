@@ -23,6 +23,10 @@ local rewards = {
 }
 
 return {
+    ClockworkGoalRoute = import("mods/controls/ClockworkGoalRoute/ClockworkGoalRoute.lua", nil, {
+        route = route,
+        rewards = rewards,
+    }),
     FieldsCageRoute = import("mods/controls/FieldsCageRoute/FieldsCageRoute.lua", nil, {
         route = route,
         rewards = rewards,

@@ -166,9 +166,21 @@ function TestRunPlannerRewards.testCatalogNormalizesBoonOnlySurface()
     lu.assertEquals(surface.fixedRewardType, "Boon")
     lu.assertEquals(#surface.controls, 1)
     lu.assertEquals(surface.controls[1].key, "boonSource")
+    lu.assertEquals(surface.controls[1].label, "")
     lu.assertEquals(surface.controls[1].alias, "Reward1Key")
     lu.assertEquals(surface.controls[1].values[1], "")
     lu.assertEquals(surface.controls[1].values[2], "AphroditeUpgrade")
+end
+
+function TestRunPlannerRewards.testCatalogLeavesDevotionGodLabelsIntact()
+    local catalog = loadCatalog()
+    local surface = catalog:surfaceFor({
+        kind = "forcedReward",
+        rewardType = "Devotion",
+    })
+
+    lu.assertEquals(surface.controls[1].label, "God A")
+    lu.assertEquals(surface.controls[2].label, "God B")
 end
 
 function TestRunPlannerRewards.testCatalogNormalizesEphyraSubRoomRewardSurfaces()

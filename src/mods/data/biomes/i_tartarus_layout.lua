@@ -95,7 +95,7 @@ layout.specialExtensionRooms = {
             maxCreationsThisRun = 1,
             requiresExistingIExit = true,
             availability = {
-                biomeDepth = { min = 2, max = 4 },
+                biomeDepth = { min = 2 },
             },
         }),
     },

@@ -1,6 +1,7 @@
 local controls = {}
 
 local TEMPLATE_BY_ADAPTER = {
+    clockworkGoal = "ClockworkGoalRoute",
     fieldsCageRoute = "FieldsCageRoute",
     fixedLinear = "FixedLinearRoute",
     hubPylon = "HubPylonRoute",
@@ -10,6 +11,19 @@ local TEMPLATE_BY_ADAPTER = {
 
 local function routeControlName(biomeKey)
     return "Route" .. tostring(biomeKey or "")
+end
+
+local function routeTabForBiome(catalog, biomeKey)
+    local biome = catalog.lookup and catalog.lookup[biomeKey] or nil
+    local template = biome and TEMPLATE_BY_ADAPTER[biome.adapter] or nil
+    if template == nil then
+        return nil
+    end
+    return {
+        key = biome.key,
+        label = biome.label,
+        controlName = routeControlName(biome.key),
+    }
 end
 
 function controls.routeControlName(biomeKey)
@@ -27,6 +41,21 @@ function controls.routeControlNames(catalog)
 end
 
 function controls.routeControlTabs(catalog)
+    if catalog ~= nil and catalog.routes ~= nil and catalog.routes.ordered ~= nil then
+        local tabsByRoute = {}
+        for _, route in ipairs(catalog.routes.ordered) do
+            local tabs = {}
+            for _, biomeKey in ipairs(route.biomes or {}) do
+                local tab = routeTabForBiome(catalog, biomeKey)
+                if tab ~= nil then
+                    tabs[#tabs + 1] = tab
+                end
+            end
+            tabsByRoute[route.key] = tabs
+        end
+        return tabsByRoute
+    end
+
     local tabsByRegion = {}
     for _, biome in ipairs(catalog and catalog.ordered or {}) do
         if TEMPLATE_BY_ADAPTER[biome.adapter] ~= nil then

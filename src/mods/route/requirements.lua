@@ -2,6 +2,7 @@ local deps = ...
 local common = deps.common
 
 local requirements = {}
+local EMPTY_LIST = {}
 
 local function status(code, message)
     return common.invalidStatus(code, message)
@@ -44,63 +45,86 @@ local function previousRoomExitCountStatus(route, instance, rows, rowIndex, requ
 end
 
 local function addGodLootSelection(selections, countedLookup, lootName)
-    if lootName ~= nil and lootName ~= "" and countedLookup[lootName] then
+    if lootName ~= nil and lootName ~= "" and countedLookup[lootName] and not selections[lootName] then
         selections[lootName] = true
+        return 1
     end
+    return 0
+end
+
+local function selectionCount(selections)
+    local count = 0
+    for _ in pairs(selections) do
+        count = count + 1
+    end
+    return count
 end
 
 local function collectRewardGodLoot(route, instance, rows, rowIndex, selections, countedLookup)
     local roleKey, role = route.resolveRole(instance, rows, rowIndex)
     if role == nil or roleKey == common.VANILLA_ROLE_KEY then
-        return
+        return 0
     end
 
     local validation = route.validateRow(instance, rows, rowIndex)
     if not validation.valid then
-        return
+        return 0
     end
 
     local _, option = route.resolveOption(instance, rows, rowIndex, roleKey)
     local context = common.rewardContext(role, option)
     if context == nil then
-        return
+        return 0
     end
 
     local reward1 = rows:read(rowIndex, "Reward1Key") or ""
     local reward2 = rows:read(rowIndex, "Reward2Key") or ""
     local reward3 = rows:read(rowIndex, "Reward3Key") or ""
+    local count = 0
 
     if context.kind == "majorMinor" or context.kind == "shipWheel" then
         if reward1 == "Major" and reward2 == "Boon" then
-            addGodLootSelection(selections, countedLookup, reward3)
+            count = count + addGodLootSelection(selections, countedLookup, reward3)
         end
     elseif context.kind == "roomStore" then
         if common.isOnlyEligible(context.eligibleRewardTypes, "Boon") then
-            addGodLootSelection(selections, countedLookup, reward1)
+            count = count + addGodLootSelection(selections, countedLookup, reward1)
         elseif reward1 == "Boon" then
-            addGodLootSelection(selections, countedLookup, reward2)
+            count = count + addGodLootSelection(selections, countedLookup, reward2)
         end
     elseif context.kind == "forcedReward" then
         if context.rewardType == "Boon" then
-            addGodLootSelection(selections, countedLookup, reward1)
+            count = count + addGodLootSelection(selections, countedLookup, reward1)
         elseif context.rewardType == "Devotion" then
-            addGodLootSelection(selections, countedLookup, reward1)
-            addGodLootSelection(selections, countedLookup, reward2)
+            count = count + addGodLootSelection(selections, countedLookup, reward1)
+            count = count + addGodLootSelection(selections, countedLookup, reward2)
         end
+    end
+    return count
+end
+
+local function collectRouteContextGodLoot(instance, countedLookup, selections, stopAtCount)
+    local routeContext = instance and instance.routeContext or nil
+    if routeContext ~= nil and routeContext.collectPriorGodLoot ~= nil then
+        routeContext:collectPriorGodLoot(instance.biomeKey, countedLookup, selections, stopAtCount)
     end
 end
 
 local function priorDistinctGodLootStatus(route, instance, rows, rowIndex, requirement)
     local countedLookup = requirement.countedLootLookup or common.buildKeyLookup(requirement.countedLootNames)
     local selections = {}
-    local count = 0
 
-    for priorIndex = 1, rowIndex - 1 do
-        collectRewardGodLoot(route, instance, rows, priorIndex, selections, countedLookup)
+    collectRouteContextGodLoot(instance, countedLookup, selections, requirement.minDistinct)
+    local count = selectionCount(selections)
+    if count >= requirement.minDistinct then
+        return common.validStatus()
     end
 
-    for _ in pairs(selections) do
-        count = count + 1
+    for priorIndex = 1, rowIndex - 1 do
+        count = count + collectRewardGodLoot(route, instance, rows, priorIndex, selections, countedLookup)
+        if count >= requirement.minDistinct then
+            return common.validStatus()
+        end
     end
     if count < requirement.minDistinct then
         return status(
@@ -124,7 +148,7 @@ local function itemStatus(route, instance, rows, rowIndex, requirement)
 end
 
 local function listStatus(route, instance, rows, rowIndex, requirementList)
-    for _, requirement in ipairs(requirementList or {}) do
+    for _, requirement in ipairs(requirementList or EMPTY_LIST) do
         local result = itemStatus(route, instance, rows, rowIndex, requirement)
         if not result.valid then
             return result
@@ -147,7 +171,7 @@ function requirements.status(route, instance, rows, rowIndex, role, option)
 end
 
 function requirements.prepareList(requirementList)
-    for _, requirement in ipairs(requirementList or {}) do
+    for _, requirement in ipairs(requirementList or EMPTY_LIST) do
         if requirement.kind == "priorDistinctGodLoot" and requirement.countedLootLookup == nil then
             requirement.countedLootLookup = common.buildKeyLookup(requirement.countedLootNames)
         end
@@ -169,11 +193,11 @@ function requirements.prepareRole(role)
 end
 
 function requirements.prepareSlots(slots)
-    for _, slot in ipairs(slots or {}) do
+    for _, slot in ipairs(slots or EMPTY_LIST) do
         if slot.role ~= nil then
             requirements.prepareRole(slot.role)
         end
-        for _, branch in ipairs(slot.branches or {}) do
+        for _, branch in ipairs(slot.branches or EMPTY_LIST) do
             requirements.prepareContext(branch.reward)
         end
     end

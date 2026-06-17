@@ -160,7 +160,7 @@ local function roomStoreSurface(self, context)
             context = context,
             fixedRewardType = "Boon",
             controls = {
-                dropdown("Reward1Key", "boonSource", "God", values, labels, {
+                dropdown("Reward1Key", "boonSource", "", values, labels, {
                     kind = "boonSource",
                     controlWidth = 170,
                 }),
@@ -266,7 +266,7 @@ local function forcedRewardSurface(self, context)
             context = context,
             fixedRewardType = "Boon",
             controls = {
-                dropdown("Reward1Key", "boonSource", "God", values, labels, {
+                dropdown("Reward1Key", "boonSource", "", values, labels, {
                     kind = "boonSource",
                     controlWidth = 170,
                 }),

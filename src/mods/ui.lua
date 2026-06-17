@@ -1,10 +1,12 @@
 local ui = {}
 
-local UNDERWORLD_REGION = "Underworld"
-local SURFACE_REGION = "Surface"
+local EMPTY_LIST = {}
 
 local routeNavOpts = {}
 local routeControlByTab = {}
+local routeDefinitions = {}
+local routeContextFactory
+local activeRouteContext
 local activeRouteTabs = {}
 
 local roomRoutingOpts = {
@@ -14,6 +16,20 @@ local rewardRoutingOpts = {
     label = "Reward Routing",
 }
 local planModeOpts
+
+local function fallbackRouteDefinitions(routeControlTabs)
+    local ordered = {}
+    for key in pairs(routeControlTabs or {}) do
+        ordered[#ordered + 1] = {
+            key = key,
+            label = key,
+            biomes = {},
+        }
+    end
+    return {
+        ordered = ordered,
+    }
+end
 
 local function buildRegionTabs(routeControlTabs)
     routeNavOpts = {}
@@ -41,7 +57,21 @@ local function buildRegionTabs(routeControlTabs)
     end
 end
 
-local function drawRegionTab(ctx, region, childId)
+local function beginRouteContext(ctx)
+    if routeContextFactory == nil then
+        return nil
+    end
+
+    if activeRouteContext == nil then
+        activeRouteContext = routeContextFactory.create({
+            routes = routeDefinitions,
+        })
+    end
+    activeRouteContext:beginPass(ctx.controls)
+    return activeRouteContext
+end
+
+local function drawRegionTab(ctx, region, childId, routeContext)
     local draw = ctx.draw
     local imgui = draw.imgui
     local navOpts = routeNavOpts[region]
@@ -60,25 +90,26 @@ local function drawRegionTab(ctx, region, childId)
     imgui.BeginChild(childId .. "Detail", 0, 0, false)
     local controlName = routeControlByTab[region][activeTab]
     if controlName ~= nil then
-        draw.control(ctx.controls.get(controlName), "planner")
+        local control = ctx.controls.get(controlName)
+        if routeContext ~= nil then
+            routeContext:bindControl(control)
+        end
+        draw.control(control, "planner")
     end
     imgui.EndChild()
 end
 
-local function drawRouteTabs(ctx)
+local function drawRouteTabs(ctx, routeContext)
     local imgui = ctx.draw.imgui
     if not imgui.BeginTabBar("RunPlannerRouteTabs") then
         return
     end
 
-    if routeNavOpts[UNDERWORLD_REGION] ~= nil and imgui.BeginTabItem("Underworld") then
-        drawRegionTab(ctx, UNDERWORLD_REGION, "RunPlannerUnderworld")
-        imgui.EndTabItem()
-    end
-
-    if routeNavOpts[SURFACE_REGION] ~= nil and imgui.BeginTabItem("Surface") then
-        drawRegionTab(ctx, SURFACE_REGION, "RunPlannerSurface")
-        imgui.EndTabItem()
+    for _, route in ipairs(routeDefinitions.ordered or EMPTY_LIST) do
+        if routeNavOpts[route.key] ~= nil and imgui.BeginTabItem(route.label or route.key) then
+            drawRegionTab(ctx, route.key, "RunPlanner" .. tostring(route.key), routeContext)
+            imgui.EndTabItem()
+        end
     end
 
     imgui.EndTabBar()
@@ -87,6 +118,10 @@ end
 function ui.bind(deps)
     deps = deps or {}
     local data = deps.data or deps
+    routeDefinitions = deps.routes
+        or (deps.catalog and deps.catalog.routes)
+        or fallbackRouteDefinitions(deps.routeControlTabs)
+    routeContextFactory = deps.routeContext
     buildRegionTabs(deps.routeControlTabs)
     planModeOpts = {
         label = "Plan Mode",
@@ -112,7 +147,7 @@ function ui.drawTab(_, ctx)
     draw.widgets.checkbox(state.get("RewardRoutingEnabled"), rewardRoutingOpts)
     draw.widgets.dropdown(state.get("PlanMode"), planModeOpts)
     draw.widgets.separator()
-    drawRouteTabs(ctx)
+    drawRouteTabs(ctx, beginRouteContext(ctx))
 end
 
 return ui
