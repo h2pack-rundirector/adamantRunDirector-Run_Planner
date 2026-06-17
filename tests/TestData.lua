@@ -487,7 +487,7 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(fields.Combat.mapOptions[15].availability.biomeDepth, { max = 3 })
     lu.assertEquals(fields.Miniboss.roomOptions[1].availability.biomeDepth, { min = 2, max = 4 })
     lu.assertEquals(fields.Miniboss.routeRules, oneShotRouteRules())
-    lu.assertEquals(fields.Bridge.roomOptions[1].availability.priorCombatOrMinibossRooms, { exact = 2 })
+    lu.assertEquals(fields.Bridge.roomOptions[1].availability.routePick, { exact = 3 })
 
     local thessaly = biomes.lookup.O.rolesByKey
     lu.assertEquals(thessaly.Combat.mapOptions[13].availability.biomeDepth, { min = 6 })
@@ -653,7 +653,7 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
     lu.assertEquals(fields.fields.minibossRoomsByKey.H_MiniBoss02.encounter, "MiniBossLamia")
 
     lu.assertEquals(fields.fields.bridge.roomKey, "H_Bridge01")
-    lu.assertEquals(fields.fields.bridge.roomOptions[1].availability.priorCombatOrMinibossRooms, { exact = 2 })
+    lu.assertEquals(fields.fields.bridge.roomOptions[1].availability.routePick, { exact = 3 })
     lu.assertEquals(fields.fields.bridge.rewardModes[2].key, "Shop")
     lu.assertEquals(fields.fields.bridge.rewardModes[3].key, "Story")
     lu.assertEquals(fields.fields.bridge.rewardModes[4].key, "Nemesis")

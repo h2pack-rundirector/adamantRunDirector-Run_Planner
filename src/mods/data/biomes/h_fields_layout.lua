@@ -44,9 +44,9 @@ layout.prebossRoom = option("H_PreBoss01", "Preboss Shop", {
     },
 })
 
-layout.bridgeRoom = option("H_Bridge01", "Bridge", {
+layout.bridgeRoom = option("H_Bridge01", "Echo", {
     availability = {
-        priorCombatOrMinibossRooms = { exact = 2 },
+        routePick = { exact = 3 },
     },
     maxCreationsThisRun = 1,
     maxAppearancesThisBiome = 1,
@@ -69,7 +69,7 @@ layout.bridge = {
         },
         {
             key = "Story",
-            label = "Echo / Story",
+            label = "Echo",
             forcedReward = "Story",
             encounter = "Story_Echo_01",
             availability = {

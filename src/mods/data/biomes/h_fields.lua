@@ -73,7 +73,7 @@ return function(importer)
             },
             {
                 key = "Bridge",
-                label = "Bridge",
+                label = "Echo",
                 roomOptions = { layout.bridgeRoom },
                 reward = rewards.fieldsBridge(),
                 reserve = true,

@@ -39,6 +39,7 @@ local function buildFixedRoleSlot(instance, depth, special)
     local role = {
         key = special.key or special.kind,
         label = special.label or special.key or special.kind,
+        roomKey = special.roomKey,
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
         reward = special.reward,
@@ -51,9 +52,26 @@ local function buildFixedRoleSlot(instance, depth, special)
         coordinate = depth,
         kind = special.kind,
         label = special.label or role.label,
+        roomKey = special.roomKey,
         roleKey = role.key,
         role = role,
     }
+end
+
+local function buildEntrySlot(instance, entry)
+    if entry == nil then
+        return
+    end
+
+    buildFixedRoleSlot(instance, entry.coordinate or 0, {
+        kind = entry.kind or "intro",
+        key = entry.key or "Intro",
+        label = entry.label or "Intro",
+        roomKey = entry.roomKey,
+        roomOptions = entry.roomOptions,
+        reward = entry.reward,
+        locked = entry.locked,
+    })
 end
 
 local function buildRouteSlots(instance)
@@ -65,6 +83,8 @@ local function buildRouteSlots(instance)
     end
 
     instance.routeSlots = {}
+    buildEntrySlot(instance, slotLayout.entry)
+
     local fixedDepths = {}
     for depth, slot in pairs(slotLayout.special or {}) do
         if slot.kind == "opening" then

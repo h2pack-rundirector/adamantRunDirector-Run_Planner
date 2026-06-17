@@ -1,6 +1,7 @@
 local controls = {}
 
 local TEMPLATE_BY_ADAPTER = {
+    fieldsCageRoute = "FieldsCageRoute",
     fixedLinear = "FixedLinearRoute",
     hubPylon = "HubPylonRoute",
     multiEncounterFixed = "MultiEncounterFixedRoute",

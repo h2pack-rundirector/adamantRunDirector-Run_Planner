@@ -61,6 +61,20 @@ function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()
     })
 end
 
+function TestRunPlannerRewards.testCatalogNormalizesFieldsCageSurface()
+    local catalog = loadCatalog()
+    local surface = catalog:surfaceFor({
+        kind = "fieldsCages",
+        rewardStore = "RunProgress",
+    })
+
+    lu.assertEquals(surface.kind, "roomStore")
+    lu.assertEquals(surface.rewardStore, "RunProgress")
+    lu.assertEquals(surface.controls[1].key, "rewardType")
+    lu.assertEquals(surface.controls[1].values[2], "Boon")
+    lu.assertEquals(surface.controls[2].key, "boonSource")
+end
+
 function TestRunPlannerRewards.testCatalogNormalizesMajorMinorSurface()
     local catalog = loadCatalog()
     local surface = catalog:surfaceFor({

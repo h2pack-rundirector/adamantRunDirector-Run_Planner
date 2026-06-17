@@ -343,6 +343,8 @@ local function surfaceFor(self, context)
     context = context or { kind = "none" }
     if context.kind == "none" then
         return noSurface(context)
+    elseif context.kind == "fieldsCages" then
+        return roomStoreSurface(self, context)
     elseif context.kind == "roomStore" then
         return roomStoreSurface(self, context)
     elseif context.kind == "majorMinor" then

@@ -23,6 +23,10 @@ local rewards = {
 }
 
 return {
+    FieldsCageRoute = import("mods/controls/FieldsCageRoute/FieldsCageRoute.lua", nil, {
+        route = route,
+        rewards = rewards,
+    }),
     FixedLinearRoute = import("mods/controls/FixedLinearRoute/FixedLinearRoute.lua", nil, {
         route = route,
         rewards = rewards,
