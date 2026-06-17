@@ -1307,7 +1307,7 @@ function TestRunPlannerControls.testHubPylonPolicyRejectsDuplicateNonBoonRewards
         name = "RouteN",
         biome = catalog.lookup.N,
     })
-    local control = template.createRuntime(routeFields({
+    local rowData = {
             {},
             {},
             {},
@@ -1321,7 +1321,8 @@ function TestRunPlannerControls.testHubPylonPolicyRejectsDuplicateNonBoonRewards
                 OptionKey = "N_Combat13",
                 Reward1Key = "MaxHealthDropBig",
             },
-        }), instance)
+        }
+    local control = template.createRuntime(routeFields(rowData), instance)
     local snapshot = control:buildSnapshot()
 
     lu.assertFalse(snapshot.valid)
@@ -1330,6 +1331,12 @@ function TestRunPlannerControls.testHubPylonPolicyRejectsDuplicateNonBoonRewards
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
     lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_reward_type")
     lu.assertEquals(snapshot.rows[5].invalidCode, "duplicate_reward_type")
+
+    local uiControl = template.createUi(routeFields(rowData), instance)
+    lu.assertTrue(uiControl:uiRowValidation(4).valid)
+    local validation = uiControl:uiRowValidation(5)
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "duplicate_reward_type")
 end
 
 function TestRunPlannerControls.testFixedLinearPrebossRowsUseBranchChoices()
@@ -2414,6 +2421,68 @@ function TestRunPlannerControls.testRouteContextScopesPriorGodLootByRoute()
 
     iInstance.routeKey = "WithErebus"
     lu.assertTrue(hasValue(data.roleValuesForRow(iInstance, rows, 3), "Trial"))
+end
+
+function TestRunPlannerControls.testRouteOverviewRebuildsOnlyWhenDirty()
+    local readsByControl = {}
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "RouteA",
+                label = "Route A",
+                biomes = { "F", "G" },
+            },
+            {
+                key = "RouteB",
+                label = "Route B",
+                biomes = { "G" },
+            },
+        }),
+        controlResolver = function(controlName)
+            return {
+                read = function(_, path)
+                    if path == "snapshot" then
+                        readsByControl[controlName] = (readsByControl[controlName] or 0) + 1
+                        return {
+                            controlName = controlName,
+                            valid = true,
+                            invalidRows = {},
+                            rows = {},
+                        }
+                    end
+                    return nil
+                end,
+            }
+        end,
+    })
+
+    routeContext:beginPass()
+    lu.assertTrue(routeContext:overview("RouteA").valid)
+    lu.assertTrue(routeContext:overview("RouteA").valid)
+    lu.assertEquals(readsByControl.RouteF, 1)
+    lu.assertEquals(readsByControl.RouteG, 1)
+
+    routeContext:beginPass()
+    lu.assertTrue(routeContext:overview("RouteA").valid)
+    lu.assertEquals(readsByControl.RouteF, 1)
+    lu.assertEquals(readsByControl.RouteG, 1)
+
+    routeContext:markDirty("RouteA")
+    routeContext:beginPass()
+    lu.assertTrue(routeContext:overview("RouteA").valid)
+    lu.assertEquals(readsByControl.RouteF, 2)
+    lu.assertEquals(readsByControl.RouteG, 2)
+
+    routeContext:beginPass()
+    lu.assertTrue(routeContext:overview("RouteB").valid)
+    lu.assertEquals(readsByControl.RouteG, 3)
+
+    routeContext:markDirty(nil, "G")
+    routeContext:beginPass()
+    lu.assertTrue(routeContext:overview("RouteA").valid)
+    lu.assertTrue(routeContext:overview("RouteB").valid)
+    lu.assertEquals(readsByControl.RouteF, 3)
+    lu.assertEquals(readsByControl.RouteG, 5)
 end
 
 function TestRunPlannerControls.testMultiEncounterTrialRequirementsUsePriorSurfaceBiomes()

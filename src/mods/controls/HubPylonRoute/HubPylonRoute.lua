@@ -10,6 +10,8 @@ local ui = import("mods/controls/HubPylonRoute/ui.lua", nil, {
     data = data,
     rewardRuntime = deps.rewards.runtime,
     rewardUi = deps.rewards.ui,
+    rewardOfferPolicies = deps.route.rewardOfferPolicies,
+    rewardOfferRules = deps.route.rewardOfferRules,
     routeStatusUi = deps.routeStatusUi,
     runtime = runtime,
 })

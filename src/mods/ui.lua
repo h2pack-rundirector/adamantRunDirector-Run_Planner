@@ -6,6 +6,7 @@ local routeNavOpts = {}
 local routeControlByTab = {}
 local routeDefinitions = {}
 local routeContextFactory
+local routeStatusUi
 local activeRouteContext
 local activeRouteTabs = {}
 
@@ -115,6 +116,24 @@ local function drawRouteTabs(ctx, routeContext)
     imgui.EndTabBar()
 end
 
+local function drawRouteOverview(draw, routeContext)
+    if routeStatusUi == nil or routeContext == nil then
+        return
+    end
+
+    local drewStatus = false
+    for _, route in ipairs(routeDefinitions.ordered or EMPTY_LIST) do
+        if drewStatus then
+            draw.imgui.SameLine()
+        end
+        routeStatusUi.drawRouteStatus(draw, routeContext:overview(route.key))
+        drewStatus = true
+    end
+    if drewStatus then
+        draw.imgui.Spacing()
+    end
+end
+
 function ui.bind(deps)
     deps = deps or {}
     local data = deps.data or deps
@@ -122,6 +141,7 @@ function ui.bind(deps)
         or (deps.catalog and deps.catalog.routes)
         or fallbackRouteDefinitions(deps.routeControlTabs)
     routeContextFactory = deps.routeContext
+    routeStatusUi = deps.routeStatusUi
     buildRegionTabs(deps.routeControlTabs)
     planModeOpts = {
         label = "Plan Mode",
@@ -148,6 +168,7 @@ function ui.drawTab(_, ctx)
     draw.widgets.dropdown(state.get("PlanMode"), planModeOpts)
     draw.widgets.separator()
     local routeContext = beginRouteContext(ctx)
+    drawRouteOverview(draw, routeContext)
     drawRouteTabs(ctx, routeContext)
 end
 

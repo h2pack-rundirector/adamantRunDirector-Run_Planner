@@ -148,6 +148,9 @@ function runtime.create(fields, instance)
 
     function control:invalidateReadPass()
         data.invalidateReadPass(instance)
+        if instance.routeContext ~= nil and instance.routeContext.markDirty ~= nil then
+            instance.routeContext:markDirty(instance.routeKey, instance.biomeKey)
+        end
     end
 
     function control:endReadPass()

@@ -29,6 +29,7 @@ local function init()
         data = data,
         routeContext = import("mods/route/run_context.lua"),
         routeControlTabs = data.routeControlTabs(catalog),
+        routeStatusUi = import("mods/controls/route_status_ui.lua"),
     })
 
     local module = lib.createModule({

@@ -316,7 +316,9 @@ local function drawRewardRow(draw, control, instance, rowIndex)
             imgui.Text(tostring(leg.label or leg.key or "Reward"))
             imgui.SameLine()
             imgui.SetCursorPosX(ENCOUNTER_REWARD_COLUMN_X)
-            rewardUi.draw(draw, legSurface, encounterRewardFields(control, encounterRewardRowIndex), REWARD_DRAW_OPTS)
+            if rewardUi.draw(draw, legSurface, encounterRewardFields(control, encounterRewardRowIndex), REWARD_DRAW_OPTS) then
+                control:invalidateReadPass()
+            end
         end
     end
 
@@ -326,7 +328,9 @@ local function drawRewardRow(draw, control, instance, rowIndex)
     then
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)
-        rewardUi.draw(draw, surface, rewardFields(control, rowIndex), REWARD_DRAW_OPTS)
+        if rewardUi.draw(draw, surface, rewardFields(control, rowIndex), REWARD_DRAW_OPTS) then
+            control:invalidateReadPass()
+        end
     end
 end
 

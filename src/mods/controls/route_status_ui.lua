@@ -2,6 +2,7 @@ local routeStatusUi = {}
 
 local STATUS_COLUMN_X = 590
 local INVALID_COLOR = { 1.0, 0.24, 0.16, 1.0 }
+local VALID_COLOR = { 0.35, 0.9, 0.45, 1.0 }
 local textColoredMode
 
 local function drawColoredText(imgui, color, text)
@@ -43,6 +44,13 @@ function routeStatusUi.drawInvalid(draw, validation, columnX)
     imgui.AlignTextToFramePadding()
     drawColoredText(imgui, INVALID_COLOR, "Invalid")
     return true
+end
+
+function routeStatusUi.drawRouteStatus(draw, routeSnapshot)
+    local label = tostring((routeSnapshot and routeSnapshot.label) or (routeSnapshot and routeSnapshot.routeKey) or "Route")
+    local valid = routeSnapshot ~= nil and routeSnapshot.valid
+    local text = label .. ": " .. (valid and "Valid" or "Invalid")
+    drawColoredText(draw.imgui, valid and VALID_COLOR or INVALID_COLOR, text)
 end
 
 return routeStatusUi

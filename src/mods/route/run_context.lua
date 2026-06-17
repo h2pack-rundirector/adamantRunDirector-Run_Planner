@@ -107,6 +107,18 @@ local function routeSnapshotCache(context, routeKey)
     return snapshots
 end
 
+local function routeOverviewState(context, routeKey)
+    local state = context.overviewByRoute[routeKey]
+    if state == nil then
+        state = {
+            dirty = true,
+            snapshot = nil,
+        }
+        context.overviewByRoute[routeKey] = state
+    end
+    return state
+end
+
 local function controlSnapshot(context, routeKey, biomeKey)
     local snapshots = routeSnapshotCache(context, routeKey)
     if snapshots[biomeKey] ~= nil then
@@ -135,6 +147,7 @@ function runContext.create(opts)
         controlResolver = opts.controlResolver,
         controls = opts.controls,
         snapshotByRoute = {},
+        overviewByRoute = {},
     }
 
     function context:beginPass(controls)
@@ -159,6 +172,40 @@ function runContext.create(opts)
             return self.routeInfoByRoute[routeKey][biomeKey]
         end
         return self.routeInfoByBiome[biomeKey]
+    end
+
+    function context:markAllDirty()
+        for _, route in ipairs(self.routes.ordered or EMPTY_LIST) do
+            routeOverviewState(self, route.key).dirty = true
+        end
+        clearMap(self.snapshotByRoute)
+    end
+
+    function context:markRoutesForBiome(biomeKey)
+        local marked = false
+        for routeKey, routeInfos in pairs(self.routeInfoByRoute) do
+            if routeInfos[biomeKey] ~= nil then
+                routeOverviewState(self, routeKey).dirty = true
+                self.snapshotByRoute[routeKey] = nil
+                marked = true
+            end
+        end
+        if not marked then
+            self:markAllDirty()
+        end
+    end
+
+    function context:markDirty(routeKey, biomeKey)
+        if routeKey ~= nil then
+            routeOverviewState(self, routeKey).dirty = true
+            self.snapshotByRoute[routeKey] = nil
+            return
+        end
+        if biomeKey ~= nil then
+            self:markRoutesForBiome(biomeKey)
+            return
+        end
+        self:markAllDirty()
     end
 
     function context:controlForBiome(routeKey, biomeKey)
@@ -262,6 +309,15 @@ function runContext.create(opts)
             invalidRows = invalidRows,
             biomes = snapshots,
         }
+    end
+
+    function context:overview(routeKey)
+        local state = routeOverviewState(self, routeKey)
+        if state.dirty or state.snapshot == nil then
+            state.snapshot = self:snapshot(routeKey)
+            state.dirty = false
+        end
+        return state.snapshot
     end
 
     return context

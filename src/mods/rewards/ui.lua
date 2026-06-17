@@ -59,7 +59,7 @@ local function drawControl(draw, fields, control, opts)
     then
         drawOpts = control.genericRewardLabelHiddenDrawOpts
     end
-    draw.widgets.dropdown(fields:get(control.alias), drawOpts)
+    return draw.widgets.dropdown(fields:get(control.alias), drawOpts)
 end
 
 local function hasGroupedRows(surface)
@@ -79,6 +79,7 @@ local function drawGroupedControls(draw, surface, fields, opts)
     local startX = imgui.GetCursorPosX()
     local rowIndex = nil
     local drew = false
+    local changed = false
     local rowHeader = surface.rowHeader
     if opts ~= nil and opts.hideGenericRewardLabel and rowHeader == GENERIC_REWARD_HEADER then
         rowHeader = nil
@@ -93,11 +94,11 @@ local function drawGroupedControls(draw, surface, fields, opts)
             else
                 imgui.SameLine()
             end
-            drawControl(draw, fields, control, opts)
+            changed = drawControl(draw, fields, control, opts) or changed
             drew = true
         end
     end
-    return drew
+    return changed
 end
 
 function ui.draw(draw, surface, fields, opts)
@@ -109,6 +110,7 @@ function ui.draw(draw, surface, fields, opts)
     end
 
     local drew = false
+    local changed = false
     local imgui = draw.imgui
     if hasGroupedRows(surface) then
         return drawGroupedControls(draw, surface, fields, opts)
@@ -119,11 +121,11 @@ function ui.draw(draw, surface, fields, opts)
             if drew then
                 imgui.SameLine()
             end
-            drawControl(draw, fields, control, opts)
+            changed = drawControl(draw, fields, control, opts) or changed
             drew = true
         end
     end
-    return drew
+    return changed
 end
 
 return ui

@@ -389,7 +389,9 @@ local function drawCageRewardRows(draw, control, instance, rowIndex)
             draw.imgui.Text(tostring(leg.label or leg.key or "Cage"))
             draw.imgui.SameLine()
             draw.imgui.SetCursorPosX(CAGE_REWARD_COLUMN_X)
-            rewardUi.draw(draw, legSurface, cageRewardFields(control, cageRewardRowIndex), REWARD_DRAW_OPTS)
+            if rewardUi.draw(draw, legSurface, cageRewardFields(control, cageRewardRowIndex), REWARD_DRAW_OPTS) then
+                control:invalidateReadPass()
+            end
         end
     end
 end
@@ -413,7 +415,9 @@ local function drawRewardRow(draw, control, instance, rowIndex)
     then
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)
-        rewardUi.draw(draw, surface, rewardFields(control, rowIndex), REWARD_DRAW_OPTS)
+        if rewardUi.draw(draw, surface, rewardFields(control, rowIndex), REWARD_DRAW_OPTS) then
+            control:invalidateReadPass()
+        end
     end
 end
 
