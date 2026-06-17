@@ -2,6 +2,8 @@
 
 local deps = ...
 local data = deps.data
+local rewardRuntime = deps.rewardRuntime
+local rewardUi = deps.rewardUi
 local runtime = deps.runtime
 
 local ui = {}
@@ -31,53 +33,57 @@ local function resetRowDetails(fields, rowIndex)
     end
 end
 
-local function normalizeRoleField(control, instance, rowIndex)
-    local roleField = control:rowField(rowIndex, "RoleKey")
-    local roleKey = roleField:read()
-    if instance.rolesByKey[roleKey] ~= nil then
-        return roleField, roleKey
-    end
-
-    roleField:write("Vanilla")
-    resetRowDetails(control:fields(), rowIndex)
-    return roleField, "Vanilla"
-end
-
-local function normalizeOptionField(control, instance, rowIndex, roleKey)
-    local role = instance.rolesByKey[roleKey]
-    if role == nil then
-        return
-    end
-
-    local values = instance.optionValuesByRole[roleKey] or {}
-    local defaultValue = values[1] or ""
-    local optionKey = control:rowField(rowIndex, "OptionKey"):read()
-    if optionKey == defaultValue or role.optionsByKey[optionKey] ~= nil then
-        return
-    end
-    control:rowField(rowIndex, "OptionKey"):write(defaultValue)
-end
-
-local function getRoleOpts(control, instance)
-    if control._roleOpts == nil then
-        local opts = copyBaseOpts(ROLE_OPTS)
-        opts.values = instance.roleValues
+local function getRoleOpts(control, instance, rowIndex)
+    control._roleOptsByRow = control._roleOptsByRow or {}
+    local opts = control._roleOptsByRow[rowIndex]
+    if opts == nil then
+        opts = copyBaseOpts(ROLE_OPTS)
+        opts.values = {}
         opts.displayValues = instance.roleLabels
-        control._roleOpts = opts
+        control._roleOptsByRow[rowIndex] = opts
     end
-    return control._roleOpts
+    data.fillRoleValues(instance, control:fields().Rows, rowIndex, opts.values)
+    return opts
 end
 
-local function getOptionOpts(control, instance, roleKey)
-    control._optionOptsByRole = control._optionOptsByRole or {}
-    local opts = control._optionOptsByRole[roleKey]
+local function optionOptsByRole(control, rowIndex)
+    control._optionOptsByRow = control._optionOptsByRow or {}
+    local optsByRole = control._optionOptsByRow[rowIndex]
+    if optsByRole == nil then
+        optsByRole = {}
+        control._optionOptsByRow[rowIndex] = optsByRole
+    end
+    return optsByRole
+end
+
+local function getOptionOpts(control, instance, rowIndex, roleKey)
+    local optsByRole = optionOptsByRole(control, rowIndex)
+    local opts = optsByRole[roleKey]
     if opts == nil then
         opts = copyBaseOpts(OPTION_OPTS)
-        opts.values = instance.optionValuesByRole[roleKey] or { "" }
+        opts.values = {}
         opts.displayValues = instance.optionLabelsByRole[roleKey] or {}
-        control._optionOptsByRole[roleKey] = opts
+        optsByRole[roleKey] = opts
     end
+    data.fillOptionValues(instance, control:fields().Rows, rowIndex, roleKey, opts.values)
     return opts
+end
+
+local function rewardFields(control, rowIndex)
+    control._rewardFieldsByRow = control._rewardFieldsByRow or {}
+    local fields = control._rewardFieldsByRow[rowIndex]
+    if fields == nil then
+        fields = {
+            get = function(_, alias)
+                return control:rowField(rowIndex, alias)
+            end,
+            read = function(_, alias)
+                return control:fields().Rows:read(rowIndex, alias)
+            end,
+        }
+        control._rewardFieldsByRow[rowIndex] = fields
+    end
+    return fields
 end
 
 local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey)
@@ -86,13 +92,27 @@ local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey)
         return
     end
 
-    normalizeOptionField(control, instance, rowIndex, roleKey)
+    local optionOpts = getOptionOpts(control, instance, rowIndex, roleKey)
+    if optionOpts.values[1] == nil then
+        return
+    end
+
     draw.imgui.SameLine()
     draw.imgui.SetCursorPosX(230)
     draw.widgets.dropdown(
         control:rowField(rowIndex, "OptionKey"),
-        getOptionOpts(control, instance, roleKey)
+        optionOpts
     )
+end
+
+local function drawRowValidation(draw, control, instance, rowIndex)
+    local validation = data.validateRow(instance, control:fields().Rows, rowIndex)
+    if validation.valid then
+        return
+    end
+
+    draw.imgui.SameLine()
+    draw.imgui.Text("Invalid")
 end
 
 local function drawRouteRow(draw, control, instance, rowIndex)
@@ -102,17 +122,28 @@ local function drawRouteRow(draw, control, instance, rowIndex)
     end
 
     local imgui = draw.imgui
-    local roleField, currentRoleKey = normalizeRoleField(control, instance, rowIndex)
+    local roleField = control:rowField(rowIndex, "RoleKey")
+    local currentRoleKey = data.readRoleKey(control:fields().Rows, rowIndex)
 
     imgui.AlignTextToFramePadding()
     imgui.Text(slot.label)
     imgui.SameLine()
     imgui.SetCursorPosX(80)
-    if draw.widgets.dropdown(roleField, getRoleOpts(control, instance)) then
+    if draw.widgets.dropdown(roleField, getRoleOpts(control, instance, rowIndex)) then
         resetRowDetails(control:fields(), rowIndex)
         currentRoleKey = roleField:read()
     end
     drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey)
+    drawRowValidation(draw, control, instance, rowIndex)
+
+    local surface = control:rewardSurface(rowIndex)
+    if rewardUi ~= nil
+        and rewardRuntime ~= nil
+        and rewardRuntime.hasControls(surface)
+    then
+        imgui.SetCursorPosX(80)
+        rewardUi.draw(draw, surface, rewardFields(control, rowIndex))
+    end
 end
 
 function ui.create(fields, instance)

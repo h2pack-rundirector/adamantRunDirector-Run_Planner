@@ -40,7 +40,6 @@ function biomes.load(importer)
     importer = importer or defaultImporter
 
     local rewards = importer("mods/data/rewards.lua")(importer)
-    local shopProfiles = importer("mods/data/shop_profiles.lua")
     local ordered = {}
     local lookup = {}
 
@@ -54,7 +53,6 @@ function biomes.load(importer)
         ordered = ordered,
         lookup = lookup,
         rewardTypes = rewards.rewardTypeMetadata(),
-        shopProfiles = shopProfiles,
     }
 end
 

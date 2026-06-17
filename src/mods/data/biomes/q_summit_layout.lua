@@ -75,11 +75,23 @@ layout.combatRooms = {
 layout.combatRoomsByKey = indexByKey(layout.combatRooms)
 
 layout.vanillaDepthHints = {
+    [1] = { "Q_Combat10", "Q_Combat11" },
     [2] = { "Q_Combat03", "Q_Combat05", "Q_Combat15" },
     [3] = { "Q_MiniBoss02", "Q_MiniBoss05" },
     [5] = { "Q_Combat12", "Q_Combat13", "Q_Combat14" },
     [6] = { "Q_MiniBoss03", "Q_MiniBoss04" },
     [7] = { "Q_PreBoss01" },
+}
+
+layout.forcedDepthOptions = {
+    [3] = {
+        roleKey = "Miniboss",
+        optionKeys = { "Q_MiniBoss02", "Q_MiniBoss05" },
+    },
+    [6] = {
+        roleKey = "Miniboss",
+        optionKeys = { "Q_MiniBoss03", "Q_MiniBoss04" },
+    },
 }
 
 layout.minibossRooms = {

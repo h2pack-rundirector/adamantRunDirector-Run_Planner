@@ -2,30 +2,9 @@
 
 local deps = ...
 local data = deps.data
+local rewardRuntime = deps.rewardRuntime
 
 local runtime = {}
-
-local function normalizeRole(instance, roleKey)
-    local role = instance.rolesByKey[roleKey]
-    if role ~= nil then
-        return roleKey, role
-    end
-    return "Vanilla", instance.rolesByKey.Vanilla
-end
-
-local function normalizeOption(role, optionKey)
-    if role == nil then
-        return "", nil
-    end
-
-    local normalizedKey = optionKey
-    local option = normalizedKey ~= nil and role.optionsByKey and role.optionsByKey[normalizedKey] or nil
-    if option == nil then
-        normalizedKey = role.defaultOptionKey or ""
-        option = normalizedKey ~= "" and role.optionsByKey and role.optionsByKey[normalizedKey] or nil
-    end
-    return normalizedKey, option
-end
 
 local function readRewards(rows, rowIndex)
     local rewards = {}
@@ -33,6 +12,28 @@ local function readRewards(rows, rowIndex)
         rewards[index] = rows:read(rowIndex, "Reward" .. tostring(index) .. "Key") or ""
     end
     return rewards
+end
+
+local function rewardFields(rows, rowIndex)
+    return {
+        read = function(_, alias)
+            return rows:read(rowIndex, alias)
+        end,
+    }
+end
+
+local function rewardContext(role, option)
+    if option ~= nil and option.reward ~= nil then
+        return option.reward
+    end
+    return role and role.reward or nil
+end
+
+local function rewardSurface(role, option)
+    if rewardRuntime == nil or role == nil then
+        return nil
+    end
+    return rewardRuntime.surfaceFor(rewardContext(role, option))
 end
 
 function runtime.create(fields, instance)
@@ -59,16 +60,18 @@ function runtime.create(fields, instance)
     end
 
     function control:role(rowIndex)
-        local roleKey = fields.Rows:read(rowIndex, "RoleKey")
-        local _, role = normalizeRole(instance, roleKey)
+        local _, role = data.resolveRole(instance, fields.Rows, rowIndex)
         return role
     end
 
     function control:option(rowIndex)
-        local role = self:role(rowIndex)
-        local optionKey = fields.Rows:read(rowIndex, "OptionKey")
-        local _, option = normalizeOption(role, optionKey)
+        local roleKey = data.resolveRole(instance, fields.Rows, rowIndex)
+        local _, option = data.resolveOption(instance, fields.Rows, rowIndex, roleKey)
         return option
+    end
+
+    function control:rewardSurface(rowIndex)
+        return rewardSurface(self:role(rowIndex), self:option(rowIndex))
     end
 
     function control:rowSnapshot(rowIndex)
@@ -77,8 +80,10 @@ function runtime.create(fields, instance)
             return nil
         end
 
-        local roleKey, role = normalizeRole(instance, fields.Rows:read(rowIndex, "RoleKey"))
-        local optionKey, option = normalizeOption(role, fields.Rows:read(rowIndex, "OptionKey"))
+        local roleKey, role = data.resolveRole(instance, fields.Rows, rowIndex)
+        local optionKey, option = data.resolveOption(instance, fields.Rows, rowIndex, roleKey)
+        local validation = data.validateRow(instance, fields.Rows, rowIndex)
+        local surface = rewardSurface(role, option)
         return {
             rowIndex = rowIndex,
             coordinate = slot.coordinate,
@@ -87,20 +92,38 @@ function runtime.create(fields, instance)
             role = role,
             optionKey = optionKey,
             option = option,
+            valid = validation.valid,
+            invalidCode = validation.code,
+            invalidReason = validation.message,
             variantKey = fields.Rows:read(rowIndex, "VariantKey") or "",
             rewards = readRewards(fields.Rows, rowIndex),
+            rewardKind = surface and surface.kind or "none",
+            rewardPicks = rewardRuntime and rewardRuntime.snapshot(surface, rewardFields(fields.Rows, rowIndex)) or {},
         }
     end
 
     function control:buildSnapshot()
         local rows = {}
+        local invalidRows = {}
         for rowIndex = 1, self:rowCount() do
-            rows[#rows + 1] = self:rowSnapshot(rowIndex)
+            local row = self:rowSnapshot(rowIndex)
+            rows[#rows + 1] = row
+            if row ~= nil and not row.valid then
+                invalidRows[#invalidRows + 1] = {
+                    rowIndex = row.rowIndex,
+                    coordinate = row.coordinate,
+                    code = row.invalidCode,
+                    message = row.invalidReason,
+                }
+            end
         end
         return {
             controlName = instance.name,
             biomeKey = instance.biomeKey,
             adapter = instance.biome.adapter,
+            valid = invalidRows[1] == nil,
+            disabled = invalidRows[1] ~= nil,
+            invalidRows = invalidRows,
             rows = rows,
         }
     end

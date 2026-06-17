@@ -13,7 +13,9 @@ local function combatRoom(roomKey, exitCount, opts)
         label = combatLabel(roomKey),
         exitCount = exitCount,
         supportsExtensionChoice = exitCount > 1,
-        reward = opts.reward or rewards.roomStore("TartarusRewards"),
+        reward = opts.reward or rewards.roomStore("TartarusRewards", {
+            ineligibleRewardTypes = rewards.rewardSet("ClockworkExtensionCombatBans"),
+        }),
         availability = opts.availability,
     }
 end
@@ -99,7 +101,7 @@ layout.specialExtensionRooms = {
     },
     miniboss = {
         roomOption("I_MiniBoss01", "Satyr Ratcatcher", {
-            reward = rewards.roomStore("RunProgress", { allowedRewardTypes = { "Boon" } }),
+            reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
             countsNonGoalReward = true,
             exitCount = 2,
             maxCreationsThisRun = 1,
@@ -109,7 +111,7 @@ layout.specialExtensionRooms = {
             },
         }),
         roomOption("I_MiniBoss02", "Gold Elemental", {
-            reward = rewards.roomStore("RunProgress", { allowedRewardTypes = { "Boon" } }),
+            reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
             countsNonGoalReward = true,
             exitCount = 2,
             maxCreationsThisRun = 1,

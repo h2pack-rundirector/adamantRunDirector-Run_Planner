@@ -22,14 +22,18 @@ return function(importer)
                     key = "Opening",
                     label = "Opening",
                     roomKey = "N_Opening01",
-                    reward = rewards.roomStore("RunProgress"),
+                    reward = rewards.roomStore("RunProgress", {
+                        ineligibleRewardTypes = rewards.rewardSet("OpeningRoomBans"),
+                    }),
                     locked = true,
                 },
                 {
                     key = "PreHub",
                     label = "Pre-Hub",
                     roomKey = "N_PreHub01",
-                    reward = rewards.roomStore("RunProgress"),
+                    reward = rewards.roomStore("RunProgress", {
+                        ineligibleRewardTypes = rewards.rewardSet("OpeningRoomBans"),
+                    }),
                     locked = true,
                 },
                 {
@@ -105,7 +109,7 @@ return function(importer)
                 key = "Miniboss",
                 label = "Miniboss",
                 roomOptions = layout.minibossRooms,
-                reward = rewards.roomStore("RunProgress", { allowedRewardTypes = { "Boon" } }),
+                reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
                 routeRules = routeRules.role("Miniboss"),
                 reserve = true,
             },

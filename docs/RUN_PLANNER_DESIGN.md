@@ -14,10 +14,13 @@ Planner depths use vanilla `BiomeDepthCache` directly:
 
 - The boss room is excluded.
 - The preboss room is included at its vanilla force depth.
-- Non-starter biome intros are locked depth `1`.
+- Post-boss transition rooms are excluded. Boss rooms link to them, and they
+  hand off to the next biome with `NextRoomSet`.
+- Non-starter biome intros are locked entry rooms outside the planned row list.
+  They can still lead to a first planned door room at `BiomeDepthCache == 1`.
 - `F` is special: its opening room is locked depth `0` because vanilla
   explicitly sets `BiomeDepthCache = 0` for the starter room.
-- Normal planned route depths are the depths between the locked intro/opening
+- Normal planned route depths are the depths between the locked entry/opening
   and the preboss.
 
 Current working depths:
@@ -25,13 +28,13 @@ Current working depths:
 | Biome | Route | Depth range | Planned route depths | Notes |
 | --- | --- | --- | --- | --- |
 | `F` | Erebus | `0..10` | `1..9` | Starter biome. Depth `0` is one of `F_Opening01/02/03`. Preboss offers shop and non-shop major reward branches. |
-| `G` | Oceanus | `1..8` | `2..7` | Depth `1` is `G_Intro`. Preboss offers shop and non-shop major reward branches. |
+| `G` | Oceanus | `1..8` | `1..7` | `G_Intro` is a locked entry before the planned row list. Preboss offers shop and non-shop major reward branches. |
 | `H` | Fields | Route picks | Picks `1..4` | `H_Intro`, then four preboss picks, then `H_PreBoss01`. Combat maps expose reward cages rather than a single room reward. |
 | `I` | Tartarus | Clockwork | Rows `1..11` | `I_Intro` initializes five required `ClockworkGoal` rewards and a vanilla non-goal reward budget of `3..6`. |
 | `N` | Ephyra | Hub pylon | Picks `1..6` | Fixed `N_Opening01` into `N_PreHub01`, then hub pylon picks from `N_Hub`. Preboss is shop-only after six pylons. |
-| `O` | Thessaly | `1..7` | `2..6` | Depth `1` is `O_Intro`. Combat route depths use ship multi-encounter policy. Preboss is shop-only. |
-| `P` | Olympus | `1..9` | `2..8` | Depth `1` is `P_Intro`. Preboss offers shop and non-shop major reward branches. |
-| `Q` | Summit | `1..7` | `2..6` | Depth `1` is `Q_Intro`. Scripted fixed route. Preboss is shop-only. |
+| `O` | Thessaly | `1..7` | `1..6` | `O_Intro` is a locked entry before the planned row list. Combat route depths use ship multi-encounter policy. Preboss is shop-only. |
+| `P` | Olympus | `1..9` | `1..8` | `P_Intro` is a locked entry before the planned row list. Preboss offers shop and non-shop major reward branches. |
+| `Q` | Summit | `1..7` | `1..6` | `Q_Intro` is a locked entry before the planned row list. Scripted fixed route. Preboss is shop-only. |
 
 ## Vanilla Facts To Preserve
 
@@ -172,6 +175,12 @@ The depth role controls which additional fields are valid.
 | `Trial` | Optional trial-capable combat map | `Devotion` | Trial/devotion rewards are a special path. |
 | `Miniboss` | Specific miniboss room | Store-defined reward primitive | Most minibosses restrict `RunProgress` to `Boon`; `Q` uses `TyphonBossRewards`. |
 
+In F/G/I, vanilla can represent Devotion through reward data on normal maps,
+but the planner exposes it as the `Trial` role. Planner-facing reward-store
+surfaces do not include `Devotion`, so the same user choice is not exposed in
+two languages. O is different because vanilla declares an actual
+`O_Devotion01` room, so that room is the Trial option.
+
 Target-side availability can depend on shared route rules. For example, F/G
 midshops and devotion rewards require the previous room to have at least two
 offered exits. The room option owns `exitCount`; the role or reward owns the
@@ -180,12 +189,35 @@ shared route requirement.
 The UI should reveal only the fields supported by the selected role. Avoid
 allowing arbitrary combinations that vanilla cannot satisfy.
 
+Planner snapshots fail closed. The UI should prevent obvious invalid choices,
+but runtime snapshot construction must not silently replace an invalid row with
+`Vanilla` or a different room. If a configured row is out of range, duplicates a
+one-shot role, or violates another planner-owned route rule, the snapshot is
+marked invalid and route application is disabled for that run until the user
+fixes the plan.
+
+The first supported route requirement is `previousRoomExitCount`. It only
+passes when the previous planned row is valid and resolves to a concrete room
+option with enough exits. `Vanilla` and unresolved `Auto` rows do not satisfy
+the requirement because the planner cannot prove the previous room shape.
+
+Biome Q also uses forced-depth role gates for miniboss depths. At depths 3 and
+6, vanilla can have broadly eligible combat rooms, but forced miniboss rooms win
+the room selection pass. The planner keeps `Vanilla` available as an opt-out,
+but explicit planned roles at those depths must be `Miniboss`.
+
 Reward declarations use vanilla reward contexts instead of invented planner
 categories:
 
 ```lua
 reward = { kind = "none" }
 reward = { kind = "roomStore", rewardStore = "RunProgress" }
+reward = {
+    kind = "roomStore",
+    rewardStore = "RunProgress",
+    eligibleRewardTypes = { "Boon" },
+    ineligibleRewardTypes = { "RoomMoneyDrop" },
+}
 reward = { kind = "roomStore", rewardStore = "HubRewards" }
 reward = { kind = "forcedReward", rewardType = "Devotion", rewardStore = "RunProgress" }
 reward = { kind = "shop", shopProfile = "WorldShop" }
@@ -194,8 +226,29 @@ reward = { kind = "shipWheel", storeSource = "ChooseNextRewardStore" }
 
 The context tells UI/runtime which vanilla mechanism owns the reward. The
 player-facing choice should be the actual primitive inside that context, such
-as `Boon`, `WeaponUpgrade`, `TalentBigDrop`, or `StackUpgradeTriple`, resolved
-from live `RewardStoreData`/`StoreData` when the route UI is built.
+as `Boon`, `WeaponUpgrade`, `TalentBigDrop`, or `StackUpgradeTriple`.
+Room-store contexts can also carry `eligibleRewardTypes` and
+`ineligibleRewardTypes`; those mirror vanilla room-level `EligibleRewards` and
+`IneligibleRewards` filtering after the broad reward store is selected.
+
+Reward rendering is shared infrastructure, not owned by one route control
+template:
+
+- `mods/rewards/surfaces.lua` owns the curated planner-facing reward surfaces.
+  These surfaces are intentionally explicit instead of pretending to fully
+  evaluate vanilla `RewardStoreData`/`StoreData` requirements.
+- `mods/rewards/catalog.lua` translates planner reward contexts plus curated
+  reward surfaces into normalized picker surfaces.
+- `mods/rewards/runtime.lua` reads normalized reward picks through a generic
+  field adapter.
+- `mods/rewards/ui.lua` renders normalized reward controls through the same
+  adapter. Route templates decide where picks are stored; they do not duplicate
+  reward-surface rules.
+
+If reward selection later needs stronger live-data guarantees, that can be a
+separate data-layer pass. The current catalog should stay honest: it normalizes
+planner-owned surfaces, with vanilla data used as source reference rather than
+runtime truth.
 
 `Boon` needs a second selection layer for Olympian god source. The
 player-facing picker should show the god source, not stop at the generic
@@ -248,8 +301,8 @@ toward the two prior gods required to make `Devotion` eligible.
 facts:
 
 - F/G midshop roles require a previous room with at least two exits.
-- `Devotion` rewards require a previous room with at least two exits and two
-  prior devotion-counted gods.
+- `Trial` roles require a previous room with at least two exits and two prior
+  devotion-counted gods.
 - Miniboss roles allow at most one miniboss selection per biome.
 
 Biome layout files should not repeat these as per-room conditions. They should
@@ -301,32 +354,34 @@ For `Q` and `O`, the preboss depth only has the shop branch:
 ```
 
 `PrebossShop` is shop inventory control. `PrebossNoShop` is normal
-`RunProgress` reward control on the non-shop branch.
+`RunProgress` reward control on the non-shop branch, narrowed by the room's
+`IneligibleRewards` so `RoomMoneyDrop` is not exposed. `Devotion` is absent
+from planner reward stores and is exposed only through the `Trial` role.
 
-## Shop Profiles
+## Shop Surfaces
 
 Shop control should model all store options, not only the boon option.
 
-Implemented shop profiles live in `src/mods/data/shop_profiles.lua`:
+Implemented shop surfaces live in `src/mods/rewards/surfaces.lua`:
 
-| Profile | StoreData | Options | Notes |
+| Surface | Vanilla store | Options | Notes |
 | --- | --- | ---: | --- |
 | `WorldShop` | `WorldShop` | 3 | `Boon`, `MajorNonBoon`, `Minor`. Used by `F/G/P/O` shops. |
 | `I_WorldShop` | `I_WorldShop` | 5 | Tartarus preboss shop profile. Slots use `GroupNOffer1` keys. |
 | `Q_WorldShop` | `Q_WorldShop` | 6 | Summit preboss shop profile. Group 1 contributes `Group1Offer1` and `Group1Offer2`. |
 
-Biome definitions reference these profiles with `reward = { kind = "shop",
+Biome definitions reference these surfaces with `reward = { kind = "shop",
 shopProfile = "..." }`. Runtime/shop UI should render option controls from the
-profile's `optionSlots` instead of hard-coding a single boon field.
+reward catalog surface instead of hard-coding a single boon field.
 
-Biome files should not duplicate store internals. They only select the shop
-profile that applies to a route depth. Store-specific shape belongs inside the
-shop profile:
+Biome files should not duplicate shop internals. They only select the shop
+surface that applies to a route depth. Store-specific shape belongs inside
+`mods/rewards/surfaces.lua`:
 
 - `key`: stable route/storage identity, matching the source group/offer shape
   such as `Group4Offer1`.
 - `label`: player-facing description such as `Major Power` or `Resource`.
-- `storeGroup` and `offerIndex`: direct mapping back to vanilla `StoreData`.
+- `options`: curated planner-facing choices for that slot.
 
 `I_WorldShop` and `Q_WorldShop` intentionally use source-shaped keys rather
 than anonymous `Option1` names because their vanilla stores are mixed grouped
@@ -355,7 +410,7 @@ G = {
     kind = "fixedLinear",
     coordinate = "BiomeDepthCache",
     depthRange = { min = 1, max = 8 },
-    routeStartDepth = 2,
+    routeStartDepth = 1,
     routeEndDepth = 7,
     preboss = "shopAndReward",
 }
@@ -364,7 +419,7 @@ P = {
     kind = "fixedLinear",
     coordinate = "BiomeDepthCache",
     depthRange = { min = 1, max = 9 },
-    routeStartDepth = 2,
+    routeStartDepth = 1,
     routeEndDepth = 8,
     preboss = "shopAndReward",
 }
@@ -373,7 +428,7 @@ Q = {
     kind = "scriptedFixedLinear",
     coordinate = "BiomeDepthCache",
     depthRange = { min = 1, max = 7 },
-    routeStartDepth = 2,
+    routeStartDepth = 1,
     routeEndDepth = 6,
     preboss = "shopOnly",
 }
@@ -403,7 +458,7 @@ O = {
     kind = "multiEncounterFixed",
     coordinate = "BiomeDepthCache",
     depthRange = { min = 1, max = 7 },
-    routeStartDepth = 2,
+    routeStartDepth = 1,
     routeEndDepth = 6,
     combatEncounterPolicy = "O_CombatData",
 }
@@ -441,9 +496,10 @@ The main declaration file is the source of truth for route and role semantics:
 - `mapOptions` or `roomOptions`: references to layout-owned room groups that
   are valid for a role.
 - `reward`: which vanilla reward context applies to the role or special depth.
-  Room-store contexts point at `RewardStoreData`; shop contexts point at
-  `StoreData` through a shop profile; no-reward contexts intentionally expose
-  no reward picker.
+  Room-store and shop contexts are resolved through curated reward surfaces;
+  no-reward contexts intentionally expose no reward picker. A concrete
+  `mapOptions`/`roomOptions` entry can override the role reward when a vanilla
+  room has narrower reward filters than the rest of the role.
 
 The layout file is the source of truth for concrete vanilla room catalogues:
 

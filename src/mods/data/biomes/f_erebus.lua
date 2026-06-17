@@ -36,7 +36,9 @@ return function(importer)
                         {
                             key = "MajorReward",
                             label = "Major Reward",
-                            reward = rewards.roomStore("RunProgress"),
+                            reward = rewards.roomStore("RunProgress", {
+                                ineligibleRewardTypes = rewards.rewardSet("PreBossRoomBans"),
+                            }),
                         },
                     },
                 },
@@ -91,7 +93,7 @@ return function(importer)
                 key = "Miniboss",
                 label = "Miniboss",
                 roomOptions = layout.minibossRooms,
-                reward = rewards.roomStore("RunProgress", { allowedRewardTypes = { "Boon" } }),
+                reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
                 routeRules = routeRules.role("Miniboss"),
                 reserve = true,
             },

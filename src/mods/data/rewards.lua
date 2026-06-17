@@ -2,6 +2,33 @@ return function(importer)
 local routeRules = importer("mods/data/route_rules.lua")
 local rewards = {}
 
+local REWARD_SETS = {
+    OpeningRoomBans = {
+        "RoomMoneyDrop",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+    },
+    HubCombatRoomEasyBans = {
+        "WeaponUpgrade",
+        "HermesUpgrade",
+        "HephaestusUpgrade",
+    },
+    PreBossRoomBans = {
+        "RoomMoneyDrop",
+    },
+    ClockworkExtensionCombatBans = {
+        "Boon",
+    },
+}
+
+local function copyList(items)
+    local copy = {}
+    for index, item in ipairs(items or {}) do
+        copy[index] = item
+    end
+    return copy
+end
+
 local function indexByKey(items)
     local lookup = {}
     for _, item in ipairs(items) do
@@ -22,10 +49,21 @@ function rewards.roomStore(rewardStore, opts)
         kind = "roomStore",
         rewardStore = rewardStore,
     }
-    if opts.allowedRewardTypes ~= nil then
-        context.allowedRewardTypes = opts.allowedRewardTypes
+    if opts.eligibleRewardTypes ~= nil then
+        context.eligibleRewardTypes = copyList(opts.eligibleRewardTypes)
+    end
+    if opts.ineligibleRewardTypes ~= nil then
+        context.ineligibleRewardTypes = copyList(opts.ineligibleRewardTypes)
     end
     return context
+end
+
+function rewards.rewardSet(name)
+    local set = REWARD_SETS[name]
+    if set == nil then
+        error("unknown reward set: " .. tostring(name), 2)
+    end
+    return copyList(set)
 end
 
 function rewards.forcedReward(rewardType, opts)
@@ -56,10 +94,17 @@ end
 
 function rewards.fieldsCages(opts)
     opts = opts or {}
-    return {
+    local context = {
         kind = "fieldsCages",
         rewardStore = opts.rewardStore or "RunProgress",
     }
+    if opts.eligibleRewardTypes ~= nil then
+        context.eligibleRewardTypes = copyList(opts.eligibleRewardTypes)
+    end
+    if opts.ineligibleRewardTypes ~= nil then
+        context.ineligibleRewardTypes = copyList(opts.ineligibleRewardTypes)
+    end
+    return context
 end
 
 function rewards.fieldsBridge()
@@ -73,11 +118,18 @@ end
 
 function rewards.shipWheel(opts)
     opts = opts or {}
-    return {
+    local context = {
         kind = "shipWheel",
         storeSource = opts.storeSource or "ChooseNextRewardStore",
         defaultRewardStore = opts.defaultRewardStore or "RunProgress",
     }
+    if opts.eligibleRewardTypes ~= nil then
+        context.eligibleRewardTypes = copyList(opts.eligibleRewardTypes)
+    end
+    if opts.ineligibleRewardTypes ~= nil then
+        context.ineligibleRewardTypes = copyList(opts.ineligibleRewardTypes)
+    end
+    return context
 end
 
 function rewards.rewardTypeMetadata()

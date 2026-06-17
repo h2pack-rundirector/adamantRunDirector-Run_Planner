@@ -28,13 +28,18 @@ local function sideDoor(doorId, roomKey)
     }
 end
 
-local function combatRoom(roomKey, hubDoorId, sideDoors)
-    return {
+local function combatRoom(roomKey, hubDoorId, sideDoors, opts)
+    opts = opts or {}
+    local room = {
         key = roomKey,
         label = combatLabel(roomKey),
         hubDoorId = hubDoorId,
         sideDoors = sideDoors or {},
     }
+    if opts.reward ~= nil then
+        room.reward = opts.reward
+    end
+    return room
 end
 
 local function indexByKey(items)
@@ -115,6 +120,10 @@ layout.combatRooms = {
         sideDoor(558352, "N_Sub09"),
         sideDoor(566544, "N_Sub10"),
         sideDoor(566545, "N_Sub07"),
+    }, {
+        reward = rewards.roomStore("HubRewards", {
+            ineligibleRewardTypes = rewards.rewardSet("HubCombatRoomEasyBans"),
+        }),
     }),
     combatRoom("N_Combat13", 616992),
     combatRoom("N_Combat14", 561403),
@@ -126,6 +135,10 @@ layout.combatRooms = {
     }),
     combatRoom("N_Combat17", 561424, {
         sideDoor(558352, "N_Sub11"),
+    }, {
+        reward = rewards.roomStore("HubRewards", {
+            ineligibleRewardTypes = rewards.rewardSet("HubCombatRoomEasyBans"),
+        }),
     }),
     combatRoom("N_Combat18", 561374, {
         sideDoor(658853, "N_Sub12"),

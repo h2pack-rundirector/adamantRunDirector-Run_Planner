@@ -11,18 +11,18 @@ return function(importer)
         slotLayout = {
             coordinate = "BiomeDepthCache",
             depthRange = { min = 1, max = 8 },
-            routeStartDepth = 2,
+            routeStartDepth = 1,
             routeEndDepth = 7,
+            entry = {
+                kind = "intro",
+                roomKey = layout.introRoom.key,
+                locked = true,
+            },
             default = {
                 kind = "route",
                 alternate = "VanillaSafe",
             },
             special = {
-                [1] = {
-                    kind = "intro",
-                    roomKey = layout.introRoom.key,
-                    locked = true,
-                },
                 [8] = {
                     kind = "preboss",
                     roomKey = layout.prebossRoom.key,
@@ -35,7 +35,9 @@ return function(importer)
                         {
                             key = "MajorReward",
                             label = "Major Reward",
-                            reward = rewards.roomStore("RunProgress"),
+                            reward = rewards.roomStore("RunProgress", {
+                                ineligibleRewardTypes = rewards.rewardSet("PreBossRoomBans"),
+                            }),
                         },
                     },
                 },
@@ -90,7 +92,7 @@ return function(importer)
                 key = "Miniboss",
                 label = "Miniboss",
                 roomOptions = layout.minibossRooms,
-                reward = rewards.roomStore("RunProgress", { allowedRewardTypes = { "Boon" } }),
+                reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
                 routeRules = routeRules.role("Miniboss"),
                 reserve = true,
             },

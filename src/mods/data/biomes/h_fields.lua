@@ -58,14 +58,16 @@ return function(importer)
                 key = "Combat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,
-                reward = rewards.fieldsCages({ rewardStore = "RunProgress" }),
+                reward = rewards.fieldsCages({
+                    rewardStore = "RunProgress",
+                }),
                 cageRewardPolicy = "H_FieldsCageRewards",
             },
             {
                 key = "Miniboss",
                 label = "Miniboss",
                 roomOptions = layout.minibossRooms,
-                reward = rewards.roomStore("RunProgress", { allowedRewardTypes = { "Boon" } }),
+                reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
                 routeRules = routeRules.role("Miniboss"),
                 reserve = true,
             },
