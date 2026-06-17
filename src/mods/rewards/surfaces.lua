@@ -91,7 +91,7 @@ surfaces.shops = {
             },
             {
                 key = "MajorNonBoon",
-                label = "Major Non-Boon",
+                label = "Non-Boon",
                 options = {
                     "WeaponUpgradeDrop",
                     "RoomRewardHealDrop",

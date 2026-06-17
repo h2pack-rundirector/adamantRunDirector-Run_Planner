@@ -77,6 +77,14 @@ local function loadFieldsCageTemplate()
     return template
 end
 
+local function loadRouteGlobalTemplate()
+    local template
+    withTestImport(function()
+        template = testImport("mods/controls/templates.lua").RouteGlobal
+    end)
+    return template
+end
+
 local function loadFixedLinearData()
     return testImport("mods/controls/FixedLinearRoute/data.lua", nil, loadRouteDeps())
 end
@@ -188,11 +196,44 @@ local function fakeUiRows(rowCount)
     }
 end
 
+local function fakePackedField(root)
+    local values = {}
+    for _, bit in ipairs(root.bits or {}) do
+        values[bit.key] = bit.default == true
+    end
+
+    return {
+        read = function()
+            return 0
+        end,
+        get = function()
+            return nil
+        end,
+        readAlias = function(_, alias)
+            return values[alias]
+        end,
+        writeAlias = function(_, alias, value)
+            values[alias] = value == true
+        end,
+        schema = function()
+            return root
+        end,
+        alias = function()
+            return root.key
+        end,
+        controlId = function()
+            return root.key
+        end,
+    }
+end
+
 local function routeUiFields(storage)
     local fields = {}
     for _, root in ipairs(storage or {}) do
         if root.type == "table" then
             fields[root.key] = fakeUiRows(root.defaultRows or root.maxRows or root.minRows or 0)
+        elseif root.type == "packedInt" then
+            fields[root.key] = fakePackedField(root)
         end
     end
     return fields
@@ -206,9 +247,16 @@ local function noOpDraw()
         BeginTabItem = function()
             return false
         end,
+        Checkbox = function(_, current)
+            return current, false
+        end,
         EndTabBar = function()
         end,
         EndTabItem = function()
+        end,
+        PopStyleColor = function()
+        end,
+        PushStyleColor = function()
         end,
         GetCursorPosX = function()
             return 0
@@ -229,7 +277,12 @@ local function noOpDraw()
     return {
         imgui = imgui,
         widgets = {
+            text = function()
+            end,
             dropdown = function()
+                return false
+            end,
+            packedCheckboxList = function()
                 return false
             end,
         },
@@ -262,35 +315,154 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
     local controls = data.buildControls(catalog, testImport)
 
     lu.assertEquals(data.routeControlNames(catalog, testImport), {
+        "RouteGlobalUnderworld",
         "RouteF",
         "RouteG",
         "RouteH",
         "RouteI",
+        "RouteGlobalSurface",
         "RouteN",
         "RouteO",
         "RouteP",
         "RouteQ",
     })
     lu.assertEquals(data.routeControlTabs(catalog, testImport).Underworld, {
+        { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
         { key = "F", label = "Erebus", controlName = "RouteF" },
         { key = "G", label = "Oceanus", controlName = "RouteG" },
         { key = "H", label = "Fields", controlName = "RouteH" },
         { key = "I", label = "Tartarus", controlName = "RouteI" },
     })
     lu.assertEquals(data.routeControlTabs(catalog, testImport).Surface, {
+        { key = "Global", label = "Global", controlName = "RouteGlobalSurface" },
         { key = "N", label = "Ephyra", controlName = "RouteN" },
         { key = "O", label = "Thessaly", controlName = "RouteO" },
         { key = "P", label = "Olympus", controlName = "RouteP" },
         { key = "Q", label = "Summit", controlName = "RouteQ" },
     })
+    lu.assertEquals(controls.RouteGlobalUnderworld.template, "RouteGlobal")
     lu.assertEquals(controls.RouteF.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteG.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteH.template, "FieldsCageRoute")
     lu.assertEquals(controls.RouteI.template, "ClockworkGoalRoute")
+    lu.assertEquals(controls.RouteGlobalSurface.template, "RouteGlobal")
     lu.assertEquals(controls.RouteN.template, "HubPylonRoute")
     lu.assertEquals(controls.RouteO.template, "MultiEncounterFixedRoute")
     lu.assertEquals(controls.RouteP.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteQ.template, "FixedLinearRoute")
+end
+
+function TestRunPlannerControls.testRouteGlobalTemplateStoresGodPool()
+    local catalog = loadCatalog()
+    local template = loadRouteGlobalTemplate()
+    local instance = template.prepare({
+        name = "RouteGlobalUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        gods = catalog.gods,
+    })
+    local storage = template.storage(instance)
+    local control = template.createRuntime(routeUiFields(storage), instance)
+
+    lu.assertEquals(storage[1].key, "GodPool")
+    lu.assertEquals(storage[1].type, "packedInt")
+    lu.assertEquals(storage[1].width, 9)
+    lu.assertEquals(#storage[1].bits, 9)
+    lu.assertEquals(storage[1].bits[1], {
+        key = "AphroditeUpgrade",
+        label = "Aphrodite",
+        type = "bool",
+        offset = 0,
+        width = 1,
+        default = true,
+    })
+    lu.assertTrue(control:isGodEnabled("AphroditeUpgrade"))
+    lu.assertEquals(control:enabledGods(), {
+        "AphroditeUpgrade",
+        "ApolloUpgrade",
+        "AresUpgrade",
+        "DemeterUpgrade",
+        "HephaestusUpgrade",
+        "HestiaUpgrade",
+        "HeraUpgrade",
+        "PoseidonUpgrade",
+        "ZeusUpgrade",
+    })
+end
+
+function TestRunPlannerControls.testRouteGlobalProvidesStableGodSourceDropdownOptions()
+    local catalog = loadCatalog()
+    local template = loadRouteGlobalTemplate()
+    local instance = template.prepare({
+        name = "RouteGlobalUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        gods = catalog.gods,
+    })
+    local control = template.createUi(routeUiFields(template.storage(instance)), instance)
+    local baseOpts = {
+        label = "God",
+        controlWidth = 170,
+    }
+
+    local opts = control:godSourceDrawOpts(baseOpts, "")
+    lu.assertEquals(opts.label, "God")
+    lu.assertEquals(opts.values, {
+        "",
+        "AphroditeUpgrade",
+        "ApolloUpgrade",
+        "AresUpgrade",
+        "DemeterUpgrade",
+        "HephaestusUpgrade",
+        "HestiaUpgrade",
+        "HeraUpgrade",
+        "PoseidonUpgrade",
+        "ZeusUpgrade",
+    })
+    lu.assertEquals(opts.displayValues.AphroditeUpgrade, "Aphrodite")
+    lu.assertEquals(opts.valueColors.AphroditeUpgrade, catalog.gods[1].color)
+
+    control:godPoolField():writeAlias("AphroditeUpgrade", false)
+    control:invalidateGodSource()
+
+    local updatedOpts = control:godSourceDrawOpts(baseOpts, "")
+    lu.assertIs(updatedOpts, opts)
+    lu.assertFalse(hasValue(updatedOpts.values, "AphroditeUpgrade"))
+
+    local currentValueOpts = control:godSourceDrawOpts(baseOpts, "AphroditeUpgrade")
+    lu.assertIs(currentValueOpts, opts)
+    lu.assertTrue(hasValue(currentValueOpts.values, "AphroditeUpgrade"))
+end
+
+function TestRunPlannerControls.testRouteContextSuppliesRouteGlobalGodSource()
+    local catalog = loadCatalog()
+    local globalTemplate = loadRouteGlobalTemplate()
+    local fixedTemplate = loadFixedLinearTemplate()
+    local globalInstance = globalTemplate.prepare({
+        name = "RouteGlobalUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        gods = catalog.gods,
+    })
+    local globalControl = globalTemplate.createUi(routeUiFields(globalTemplate.storage(globalInstance)), globalInstance)
+    local routeControl = createUiControl(fixedTemplate, catalog.lookup.F, "RouteF")
+    local controlsByName = {
+        RouteGlobalUnderworld = globalControl,
+        RouteF = routeControl,
+    }
+    local context = loadRunContext().create({
+        routes = routeDefinitions({ catalog.routes.lookup.Underworld }),
+        controls = {
+            get = function(controlName)
+                return controlsByName[controlName]
+            end,
+        },
+    })
+
+    context:bindControl(routeControl, "Underworld")
+    local rewardOpts = routeControl:rewardDrawOpts({
+        hideGenericRewardLabel = true,
+    })
+
+    lu.assertIs(rewardOpts.godSource, globalControl)
+    lu.assertTrue(rewardOpts.hideGenericRewardLabel)
 end
 
 function TestRunPlannerControls.testRouteTemplateViewsSupportNoOpUiTraversal()
@@ -317,6 +489,15 @@ function TestRunPlannerControls.testRouteTemplateViewsSupportNoOpUiTraversal()
             end
         end
     end
+
+    local globalTemplate = loadRouteGlobalTemplate()
+    local globalInstance = globalTemplate.prepare({
+        name = "RouteGlobalUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        gods = catalog.gods,
+    })
+    local globalControl = globalTemplate.createUi(routeUiFields(globalTemplate.storage(globalInstance)), globalInstance)
+    globalTemplate.views.planner(draw, globalControl, globalInstance)
 end
 
 function TestRunPlannerControls.testRouteTemplateViewAllocationsStayBounded()

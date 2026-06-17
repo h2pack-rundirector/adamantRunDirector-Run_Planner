@@ -9,8 +9,14 @@ local TEMPLATE_BY_ADAPTER = {
     scriptedFixedLinear = "FixedLinearRoute",
 }
 
+local GLOBAL_TAB_KEY = "Global"
+
 local function routeControlName(biomeKey)
     return "Route" .. tostring(biomeKey or "")
+end
+
+local function routeGlobalControlName(routeKey)
+    return "RouteGlobal" .. tostring(routeKey or "")
 end
 
 local function routeTabForBiome(catalog, biomeKey)
@@ -30,11 +36,27 @@ function controls.routeControlName(biomeKey)
     return routeControlName(biomeKey)
 end
 
+function controls.routeGlobalControlName(routeKey)
+    return routeGlobalControlName(routeKey)
+end
+
 function controls.routeControlNames(catalog)
     local names = {}
-    for _, biome in ipairs(catalog and catalog.ordered or {}) do
-        if TEMPLATE_BY_ADAPTER[biome.adapter] ~= nil then
-            names[#names + 1] = routeControlName(biome.key)
+    if catalog ~= nil and catalog.routes ~= nil and catalog.routes.ordered ~= nil then
+        for _, route in ipairs(catalog.routes.ordered) do
+            names[#names + 1] = routeGlobalControlName(route.key)
+            for _, biomeKey in ipairs(route.biomes or {}) do
+                local biome = catalog.lookup and catalog.lookup[biomeKey] or nil
+                if biome ~= nil and TEMPLATE_BY_ADAPTER[biome.adapter] ~= nil then
+                    names[#names + 1] = routeControlName(biome.key)
+                end
+            end
+        end
+    else
+        for _, biome in ipairs(catalog and catalog.ordered or {}) do
+            if TEMPLATE_BY_ADAPTER[biome.adapter] ~= nil then
+                names[#names + 1] = routeControlName(biome.key)
+            end
         end
     end
     return names
@@ -44,7 +66,13 @@ function controls.routeControlTabs(catalog)
     if catalog ~= nil and catalog.routes ~= nil and catalog.routes.ordered ~= nil then
         local tabsByRoute = {}
         for _, route in ipairs(catalog.routes.ordered) do
-            local tabs = {}
+            local tabs = {
+                {
+                    key = GLOBAL_TAB_KEY,
+                    label = "Global",
+                    controlName = routeGlobalControlName(route.key),
+                },
+            }
             for _, biomeKey in ipairs(route.biomes or {}) do
                 local tab = routeTabForBiome(catalog, biomeKey)
                 if tab ~= nil then
@@ -77,6 +105,16 @@ end
 
 function controls.build(catalog)
     local instances = {}
+    if catalog ~= nil and catalog.routes ~= nil and catalog.routes.ordered ~= nil then
+        for _, route in ipairs(catalog.routes.ordered) do
+            instances[routeGlobalControlName(route.key)] = {
+                template = "RouteGlobal",
+                label = "Global",
+                route = route,
+                gods = catalog.gods,
+            }
+        end
+    end
     for _, biome in ipairs(catalog and catalog.ordered or {}) do
         local template = TEMPLATE_BY_ADAPTER[biome.adapter]
         if template ~= nil then

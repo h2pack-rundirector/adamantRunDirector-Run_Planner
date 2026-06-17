@@ -111,6 +111,20 @@ function runtime.create(fields, instance)
         instance.routeKey = routeKey
     end
 
+    function control:godSource()
+        if instance.routeContext ~= nil and instance.routeContext.godSourceForRoute ~= nil then
+            return instance.routeContext:godSourceForRoute(instance.routeKey)
+        end
+        return nil
+    end
+
+    function control:rewardDrawOpts(baseOpts)
+        instance.rewardDrawOpts = instance.rewardDrawOpts or {}
+        instance.rewardDrawOpts.hideGenericRewardLabel = baseOpts and baseOpts.hideGenericRewardLabel
+        instance.rewardDrawOpts.godSource = self:godSource()
+        return instance.rewardDrawOpts
+    end
+
     function control:label()
         return instance.label
     end

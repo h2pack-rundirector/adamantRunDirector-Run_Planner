@@ -18,6 +18,7 @@ local rewardRuntime = import("mods/rewards/runtime.lua", nil, {
     catalog = rewardCatalog,
 })
 local routeStatusUi = import("mods/controls/route_status_ui.lua")
+local godData = import("mods/data/gods.lua")
 local rewards = {
     runtime = rewardRuntime,
     ui = import("mods/rewards/ui.lua", nil, {
@@ -50,5 +51,8 @@ return {
         route = route,
         rewards = rewards,
         routeStatusUi = routeStatusUi,
+    }),
+    RouteGlobal = import("mods/controls/RouteGlobal/RouteGlobal.lua", nil, {
+        gods = godData,
     }),
 }

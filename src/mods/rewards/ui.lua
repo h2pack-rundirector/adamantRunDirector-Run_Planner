@@ -52,6 +52,7 @@ local function drawGroupedRowStart(imgui, startX, header, reserveHeaderColumn)
 end
 
 local function drawControl(draw, fields, control, opts)
+    local field = fields:get(control.alias)
     local drawOpts = control.drawOpts
     if opts ~= nil
         and opts.hideGenericRewardLabel
@@ -59,7 +60,14 @@ local function drawControl(draw, fields, control, opts)
     then
         drawOpts = control.genericRewardLabelHiddenDrawOpts
     end
-    return draw.widgets.dropdown(fields:get(control.alias), drawOpts)
+    if control.kind == "boonSource"
+        and opts ~= nil
+        and opts.godSource ~= nil
+        and opts.godSource.godSourceDrawOpts ~= nil
+    then
+        drawOpts = opts.godSource:godSourceDrawOpts(drawOpts, field:read())
+    end
+    return draw.widgets.dropdown(field, drawOpts)
 end
 
 local function hasGroupedRows(surface)

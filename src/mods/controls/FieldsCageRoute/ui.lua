@@ -32,6 +32,13 @@ local REWARD_DRAW_OPTS = {
     hideGenericRewardLabel = true,
 }
 
+local function rewardDrawOpts(control)
+    if control.rewardDrawOpts ~= nil then
+        return control:rewardDrawOpts(REWARD_DRAW_OPTS)
+    end
+    return REWARD_DRAW_OPTS
+end
+
 local function copyBaseOpts(base)
     local copy = {}
     for key, value in pairs(base or {}) do
@@ -389,7 +396,7 @@ local function drawCageRewardRows(draw, control, instance, rowIndex)
             draw.imgui.Text(tostring(leg.label or leg.key or "Cage"))
             draw.imgui.SameLine()
             draw.imgui.SetCursorPosX(CAGE_REWARD_COLUMN_X)
-            if rewardUi.draw(draw, legSurface, cageRewardFields(control, cageRewardRowIndex), REWARD_DRAW_OPTS) then
+            if rewardUi.draw(draw, legSurface, cageRewardFields(control, cageRewardRowIndex), rewardDrawOpts(control)) then
                 control:invalidateReadPass()
             end
         end
@@ -415,7 +422,7 @@ local function drawRewardRow(draw, control, instance, rowIndex)
     then
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)
-        if rewardUi.draw(draw, surface, rewardFields(control, rowIndex), REWARD_DRAW_OPTS) then
+        if rewardUi.draw(draw, surface, rewardFields(control, rowIndex), rewardDrawOpts(control)) then
             control:invalidateReadPass()
         end
     end

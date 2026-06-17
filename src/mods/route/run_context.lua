@@ -6,6 +6,10 @@ local function routeControlName(biomeKey)
     return "Route" .. tostring(biomeKey or "")
 end
 
+local function routeGlobalControlName(routeKey)
+    return "RouteGlobal" .. tostring(routeKey or "")
+end
+
 local function buildRouteInfo(routes)
     local routeInfoByRoute = {}
     local routeInfoByBiome = {}
@@ -148,6 +152,7 @@ function runContext.create(opts)
         controls = opts.controls,
         snapshotByRoute = {},
         overviewByRoute = {},
+        godSourceByRoute = {},
     }
 
     function context:beginPass(controls)
@@ -222,8 +227,31 @@ function runContext.create(opts)
         return nil
     end
 
+    function context:controlByName(controlName, routeKey)
+        local control
+        if self.controlResolver ~= nil then
+            control = self.controlResolver(controlName, nil, routeKey)
+        elseif self.controls ~= nil and self.controls.get ~= nil then
+            control = self.controls.get(controlName)
+        end
+        return self:bindControl(control, routeKey)
+    end
+
+    function context:godSourceForRoute(routeKey)
+        if self.godSourceByRoute[routeKey] ~= nil then
+            return self.godSourceByRoute[routeKey]
+        end
+        local control = self:controlByName(routeGlobalControlName(routeKey), routeKey)
+        if control ~= nil and control.godSourceDrawOpts ~= nil then
+            self.godSourceByRoute[routeKey] = control
+            return control
+        end
+        return nil
+    end
+
     function context:attachControls()
         for _, route in ipairs(self.routes.ordered or EMPTY_LIST) do
+            self:godSourceForRoute(route.key)
             for _, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
                 self:controlForBiome(route.key, biomeKey)
             end

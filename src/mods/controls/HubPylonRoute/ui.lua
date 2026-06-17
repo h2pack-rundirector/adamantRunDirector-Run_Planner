@@ -32,6 +32,13 @@ local REWARD_DRAW_OPTS = {
     hideGenericRewardLabel = true,
 }
 
+local function rewardDrawOpts(control)
+    if control.rewardDrawOpts ~= nil then
+        return control:rewardDrawOpts(REWARD_DRAW_OPTS)
+    end
+    return REWARD_DRAW_OPTS
+end
+
 local function copyBaseOpts(base)
     local copy = {}
     for key, value in pairs(base or {}) do
@@ -410,7 +417,7 @@ local function drawPrimaryRewardRow(draw, control, instance, rowIndex)
     then
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)
-        if rewardUi.draw(draw, surface, rewardFields(control, rowIndex), REWARD_DRAW_OPTS) then
+        if rewardUi.draw(draw, surface, rewardFields(control, rowIndex), rewardDrawOpts(control)) then
             control:invalidateReadPass()
         end
     end
@@ -435,7 +442,7 @@ local function drawSideRoomRow(draw, control, instance, rowIndex)
         then
             draw.imgui.SameLine()
             draw.imgui.SetCursorPosX(SIDE_REWARD_COLUMN_X)
-            if rewardUi.draw(draw, surface, sideRewardFields(control, sideRowIndex), REWARD_DRAW_OPTS) then
+            if rewardUi.draw(draw, surface, sideRewardFields(control, sideRowIndex), rewardDrawOpts(control)) then
                 control:invalidateReadPass()
             end
         end
