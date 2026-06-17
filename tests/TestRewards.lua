@@ -53,6 +53,7 @@ function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()
         "StackUpgrade",
         "TalentDrop",
     })
+    lu.assertEquals(surface.controls[1].genericRewardLabelHiddenDrawOpts.label, "")
     lu.assertEquals(surface.controls[2].key, "boonSource")
     lu.assertEquals(surface.controls[2].visibleWhen, {
         alias = "Reward1Key",
@@ -75,6 +76,7 @@ function TestRunPlannerRewards.testCatalogNormalizesMajorMinorSurface()
         "Major",
         "Minor",
     })
+    lu.assertEquals(surface.controls[1].genericRewardLabelHiddenDrawOpts.label, "")
     lu.assertEquals(surface.controls[2].key, "rewardType")
     lu.assertEquals(surface.controls[2].rewardStore, "RunProgress")
     lu.assertEquals(surface.controls[2].visibleWhen, {
@@ -121,6 +123,23 @@ function TestRunPlannerRewards.testCatalogNormalizesMajorMinorSurface()
     })
 end
 
+function TestRunPlannerRewards.testCatalogSplitsDevotionPairAcrossRows()
+    local catalog = loadCatalog()
+    local surface = catalog:surfaceFor({
+        kind = "forcedReward",
+        rewardType = "Devotion",
+    })
+
+    lu.assertEquals(surface.kind, "devotionPair")
+    lu.assertEquals(surface.fixedRewardType, "Devotion")
+    lu.assertEquals(surface.controls[1].key, "lootAName")
+    lu.assertEquals(surface.controls[1].label, "God A")
+    lu.assertEquals(surface.controls[1].rowIndex, 1)
+    lu.assertEquals(surface.controls[2].key, "lootBName")
+    lu.assertEquals(surface.controls[2].label, "God B")
+    lu.assertEquals(surface.controls[2].rowIndex, 2)
+end
+
 function TestRunPlannerRewards.testCatalogNormalizesBoonOnlySurface()
     local catalog = loadCatalog()
     local surface = catalog:surfaceFor({
@@ -136,6 +155,48 @@ function TestRunPlannerRewards.testCatalogNormalizesBoonOnlySurface()
     lu.assertEquals(surface.controls[1].alias, "Reward1Key")
     lu.assertEquals(surface.controls[1].values[1], "")
     lu.assertEquals(surface.controls[1].values[2], "AphroditeUpgrade")
+end
+
+function TestRunPlannerRewards.testCatalogNormalizesEphyraSubRoomRewardSurfaces()
+    local catalog = loadCatalog()
+    local surface = catalog:surfaceFor({
+        kind = "roomStore",
+        rewardStore = "SubRoomRewards",
+    })
+
+    lu.assertEquals(surface.kind, "roomStore")
+    lu.assertEquals(surface.controls[1].values, {
+        "",
+        "MaxManaDropSmall",
+        "MaxHealthDropSmall",
+        "EmptyMaxHealthSmallDrop",
+        "RoomMoneyTinyDrop",
+        "AirBoost",
+        "EarthBoost",
+        "FireBoost",
+        "WaterBoost",
+        "GiftDrop",
+        "MetaCurrencyDrop",
+        "MetaCardPointsCommonDrop",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+        "StackUpgrade",
+        "RoomMoneyDrop",
+        "MinorTalentDrop",
+    })
+
+    local hardSurface = catalog:surfaceFor({
+        kind = "roomStore",
+        rewardStore = "SubRoomRewardsHard",
+    })
+    lu.assertEquals(hardSurface.kind, "roomStore")
+    lu.assertEquals(hardSurface.controls[1].values, {
+        "",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+        "StackUpgrade",
+        "RoomMoneyDrop",
+    })
 end
 
 function TestRunPlannerRewards.testCatalogUsesMajorMinorSurfaceForShipWheel()

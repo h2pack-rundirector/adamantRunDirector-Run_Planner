@@ -593,6 +593,12 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     lu.assertEquals(ephyra.hub.roomKey, "N_Hub")
     lu.assertEquals(ephyra.hub.requiredPylons, 6)
     lu.assertEquals(ephyra.hub.availableDoorCount, { min = 9, max = 10 })
+    lu.assertEquals(ephyra.hub.sideRoomAvailability.default, "")
+    lu.assertEquals(ephyra.hub.sideRoomAvailability.modes, {
+        { key = "", label = "Vanilla" },
+        { key = "Disabled", label = "Disabled" },
+        { key = "Enabled", label = "Enabled" },
+    })
     lu.assertEquals(#ephyra.hub.combatRooms, 23)
     lu.assertEquals(#ephyra.hub.hubDoorRooms, 26)
 
@@ -624,7 +630,7 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     lu.assertEquals(ephyra.hub.minibossAvailability.mode, "oneOf")
     lu.assertEquals(ephyra.hub.minibossAvailability.rooms, { "N_MiniBoss01", "N_MiniBoss02" })
     lu.assertEquals(ephyra.hub.sideRoomAvailability.identity, "parentCombatRoomAndDoorId")
-    lu.assertEquals(ephyra.hub.sideRoomAvailability.default, "Vanilla")
+    lu.assertEquals(ephyra.hub.sideRoomAvailability.default, "")
 end
 
 function TestRunPlannerData.testFieldsLayoutModelsCageRoute()

@@ -74,11 +74,11 @@ return function(importer)
             },
             sideRoomAvailability = {
                 identity = "parentCombatRoomAndDoorId",
-                default = "Vanilla",
+                default = "",
                 modes = {
-                    { key = "Vanilla", label = "Vanilla" },
-                    { key = "Force", label = "Force" },
-                    { key = "Block", label = "Block" },
+                    { key = "", label = "Vanilla" },
+                    { key = "Disabled", label = "Disabled" },
+                    { key = "Enabled", label = "Enabled" },
                 },
             },
         },

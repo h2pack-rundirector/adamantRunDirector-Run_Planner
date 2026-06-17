@@ -30,6 +30,14 @@ local function rewardFields(rewardRows, rowIndex)
     }
 end
 
+local function sideRewardFields(sideRewardRows, sideRowIndex)
+    return {
+        read = function(_, alias)
+            return sideRewardRows:read(sideRowIndex, data.sideRoomRewardAlias(nil, alias))
+        end,
+    }
+end
+
 local function createRouteRows(fields)
     return {
         read = function(_, rowIndex, alias)
@@ -48,6 +56,13 @@ local function rewardContext(role, option)
     return role and role.reward or nil
 end
 
+local function rewardSurfaceForContext(context)
+    if rewardRuntime == nil then
+        return nil
+    end
+    return rewardRuntime.surfaceFor(context)
+end
+
 local function rewardSurface(role, option)
     if rewardRuntime == nil or role == nil then
         return nil
@@ -64,14 +79,93 @@ local function prewarmRewardSurfaces(instance)
         prewarmRewardSurface(role)
         for _, option in ipairs(data.optionListForRole(role)) do
             prewarmRewardSurface(role, option)
+            for _, sideDoor in ipairs(option.sideDoors or {}) do
+                rewardSurfaceForContext(sideDoor.reward)
+            end
         end
     end
     for _, slot in ipairs(instance.routeSlots or {}) do
         prewarmRewardSurface(slot.role)
-        for _, branch in ipairs(slot.branches or {}) do
-            prewarmRewardSurface(branch)
+        for _, option in ipairs(data.optionListForRole(slot.role)) do
+            prewarmRewardSurface(slot.role, option)
         end
     end
+end
+
+local function selectedRoomKey(slot, option)
+    if option ~= nil and option.key ~= nil then
+        return option.key
+    end
+    return slot and slot.roomKey or nil
+end
+
+local function readSideRewards(sideRewardRows, sideRowIndex)
+    local rewards = {}
+    for index = 1, data.REWARD_SLOT_COUNT do
+        rewards[index] = sideRewardRows:read(
+            sideRowIndex,
+            data.sideRoomRewardAlias(nil, "Reward" .. tostring(index) .. "Key")
+        ) or ""
+    end
+    return rewards
+end
+
+local function readSideRewardLoot(sideRewardRows, sideRowIndex)
+    local loot = {}
+    for index = 1, data.REWARD_SLOT_COUNT do
+        loot[index] = sideRewardRows:read(
+            sideRowIndex,
+            data.sideRoomRewardAlias(nil, "Reward" .. tostring(index) .. "LootKey")
+        ) or ""
+    end
+    return loot
+end
+
+local function sideRoomMode(sideRows, sideRowIndex)
+    local mode = sideRows:read(sideRowIndex, data.sideRoomModeAlias()) or ""
+    if mode == "" then
+        return "", "Vanilla"
+    end
+    return mode, mode
+end
+
+local function sideRewardPicks(surface, sideRewardRows, sideRowIndex)
+    local picks = rewardRuntime and rewardRuntime.snapshot(surface, sideRewardFields(sideRewardRows, sideRowIndex)) or {}
+    for _, pick in ipairs(picks) do
+        pick.storageAlias = pick.alias
+    end
+    return picks
+end
+
+local function sideRoomSnapshot(fields, sideRowIndex, sideIndex, sideDoor)
+    local storedMode, mode = sideRoomMode(fields.SideRooms, sideRowIndex)
+    local enabled = storedMode == data.sideRoomEnabledMode()
+    local surface = enabled and rewardSurfaceForContext(sideDoor.reward) or nil
+    return {
+        sideIndex = sideIndex,
+        doorId = sideDoor.doorId,
+        roomKey = sideDoor.roomKey,
+        modeKey = mode,
+        storedModeKey = storedMode,
+        enabled = enabled,
+        rewardStore = sideDoor.reward and sideDoor.reward.rewardStore or nil,
+        rewards = readSideRewards(fields.SideRewards, sideRowIndex),
+        rewardLoot = readSideRewardLoot(fields.SideRewards, sideRowIndex),
+        rewardKind = surface and surface.kind or "none",
+        rewardPicks = enabled and sideRewardPicks(surface, fields.SideRewards, sideRowIndex) or {},
+    }
+end
+
+local function sideRoomSnapshots(instance, fields, routeRows, rowIndex)
+    local sideRooms = {}
+    for sideIndex = 1, data.sideDoorCountForRow(instance, routeRows, rowIndex) do
+        local sideDoor = data.sideDoorForRow(instance, routeRows, rowIndex, sideIndex)
+        local sideRowIndex = data.sideRoomRowIndex(instance, rowIndex, sideIndex)
+        if sideDoor ~= nil and sideRowIndex ~= nil then
+            sideRooms[#sideRooms + 1] = sideRoomSnapshot(fields, sideRowIndex, sideIndex, sideDoor)
+        end
+    end
+    return sideRooms
 end
 
 function runtime.create(fields, instance)
@@ -140,14 +234,16 @@ function runtime.create(fields, instance)
         return {
             rowIndex = rowIndex,
             coordinate = slot.coordinate,
-            slotKind = slot.kind or "route",
-            roomKey = slot.roomKey,
-            branchKey = slot.branchKey,
+            slotKind = slot.kind or "pylonPick",
             slotLabel = slot.label,
             roleKey = roleKey,
             role = role,
             optionKey = optionKey,
             option = option,
+            roomKey = selectedRoomKey(slot, option),
+            hubDoorId = option and option.hubDoorId or slot.hubDoorId,
+            sideDoors = option and option.sideDoors or slot.sideDoors,
+            sideRooms = sideRoomSnapshots(instance, fields, routeRows, rowIndex),
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,

@@ -99,6 +99,14 @@ end
 local function dropdown(alias, key, label, values, labels, opts)
     opts = opts or {}
     local controlWidth = opts.controlWidth or 160
+    local drawOpts = {
+        label = label,
+        values = values,
+        displayValues = labels,
+        controlWidth = controlWidth,
+        labelWidth = opts.labelWidth,
+        controlGap = opts.controlGap,
+    }
     local control = {
         alias = alias,
         key = key,
@@ -107,16 +115,19 @@ local function dropdown(alias, key, label, values, labels, opts)
         values = values,
         displayValues = labels,
         controlWidth = controlWidth,
-        drawOpts = {
-            label = label,
+        drawOpts = drawOpts,
+        visibleWhen = opts.visibleWhen,
+    }
+    if label == "Reward" then
+        control.genericRewardLabelHiddenDrawOpts = {
+            label = "",
             values = values,
             displayValues = labels,
             controlWidth = controlWidth,
             labelWidth = opts.labelWidth,
             controlGap = opts.controlGap,
-        },
-        visibleWhen = opts.visibleWhen,
-    }
+        }
+    end
     if opts.rewardStore ~= nil then
         control.rewardStore = opts.rewardStore
     end
@@ -237,10 +248,12 @@ local function forcedRewardSurface(self, context)
                 dropdown("Reward1Key", "lootAName", "God A", values, labels, {
                     kind = "boonSource",
                     controlWidth = 150,
+                    rowIndex = 1,
                 }),
                 dropdown("Reward2Key", "lootBName", "God B", values, labels, {
                     kind = "boonSource",
                     controlWidth = 150,
+                    rowIndex = 2,
                 }),
             },
         }

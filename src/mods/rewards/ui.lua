@@ -4,6 +4,7 @@ local runtime = deps.runtime
 local ui = {}
 
 local ROW_HEADER_WIDTH = 80
+local GENERIC_REWARD_HEADER = "Reward"
 
 local function conditionMatches(condition, fields)
     return fields:read(condition.alias) == condition.value
@@ -39,39 +40,67 @@ local function drawRowHeader(imgui, header)
     imgui.SameLine()
 end
 
-local function drawGroupedRowStart(imgui, startX, header)
+local function drawGroupedRowStart(imgui, startX, header, reserveHeaderColumn)
     if header ~= nil then
         drawRowHeader(imgui, header)
     end
-    imgui.SetCursorPosX(startX + ROW_HEADER_WIDTH)
+    if header ~= nil or reserveHeaderColumn then
+        imgui.SetCursorPosX(startX + ROW_HEADER_WIDTH)
+    else
+        imgui.SetCursorPosX(startX)
+    end
 end
 
-local function drawControl(draw, fields, control)
-    draw.widgets.dropdown(fields:get(control.alias), control.drawOpts)
+local function drawControl(draw, fields, control, opts)
+    local drawOpts = control.drawOpts
+    if opts ~= nil
+        and opts.hideGenericRewardLabel
+        and control.genericRewardLabelHiddenDrawOpts ~= nil
+    then
+        drawOpts = control.genericRewardLabelHiddenDrawOpts
+    end
+    draw.widgets.dropdown(fields:get(control.alias), drawOpts)
 end
 
-local function drawGroupedControls(draw, surface, fields)
+local function hasGroupedRows(surface)
+    if surface.rowHeader ~= nil then
+        return true
+    end
+    for _, control in ipairs(surface.controls or {}) do
+        if control.rowIndex ~= nil then
+            return true
+        end
+    end
+    return false
+end
+
+local function drawGroupedControls(draw, surface, fields, opts)
     local imgui = draw.imgui
     local startX = imgui.GetCursorPosX()
     local rowIndex = nil
     local drew = false
+    local rowHeader = surface.rowHeader
+    if opts ~= nil and opts.hideGenericRewardLabel and rowHeader == GENERIC_REWARD_HEADER then
+        rowHeader = nil
+    end
+    local reserveHeaderColumn = rowHeader ~= nil
 
     for _, control in ipairs(surface.controls or {}) do
         if isControlVisible(control, fields) then
             if rowIndex ~= control.rowIndex then
                 rowIndex = control.rowIndex
-                drawGroupedRowStart(imgui, startX, not drew and surface.rowHeader or nil)
+                drawGroupedRowStart(imgui, startX, not drew and rowHeader or nil, reserveHeaderColumn)
             else
                 imgui.SameLine()
             end
-            drawControl(draw, fields, control)
+            drawControl(draw, fields, control, opts)
             drew = true
         end
     end
     return drew
 end
 
-function ui.draw(draw, surface, fields)
+function ui.draw(draw, surface, fields, opts)
     if runtime ~= nil and not runtime.hasControls(surface) then
         return false
     end
@@ -81,8 +110,8 @@ function ui.draw(draw, surface, fields)
 
     local drew = false
     local imgui = draw.imgui
-    if surface.rowHeader ~= nil then
-        return drawGroupedControls(draw, surface, fields)
+    if hasGroupedRows(surface) then
+        return drawGroupedControls(draw, surface, fields, opts)
     end
 
     for _, control in ipairs(surface.controls or {}) do
@@ -90,7 +119,7 @@ function ui.draw(draw, surface, fields)
             if drew then
                 imgui.SameLine()
             end
-            drawControl(draw, fields, control)
+            drawControl(draw, fields, control, opts)
             drew = true
         end
     end

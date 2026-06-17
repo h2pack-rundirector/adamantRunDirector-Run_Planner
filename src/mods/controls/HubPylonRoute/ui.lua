@@ -16,9 +16,15 @@ local OPTION_OPTS = {
     label = "",
     controlWidth = 190,
 }
+local SIDE_MODE_OPTS = {
+    label = "",
+    controlWidth = 110,
+}
 local ROLE_COLUMN_X = 80
 local OPTION_COLUMN_X = 230
 local REWARD_COLUMN_X = 130
+local SIDE_MODE_COLUMN_X = 130
+local SIDE_REWARD_COLUMN_X = 260
 local REWARD_DRAW_OPTS = {
     hideGenericRewardLabel = true,
 }
@@ -31,11 +37,6 @@ local function copyBaseOpts(base)
     return copy
 end
 
-local function resetRoomDetails(fields, rowIndex)
-    fields.Rooms:reset(rowIndex, "OptionKey")
-    fields.Rooms:reset(rowIndex, "VariantKey")
-end
-
 local function resetRewardDetails(fields, rowIndex)
     for index = 1, data.REWARD_SLOT_COUNT do
         fields.Rewards:reset(rowIndex, "Reward" .. tostring(index) .. "Key")
@@ -43,9 +44,39 @@ local function resetRewardDetails(fields, rowIndex)
     end
 end
 
-local function resetRowDetails(fields, rowIndex)
+local function resetSideRewardDetails(fields, sideRowIndex)
+    if sideRowIndex == nil then
+        return
+    end
+    for index = 1, data.REWARD_SLOT_COUNT do
+        fields.SideRewards:reset(sideRowIndex, "Reward" .. tostring(index) .. "Key")
+        fields.SideRewards:reset(sideRowIndex, "Reward" .. tostring(index) .. "LootKey")
+    end
+end
+
+local function resetSideRoomDetails(fields, sideRowIndex)
+    if sideRowIndex == nil then
+        return
+    end
+    fields.SideRooms:reset(sideRowIndex, data.sideRoomModeAlias())
+    resetSideRewardDetails(fields, sideRowIndex)
+end
+
+local function resetAllSideRoomDetails(fields, instance, rowIndex)
+    for sideIndex = 1, data.maxSideDoorCount(instance) do
+        resetSideRoomDetails(fields, data.sideRoomRowIndex(instance, rowIndex, sideIndex))
+    end
+end
+
+local function resetRoomDetails(fields, rowIndex)
+    fields.Rooms:reset(rowIndex, "OptionKey")
+    fields.Rooms:reset(rowIndex, "VariantKey")
+end
+
+local function resetRowDetails(fields, instance, rowIndex)
     resetRoomDetails(fields, rowIndex)
     resetRewardDetails(fields, rowIndex)
+    resetAllSideRoomDetails(fields, instance, rowIndex)
 end
 
 local function getRoleOpts(control, instance, rowIndex)
@@ -84,6 +115,15 @@ local function getOptionOpts(control, instance, rowIndex, roleKey)
     return opts
 end
 
+local function getSideModeOpts(control, instance)
+    if control._sideModeOpts == nil then
+        control._sideModeOpts = copyBaseOpts(SIDE_MODE_OPTS)
+        control._sideModeOpts.values = data.sideRoomModeValues(instance)
+        control._sideModeOpts.displayValues = data.sideRoomModeLabels(instance)
+    end
+    return control._sideModeOpts
+end
+
 local function rewardFields(control, rowIndex)
     control._rewardFieldsByRow = control._rewardFieldsByRow or {}
     local fields = control._rewardFieldsByRow[rowIndex]
@@ -97,6 +137,23 @@ local function rewardFields(control, rowIndex)
             end,
         }
         control._rewardFieldsByRow[rowIndex] = fields
+    end
+    return fields
+end
+
+local function sideRewardFields(control, sideRowIndex)
+    control._sideRewardFieldsByRow = control._sideRewardFieldsByRow or {}
+    local fields = control._sideRewardFieldsByRow[sideRowIndex]
+    if fields == nil then
+        fields = {
+            get = function(_, alias)
+                return control:sideRewardField(sideRowIndex, data.sideRoomRewardAlias(nil, alias))
+            end,
+            read = function(_, alias)
+                return control:fields().SideRewards:read(sideRowIndex, data.sideRoomRewardAlias(nil, alias))
+            end,
+        }
+        control._sideRewardFieldsByRow[sideRowIndex] = fields
     end
     return fields
 end
@@ -175,6 +232,28 @@ local function drawRewardRowHeader(imgui, control, rowIndex, slot)
     imgui.Text(rewardRowLabel(control, rowIndex, slot))
 end
 
+local function drawSideRoomMode(draw, control, instance, rowIndex, sideIndex)
+    local sideDoor = data.sideDoorForRow(instance, control:routeRows(), rowIndex, sideIndex)
+    local sideRowIndex = data.sideRoomRowIndex(instance, rowIndex, sideIndex)
+    if sideDoor == nil or sideRowIndex == nil then
+        return nil
+    end
+
+    local imgui = draw.imgui
+    local modeAlias = data.sideRoomModeAlias()
+    imgui.AlignTextToFramePadding()
+    imgui.Text(tostring(control:slot(rowIndex).label or "Pylon") .. " / Side " .. tostring(sideIndex))
+    imgui.SameLine()
+    imgui.SetCursorPosX(SIDE_MODE_COLUMN_X)
+    if draw.widgets.dropdown(control:sideRoomField(sideRowIndex, modeAlias), getSideModeOpts(control, instance)) then
+        if (control:fields().SideRooms:read(sideRowIndex, modeAlias) or "") ~= data.sideRoomEnabledMode() then
+            resetSideRewardDetails(control:fields(), sideRowIndex)
+        end
+        control:invalidateReadPass()
+    end
+    return sideRowIndex, sideDoor
+end
+
 local function drawRoomRow(draw, control, instance, rowIndex)
     local slot = control:slot(rowIndex)
     if slot == nil then
@@ -188,6 +267,7 @@ local function drawRoomRow(draw, control, instance, rowIndex)
     if data.isFixedIdentityRow(instance, rowIndex) then
         if drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey, ROLE_COLUMN_X) then
             resetRewardDetails(control:fields(), rowIndex)
+            resetAllSideRoomDetails(control:fields(), instance, rowIndex)
             control:invalidateReadPass()
         end
     else
@@ -195,19 +275,20 @@ local function drawRoomRow(draw, control, instance, rowIndex)
         imgui.SameLine()
         imgui.SetCursorPosX(ROLE_COLUMN_X)
         if draw.widgets.dropdown(roleField, getRoleOpts(control, instance, rowIndex)) then
-            resetRowDetails(control:fields(), rowIndex)
+            resetRowDetails(control:fields(), instance, rowIndex)
             control:invalidateReadPass()
             currentRoleKey = data.readRoleKey(instance, control:routeRows(), rowIndex)
         end
         if drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey) then
             resetRewardDetails(control:fields(), rowIndex)
+            resetAllSideRoomDetails(control:fields(), instance, rowIndex)
             control:invalidateReadPass()
         end
     end
     drawRowValidation(draw, control, instance, rowIndex)
 end
 
-local function drawRewardRow(draw, control, instance, rowIndex)
+local function drawPrimaryRewardRow(draw, control, instance, rowIndex)
     local slot = control:slot(rowIndex)
     if slot == nil then
         return
@@ -229,15 +310,38 @@ local function drawRewardRow(draw, control, instance, rowIndex)
     end
 end
 
+local function drawRewardRow(draw, control, instance, rowIndex)
+    drawPrimaryRewardRow(draw, control, instance, rowIndex)
+end
+
+local function drawSideRoomRow(draw, control, instance, rowIndex)
+    for sideIndex = 1, data.sideDoorCountForRow(instance, control:routeRows(), rowIndex) do
+        if sideIndex > 1 then
+            draw.imgui.Spacing()
+        end
+        local sideRowIndex, sideDoor = drawSideRoomMode(draw, control, instance, rowIndex, sideIndex)
+        local mode = sideRowIndex and control:fields().SideRooms:read(sideRowIndex, data.sideRoomModeAlias()) or ""
+        local surface = sideDoor ~= nil and rewardRuntime and rewardRuntime.surfaceFor(sideDoor.reward) or nil
+        if mode == data.sideRoomEnabledMode()
+            and rewardUi ~= nil
+            and rewardRuntime ~= nil
+            and rewardRuntime.hasControls(surface)
+        then
+            draw.imgui.SameLine()
+            draw.imgui.SetCursorPosX(SIDE_REWARD_COLUMN_X)
+            rewardUi.draw(draw, surface, sideRewardFields(control, sideRowIndex), REWARD_DRAW_OPTS)
+        end
+    end
+end
+
 local function drawRouteRowSeparator(imgui)
     imgui.Spacing()
     imgui.Separator()
     imgui.Spacing()
 end
 
-local function isRoomTabRow(control, rowIndex)
-    local slot = control:slot(rowIndex)
-    return slot ~= nil and slot.kind ~= "preboss"
+local function hasSideRoomRows(control, instance, rowIndex)
+    return data.sideDoorCountForRow(instance, control:routeRows(), rowIndex) > 0
 end
 
 local function drawRows(draw, control, instance, drawRow, includeRow)
@@ -245,7 +349,7 @@ local function drawRows(draw, control, instance, drawRow, includeRow)
     local drewRow = false
     control:beginReadPass()
     for rowIndex = 1, rowCount do
-        if includeRow == nil or includeRow(control, rowIndex) then
+        if includeRow == nil or includeRow(control, instance, rowIndex) then
             if drewRow then
                 drawRouteRowSeparator(draw.imgui)
             end
@@ -283,9 +387,17 @@ function ui.create(fields, instance)
         return fields.Rewards:get(rowIndex, rowAlias)
     end
 
+    function control:sideRoomField(sideRowIndex, rowAlias)
+        return fields.SideRooms:get(sideRowIndex, rowAlias)
+    end
+
+    function control:sideRewardField(sideRowIndex, rowAlias)
+        return fields.SideRewards:get(sideRowIndex, rowAlias)
+    end
+
     function control:resetRow(rowIndex)
         fields.Rooms:reset(rowIndex, "RoleKey")
-        resetRowDetails(fields, rowIndex)
+        resetRowDetails(fields, instance, rowIndex)
     end
 
     function control:resetAllRows()
@@ -303,11 +415,15 @@ end
 ui.views = {}
 
 function ui.views.rooms(draw, control, instance)
-    drawRows(draw, control, instance, drawRoomRow, isRoomTabRow)
+    drawRows(draw, control, instance, drawRoomRow)
 end
 
 function ui.views.rewards(draw, control, instance)
     drawRows(draw, control, instance, drawRewardRow)
+end
+
+function ui.views.sideRooms(draw, control, instance)
+    drawRows(draw, control, instance, drawSideRoomRow, hasSideRoomRows)
 end
 
 function ui.views.planner(draw, control, instance)
@@ -323,6 +439,10 @@ function ui.views.planner(draw, control, instance)
     end
     if imgui.BeginTabItem("Rewards") then
         ui.views.rewards(draw, control, instance)
+        imgui.EndTabItem()
+    end
+    if imgui.BeginTabItem("Side Rooms") then
+        ui.views.sideRooms(draw, control, instance)
         imgui.EndTabItem()
     end
     imgui.EndTabBar()

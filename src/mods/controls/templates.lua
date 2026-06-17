@@ -8,6 +8,7 @@ local route = {
     readCache = import("mods/route/read_cache.lua"),
     requirements = routeRequirements,
 }
+route.rowEngine = import("mods/route/row_engine.lua", nil, route)
 
 local rewardCatalogFactory = import("mods/rewards/catalog.lua")
 local rewardCatalog = rewardCatalogFactory.create(import("mods/rewards/surfaces.lua"))
@@ -23,6 +24,10 @@ local rewards = {
 
 return {
     FixedLinearRoute = import("mods/controls/FixedLinearRoute/FixedLinearRoute.lua", nil, {
+        route = route,
+        rewards = rewards,
+    }),
+    HubPylonRoute = import("mods/controls/HubPylonRoute/HubPylonRoute.lua", nil, {
         route = route,
         rewards = rewards,
     }),
