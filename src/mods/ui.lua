@@ -12,14 +12,14 @@ local routeContextFactory
 local routeStatusUi
 local activeRouteContext
 local activeRouteTabs = {}
+local routeAllTabs = {}
+local routeVisibleTabs = {}
 
-local roomRoutingOpts = {
-    label = "Room Routing",
-}
-local rewardRoutingOpts = {
-    label = "Reward Routing",
-}
-local planModeOpts
+local function clearList(list)
+    for index = #list, 1, -1 do
+        list[index] = nil
+    end
+end
 
 local function fallbackRouteDefinitions(routeControlTabs)
     local ordered = {}
@@ -38,21 +38,27 @@ end
 local function buildRegionTabs(routeControlTabs)
     routeNavOpts = {}
     routeControlByTab = {}
+    routeAllTabs = {}
+    routeVisibleTabs = {}
 
     for region, entries in pairs(routeControlTabs or {}) do
         local tabs = {}
+        local visibleTabs = {}
         local controls = {}
         for _, entry in ipairs(entries) do
             tabs[#tabs + 1] = {
                 key = entry.key,
                 label = entry.label,
+                layer = entry.layer,
             }
             controls[entry.key] = entry.controlNames or { entry.controlName }
         end
+        routeAllTabs[region] = tabs
+        routeVisibleTabs[region] = visibleTabs
         routeNavOpts[region] = {
             id = "RunPlanner" .. tostring(region) .. "Tabs",
             navWidth = 180,
-            tabs = tabs,
+            tabs = visibleTabs,
         }
         routeControlByTab[region] = controls
         if activeRouteTabs[region] == nil and tabs[1] ~= nil then
@@ -78,16 +84,52 @@ local function beginRouteContext(ctx)
     return activeRouteContext
 end
 
+local function tabLayerConfigured(routeContext, region, tab)
+    if tab.layer == nil then
+        return true
+    end
+    if routeContext == nil or routeContext.isLayerConfigured == nil then
+        return true
+    end
+    return routeContext:isLayerConfigured(region, tab.layer) ~= false
+end
+
+local function refreshRegionTabs(routeContext, region)
+    local visibleTabs = routeVisibleTabs[region]
+    if visibleTabs == nil then
+        return nil
+    end
+
+    clearList(visibleTabs)
+    for _, tab in ipairs(routeAllTabs[region] or EMPTY_LIST) do
+        if tabLayerConfigured(routeContext, region, tab) then
+            visibleTabs[#visibleTabs + 1] = tab
+        end
+    end
+    return visibleTabs
+end
+
+local function activeTabIsVisible(region)
+    local activeTab = activeRouteTabs[region]
+    for _, tab in ipairs(routeVisibleTabs[region] or EMPTY_LIST) do
+        if tab.key == activeTab then
+            return true
+        end
+    end
+    return false
+end
+
 local function drawRegionTab(ctx, region, childId, routeContext)
     local draw = ctx.draw
     local imgui = draw.imgui
     local navOpts = routeNavOpts[region]
-    if navOpts == nil or navOpts.tabs[1] == nil then
+    local visibleTabs = refreshRegionTabs(routeContext, region)
+    if navOpts == nil or visibleTabs == nil or visibleTabs[1] == nil then
         return
     end
 
-    if routeControlByTab[region][activeRouteTabs[region]] == nil then
-        activeRouteTabs[region] = navOpts.tabs[1].key
+    if routeControlByTab[region][activeRouteTabs[region]] == nil or not activeTabIsVisible(region) then
+        activeRouteTabs[region] = visibleTabs[1].key
     end
 
     navOpts.activeKey = activeRouteTabs[region]
@@ -147,7 +189,6 @@ end
 
 function ui.bind(deps)
     deps = deps or {}
-    local data = deps.data or deps
     routeDefinitions = deps.routes
         or (deps.catalog and deps.catalog.routes)
         or fallbackRouteDefinitions(deps.routeControlTabs)
@@ -156,31 +197,14 @@ function ui.bind(deps)
     featureDefinitions = deps.features or (deps.catalog and deps.catalog.features) or {}
     routeContextFactory = deps.routeContext
     routeStatusUi = deps.routeStatusUi
+    activeRouteContext = nil
     buildRegionTabs(deps.routeControlTabs)
-    planModeOpts = {
-        label = "Plan Mode",
-        values = data.PLAN_MODE_VALUES,
-        controlWidth = 180,
-    }
     return ui
-end
-
-function ui.drawQuickContent(_, ctx)
-    local draw = ctx.draw
-    local state = ctx.data
-
-    draw.widgets.checkbox(state.get("RoomRoutingEnabled"), roomRoutingOpts)
-    draw.widgets.checkbox(state.get("RewardRoutingEnabled"), rewardRoutingOpts)
 end
 
 function ui.drawTab(_, ctx)
     local draw = ctx.draw
-    local state = ctx.data
 
-    draw.widgets.checkbox(state.get("RoomRoutingEnabled"), roomRoutingOpts)
-    draw.widgets.checkbox(state.get("RewardRoutingEnabled"), rewardRoutingOpts)
-    draw.widgets.dropdown(state.get("PlanMode"), planModeOpts)
-    draw.widgets.separator()
     local routeContext = beginRouteContext(ctx)
     drawRouteOverview(draw, routeContext)
     drawRouteTabs(ctx, routeContext)

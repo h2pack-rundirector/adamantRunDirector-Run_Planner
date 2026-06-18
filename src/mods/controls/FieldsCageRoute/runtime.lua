@@ -2,11 +2,13 @@
 
 local deps = ...
 local data = deps.data
+local common = deps.common
 local rewardRuntime = deps.rewardRuntime
 local rewardOfferPolicies = deps.rewardOfferPolicies
 local rewardOfferRules = deps.rewardOfferRules
 
 local runtime = {}
+local EMPTY_LIST = {}
 
 local function readRewards(rewardRows, rowIndex)
     local rewards = {}
@@ -111,32 +113,44 @@ local function cageRewardPicks(surface, cageRewardRows, cageRewardRowIndex)
     return picks
 end
 
-local function cageRewardSnapshot(fields, instance, rowIndex, coordinate, cageIndex, leg)
+local function cageRewardSnapshot(fields, instance, rowIndex, coordinate, cageIndex, leg, rewardsConfigured)
     local cageRewardRowIndex = data.cageRewardRowIndex(instance, rowIndex, cageIndex)
     if leg == nil or cageRewardRowIndex == nil then
         return nil
     end
 
-    local surface = rewardSurfaceForContext(leg.reward)
+    local surface = rewardsConfigured and rewardSurfaceForContext(leg.reward) or nil
     return {
         rowIndex = rowIndex,
         coordinate = coordinate,
         cageIndex = cageIndex,
         key = leg.key,
         label = leg.label,
-        rewards = readRewards(fields.CageRewards, cageRewardRowIndex),
-        rewardLoot = readRewardLoot(fields.CageRewards, cageRewardRowIndex),
-        rewardKind = surface and surface.kind or "none",
-        rewardPicks = cageRewardPicks(surface, fields.CageRewards, cageRewardRowIndex),
+        rewards = rewardsConfigured and readRewards(fields.CageRewards, cageRewardRowIndex) or EMPTY_LIST,
+        rewardLoot = rewardsConfigured and readRewardLoot(fields.CageRewards, cageRewardRowIndex) or EMPTY_LIST,
+        rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
+        rewardPicks = rewardsConfigured and cageRewardPicks(surface, fields.CageRewards, cageRewardRowIndex) or EMPTY_LIST,
     }
 end
 
-local function cageRewardSnapshots(fields, instance, routeRows, rowIndex)
+local function cageRewardSnapshots(fields, instance, routeRows, rowIndex, rewardsConfigured)
+    if not rewardsConfigured then
+        return EMPTY_LIST
+    end
+
     local snapshots = {}
     local slot = instance.routeSlots and instance.routeSlots[rowIndex] or nil
     for cageIndex = 1, data.cageRewardCountForRow(instance, routeRows, rowIndex) do
         local leg = data.cageRewardLegForRow(instance, routeRows, rowIndex, cageIndex)
-        local snapshot = cageRewardSnapshot(fields, instance, rowIndex, slot and slot.coordinate or nil, cageIndex, leg)
+        local snapshot = cageRewardSnapshot(
+            fields,
+            instance,
+            rowIndex,
+            slot and slot.coordinate or nil,
+            cageIndex,
+            leg,
+            rewardsConfigured
+        )
         if snapshot ~= nil then
             snapshots[#snapshots + 1] = snapshot
         end
@@ -260,6 +274,10 @@ function runtime.create(fields, instance)
         return rewardSurface(role, self:option(rowIndex))
     end
 
+    function control:rewardsConfigured()
+        return common == nil or common.rewardsConfigured(instance)
+    end
+
     function control:beginReadPass()
         data.beginReadPass(instance)
     end
@@ -285,7 +303,8 @@ function runtime.create(fields, instance)
         local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
         local cageCountKey, cageCount = data.resolveCageCount(instance, routeRows, rowIndex, roleKey)
         local validation = data.validateRow(instance, routeRows, rowIndex)
-        local surface = role ~= nil and role.cageRewardPolicy == nil and rewardSurface(role, option) or nil
+        local rewardsConfigured = self:rewardsConfigured()
+        local surface = rewardsConfigured and role ~= nil and role.cageRewardPolicy == nil and rewardSurface(role, option) or nil
         return {
             rowIndex = rowIndex,
             coordinate = slot.coordinate,
@@ -306,11 +325,14 @@ function runtime.create(fields, instance)
             cagePolicyKey = role and role.cageRewardPolicy or nil,
             cageRewardCountKey = cageCountKey,
             cageRewardCount = cageCount and cageCount.cageRewardCount or nil,
-            cageRewards = cageRewardSnapshots(fields, instance, routeRows, rowIndex),
-            rewards = readRewards(fields.Rewards, rowIndex),
-            rewardLoot = readRewardLoot(fields.Rewards, rowIndex),
-            rewardKind = surface and surface.kind or "none",
-            rewardPicks = rewardRuntime and rewardRuntime.snapshot(surface, rewardFields(fields.Rewards, rowIndex)) or {},
+            cageRewards = cageRewardSnapshots(fields, instance, routeRows, rowIndex, rewardsConfigured),
+            rewards = rewardsConfigured and readRewards(fields.Rewards, rowIndex) or EMPTY_LIST,
+            rewardLoot = rewardsConfigured and readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
+            rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
+            rewardPicks = rewardsConfigured
+                and rewardRuntime
+                and rewardRuntime.snapshot(surface, rewardFields(fields.Rewards, rowIndex))
+                or EMPTY_LIST,
         }
     end
 
@@ -331,7 +353,9 @@ function runtime.create(fields, instance)
                 })
             end
         end
-        applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
+        if self:rewardsConfigured() then
+            applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
+        end
         self:endReadPass()
         return {
             controlName = instance.name,

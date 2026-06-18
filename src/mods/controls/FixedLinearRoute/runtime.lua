@@ -2,9 +2,11 @@
 
 local deps = ...
 local data = deps.data
+local common = deps.common
 local rewardRuntime = deps.rewardRuntime
 
 local runtime = {}
+local EMPTY_LIST = {}
 
 local function readRewards(rewardRows, rowIndex)
     local rewards = {}
@@ -151,11 +153,18 @@ function runtime.create(fields, instance)
         return rewardSurface(self:role(rowIndex), self:option(rowIndex))
     end
 
+    function control:rewardsConfigured()
+        return common == nil or common.rewardsConfigured(instance)
+    end
+
     function control:rowValidation(rowIndex)
         local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
         local _, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
         local validation = data.validateRow(instance, routeRows, rowIndex)
         if not validation.valid then
+            return validation
+        end
+        if not self:rewardsConfigured() then
             return validation
         end
 
@@ -190,7 +199,8 @@ function runtime.create(fields, instance)
 
         local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
         local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
-        local surface = rewardSurface(role, option)
+        local rewardsConfigured = self:rewardsConfigured()
+        local surface = rewardsConfigured and rewardSurface(role, option) or nil
         local validation = self:rowValidation(rowIndex)
         return {
             rowIndex = rowIndex,
@@ -210,10 +220,13 @@ function runtime.create(fields, instance)
             invalidCode = validation.code,
             invalidReason = validation.message,
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
-            rewards = readRewards(fields.Rewards, rowIndex),
-            rewardLoot = readRewardLoot(fields.Rewards, rowIndex),
-            rewardKind = surface and surface.kind or "none",
-            rewardPicks = rewardRuntime and rewardRuntime.snapshot(surface, rewardFields(fields.Rewards, rowIndex)) or {},
+            rewards = rewardsConfigured and readRewards(fields.Rewards, rowIndex) or EMPTY_LIST,
+            rewardLoot = rewardsConfigured and readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
+            rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
+            rewardPicks = rewardsConfigured
+                and rewardRuntime
+                and rewardRuntime.snapshot(surface, rewardFields(fields.Rewards, rowIndex))
+                or EMPTY_LIST,
         }
     end
 

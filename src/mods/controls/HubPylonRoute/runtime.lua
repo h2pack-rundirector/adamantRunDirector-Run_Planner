@@ -2,11 +2,13 @@
 
 local deps = ...
 local data = deps.data
+local common = deps.common
 local rewardRuntime = deps.rewardRuntime
 local rewardOfferPolicies = deps.rewardOfferPolicies
 local rewardOfferRules = deps.rewardOfferRules
 
 local runtime = {}
+local EMPTY_LIST = {}
 
 local function readRewards(rewardRows, rowIndex)
     local rewards = {}
@@ -139,10 +141,10 @@ local function sideRewardPicks(surface, sideRewardRows, sideRowIndex)
     return picks
 end
 
-local function sideRoomSnapshot(fields, sideRowIndex, sideIndex, sideDoor)
+local function sideRoomSnapshot(fields, sideRowIndex, sideIndex, sideDoor, rewardsConfigured)
     local storedMode, mode = sideRoomMode(fields.SideRooms, sideRowIndex)
     local enabled = storedMode == data.sideRoomEnabledMode()
-    local surface = enabled and rewardSurfaceForContext(sideDoor.reward) or nil
+    local surface = rewardsConfigured and enabled and rewardSurfaceForContext(sideDoor.reward) or nil
     return {
         sideIndex = sideIndex,
         doorId = sideDoor.doorId,
@@ -152,10 +154,11 @@ local function sideRoomSnapshot(fields, sideRowIndex, sideIndex, sideDoor)
         enabled = enabled,
         features = sideDoor.features,
         rewardStore = sideDoor.reward and sideDoor.reward.rewardStore or nil,
-        rewards = readSideRewards(fields.SideRewards, sideRowIndex),
-        rewardLoot = readSideRewardLoot(fields.SideRewards, sideRowIndex),
-        rewardKind = surface and surface.kind or "none",
-        rewardPicks = enabled and sideRewardPicks(surface, fields.SideRewards, sideRowIndex) or {},
+        rewards = rewardsConfigured and readSideRewards(fields.SideRewards, sideRowIndex) or EMPTY_LIST,
+        rewardLoot = rewardsConfigured and readSideRewardLoot(fields.SideRewards, sideRowIndex) or EMPTY_LIST,
+        rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
+        rewardPicks = rewardsConfigured and enabled and sideRewardPicks(surface, fields.SideRewards, sideRowIndex)
+            or EMPTY_LIST,
     }
 end
 
@@ -210,13 +213,13 @@ local function applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
     end
 end
 
-local function sideRoomSnapshots(instance, fields, routeRows, rowIndex)
+local function sideRoomSnapshots(instance, fields, routeRows, rowIndex, rewardsConfigured)
     local sideRooms = {}
     for sideIndex = 1, data.sideDoorCountForRow(instance, routeRows, rowIndex) do
         local sideDoor = data.sideDoorForRow(instance, routeRows, rowIndex, sideIndex)
         local sideRowIndex = data.sideRoomRowIndex(instance, rowIndex, sideIndex)
         if sideDoor ~= nil and sideRowIndex ~= nil then
-            sideRooms[#sideRooms + 1] = sideRoomSnapshot(fields, sideRowIndex, sideIndex, sideDoor)
+            sideRooms[#sideRooms + 1] = sideRoomSnapshot(fields, sideRowIndex, sideIndex, sideDoor, rewardsConfigured)
         end
     end
     return sideRooms
@@ -286,6 +289,10 @@ function runtime.create(fields, instance)
         return rewardSurface(self:role(rowIndex), self:option(rowIndex))
     end
 
+    function control:rewardsConfigured()
+        return common == nil or common.rewardsConfigured(instance)
+    end
+
     function control:beginReadPass()
         data.beginReadPass(instance)
     end
@@ -310,7 +317,8 @@ function runtime.create(fields, instance)
         local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
         local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
         local validation = data.validateRow(instance, routeRows, rowIndex)
-        local surface = rewardSurface(role, option)
+        local rewardsConfigured = self:rewardsConfigured()
+        local surface = rewardsConfigured and rewardSurface(role, option) or nil
         return {
             rowIndex = rowIndex,
             coordinate = slot.coordinate,
@@ -326,15 +334,18 @@ function runtime.create(fields, instance)
             roomKey = selectedRoomKey(slot, option),
             hubDoorId = option and option.hubDoorId or slot.hubDoorId,
             sideDoors = option and option.sideDoors or slot.sideDoors,
-            sideRooms = sideRoomSnapshots(instance, fields, routeRows, rowIndex),
+            sideRooms = sideRoomSnapshots(instance, fields, routeRows, rowIndex, rewardsConfigured),
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
-            rewards = readRewards(fields.Rewards, rowIndex),
-            rewardLoot = readRewardLoot(fields.Rewards, rowIndex),
-            rewardKind = surface and surface.kind or "none",
-            rewardPicks = rewardRuntime and rewardRuntime.snapshot(surface, rewardFields(fields.Rewards, rowIndex)) or {},
+            rewards = rewardsConfigured and readRewards(fields.Rewards, rowIndex) or EMPTY_LIST,
+            rewardLoot = rewardsConfigured and readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
+            rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
+            rewardPicks = rewardsConfigured
+                and rewardRuntime
+                and rewardRuntime.snapshot(surface, rewardFields(fields.Rewards, rowIndex))
+                or EMPTY_LIST,
         }
     end
 
@@ -355,7 +366,9 @@ function runtime.create(fields, instance)
                 })
             end
         end
-        applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
+        if self:rewardsConfigured() then
+            applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
+        end
         self:endReadPass()
         return {
             controlName = instance.name,

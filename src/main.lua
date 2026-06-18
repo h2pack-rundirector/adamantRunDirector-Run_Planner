@@ -44,11 +44,9 @@ local function init()
         return
     end
 
-    module.data.define(data.buildStorage())
     module.controls.defineTemplates(data.loadControlTemplates())
     module.controls.define(routeControls)
     module.ui.tab(ui.drawTab)
-    module.ui.quickContent(ui.drawQuickContent)
     module.fallbackUi.attachGuiOnce(function(fallbackUi)
         rom.gui.add_imgui(fallbackUi.renderWindow)
         rom.gui.add_to_menu_bar(fallbackUi.addMenuBar)

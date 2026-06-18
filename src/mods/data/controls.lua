@@ -131,11 +131,13 @@ function controls.routeControlTabs(catalog)
             tabs[#tabs + 1] = {
                 key = "NPCs",
                 label = "NPCs",
+                layer = "npcs",
                 controlName = routeNpcControlName(route.key),
             }
             tabs[#tabs + 1] = {
                 key = "Features",
                 label = "Features",
+                layer = "features",
                 controlNames = routeFeatureControls(catalog, route),
             }
             tabsByRoute[route.key] = tabs

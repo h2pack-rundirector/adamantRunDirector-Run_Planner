@@ -2,6 +2,7 @@ local deps = ...
 local data = import("mods/controls/FixedLinearRoute/data.lua", nil, deps.route)
 local runtime = import("mods/controls/FixedLinearRoute/runtime.lua", nil, {
     data = data,
+    common = deps.route.common,
     rewardRuntime = deps.rewards.runtime,
 })
 local ui = import("mods/controls/FixedLinearRoute/ui.lua", nil, {

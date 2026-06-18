@@ -896,6 +896,14 @@ function runContext.create(opts)
         return nil
     end
 
+    function context:isLayerConfigured(routeKey, layer)
+        local control = self:controlByName(routeGlobalControlName(routeKey), routeKey)
+        if control ~= nil and control.isLayerConfigured ~= nil then
+            return control:isLayerConfigured(layer) ~= false
+        end
+        return true
+    end
+
     function context:attachControls()
         for _, route in ipairs(self.routes.ordered or EMPTY_LIST) do
             self:godSourceForRoute(route.key)
@@ -943,7 +951,14 @@ function runContext.create(opts)
     function context:npcTargets(routeKey)
         local state = routeNpcTargetsState(self, routeKey)
         if state.dirty or state.targets == nil then
-            state.targets = buildNpcTargets(self, routeKey)
+            if self:isLayerConfigured(routeKey, "npcs") then
+                state.targets = buildNpcTargets(self, routeKey)
+            else
+                state.targets = {
+                    byNpc = {},
+                    byNpcBiome = {},
+                }
+            end
             state.dirty = false
         end
         return state.targets
@@ -960,7 +975,14 @@ function runContext.create(opts)
     function context:featureTargets(routeKey)
         local state = routeFeatureTargetsState(self, routeKey)
         if state.dirty or state.targets == nil then
-            state.targets = buildFeatureTargets(self, routeKey)
+            if self:isLayerConfigured(routeKey, "features") then
+                state.targets = buildFeatureTargets(self, routeKey)
+            else
+                state.targets = {
+                    byFeature = {},
+                    byFeatureBiome = {},
+                }
+            end
             state.dirty = false
         end
         return state.targets
@@ -1016,31 +1038,35 @@ function runContext.create(opts)
             end
         end
 
-        local npcControl = self:controlByName(routeNpcControlName(route.key), route.key)
-        if npcControl ~= nil and npcControl.read ~= nil then
-            npcSnapshot = npcControl:read("snapshot")
-            for _, invalidRow in ipairs(npcSnapshot and npcSnapshot.invalidRows or EMPTY_LIST) do
-                invalidRows[#invalidRows + 1] = {
-                    controlName = npcSnapshot.controlName,
-                    rowIndex = invalidRow.rowIndex,
-                    code = invalidRow.code,
-                    message = invalidRow.message,
-                }
-            end
-        end
-
-        for _, featureKey in ipairs(routeFeatureKeys(self, route)) do
-            local featureControl = self:controlByName(routeFeatureControlName(route.key, featureKey), route.key)
-            if featureControl ~= nil and featureControl.read ~= nil then
-                local featureSnapshot = featureControl:read("snapshot")
-                featureSnapshots[#featureSnapshots + 1] = featureSnapshot
-                for _, invalidRow in ipairs(featureSnapshot and featureSnapshot.invalidRows or EMPTY_LIST) do
+        if self:isLayerConfigured(route.key, "npcs") then
+            local npcControl = self:controlByName(routeNpcControlName(route.key), route.key)
+            if npcControl ~= nil and npcControl.read ~= nil then
+                npcSnapshot = npcControl:read("snapshot")
+                for _, invalidRow in ipairs(npcSnapshot and npcSnapshot.invalidRows or EMPTY_LIST) do
                     invalidRows[#invalidRows + 1] = {
-                        controlName = featureSnapshot.controlName,
+                        controlName = npcSnapshot.controlName,
                         rowIndex = invalidRow.rowIndex,
                         code = invalidRow.code,
                         message = invalidRow.message,
                     }
+                end
+            end
+        end
+
+        if self:isLayerConfigured(route.key, "features") then
+            for _, featureKey in ipairs(routeFeatureKeys(self, route)) do
+                local featureControl = self:controlByName(routeFeatureControlName(route.key, featureKey), route.key)
+                if featureControl ~= nil and featureControl.read ~= nil then
+                    local featureSnapshot = featureControl:read("snapshot")
+                    featureSnapshots[#featureSnapshots + 1] = featureSnapshot
+                    for _, invalidRow in ipairs(featureSnapshot and featureSnapshot.invalidRows or EMPTY_LIST) do
+                        invalidRows[#invalidRows + 1] = {
+                            controlName = featureSnapshot.controlName,
+                            rowIndex = invalidRow.rowIndex,
+                            code = invalidRow.code,
+                            message = invalidRow.message,
+                        }
+                    end
                 end
             end
         end

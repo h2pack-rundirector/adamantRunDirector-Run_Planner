@@ -8,6 +8,24 @@ local RouteGlobal = {}
 local GODS_PER_ROW = 3
 local GOD_COLUMN_WIDTH = 170
 local VANILLA_VALUE = ""
+local CONFIGURE_REWARDS_KEY = "ConfigureRewards"
+local CONFIGURE_NPCS_KEY = "ConfigureNpcs"
+local CONFIGURE_FEATURES_KEY = "ConfigureFeatures"
+
+local CONFIG_TOGGLES = {
+    {
+        key = CONFIGURE_REWARDS_KEY,
+        label = "Configure Rewards",
+    },
+    {
+        key = CONFIGURE_NPCS_KEY,
+        label = "Configure NPC Encounters",
+    },
+    {
+        key = CONFIGURE_FEATURES_KEY,
+        label = "Configure Route Features",
+    },
+}
 
 local function clearList(list)
     for index = #list, 1, -1 do
@@ -106,6 +124,21 @@ end
 function RouteGlobal.storage(instance)
     return {
         {
+            key = CONFIGURE_REWARDS_KEY,
+            type = "bool",
+            default = true,
+        },
+        {
+            key = CONFIGURE_NPCS_KEY,
+            type = "bool",
+            default = true,
+        },
+        {
+            key = CONFIGURE_FEATURES_KEY,
+            type = "bool",
+            default = true,
+        },
+        {
             key = "GodPool",
             type = "packedInt",
             width = #instance.godBits,
@@ -167,6 +200,32 @@ function RouteGlobal.createRuntime(fields, instance)
 
     function control:isGodEnabled(key)
         return fields.GodPool:readAlias(key) == true
+    end
+
+    function control:isConfigEnabled(key)
+        local field = fields[key]
+        if field == nil or field.read == nil then
+            return true
+        end
+        return field:read() == true
+    end
+
+    function control:isLayerConfigured(layer)
+        if layer == "rewards" then
+            return self:isConfigEnabled(CONFIGURE_REWARDS_KEY)
+        elseif layer == "npcs" then
+            return self:isConfigEnabled(CONFIGURE_REWARDS_KEY)
+                and self:isConfigEnabled(CONFIGURE_NPCS_KEY)
+        elseif layer == "features" then
+            return self:isConfigEnabled(CONFIGURE_FEATURES_KEY)
+        end
+        return true
+    end
+
+    function control:invalidateConfiguration()
+        if instance.routeContext ~= nil and instance.routeContext.markDirty ~= nil then
+            instance.routeContext:markDirty(instance.routeKey)
+        end
     end
 
     function control:invalidateGodSource()
@@ -235,6 +294,14 @@ end
 function RouteGlobal.createUi(fields, instance)
     local control = RouteGlobal.createRuntime(fields, instance)
 
+    function control:configToggles()
+        return CONFIG_TOGGLES
+    end
+
+    function control:configField(key)
+        return fields[key]
+    end
+
     function control:godPoolField()
         return fields.GodPool
     end
@@ -284,7 +351,32 @@ local function drawGodPool(draw, control, instance)
     end
 end
 
+local function drawConfigCheckbox(draw, control, toggle)
+    local field = control:configField(toggle.key)
+    if field == nil or field.read == nil or field.write == nil then
+        return
+    end
+
+    local label = tostring(toggle.label) .. "##" .. tostring(control:name()) .. ":" .. tostring(toggle.key)
+    local nextValue, changed = draw.imgui.Checkbox(label, field:read() == true)
+    if changed then
+        field:write(nextValue == true)
+        control:invalidateConfiguration()
+    end
+end
+
+local function drawConfiguration(draw, control)
+    draw.widgets.text("Configuration", { alignToFramePadding = true })
+    for _, toggle in ipairs(control:configToggles()) do
+        drawConfigCheckbox(draw, control, toggle)
+    end
+end
+
 function RouteGlobal.draw(draw, control, instance)
+    drawConfiguration(draw, control)
+    draw.imgui.Spacing()
+    draw.imgui.Separator()
+    draw.imgui.Spacing()
     draw.widgets.text("God Pool", { alignToFramePadding = true })
     drawGodPool(draw, control, instance)
 end

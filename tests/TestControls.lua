@@ -271,6 +271,27 @@ local function fakeStringField(root)
     }
 end
 
+local function fakeBoolField(root)
+    local value = root.default == true
+    return {
+        read = function()
+            return value
+        end,
+        write = function(_, nextValue)
+            value = nextValue == true
+        end,
+        schema = function()
+            return root
+        end,
+        alias = function()
+            return root.key
+        end,
+        controlId = function()
+            return root.key
+        end,
+    }
+end
+
 local function routeUiFields(storage)
     local fields = {}
     for _, root in ipairs(storage or {}) do
@@ -280,6 +301,8 @@ local function routeUiFields(storage)
             fields[root.key] = fakePackedField(root)
         elseif root.type == "string" then
             fields[root.key] = fakeStringField(root)
+        elseif root.type == "bool" then
+            fields[root.key] = fakeBoolField(root)
         end
     end
     return fields
@@ -384,10 +407,11 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
         { key = "G", label = "Oceanus", controlName = "RouteG" },
         { key = "H", label = "Fields", controlName = "RouteH" },
         { key = "I", label = "Tartarus", controlName = "RouteI" },
-        { key = "NPCs", label = "NPCs", controlName = "RouteNpcsUnderworld" },
+        { key = "NPCs", label = "NPCs", layer = "npcs", controlName = "RouteNpcsUnderworld" },
         {
             key = "Features",
             label = "Features",
+            layer = "features",
             controlNames = {
                 "RouteFeatureChaosGateUnderworld",
                 "RouteFeatureStygianWellUnderworld",
@@ -400,10 +424,11 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
         { key = "O", label = "Thessaly", controlName = "RouteO" },
         { key = "P", label = "Olympus", controlName = "RouteP" },
         { key = "Q", label = "Summit", controlName = "RouteQ" },
-        { key = "NPCs", label = "NPCs", controlName = "RouteNpcsSurface" },
+        { key = "NPCs", label = "NPCs", layer = "npcs", controlName = "RouteNpcsSurface" },
         {
             key = "Features",
             label = "Features",
+            layer = "features",
             controlNames = {
                 "RouteFeatureChaosGateSurface",
                 "RouteFeatureHermesShrineSurface",
@@ -428,7 +453,7 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
     lu.assertEquals(controls.RouteFeatureHermesShrineSurface.template, "RouteFeatures")
 end
 
-function TestRunPlannerControls.testRouteGlobalTemplateStoresGodPool()
+function TestRunPlannerControls.testRouteGlobalTemplateStoresConfigurationAndGodPool()
     local catalog = loadCatalog()
     local template = loadRouteGlobalTemplate()
     local instance = template.prepare({
@@ -439,11 +464,26 @@ function TestRunPlannerControls.testRouteGlobalTemplateStoresGodPool()
     local storage = template.storage(instance)
     local control = template.createRuntime(routeUiFields(storage), instance)
 
-    lu.assertEquals(storage[1].key, "GodPool")
-    lu.assertEquals(storage[1].type, "packedInt")
-    lu.assertEquals(storage[1].width, 9)
-    lu.assertEquals(#storage[1].bits, 9)
-    lu.assertEquals(storage[1].bits[1], {
+    lu.assertEquals(storage[1], {
+        key = "ConfigureRewards",
+        type = "bool",
+        default = true,
+    })
+    lu.assertEquals(storage[2], {
+        key = "ConfigureNpcs",
+        type = "bool",
+        default = true,
+    })
+    lu.assertEquals(storage[3], {
+        key = "ConfigureFeatures",
+        type = "bool",
+        default = true,
+    })
+    lu.assertEquals(storage[4].key, "GodPool")
+    lu.assertEquals(storage[4].type, "packedInt")
+    lu.assertEquals(storage[4].width, 9)
+    lu.assertEquals(#storage[4].bits, 9)
+    lu.assertEquals(storage[4].bits[1], {
         key = "AphroditeUpgrade",
         label = "Aphrodite",
         type = "bool",
@@ -462,6 +502,116 @@ function TestRunPlannerControls.testRouteGlobalTemplateStoresGodPool()
         "HeraUpgrade",
         "PoseidonUpgrade",
         "ZeusUpgrade",
+    })
+end
+
+function TestRunPlannerControls.testRouteGlobalConfigurationPreservesNpcDependencyOnRewards()
+    local catalog = loadCatalog()
+    local template = loadRouteGlobalTemplate()
+    local instance = template.prepare({
+        name = "RouteGlobalUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        gods = catalog.gods,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    local control = template.createRuntime(fields, instance)
+
+    lu.assertTrue(control:isLayerConfigured("rewards"))
+    lu.assertTrue(control:isLayerConfigured("npcs"))
+    lu.assertTrue(control:isLayerConfigured("features"))
+
+    fields.ConfigureRewards:write(false)
+
+    lu.assertFalse(control:isLayerConfigured("rewards"))
+    lu.assertFalse(control:isLayerConfigured("npcs"))
+    lu.assertTrue(control:isLayerConfigured("features"))
+
+    fields.ConfigureRewards:write(true)
+    fields.ConfigureNpcs:write(false)
+    fields.ConfigureFeatures:write(false)
+
+    lu.assertTrue(control:isLayerConfigured("rewards"))
+    lu.assertFalse(control:isLayerConfigured("npcs"))
+    lu.assertFalse(control:isLayerConfigured("features"))
+end
+
+function TestRunPlannerControls.testRouteUiHidesTabsForDisabledLayers()
+    local routeUi = dofile("src/mods/ui.lua")
+    local capturedTabs
+    local routeContext = {
+        beginPass = function()
+        end,
+        bindControl = function(_, control)
+            return control
+        end,
+        overview = function(_, routeKey)
+            return {
+                routeKey = routeKey,
+                valid = true,
+            }
+        end,
+        isLayerConfigured = function(_, _, layer)
+            return layer ~= "npcs" and layer ~= "features"
+        end,
+    }
+    routeUi.bind({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        routeControlTabs = {
+            Underworld = {
+                { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
+                { key = "F", label = "Erebus", controlName = "RouteF" },
+                { key = "NPCs", label = "NPCs", layer = "npcs", controlName = "RouteNpcsUnderworld" },
+                { key = "Features", label = "Features", layer = "features", controlNames = {} },
+            },
+        },
+        routeContext = {
+            create = function()
+                return routeContext
+            end,
+        },
+        routeStatusUi = {
+            drawRouteStatus = function()
+            end,
+        },
+    })
+    local draw = noOpDraw()
+    draw.imgui.BeginTabBar = function()
+        return true
+    end
+    draw.imgui.BeginTabItem = function(label)
+        return label == "Underworld"
+    end
+    draw.imgui.BeginChild = function()
+    end
+    draw.imgui.EndChild = function()
+    end
+    draw.nav = {
+        verticalTabs = function(opts)
+            capturedTabs = opts.tabs
+            return opts.tabs[1] and opts.tabs[1].key or nil
+        end,
+    }
+    draw.control = function()
+    end
+
+    routeUi.drawTab(nil, {
+        draw = draw,
+        controls = {
+            get = function()
+                return {}
+            end,
+        },
+    })
+
+    lu.assertEquals(capturedTabs, {
+        { key = "Global", label = "Global" },
+        { key = "F", label = "Erebus" },
     })
 end
 
@@ -832,6 +982,117 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
     lu.assertEquals(fields.Targets:read(1, "RowIndex"), nil)
     lu.assertEquals(fields.Targets:read(1, "TargetKey"), nil)
     lu.assertTrue(control:rowValidation(1).valid)
+end
+
+function TestRunPlannerControls.testRouteContextDisablesFeatureTargetsWhenFeaturesAreNotConfigured()
+    local catalog = loadCatalog()
+    local globalTemplate = loadRouteGlobalTemplate()
+    local globalInstance = globalTemplate.prepare({
+        name = "RouteGlobalSurface",
+        route = catalog.routes.lookup.Surface,
+        gods = catalog.gods,
+    })
+    local globalFields = routeUiFields(globalTemplate.storage(globalInstance))
+    globalFields.ConfigureFeatures:write(false)
+    local globalControl = globalTemplate.createRuntime(globalFields, globalInstance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Surface",
+                label = "Surface",
+                biomes = { "P" },
+            },
+        }),
+        biomes = catalog.lookup,
+        features = catalog.features,
+        controlResolver = function(controlName)
+            if controlName == "RouteGlobalSurface" then
+                return globalControl
+            elseif controlName == "RouteP" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteP",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {
+                                    {
+                                        rowIndex = 1,
+                                        coordinate = 4,
+                                        slotLabel = "Depth 4",
+                                        option = { key = "P_Combat01", label = "Combat 01" },
+                                        features = { chaos = true },
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                },
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+
+    local targets = routeContext:featureTargets("Surface")
+
+    lu.assertNil(targets.byFeature.chaos)
+    lu.assertNil(targets.byFeatureBiome.chaos)
+end
+
+function TestRunPlannerControls.testRouteSnapshotsTreatRewardsAsVanillaWhenRewardsAreNotConfigured()
+    local catalog = loadCatalog()
+    local globalTemplate = loadRouteGlobalTemplate()
+    local fixedTemplate = loadFixedLinearTemplate()
+    local globalInstance = globalTemplate.prepare({
+        name = "RouteGlobalUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        gods = catalog.gods,
+    })
+    local globalFields = routeUiFields(globalTemplate.storage(globalInstance))
+    globalFields.ConfigureRewards:write(false)
+    local globalControl = globalTemplate.createRuntime(globalFields, globalInstance)
+    local fInstance = fixedTemplate.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local fControl = fixedTemplate.createRuntime(routeFields({
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat04",
+            Reward1Key = "Major",
+            Reward2Key = "Boon",
+            Reward3LootKey = "ZeusUpgrade",
+        },
+    }), fInstance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        controlResolver = function(controlName)
+            if controlName == "RouteGlobalUnderworld" then
+                return globalControl
+            elseif controlName == "RouteF" then
+                return fControl
+            end
+            return nil
+        end,
+    })
+    fControl:setRouteContext(routeContext, "Underworld")
+
+    local row = fControl:rowSnapshot(1)
+
+    lu.assertEquals(row.rewardKind, "vanilla")
+    lu.assertEquals(row.rewards, {})
+    lu.assertEquals(row.rewardLoot, {})
+    lu.assertEquals(row.rewardPicks, {})
 end
 
 function TestRunPlannerControls.testRouteFeaturesUsesShopDepthPolicy()
@@ -3597,6 +3858,66 @@ function TestRunPlannerControls.testRouteContextBuildsNpcTargetsFromValidCombatR
         "",
         "F:3:ArachneCombatF",
     })
+end
+
+function TestRunPlannerControls.testRouteContextDisablesNpcTargetsWhenRewardsAreNotConfigured()
+    local catalog = loadCatalog()
+    local globalTemplate = loadRouteGlobalTemplate()
+    local globalInstance = globalTemplate.prepare({
+        name = "RouteGlobalUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        gods = catalog.gods,
+    })
+    local globalFields = routeUiFields(globalTemplate.storage(globalInstance))
+    globalFields.ConfigureRewards:write(false)
+    local globalControl = globalTemplate.createRuntime(globalFields, globalInstance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        biomes = catalog.lookup,
+        npcs = catalog.npcs,
+        controlResolver = function(controlName)
+            if controlName == "RouteGlobalUnderworld" then
+                return globalControl
+            elseif controlName == "RouteF" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteF",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {
+                                    {
+                                        rowIndex = 1,
+                                        coordinate = 5,
+                                        slotLabel = "Depth 5",
+                                        roleKey = "Combat",
+                                        option = { key = "F_Combat04", label = "Combat 04" },
+                                        valid = true,
+                                        rewardKind = "majorMinor",
+                                        rewards = { "Major", "Boon", "ZeusUpgrade" },
+                                    },
+                                },
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+
+    local targets = routeContext:npcTargets("Underworld")
+
+    lu.assertNil(targets.byNpc.Artemis)
+    lu.assertNil(targets.byNpcBiome.Artemis)
 end
 
 function TestRunPlannerControls.testRouteContextUsesRoomHistoryTimelineForNpcTargets()

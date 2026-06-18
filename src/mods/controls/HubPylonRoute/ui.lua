@@ -39,6 +39,10 @@ local function rewardDrawOpts(control)
     return REWARD_DRAW_OPTS
 end
 
+local function rewardsConfigured(control)
+    return control.rewardsConfigured == nil or control:rewardsConfigured()
+end
+
 local function copyBaseOpts(base)
     local copy = {}
     for key, value in pairs(base or {}) do
@@ -552,7 +556,7 @@ function ui.views.planner(draw, control, instance)
         ui.views.rooms(draw, control, instance)
         imgui.EndTabItem()
     end
-    if imgui.BeginTabItem("Rewards") then
+    if rewardsConfigured(control) and imgui.BeginTabItem("Rewards") then
         ui.views.rewards(draw, control, instance)
         imgui.EndTabItem()
     end

@@ -148,11 +148,11 @@ Example:
 Reservation rules:
 
 - Before the reserved depth, the reserved room is ineligible.
-- At the reserved depth, the reserved room may be forced or preferred based on
-  plan mode.
-- After the reserved depth:
-  - `Strict` should stop chasing a missed room.
-  - `Prefer` may allow the room later if it remains valid.
+- At the reserved depth, the reserved room may be forced if the current run
+  state still makes that room valid.
+- After the reserved depth, the runtime should not chase a missed room. It
+  should release the reservation, fall back to vanilla, and surface status if
+  that missed room makes the active snapshot invalid.
 
 Initial reservation should include explicitly planned rooms that are dangerous
 if pre-created:
@@ -225,11 +225,25 @@ H passive `NemesisRandomEvent`, H bridge `BridgeNemesisRandomEvent`, shop
 Nemesis, and relationship-specific random events are outside the first-pass NPC
 target model.
 
-The planned UI shape is a route-level post-setup tab rendered after the biome
-tabs. The current Global tab remains pre-setup for route-wide inputs such as
-god pool filtering. The later NPC tab should consume normalized encounter-slot
-candidates exposed by biome snapshots rather than reaching into individual
-adapter internals.
+The Global tab owns route-wide configuration policy and pre-setup inputs such
+as god pool filtering. Route rows are always the base planner surface; there is
+no separate room-routing toggle. Optional layers are:
+
+- `Configure Rewards`: shows reward tabs and lets runtime/validation consume
+  planned reward choices.
+- `Configure NPC Encounters`: shows the NPC tab and lets runtime/validation
+  consume NPC targets. This is effective only when rewards are also configured,
+  because NPC eligibility can depend on concrete planned rewards.
+- `Configure Route Features`: shows the route-feature tab and lets
+  runtime/validation consume Chaos Gate, Stygian Well, and Hermes Shrine
+  targets.
+
+Disabled layers keep their stored choices, but are hidden from the planner UI
+and ignored by target generation, route validation, and runtime snapshots.
+
+The NPC tab is a route-level post-setup tab rendered after the biome tabs. It
+should consume normalized encounter-slot candidates exposed by biome snapshots
+rather than reaching into individual adapter internals.
 
 Planner NPC targets should be precise:
 
@@ -731,8 +745,8 @@ ship-wheel reward selection. `Combat2` is vanilla-optional: it appears with a
 
 Planner UI should therefore expose combat count as `Vanilla`, `2 Combats`, or
 `3 Combats`. `3 Combats` is only valid for room-entry encounter depth `2..5`;
-outside that range, `Prefer` should fall back to vanilla behavior and `Strict`
-should warn rather than fabricating an invalid room state.
+outside that range, runtime should fall back to vanilla behavior and surface a
+warning rather than fabricating an invalid room state.
 
 ## Tartarus Clockwork Route
 
@@ -783,7 +797,7 @@ preboss shop using `I_PreBoss01/I_PreBoss02` and the `I_WorldShop` profile.
 
 The extension budget is vanilla-random by default. The data records the
 vanilla range, but the UI should treat promises beyond the active budget as
-`Prefer` fallback until the runtime adapter intentionally owns and sets
+runtime fallback until the runtime adapter intentionally owns and sets
 `MaxClockworkNonGoalRewards`.
 
 ## Fields Cage Route
@@ -803,10 +817,10 @@ Preboss: H_PreBoss01
 
 `H_Bridge01` is a forced vanilla candidate once its requirements are met, but
 it is not an absolute third slot. It requires exactly two prior combat/miniboss
-rooms and can be overridden by strict route planning or missed if prerequisites
-are not satisfied. It can resolve to shop, Echo story, or a later Nemesis
-event; the first declaration keeps that as a bridge reward mode rather than a
-normal room reward surface.
+rooms and can be overridden by explicit route planning or missed if
+prerequisites are not satisfied. It can resolve to shop, Echo story, or a later
+Nemesis event; the first declaration keeps that as a bridge reward mode rather
+than a normal room reward surface.
 
 Normal H combat rooms use reward cages. The combat room itself has `NoReward`;
 the door room receives `CageRewards`, and `SpawnRewardCages(...)` randomly
@@ -845,9 +859,9 @@ The planner should then model six pylon picks. A pylon pick can be:
   future planned hub rooms.
 
 The hub offers many doors, but the user is planning only the path they intend
-to take. Runtime should therefore force or prefer the planned selected hub exit
-while allowing vanilla to fill the other available hub doors, except for rooms
-reserved for future planned picks.
+to take. Runtime should therefore force the planned selected hub exit when it
+is still valid, while allowing vanilla to fill the other available hub doors,
+except for rooms reserved for future planned picks.
 
 `N_Hub` has two important special cases:
 
@@ -870,15 +884,15 @@ store comes from the subroom declaration: most use `SubRoomRewards`, while
 2. Add route-depth storage and UI for one primary plan per depth.
 3. Build the run-start reservation bundle from explicit planned rooms.
 4. Patch room eligibility so future reserved rooms cannot appear early.
-5. Force or prefer the primary room at the planned depth.
+5. Force the primary room at the planned depth when it remains valid.
 6. Add reward forcing per role.
 7. Add preboss branch controls.
 8. Add warnings for unsatisfiable plans.
 
 ## Open Questions
 
-- Decide whether `Prefer` should release a missed reserved room immediately
-  after its depth or keep it protected for the rest of the biome.
+- Decide whether a missed reserved room should always release immediately after
+  its depth or keep protection for the rest of the biome in some cases.
 - Decide how much reward reservation belongs in this module versus God Pool or
   Boon Bans interactions.
 - Decide whether the UI should ever expose alternate branch planning. The first

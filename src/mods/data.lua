@@ -1,7 +1,5 @@
 local data = {}
 
-data.PLAN_MODE_VALUES = { "Prefer", "Strict" }
-
 function data.loadControlTemplates(importer)
     importer = importer or import
     return importer("mods/controls/templates.lua")
@@ -44,14 +42,6 @@ end
 function data.routeControlTabs(catalog, importer)
     importer = importer or import
     return importer("mods/data/controls.lua").routeControlTabs(catalog)
-end
-
-function data.buildStorage()
-    return {
-        { type = "bool", alias = "RoomRoutingEnabled", default = false },
-        { type = "bool", alias = "RewardRoutingEnabled", default = false },
-        { type = "string", alias = "PlanMode", default = "Prefer", maxLen = 16 },
-    }
 end
 
 return data

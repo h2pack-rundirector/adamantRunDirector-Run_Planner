@@ -2,6 +2,7 @@ local deps = ...
 local data = import("mods/controls/ClockworkGoalRoute/data.lua", nil, deps.route)
 local runtime = import("mods/controls/ClockworkGoalRoute/runtime.lua", nil, {
     data = data,
+    common = deps.route.common,
     rewardRuntime = deps.rewards.runtime,
 })
 local ui = import("mods/controls/ClockworkGoalRoute/ui.lua", nil, {

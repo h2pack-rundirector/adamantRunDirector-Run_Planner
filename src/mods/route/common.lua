@@ -128,4 +128,15 @@ function common.invalidStatus(code, message)
     }
 end
 
+function common.layerConfigured(routeContext, routeKey, layer)
+    if routeContext ~= nil and routeContext.isLayerConfigured ~= nil then
+        return routeContext:isLayerConfigured(routeKey, layer) ~= false
+    end
+    return true
+end
+
+function common.rewardsConfigured(instance)
+    return common.layerConfigured(instance and instance.routeContext, instance and instance.routeKey, "rewards")
+end
+
 return common
