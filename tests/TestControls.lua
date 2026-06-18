@@ -535,6 +535,51 @@ function TestRunPlannerControls.testRouteGlobalConfigurationPreservesNpcDependen
     lu.assertFalse(control:isLayerConfigured("features"))
 end
 
+function TestRunPlannerControls.testRouteGlobalDrawDisablesNpcToggleWhenRewardsAreDisabled()
+    local catalog = loadCatalog()
+    local template = loadRouteGlobalTemplate()
+    local instance = template.prepare({
+        name = "RouteGlobalUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        gods = catalog.gods,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.ConfigureRewards:write(false)
+    fields.ConfigureNpcs:write(true)
+    local control = template.createUi(fields, instance)
+
+    local draw = noOpDraw()
+    local disabledDepth = 0
+    local npcCheckboxWasDisabled = false
+    local noteWasRendered = false
+    draw.imgui.BeginDisabled = function(disabled)
+        if disabled then
+            disabledDepth = disabledDepth + 1
+        end
+    end
+    draw.imgui.EndDisabled = function()
+        disabledDepth = disabledDepth - 1
+    end
+    draw.imgui.TextWrapped = function(text)
+        if text == "Disabling rewards invalidates Trial rooms and disables NPC encounter planning." then
+            noteWasRendered = true
+        end
+    end
+    draw.imgui.Checkbox = function(label, current)
+        if label:find("Configure NPC Encounters", 1, true) then
+            npcCheckboxWasDisabled = disabledDepth > 0
+            return false, true
+        end
+        return current, false
+    end
+
+    template.views.planner(draw, control, instance)
+
+    lu.assertTrue(noteWasRendered)
+    lu.assertTrue(npcCheckboxWasDisabled)
+    lu.assertTrue(fields.ConfigureNpcs:read())
+end
+
 function TestRunPlannerControls.testRouteUiHidesTabsForDisabledLayers()
     local routeUi = dofile("src/mods/ui.lua")
     local capturedTabs
@@ -1664,6 +1709,28 @@ function TestRunPlannerControls.testRouteTemplateViewAllocationsStayBounded()
         end
     end
 
+    local routeGlobalTemplate = loadRouteGlobalTemplate()
+    local routeGlobalInstance = routeGlobalTemplate.prepare({
+        name = "RouteGlobalUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        gods = catalog.gods,
+    })
+    local routeGlobalFields = routeUiFields(routeGlobalTemplate.storage(routeGlobalInstance))
+    routeGlobalFields.ConfigureRewards:write(false)
+    local routeGlobalControl = routeGlobalTemplate.createUi(routeGlobalFields, routeGlobalInstance)
+    local allocatedKb = measureAllocKb(iterations, function()
+        routeGlobalTemplate.views.planner(draw, routeGlobalControl, routeGlobalInstance)
+    end)
+    lu.assertTrue(
+        allocatedKb < 64,
+        string.format(
+            "RouteGlobal traversal allocated %.1f KB across %d no-op draws; budget %.1f KB",
+            allocatedKb,
+            iterations,
+            64
+        )
+    )
+
     local routeNpcsTemplate = loadRouteNpcsTemplate()
     local routeNpcsInstance = routeNpcsTemplate.prepare({
         name = "RouteNpcsUnderworld",
@@ -1675,7 +1742,7 @@ function TestRunPlannerControls.testRouteTemplateViewAllocationsStayBounded()
         routeUiFields(routeNpcsTemplate.storage(routeNpcsInstance)),
         routeNpcsInstance
     )
-    local allocatedKb = measureAllocKb(iterations, function()
+    allocatedKb = measureAllocKb(iterations, function()
         routeNpcsTemplate.views.planner(draw, routeNpcsControl, routeNpcsInstance)
     end)
     lu.assertTrue(

@@ -11,6 +11,8 @@ local VANILLA_VALUE = ""
 local CONFIGURE_REWARDS_KEY = "ConfigureRewards"
 local CONFIGURE_NPCS_KEY = "ConfigureNpcs"
 local CONFIGURE_FEATURES_KEY = "ConfigureFeatures"
+local DISABLED_TEXT_COLOR = { 0.55, 0.55, 0.55, 1 }
+local REWARDS_DISABLED_NOTE = "Disabling rewards invalidates Trial rooms and disables NPC encounter planning."
 
 local CONFIG_TOGGLES = {
     {
@@ -111,6 +113,24 @@ local function buildGodSourceOptions(instance)
     instance.godSourceDirty = true
 end
 
+local function buildDrawLabels(instance)
+    local controlName = tostring(instance.name)
+    instance.configDrawLabels = {}
+    instance.configDisabledLabels = {}
+    for _, toggle in ipairs(CONFIG_TOGGLES) do
+        local visibleLabel = tostring(toggle.label)
+        instance.configDrawLabels[toggle.key] = visibleLabel .. "##" .. controlName .. ":" .. tostring(toggle.key)
+        instance.configDisabledLabels[toggle.key] = {
+            checked = "[x] " .. visibleLabel,
+            unchecked = "[ ] " .. visibleLabel,
+        }
+    end
+
+    for _, god in ipairs(instance.gods or {}) do
+        god.drawLabel = tostring(god.label or god.key) .. "##" .. controlName .. ":" .. tostring(god.key)
+    end
+end
+
 function RouteGlobal.prepare(instance)
     instance.route = instance.route or {}
     instance.routeKey = instance.route.key or instance.routeKey or instance.name
@@ -118,6 +138,7 @@ function RouteGlobal.prepare(instance)
     instance.gods = copyGods(instance.gods or (godData and godData.olympian()) or {})
     instance.godBits = buildBits(instance.gods)
     buildGodSourceOptions(instance)
+    buildDrawLabels(instance)
     return instance
 end
 
@@ -302,6 +323,18 @@ function RouteGlobal.createUi(fields, instance)
         return fields[key]
     end
 
+    function control:configLabel(key)
+        return instance.configDrawLabels and instance.configDrawLabels[key] or nil
+    end
+
+    function control:disabledConfigLabel(key, current)
+        local labels = instance.configDisabledLabels and instance.configDisabledLabels[key] or nil
+        if labels == nil then
+            return nil
+        end
+        return current and labels.checked or labels.unchecked
+    end
+
     function control:godPoolField()
         return fields.GodPool
     end
@@ -325,12 +358,39 @@ local function popTextColor(imgui, pushed)
     end
 end
 
+local function drawDisabledText(draw, text)
+    local pushed = pushTextColor(draw.imgui, DISABLED_TEXT_COLOR)
+    draw.imgui.Text(text)
+    popTextColor(draw.imgui, pushed)
+end
+
+local function drawPolicyNote(draw, text)
+    local pushed = pushTextColor(draw.imgui, DISABLED_TEXT_COLOR)
+    if draw.imgui.TextWrapped ~= nil then
+        draw.imgui.TextWrapped(text)
+    else
+        draw.imgui.Text(text)
+    end
+    popTextColor(draw.imgui, pushed)
+end
+
+local function drawDisabledCheckbox(draw, visibleLabel, label, current)
+    local imgui = draw.imgui
+    if imgui.BeginDisabled ~= nil and imgui.EndDisabled ~= nil then
+        imgui.BeginDisabled(true)
+        imgui.Checkbox(label, current)
+        imgui.EndDisabled()
+        return
+    end
+
+    drawDisabledText(draw, visibleLabel)
+end
+
 local function drawGodCheckbox(draw, control, god)
     local field = control:godPoolField()
     local current = field:readAlias(god.key) == true
-    local label = tostring(god.label or god.key) .. "##" .. tostring(control:name()) .. ":" .. tostring(god.key)
     local pushed = pushTextColor(draw.imgui, god.color)
-    local nextValue, changed = draw.imgui.Checkbox(label, current)
+    local nextValue, changed = draw.imgui.Checkbox(god.drawLabel, current)
     popTextColor(draw.imgui, pushed)
     if changed then
         field:writeAlias(god.key, nextValue == true)
@@ -351,14 +411,20 @@ local function drawGodPool(draw, control, instance)
     end
 end
 
-local function drawConfigCheckbox(draw, control, toggle)
+local function drawConfigCheckbox(draw, control, toggle, disabled)
     local field = control:configField(toggle.key)
     if field == nil or field.read == nil or field.write == nil then
         return
     end
 
-    local label = tostring(toggle.label) .. "##" .. tostring(control:name()) .. ":" .. tostring(toggle.key)
-    local nextValue, changed = draw.imgui.Checkbox(label, field:read() == true)
+    local label = control:configLabel(toggle.key)
+    local current = field:read() == true
+    if disabled then
+        drawDisabledCheckbox(draw, control:disabledConfigLabel(toggle.key, current), label, current)
+        return
+    end
+
+    local nextValue, changed = draw.imgui.Checkbox(label, current)
     if changed then
         field:write(nextValue == true)
         control:invalidateConfiguration()
@@ -367,8 +433,13 @@ end
 
 local function drawConfiguration(draw, control)
     draw.widgets.text("Configuration", { alignToFramePadding = true })
+    local rewardsEnabled = control:isConfigEnabled(CONFIGURE_REWARDS_KEY)
+
     for _, toggle in ipairs(control:configToggles()) do
-        drawConfigCheckbox(draw, control, toggle)
+        drawConfigCheckbox(draw, control, toggle, toggle.key == CONFIGURE_NPCS_KEY and not rewardsEnabled)
+        if toggle.key == CONFIGURE_REWARDS_KEY and not rewardsEnabled then
+            drawPolicyNote(draw, REWARDS_DISABLED_NOTE)
+        end
     end
 end
 
