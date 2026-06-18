@@ -1,5 +1,6 @@
 local deps = ...
 local common = deps.common
+local timeline = deps.timeline
 local rowEngine = deps.rowEngine
 
 local VANILLA_ROLE_KEY = common.VANILLA_ROLE_KEY
@@ -514,6 +515,7 @@ function data.prepare(instance)
     data.prepareRoles(instance)
     normalizeGoalRole(instance)
     buildRouteSlots(instance)
+    timeline.applyRouteSlots(instance)
     data.buildRoleChoices(instance)
     addFixedRoleLabels(instance)
     data.prepareSlots(instance)

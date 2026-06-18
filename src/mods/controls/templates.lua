@@ -7,6 +7,7 @@ local route = {
     availability = import("mods/route/availability.lua"),
     readCache = import("mods/route/read_cache.lua"),
     requirements = routeRequirements,
+    timeline = import("mods/route/timeline.lua"),
     rewardOfferPolicies = import("mods/data/reward_offer_policies.lua"),
     rewardOfferRules = import("mods/route/reward_offer_rules.lua"),
 }
@@ -51,6 +52,9 @@ return {
     MultiEncounterFixedRoute = import("mods/controls/MultiEncounterFixedRoute/MultiEncounterFixedRoute.lua", nil, {
         route = route,
         rewards = rewards,
+        routeStatusUi = routeStatusUi,
+    }),
+    RouteNpcs = import("mods/controls/RouteNpcs/RouteNpcs.lua", nil, {
         routeStatusUi = routeStatusUi,
     }),
     RouteGlobal = import("mods/controls/RouteGlobal/RouteGlobal.lua", nil, {

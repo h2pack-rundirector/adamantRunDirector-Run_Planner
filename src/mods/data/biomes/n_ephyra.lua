@@ -1,5 +1,6 @@
 return function(importer)
     local layout = importer("mods/data/biomes/n_ephyra_layout.lua")(importer)
+    local timeline = importer("mods/data/biomes/timeline.lua")
     local rewards = importer("mods/data/rewards.lua")(importer)
     local routeRules = importer("mods/data/route_rules.lua")
 
@@ -8,6 +9,11 @@ return function(importer)
         label = "Ephyra",
         region = "Surface",
         adapter = "hubPylon",
+        timeline = timeline.standard("N", {
+            roomHistoryCostBySlotKind = {
+                pylonPick = 2,
+            },
+        }),
         slotLayout = {
             coordinate = "SoulPylon",
             routeStartPick = 1,

@@ -1,5 +1,6 @@
 return function(importer)
     local layout = importer("mods/data/biomes/f_erebus_layout.lua")
+    local timeline = importer("mods/data/biomes/timeline.lua")
     local rewards = importer("mods/data/rewards.lua")(importer)
     local routeRules = importer("mods/data/route_rules.lua")
 
@@ -8,6 +9,7 @@ return function(importer)
         label = "Erebus",
         region = "Underworld",
         adapter = "fixedLinear",
+        timeline = timeline.standard("F"),
         slotLayout = {
             coordinate = "BiomeDepthCache",
             depthRange = { min = 0, max = 10 },

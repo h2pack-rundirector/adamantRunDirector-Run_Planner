@@ -29,6 +29,7 @@ local function loadRouteDeps()
         common = common,
         availability = testImport("mods/route/availability.lua"),
         readCache = testImport("mods/route/read_cache.lua"),
+        timeline = testImport("mods/route/timeline.lua"),
         requirements = testImport("mods/route/requirements.lua", nil, {
             common = common,
         }),
@@ -81,6 +82,14 @@ local function loadRouteGlobalTemplate()
     local template
     withTestImport(function()
         template = testImport("mods/controls/templates.lua").RouteGlobal
+    end)
+    return template
+end
+
+local function loadRouteNpcsTemplate()
+    local template
+    withTestImport(function()
+        template = testImport("mods/controls/templates.lua").RouteNpcs
     end)
     return template
 end
@@ -148,6 +157,12 @@ local function routeFields(rows, sideRows, sideRewardRows, encounterRewardRows, 
         SideRewards = fakeRows(sideRewardRows or {}),
         EncounterRewards = fakeRows(encounterRewardRows or {}),
         CageRewards = fakeRows(cageRewardRows or {}),
+    }
+end
+
+local function npcFields(rows)
+    return {
+        Targets = fakeRows(rows or {}),
     }
 end
 
@@ -320,11 +335,13 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
         "RouteG",
         "RouteH",
         "RouteI",
+        "RouteNpcsUnderworld",
         "RouteGlobalSurface",
         "RouteN",
         "RouteO",
         "RouteP",
         "RouteQ",
+        "RouteNpcsSurface",
     })
     lu.assertEquals(data.routeControlTabs(catalog, testImport).Underworld, {
         { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
@@ -332,6 +349,7 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
         { key = "G", label = "Oceanus", controlName = "RouteG" },
         { key = "H", label = "Fields", controlName = "RouteH" },
         { key = "I", label = "Tartarus", controlName = "RouteI" },
+        { key = "NPCs", label = "NPCs", controlName = "RouteNpcsUnderworld" },
     })
     lu.assertEquals(data.routeControlTabs(catalog, testImport).Surface, {
         { key = "Global", label = "Global", controlName = "RouteGlobalSurface" },
@@ -339,17 +357,20 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
         { key = "O", label = "Thessaly", controlName = "RouteO" },
         { key = "P", label = "Olympus", controlName = "RouteP" },
         { key = "Q", label = "Summit", controlName = "RouteQ" },
+        { key = "NPCs", label = "NPCs", controlName = "RouteNpcsSurface" },
     })
     lu.assertEquals(controls.RouteGlobalUnderworld.template, "RouteGlobal")
     lu.assertEquals(controls.RouteF.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteG.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteH.template, "FieldsCageRoute")
     lu.assertEquals(controls.RouteI.template, "ClockworkGoalRoute")
+    lu.assertEquals(controls.RouteNpcsUnderworld.template, "RouteNpcs")
     lu.assertEquals(controls.RouteGlobalSurface.template, "RouteGlobal")
     lu.assertEquals(controls.RouteN.template, "HubPylonRoute")
     lu.assertEquals(controls.RouteO.template, "MultiEncounterFixedRoute")
     lu.assertEquals(controls.RouteP.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteQ.template, "FixedLinearRoute")
+    lu.assertEquals(controls.RouteNpcsSurface.template, "RouteNpcs")
 end
 
 function TestRunPlannerControls.testRouteGlobalTemplateStoresGodPool()
@@ -432,6 +453,139 @@ function TestRunPlannerControls.testRouteGlobalProvidesStableGodSourceDropdownOp
     lu.assertTrue(hasValue(currentValueOpts.values, "AphroditeUpgrade"))
 end
 
+function TestRunPlannerControls.testRouteNpcsStorageDerivesSlotsFromDeclarations()
+    local catalog = loadCatalog()
+    local template = loadRouteNpcsTemplate()
+    local underworld = template.prepare({
+        name = "RouteNpcsUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        npcs = catalog.npcs,
+        biomeLookup = catalog.lookup,
+    })
+    local surface = template.prepare({
+        name = "RouteNpcsSurface",
+        route = catalog.routes.lookup.Surface,
+        npcs = catalog.npcs,
+        biomeLookup = catalog.lookup,
+    })
+
+    lu.assertEquals(underworld.slotCount, 4)
+    lu.assertEquals(underworld.slots[1].key, "Artemis")
+    lu.assertEquals(underworld.slots[1].label, "Artemis")
+    lu.assertEquals(underworld.slots[2].key, "Nemesis")
+    lu.assertEquals(underworld.slots[3].key, "Arachne_F")
+    lu.assertEquals(underworld.slots[3].label, "Arachne")
+    lu.assertEquals(underworld.slots[3].fixedBiomeKey, "F")
+    lu.assertEquals(underworld.slots[4].key, "Arachne_G")
+    lu.assertEquals(underworld.slots[4].label, "Arachne")
+
+    lu.assertEquals(surface.slotCount, 4)
+    lu.assertEquals(surface.slots[1].key, "Artemis")
+    lu.assertEquals(surface.slots[2].key, "Heracles")
+    lu.assertEquals(surface.slots[3].key, "Icarus")
+    lu.assertEquals(surface.slots[4].key, "Athena")
+
+    local storage = template.storage(underworld)
+    lu.assertEquals(#storage, 1)
+    lu.assertEquals(storage[1].key, "Targets")
+    lu.assertEquals(storage[1].type, "table")
+    lu.assertEquals(storage[1].minRows, 4)
+    lu.assertEquals(storage[1].defaultRows, 4)
+    lu.assertEquals(storage[1].maxRows, 4)
+    lu.assertEquals(storage[1].row[1].key, "TargetKey")
+    lu.assertEquals(storage[1].row[2].key, "VariantKey")
+    lu.assertEquals(storage[1].row[3].key, "BiomeKey")
+    lu.assertEquals(storage[1].row[4].key, "RowIndex")
+end
+
+function TestRunPlannerControls.testRouteNpcsUsesBiomeRoomTypeSelection()
+    local catalog = loadCatalog()
+    local route = {
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }
+    local template = loadRouteNpcsTemplate()
+    local instance = template.prepare({
+        name = "RouteNpcsUnderworld",
+        route = route,
+        npcs = catalog.npcs,
+        biomeLookup = catalog.lookup,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    local control = template.createRuntime(fields, instance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        biomes = catalog.lookup,
+        npcs = catalog.npcs,
+        controlResolver = function(controlName)
+            if controlName == "RouteF" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteF",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {
+                                    {
+                                        rowIndex = 3,
+                                        coordinate = 5,
+                                        slotLabel = "Depth 5",
+                                        roleKey = "Combat",
+                                        option = { label = "Combat 04" },
+                                        valid = true,
+                                        rewardKind = "majorMinor",
+                                        rewards = { "Major", "MaxHealthDrop" },
+                                    },
+                                },
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+    control:setRouteContext(routeContext, "Underworld")
+
+    lu.assertEquals(control:biomeOptions(1).values, { "", "F" })
+    lu.assertEquals(control:biomeOptions(1).displayValues[""], "Vanilla")
+    lu.assertEquals(control:biomeOptions(1).displayValues.F, "Erebus")
+
+    control:writeBiome(1, "F")
+    lu.assertEquals(fields.Targets:read(1, "BiomeKey"), "F")
+    lu.assertEquals(control:roomOptions(1).values, { "", "3" })
+    lu.assertEquals(control:roomOptions(1).displayValues["3"], "Depth 5 - Combat 04")
+
+    control:writeRoom(1, "3")
+    lu.assertEquals(fields.Targets:read(1, "RowIndex"), "3")
+    lu.assertEquals(fields.Targets:read(1, "VariantKey"), "ArtemisCombatF")
+    lu.assertEquals(fields.Targets:read(1, "TargetKey"), "F:3:ArtemisCombatF")
+    lu.assertEquals(control:selectedTargetKey(1), "F:3:ArtemisCombatF")
+    lu.assertFalse(control:shouldRenderVariant(1))
+
+    control:writeBiome(2, "F")
+    control:writeRoom(2, "3")
+    lu.assertEquals(control:variantOptions(2).values, { "Combat", "Random" })
+    lu.assertTrue(control:shouldRenderVariant(2))
+    lu.assertEquals(fields.Targets:read(2, "VariantKey"), "Combat")
+    lu.assertEquals(control:rowValidation(2).code, "npc_room_occupied")
+
+    control:writeVariant(2, "Random")
+    lu.assertEquals(fields.Targets:read(2, "TargetKey"), "F:3:Random")
+    lu.assertEquals(control:selectedTargetKey(2), "F:3:Random")
+    lu.assertEquals(control:rowValidation(2).code, "npc_room_occupied")
+
+    control:writeBiome(2, "")
+    lu.assertEquals(fields.Targets:read(2, "BiomeKey"), nil)
+    lu.assertEquals(fields.Targets:read(2, "RowIndex"), nil)
+    lu.assertEquals(fields.Targets:read(2, "VariantKey"), nil)
+    lu.assertEquals(fields.Targets:read(2, "TargetKey"), nil)
+    lu.assertTrue(control:rowValidation(2).valid)
+end
+
 function TestRunPlannerControls.testRouteContextSuppliesRouteGlobalGodSource()
     local catalog = loadCatalog()
     local globalTemplate = loadRouteGlobalTemplate()
@@ -498,6 +652,19 @@ function TestRunPlannerControls.testRouteTemplateViewsSupportNoOpUiTraversal()
     })
     local globalControl = globalTemplate.createUi(routeUiFields(globalTemplate.storage(globalInstance)), globalInstance)
     globalTemplate.views.planner(draw, globalControl, globalInstance)
+
+    local routeNpcsTemplate = loadRouteNpcsTemplate()
+    local routeNpcsInstance = routeNpcsTemplate.prepare({
+        name = "RouteNpcsUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        npcs = catalog.npcs,
+        biomeLookup = catalog.lookup,
+    })
+    local routeNpcsControl = routeNpcsTemplate.createUi(
+        routeUiFields(routeNpcsTemplate.storage(routeNpcsInstance)),
+        routeNpcsInstance
+    )
+    routeNpcsTemplate.views.planner(draw, routeNpcsControl, routeNpcsInstance)
 end
 
 function TestRunPlannerControls.testRouteTemplateViewAllocationsStayBounded()
@@ -568,6 +735,30 @@ function TestRunPlannerControls.testRouteTemplateViewAllocationsStayBounded()
             )
         end
     end
+
+    local routeNpcsTemplate = loadRouteNpcsTemplate()
+    local routeNpcsInstance = routeNpcsTemplate.prepare({
+        name = "RouteNpcsUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        npcs = catalog.npcs,
+        biomeLookup = catalog.lookup,
+    })
+    local routeNpcsControl = routeNpcsTemplate.createUi(
+        routeUiFields(routeNpcsTemplate.storage(routeNpcsInstance)),
+        routeNpcsInstance
+    )
+    local allocatedKb = measureAllocKb(iterations, function()
+        routeNpcsTemplate.views.planner(draw, routeNpcsControl, routeNpcsInstance)
+    end)
+    lu.assertTrue(
+        allocatedKb < 96,
+        string.format(
+            "RouteNpcs traversal allocated %.1f KB across %d no-op draws; budget %.1f KB",
+            allocatedKb,
+            iterations,
+            96
+        )
+    )
 end
 
 function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
@@ -590,6 +781,7 @@ function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(instance.routeSlots[11].kind, "preboss")
     lu.assertEquals(instance.routeSlots[11].label, "Preboss Shop")
     lu.assertEquals(instance.routeSlots[11].branchKey, "Shop")
+    lu.assertEquals(instance.routeSlots[11].roomHistoryCost, 1)
     lu.assertEquals(instance.routeSlots[11].branchValues, {
         "Shop",
     })
@@ -597,6 +789,7 @@ function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(instance.routeSlots[12].kind, "preboss")
     lu.assertEquals(instance.routeSlots[12].label, "Preboss Room")
     lu.assertEquals(instance.routeSlots[12].branchKey, "MajorReward")
+    lu.assertEquals(instance.routeSlots[12].roomHistoryCost, 0)
     lu.assertEquals(instance.routeSlots[12].branchValues, {
         "MajorReward",
     })
@@ -1419,6 +1612,7 @@ function TestRunPlannerControls.testHubPylonRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[4].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[4].optionKey, "N_Combat12")
     lu.assertEquals(snapshot.rows[4].roomKey, "N_Combat12")
+    lu.assertEquals(snapshot.rows[4].roomHistoryCost, 2)
     lu.assertEquals(snapshot.rows[4].hubDoorId, 561389)
     lu.assertEquals(#snapshot.rows[4].sideDoors, 3)
     lu.assertEquals(#snapshot.rows[4].sideRooms, 3)
@@ -1475,6 +1669,7 @@ function TestRunPlannerControls.testHubPylonRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[10].slotLabel, "Preboss Shop")
     lu.assertEquals(snapshot.rows[10].roomKey, "N_PreBoss01")
     lu.assertEquals(snapshot.rows[10].roleKey, "Preboss")
+    lu.assertEquals(snapshot.rows[10].roomHistoryCost, 1)
     lu.assertTrue(snapshot.rows[10].valid)
     lu.assertEquals(snapshot.rows[10].rewardKind, "shop")
 end
@@ -2633,6 +2828,348 @@ function TestRunPlannerControls.testRouteContextScopesPriorGodLootByRoute()
 
     iInstance.routeKey = "WithErebus"
     lu.assertTrue(hasValue(data.roleValuesForRow(iInstance, rows, 3), "Trial"))
+end
+
+function TestRunPlannerControls.testRouteContextBuildsNpcTargetsFromValidCombatRows()
+    local catalog = loadCatalog()
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        biomes = catalog.lookup,
+        npcs = catalog.npcs,
+        controlResolver = function(controlName)
+            if controlName == "RouteF" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteF",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {
+                                    {
+                                        rowIndex = 1,
+                                        coordinate = 3,
+                                        slotLabel = "Depth 3",
+                                        roleKey = "Combat",
+                                        option = { label = "Combat 02" },
+                                        valid = true,
+                                    },
+                                    {
+                                        rowIndex = 2,
+                                        coordinate = 4,
+                                        slotLabel = "Depth 4",
+                                        roleKey = "Combat",
+                                        option = { label = "Combat 03" },
+                                        valid = true,
+                                        rewardKind = "majorMinor",
+                                        rewards = { "Major", "Boon", "ZeusUpgrade" },
+                                    },
+                                    {
+                                        rowIndex = 3,
+                                        coordinate = 5,
+                                        slotLabel = "Depth 5",
+                                        roleKey = "Combat",
+                                        option = { label = "Combat 04" },
+                                        valid = true,
+                                        rewardKind = "majorMinor",
+                                        rewards = { "Major", "MaxHealthDrop" },
+                                    },
+                                },
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+
+    local targets = routeContext:npcTargets("Underworld")
+
+    lu.assertNil(targets.byNpc.Artemis.lookup["F:1:ArtemisCombatF"])
+    lu.assertNil(targets.byNpc.Artemis.lookup["F:2:ArtemisCombatF"])
+    lu.assertNotNil(targets.byNpc.Artemis.lookup["F:3:ArtemisCombatF"])
+    lu.assertEquals(targets.byNpc.Artemis.displayValues["F:3:ArtemisCombatF"], "Erebus Depth 5 - Combat 04")
+    lu.assertNotNil(targets.byNpc.Nemesis.lookup["F:3:Combat"])
+    lu.assertNotNil(targets.byNpc.Nemesis.lookup["F:3:Random"])
+    lu.assertEquals(targets.byNpcBiome.Arachne.F.values, {
+        "",
+        "F:3:ArachneCombatF",
+    })
+end
+
+function TestRunPlannerControls.testRouteContextUsesRoomHistoryTimelineForNpcTargets()
+    local catalog = loadCatalog()
+    local hubTemplate = loadHubPylonTemplate()
+    local nInstance = hubTemplate.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local nControl = hubTemplate.createRuntime(routeFields({
+        {},
+        {},
+        {},
+        { RoleKey = "Combat", OptionKey = "N_Combat01" },
+        { RoleKey = "Combat", OptionKey = "N_Combat02" },
+    }), nInstance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Surface",
+                label = "Surface",
+                biomes = { "N" },
+            },
+        }),
+        biomes = catalog.lookup,
+        npcs = catalog.npcs,
+        controlResolver = function(controlName)
+            if controlName == "RouteN" then
+                return nControl
+            end
+            return nil
+        end,
+    })
+
+    local targets = routeContext:npcTargets("Surface")
+
+    lu.assertEquals(targets.byNpc.Heracles.lookup["N:4:HeraclesCombatN"].roomHistoryOrdinal, 5)
+    lu.assertEquals(targets.byNpc.Heracles.lookup["N:5:HeraclesCombatN"].roomHistoryOrdinal, 7)
+end
+
+function TestRunPlannerControls.testRouteContextAddsPostBiomeTimelineForNpcSpacing()
+    local catalog = loadCatalog()
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F", "G" },
+            },
+        }),
+        biomes = catalog.lookup,
+        npcs = catalog.npcs,
+        controlResolver = function(controlName)
+            if controlName == "RouteF" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteF",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {
+                                    {
+                                        rowIndex = 1,
+                                        coordinate = 4,
+                                        slotLabel = "Depth 4",
+                                        roleKey = "Combat",
+                                        option = { label = "Combat F" },
+                                        valid = true,
+                                    },
+                                },
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            elseif controlName == "RouteG" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteG",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {
+                                    {
+                                        rowIndex = 1,
+                                        coordinate = 4,
+                                        slotLabel = "Depth 4",
+                                        roleKey = "Combat",
+                                        option = { label = "Combat G" },
+                                        valid = true,
+                                    },
+                                },
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+
+    local targets = routeContext:npcTargets("Underworld")
+
+    lu.assertEquals(targets.byNpc.Artemis.lookup["F:1:ArtemisCombatF"].roomHistoryOrdinal, 1)
+    lu.assertEquals(targets.byNpc.Artemis.lookup["G:1:ArtemisCombatG"].roomHistoryOrdinal, 4)
+end
+
+function TestRunPlannerControls.testRouteContextFiltersOlympusNpcsByRoomTag()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local pInstance = template.prepare({
+        name = "RouteP",
+        biome = catalog.lookup.P,
+    })
+    local pControl = template.createRuntime(routeFields({
+        {},
+        { RoleKey = "Vanilla" },
+        { RoleKey = "Vanilla" },
+        {
+            RoleKey = "Combat",
+            OptionKey = "P_Combat02",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "P_Combat17",
+        },
+    }), pInstance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Surface",
+                label = "Surface",
+                biomes = { "P" },
+            },
+        }),
+        biomes = catalog.lookup,
+        npcs = catalog.npcs,
+        controlResolver = function(controlName)
+            if controlName == "RouteP" then
+                return pControl
+            end
+            return nil
+        end,
+    })
+
+    local targets = routeContext:npcTargets("Surface")
+
+    lu.assertNotNil(targets.byNpc.Heracles.lookup["P:4:HeraclesCombatP"])
+    lu.assertNil(targets.byNpc.Heracles.lookup["P:5:HeraclesCombatP"])
+    lu.assertNil(targets.byNpc.Icarus.lookup["P:4:IcarusCombatP"])
+    lu.assertNotNil(targets.byNpc.Icarus.lookup["P:5:IcarusCombatP"])
+    lu.assertEquals(
+        targets.byNpc.Heracles.displayValues["P:4:HeraclesCombatP"],
+        "Olympus Depth 3 - Combat 02"
+    )
+    lu.assertEquals(
+        targets.byNpc.Icarus.displayValues["P:5:IcarusCombatP"],
+        "Olympus Depth 4 - Combat 17"
+    )
+end
+
+function TestRunPlannerControls.testRouteNpcsSnapshotValidatesTargetsAndSpacing()
+    local catalog = loadCatalog()
+    local route = {
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }
+    local template = loadRouteNpcsTemplate()
+    local instance = template.prepare({
+        name = "RouteNpcsUnderworld",
+        route = route,
+        npcs = catalog.npcs,
+        biomeLookup = catalog.lookup,
+    })
+    local control = template.createRuntime(npcFields({
+        {
+            VariantKey = "ArtemisCombatF",
+            BiomeKey = "F",
+            RowIndex = "3",
+        },
+        {
+            VariantKey = "Combat",
+            BiomeKey = "F",
+            RowIndex = "4",
+        },
+        {
+            VariantKey = "ArachneCombatF",
+            BiomeKey = "F",
+            RowIndex = "2",
+        },
+    }), instance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        biomes = catalog.lookup,
+        npcs = catalog.npcs,
+        controlResolver = function(controlName)
+            if controlName == "RouteF" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteF",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {
+                                    {
+                                        rowIndex = 2,
+                                        coordinate = 4,
+                                        slotLabel = "Depth 4",
+                                        roleKey = "Combat",
+                                        option = { label = "Combat 03" },
+                                        valid = true,
+                                        rewardKind = "majorMinor",
+                                        rewards = { "Major", "Boon", "ZeusUpgrade" },
+                                    },
+                                    {
+                                        rowIndex = 3,
+                                        coordinate = 5,
+                                        slotLabel = "Depth 5",
+                                        roleKey = "Combat",
+                                        option = { label = "Combat 04" },
+                                        valid = true,
+                                        rewardKind = "majorMinor",
+                                        rewards = { "Major", "MaxHealthDrop" },
+                                    },
+                                    {
+                                        rowIndex = 4,
+                                        coordinate = 6,
+                                        slotLabel = "Depth 6",
+                                        roleKey = "Combat",
+                                        option = { label = "Combat 05" },
+                                        valid = true,
+                                        rewardKind = "majorMinor",
+                                        rewards = { "Major", "MaxHealthDrop" },
+                                    },
+                                },
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            if controlName == "RouteNpcsUnderworld" then
+                return control
+            end
+            return nil
+        end,
+    })
+
+    control:setRouteContext(routeContext, "Underworld")
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.rows[1].valid)
+    lu.assertFalse(snapshot.rows[2].valid)
+    lu.assertEquals(snapshot.rows[2].invalidCode, "npc_spacing")
+    lu.assertFalse(snapshot.rows[3].valid)
+    lu.assertEquals(snapshot.rows[3].invalidCode, "npc_target_unavailable")
+
+    local routeSnapshot = routeContext:overview("Underworld")
+    lu.assertFalse(routeSnapshot.valid)
+    lu.assertEquals(routeSnapshot.invalidRows[1].controlName, "RouteNpcsUnderworld")
+    lu.assertEquals(routeSnapshot.invalidRows[1].code, "npc_spacing")
 end
 
 function TestRunPlannerControls.testRouteOverviewRebuildsOnlyWhenDirty()

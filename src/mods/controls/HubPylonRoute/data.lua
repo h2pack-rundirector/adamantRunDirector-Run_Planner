@@ -1,5 +1,6 @@
 local deps = ...
 local common = deps.common
+local timeline = deps.timeline
 local rowEngine = deps.rowEngine
 
 local VANILLA_SIDE_ROOM_MODE = ""
@@ -187,6 +188,7 @@ function data.prepare(instance)
     instance.maxSideDoorCount = maxSideDoorCount(instance)
     addSideRoomModeChoices(instance)
     buildRouteSlots(instance)
+    timeline.applyRouteSlots(instance)
     prepareSideRoomRows(instance)
     data.buildRoleChoices(instance)
     addFixedRoleLabels(instance)

@@ -41,6 +41,7 @@ function biomes.load(importer)
 
     local rewards = importer("mods/data/rewards.lua")(importer)
     local gods = importer("mods/data/gods.lua")
+    local npcs = importer("mods/npcs/definitions.lua")
     local routes = importer("mods/data/routes.lua").load()
     local ordered = {}
     local lookup = {}
@@ -56,6 +57,7 @@ function biomes.load(importer)
         lookup = lookup,
         routes = routes,
         gods = gods.olympian(),
+        npcs = npcs,
         rewardTypes = rewards.rewardTypeMetadata(),
     }
 end

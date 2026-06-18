@@ -199,6 +199,8 @@ function runtime.create(fields, instance)
             roomKey = slot.roomKey,
             branchKey = slot.branchKey,
             slotLabel = slot.label,
+            roomHistoryCost = slot.roomHistoryCost,
+            roomHistoryIdentity = slot.roomHistoryIdentity,
             roleKey = roleKey,
             role = role,
             optionKey = optionKey,

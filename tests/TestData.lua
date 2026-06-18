@@ -257,6 +257,30 @@ function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
     lu.assertEquals(biomes.lookup.Q.slotLayout.routeEndDepth, 6)
 end
 
+function TestRunPlannerData.testBiomeDefinitionsDeclareRoomHistoryTimeline()
+    local data = dofile("src/mods/data.lua")
+    local biomes = data.loadBiomes(testImport)
+
+    lu.assertEquals(biomes.lookup.F.timeline.defaultRoomHistoryCost, 1)
+    lu.assertEquals(biomes.lookup.F.timeline.afterBiome[1].key, "Boss")
+    lu.assertEquals(biomes.lookup.F.timeline.afterBiome[1].roomOptions[1].key, "F_Boss01")
+    lu.assertEquals(biomes.lookup.F.timeline.afterBiome[1].roomOptions[2].key, "F_Boss02")
+    lu.assertEquals(biomes.lookup.F.timeline.afterBiome[1].roomHistoryCost, 1)
+    lu.assertEquals(biomes.lookup.F.timeline.afterBiome[2].key, "PostBoss")
+    lu.assertEquals(biomes.lookup.F.timeline.afterBiome[2].roomKey, "F_PostBoss01")
+    lu.assertEquals(biomes.lookup.F.timeline.afterBiome[2].roomHistoryCost, 1)
+
+    lu.assertEquals(biomes.lookup.N.timeline.roomHistoryCostBySlotKind.pylonPick, 2)
+    lu.assertEquals(biomes.lookup.N.timeline.afterBiome[1].roomOptions[1].key, "N_Boss01")
+    lu.assertEquals(biomes.lookup.N.timeline.afterBiome[2].roomKey, "N_PostBoss01")
+    lu.assertEquals(biomes.lookup.I.timeline.afterBiome[1].roomOptions, {
+        { key = "I_Boss01", label = "Boss" },
+    })
+    lu.assertEquals(biomes.lookup.P.timeline.afterBiome[1].roomOptions, {
+        { key = "P_Boss01", label = "Boss" },
+    })
+end
+
 function TestRunPlannerData.testRewardTypeMetadataSeparatesBoonHermesAndDevotion()
     local data = dofile("src/mods/data.lua")
     local biomes = data.loadBiomes(testImport)
@@ -378,6 +402,13 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     lu.assertNil(biomes.lookup.P.rolesByKey.Trial)
     lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.reward, majorMinorReward())
     lu.assertEquals(biomes.lookup.P.rolesByKey.Fountain.reward, majorMinorReward())
+    lu.assertEquals(biomes.lookup.P.slotLayout.entry.tags, { "Outdoor" })
+    lu.assertEquals(biomes.lookup.P.slotLayout.special[9].tags, { "Indoor", "Outdoor" })
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.mapOptions[2].tags, { "Indoor" })
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.mapOptions[17].tags, { "Outdoor" })
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Fountain.roomOptions[1].tags, { "Indoor" })
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Midshop.roomOptions[1].tags, { "Outdoor" })
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Miniboss.roomOptions[1].tags, { "Indoor" })
     assertOneShotRole(biomes.lookup.P.rolesByKey.Story)
     assertOneShotRole(biomes.lookup.P.rolesByKey.Fountain)
     assertOneShotRole(biomes.lookup.P.rolesByKey.Midshop)

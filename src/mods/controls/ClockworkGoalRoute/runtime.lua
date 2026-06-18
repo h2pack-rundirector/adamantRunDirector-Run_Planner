@@ -189,6 +189,8 @@ function runtime.create(fields, instance)
             roomKey = rowRoomKey(slot, option),
             roomOptions = roomOptions(slot),
             slotLabel = slot.label,
+            roomHistoryCost = slot.roomHistoryCost,
+            roomHistoryIdentity = slot.roomHistoryIdentity,
             roleKey = roleKey,
             role = role,
             optionKey = optionKey,

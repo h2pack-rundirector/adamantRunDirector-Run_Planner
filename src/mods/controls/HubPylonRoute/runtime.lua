@@ -315,6 +315,8 @@ function runtime.create(fields, instance)
             coordinate = slot.coordinate,
             slotKind = slot.kind or "pylonPick",
             slotLabel = slot.label,
+            roomHistoryCost = slot.roomHistoryCost,
+            roomHistoryIdentity = slot.roomHistoryIdentity,
             roleKey = roleKey,
             role = role,
             optionKey = optionKey,

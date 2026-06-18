@@ -1,6 +1,7 @@
 local deps = ...
 local common = deps.common
 local availability = deps.availability
+local timeline = deps.timeline
 local rowEngine = deps.rowEngine
 
 local shallowCopyList = common.shallowCopyList
@@ -358,6 +359,7 @@ function data.prepare(instance)
     prepareEncounterPolicies(instance)
 
     buildRouteSlots(instance)
+    timeline.applyRouteSlots(instance)
     buildVariantChoices(instance)
     prepareEncounterRewardRows(instance)
     data.buildRoleChoices(instance)

@@ -1,5 +1,6 @@
 return function(importer)
     local layout = importer("mods/data/biomes/p_olympus_layout.lua")
+    local timeline = importer("mods/data/biomes/timeline.lua")
     local rewards = importer("mods/data/rewards.lua")(importer)
     local routeRules = importer("mods/data/route_rules.lua")
 
@@ -8,6 +9,11 @@ return function(importer)
         label = "Olympus",
         region = "Surface",
         adapter = "fixedLinear",
+        timeline = timeline.standard("P", {
+            bossRooms = {
+                { key = "P_Boss01", label = "Boss" },
+            },
+        }),
         slotLayout = {
             coordinate = "BiomeDepthCache",
             depthRange = { min = 1, max = 9 },
@@ -16,6 +22,7 @@ return function(importer)
             entry = {
                 kind = "intro",
                 roomKey = layout.introRoom.key,
+                tags = layout.introRoom.tags,
                 locked = true,
             },
             default = {
@@ -26,6 +33,7 @@ return function(importer)
                 [9] = {
                     kind = "preboss",
                     roomKey = layout.prebossRoom.key,
+                    tags = layout.prebossRoom.tags,
                     branches = {
                         {
                             key = "Shop",

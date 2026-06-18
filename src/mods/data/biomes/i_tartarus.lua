@@ -1,5 +1,6 @@
 return function(importer)
     local layout = importer("mods/data/biomes/i_tartarus_layout.lua")(importer)
+    local timeline = importer("mods/data/biomes/timeline.lua")
     local rewards = importer("mods/data/rewards.lua")(importer)
     local routeRules = importer("mods/data/route_rules.lua")
 
@@ -8,6 +9,11 @@ return function(importer)
         label = "Tartarus",
         region = "Underworld",
         adapter = "clockworkGoal",
+        timeline = timeline.standard("I", {
+            bossRooms = {
+                { key = "I_Boss01", label = "Boss" },
+            },
+        }),
         slotLayout = {
             coordinate = "ClockworkGoalRoute",
             routeStartRow = 1,

@@ -19,6 +19,10 @@ local function routeGlobalControlName(routeKey)
     return "RouteGlobal" .. tostring(routeKey or "")
 end
 
+local function routeNpcControlName(routeKey)
+    return "RouteNpcs" .. tostring(routeKey or "")
+end
+
 local function routeTabForBiome(catalog, biomeKey)
     local biome = catalog.lookup and catalog.lookup[biomeKey] or nil
     local template = biome and TEMPLATE_BY_ADAPTER[biome.adapter] or nil
@@ -40,6 +44,10 @@ function controls.routeGlobalControlName(routeKey)
     return routeGlobalControlName(routeKey)
 end
 
+function controls.routeNpcControlName(routeKey)
+    return routeNpcControlName(routeKey)
+end
+
 function controls.routeControlNames(catalog)
     local names = {}
     if catalog ~= nil and catalog.routes ~= nil and catalog.routes.ordered ~= nil then
@@ -51,6 +59,7 @@ function controls.routeControlNames(catalog)
                     names[#names + 1] = routeControlName(biome.key)
                 end
             end
+            names[#names + 1] = routeNpcControlName(route.key)
         end
     else
         for _, biome in ipairs(catalog and catalog.ordered or {}) do
@@ -79,6 +88,11 @@ function controls.routeControlTabs(catalog)
                     tabs[#tabs + 1] = tab
                 end
             end
+            tabs[#tabs + 1] = {
+                key = "NPCs",
+                label = "NPCs",
+                controlName = routeNpcControlName(route.key),
+            }
             tabsByRoute[route.key] = tabs
         end
         return tabsByRoute
@@ -112,6 +126,13 @@ function controls.build(catalog)
                 label = "Global",
                 route = route,
                 gods = catalog.gods,
+            }
+            instances[routeNpcControlName(route.key)] = {
+                template = "RouteNpcs",
+                label = "NPCs",
+                route = route,
+                npcs = catalog.npcs,
+                biomeLookup = catalog.lookup,
             }
         end
     end
