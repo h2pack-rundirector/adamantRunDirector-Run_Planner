@@ -39,8 +39,14 @@ local function readField(fields, rowIndex, alias)
     return fields.Targets:read(rowIndex, alias) or ""
 end
 
+local function readManagedCount(fields, instance)
+    local countField = fields.ManagedCount
+    local rawValue = countField ~= nil and countField.read and countField:read() or nil
+    return data.clampManagedCount(instance, rawValue)
+end
+
 local function parseTargetKey(targetKey)
-    local biomeKey, targetRowIndex = string.match(targetKey or "", "^([^:]+):([^:]+)$")
+    local biomeKey, targetRowIndex = string.match(targetKey or "", "^([^:]+):(.+)$")
     return biomeKey or "", targetRowIndex or ""
 end
 
@@ -115,6 +121,13 @@ local function roomLabel(candidate)
     if optionLabel ~= nil then
         label = label .. " - " .. tostring(optionLabel)
     end
+    if candidate.sideRoom ~= nil then
+        label = label
+            .. " / Side "
+            .. tostring(candidate.sideIndex or candidate.sideRoom.sideIndex or "")
+            .. " - "
+            .. tostring(candidate.sideRoom.roomKey or "")
+    end
     return label
 end
 
@@ -139,7 +152,7 @@ end
 
 local function addRoomOption(index, candidate)
     local byBiome = ensureMap(index.roomsByBiome, candidate.biomeKey)
-    local rowKey = tostring(candidate.rowIndex or "")
+    local rowKey = tostring(candidate.targetRowIndex or candidate.rowIndex or "")
     local opts = byBiome.options
     if opts == nil then
         opts = newRoomOptions()
@@ -182,6 +195,23 @@ local function selectedCandidate(control, rowIndex)
     return control:targetCandidates(rowIndex).lookup[targetKey]
 end
 
+local function hasRoomHistoryConflict(left, right, spacing)
+    return left ~= nil
+        and right ~= nil
+        and math.abs(
+            (left.roomHistoryOrdinal or 0) - (right.roomHistoryOrdinal or 0)
+        ) < spacing
+end
+
+local function hasForwardBlockerConflict(candidate, blocker, spacing)
+    if candidate == nil or blocker == nil then
+        return false
+    end
+    local candidateOrdinal = candidate.roomHistoryOrdinal or 0
+    local blockerOrdinal = blocker.roomHistoryOrdinal or 0
+    return candidateOrdinal > blockerOrdinal and candidateOrdinal - blockerOrdinal < spacing
+end
+
 local function hasSpacingConflict(control, rowIndex, candidate)
     if candidate == nil then
         return false
@@ -197,13 +227,14 @@ local function hasSpacingConflict(control, rowIndex, candidate)
         local priorSlot = control:slot(priorIndex)
         if priorSlot ~= nil and priorSlot.featureKey == slot.featureKey then
             local priorCandidate = selectedCandidate(control, priorIndex)
-            if priorCandidate ~= nil
-                and math.abs(
-                    (candidate.roomHistoryOrdinal or 0) - (priorCandidate.roomHistoryOrdinal or 0)
-                ) < spacing
-            then
+            if hasRoomHistoryConflict(candidate, priorCandidate, spacing) then
                 return true
             end
+        end
+    end
+    for _, blocker in ipairs(control:targetCandidates(rowIndex).blockers or EMPTY_LIST) do
+        if blocker.featureKey == slot.featureKey and hasForwardBlockerConflict(candidate, blocker, spacing) then
+            return true
         end
     end
     return false
@@ -230,7 +261,27 @@ function runtime.create(fields, instance)
     end
 
     function control:rowCount()
+        return readManagedCount(fields, instance)
+    end
+
+    function control:rowCapacity()
         return fields.Targets:count()
+    end
+
+    function control:rawManagedCount()
+        return fields.ManagedCount and fields.ManagedCount:read() or tostring(instance.defaultManagedCount)
+    end
+
+    function control:managedCount()
+        return readManagedCount(fields, instance)
+    end
+
+    function control:writeManagedCount(rawValue)
+        local count = data.clampManagedCount(instance, rawValue)
+        if fields.ManagedCount ~= nil and fields.ManagedCount.write ~= nil then
+            fields.ManagedCount:write(tostring(count))
+        end
+        markDirty(instance)
     end
 
     function control:slot(rowIndex)
@@ -347,7 +398,7 @@ function runtime.create(fields, instance)
             else
                 writeField(fields, rowIndex, "TargetKey", targetKey)
                 writeField(fields, rowIndex, "BiomeKey", candidate.biomeKey or "")
-                writeField(fields, rowIndex, "RowIndex", tostring(candidate.rowIndex or ""))
+                writeField(fields, rowIndex, "RowIndex", tostring(candidate.targetRowIndex or candidate.rowIndex or ""))
             end
         end
         markDirty(instance)
@@ -357,6 +408,9 @@ function runtime.create(fields, instance)
         local slot = self:slot(rowIndex)
         if slot == nil then
             return invalidStatus("unknown_feature_slot", "Unknown feature slot")
+        end
+        if rowIndex > self:managedCount() then
+            return VALID
         end
 
         local biomeKey = self:selectedBiomeKey(rowIndex)
@@ -420,6 +474,7 @@ function runtime.create(fields, instance)
         return {
             controlName = instance.name,
             routeKey = instance.routeKey,
+            managedCount = self:managedCount(),
             valid = invalidRows[1] == nil,
             disabled = invalidRows[1] ~= nil,
             invalidRows = invalidRows,

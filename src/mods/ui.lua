@@ -47,7 +47,7 @@ local function buildRegionTabs(routeControlTabs)
                 key = entry.key,
                 label = entry.label,
             }
-            controls[entry.key] = entry.controlName
+            controls[entry.key] = entry.controlNames or { entry.controlName }
         end
         routeNavOpts[region] = {
             id = "RunPlanner" .. tostring(region) .. "Tabs",
@@ -95,8 +95,13 @@ local function drawRegionTab(ctx, region, childId, routeContext)
     activeRouteTabs[region] = activeTab
 
     imgui.BeginChild(childId .. "Detail", 0, 0, false)
-    local controlName = routeControlByTab[region][activeTab]
-    if controlName ~= nil then
+    local controlNames = routeControlByTab[region][activeTab]
+    for index, controlName in ipairs(controlNames or EMPTY_LIST) do
+        if index > 1 then
+            imgui.Spacing()
+            imgui.Separator()
+            imgui.Spacing()
+        end
         local control = ctx.controls.get(controlName)
         if routeContext ~= nil then
             routeContext:bindControl(control, region)

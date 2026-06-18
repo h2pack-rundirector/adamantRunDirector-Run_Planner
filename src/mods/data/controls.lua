@@ -23,8 +23,37 @@ local function routeNpcControlName(routeKey)
     return "RouteNpcs" .. tostring(routeKey or "")
 end
 
-local function routeFeatureControlName(routeKey)
-    return "RouteFeatures" .. tostring(routeKey or "")
+local function routeFeatureControlName(routeKey, featureKey)
+    return "RouteFeature" .. tostring(featureKey or "") .. tostring(routeKey or "")
+end
+
+local function routeBiomeLookup(route)
+    local lookup = {}
+    for _, biomeKey in ipairs(route and route.biomes or {}) do
+        lookup[biomeKey] = true
+    end
+    return lookup
+end
+
+local function routeHasFeature(routeLookup, feature)
+    for biomeKey in pairs(feature and feature.biomes or {}) do
+        if routeLookup[biomeKey] then
+            return true
+        end
+    end
+    return false
+end
+
+local function routeFeatureControls(catalog, route)
+    local routeLookup = routeBiomeLookup(route)
+    local controlNames = {}
+    for _, featureKey in ipairs(catalog and catalog.features and catalog.features.ordered or {}) do
+        local feature = catalog.features.byKey and catalog.features.byKey[featureKey] or nil
+        if feature ~= nil and routeHasFeature(routeLookup, feature) then
+            controlNames[#controlNames + 1] = routeFeatureControlName(route.key, feature.key)
+        end
+    end
+    return controlNames
 end
 
 local function routeTabForBiome(catalog, biomeKey)
@@ -52,8 +81,8 @@ function controls.routeNpcControlName(routeKey)
     return routeNpcControlName(routeKey)
 end
 
-function controls.routeFeatureControlName(routeKey)
-    return routeFeatureControlName(routeKey)
+function controls.routeFeatureControlName(routeKey, featureKey)
+    return routeFeatureControlName(routeKey, featureKey)
 end
 
 function controls.routeControlNames(catalog)
@@ -68,7 +97,9 @@ function controls.routeControlNames(catalog)
                 end
             end
             names[#names + 1] = routeNpcControlName(route.key)
-            names[#names + 1] = routeFeatureControlName(route.key)
+            for _, controlName in ipairs(routeFeatureControls(catalog, route)) do
+                names[#names + 1] = controlName
+            end
         end
     else
         for _, biome in ipairs(catalog and catalog.ordered or {}) do
@@ -105,7 +136,7 @@ function controls.routeControlTabs(catalog)
             tabs[#tabs + 1] = {
                 key = "Features",
                 label = "Features",
-                controlName = routeFeatureControlName(route.key),
+                controlNames = routeFeatureControls(catalog, route),
             }
             tabsByRoute[route.key] = tabs
         end
@@ -148,13 +179,19 @@ function controls.build(catalog)
                 npcs = catalog.npcs,
                 biomeLookup = catalog.lookup,
             }
-            instances[routeFeatureControlName(route.key)] = {
-                template = "RouteFeatures",
-                label = "Features",
-                route = route,
-                features = catalog.features,
-                biomeLookup = catalog.lookup,
-            }
+            local routeLookup = routeBiomeLookup(route)
+            for _, featureKey in ipairs(catalog.features and catalog.features.ordered or {}) do
+                local feature = catalog.features.byKey and catalog.features.byKey[featureKey] or nil
+                if feature ~= nil and routeHasFeature(routeLookup, feature) then
+                    instances[routeFeatureControlName(route.key, feature.key)] = {
+                        template = "RouteFeatures",
+                        label = feature.label or feature.key,
+                        route = route,
+                        feature = feature,
+                        biomeLookup = catalog.lookup,
+                    }
+                end
+            end
         end
     end
     for _, biome in ipairs(catalog and catalog.ordered or {}) do

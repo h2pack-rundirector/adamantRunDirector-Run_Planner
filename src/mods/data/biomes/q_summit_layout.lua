@@ -1,15 +1,36 @@
 local layout = {}
 
+local SURFACE_SHOP_FEATURES = { surfaceShop = true }
+local SURFACE_SHOP_COMBAT_ROOMS = {
+    Q_Combat01 = true,
+    Q_Combat02 = true,
+    Q_Combat03 = true,
+    Q_Combat04 = true,
+    Q_Combat05 = true,
+    Q_Combat06 = true,
+    Q_Combat07 = true,
+    Q_Combat08 = true,
+    Q_Combat09 = true,
+    Q_Combat10 = true,
+    Q_Combat11 = true,
+    Q_Combat12 = true,
+    Q_Combat13 = true,
+    Q_Combat16 = true,
+}
+
 local function option(key, label, opts)
     opts = opts or {}
     return {
         key = key,
         label = label,
+        features = opts.features,
         availability = opts.availability,
     }
 end
 
 local function combat(roomKey, opts)
+    opts = opts or {}
+    opts.features = opts.features or (SURFACE_SHOP_COMBAT_ROOMS[roomKey] and SURFACE_SHOP_FEATURES or nil)
     return option(roomKey, "Combat " .. string.sub(roomKey, -2), opts)
 end
 
@@ -20,6 +41,8 @@ local function indexByKey(items)
     end
     return lookup
 end
+
+layout.surfaceShopFeatures = SURFACE_SHOP_FEATURES
 
 layout.introRoom = option("Q_Intro", "Intro", {
     availability = { biomeDepth = { exact = 1 } },

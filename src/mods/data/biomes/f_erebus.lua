@@ -9,7 +9,14 @@ return function(importer)
         label = "Erebus",
         region = "Underworld",
         adapter = "fixedLinear",
-        timeline = timeline.standard("F"),
+        timeline = timeline.standard("F", {
+            postBossFeatures = { wellShop = true },
+        }),
+        featurePolicies = {
+            wellShop = {
+                biomeDepth = { min = 3 },
+            },
+        },
         slotLayout = {
             coordinate = "BiomeDepthCache",
             depthRange = { min = 0, max = 10 },

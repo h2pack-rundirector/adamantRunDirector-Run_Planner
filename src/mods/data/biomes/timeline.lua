@@ -24,6 +24,7 @@ function timeline.standard(biomeKey, opts)
                 label = "Post-Boss",
                 roomKey = opts.postBossRoomKey or (tostring(biomeKey) .. "_PostBoss01"),
                 roomHistoryCost = opts.postBossRoomHistoryCost or 1,
+                features = opts.postBossFeatures,
             },
         },
     }

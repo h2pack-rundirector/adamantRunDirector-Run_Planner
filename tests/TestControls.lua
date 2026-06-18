@@ -250,6 +250,27 @@ local function fakePackedField(root)
     }
 end
 
+local function fakeStringField(root)
+    local value = root.default or ""
+    return {
+        read = function()
+            return value
+        end,
+        write = function(_, nextValue)
+            value = nextValue
+        end,
+        schema = function()
+            return root
+        end,
+        alias = function()
+            return root.key
+        end,
+        controlId = function()
+            return root.key
+        end,
+    }
+end
+
 local function routeUiFields(storage)
     local fields = {}
     for _, root in ipairs(storage or {}) do
@@ -257,6 +278,8 @@ local function routeUiFields(storage)
             fields[root.key] = fakeUiRows(root.defaultRows or root.maxRows or root.minRows or 0)
         elseif root.type == "packedInt" then
             fields[root.key] = fakePackedField(root)
+        elseif root.type == "string" then
+            fields[root.key] = fakeStringField(root)
         end
     end
     return fields
@@ -344,14 +367,16 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
         "RouteH",
         "RouteI",
         "RouteNpcsUnderworld",
-        "RouteFeaturesUnderworld",
+        "RouteFeatureChaosGateUnderworld",
+        "RouteFeatureStygianWellUnderworld",
         "RouteGlobalSurface",
         "RouteN",
         "RouteO",
         "RouteP",
         "RouteQ",
         "RouteNpcsSurface",
-        "RouteFeaturesSurface",
+        "RouteFeatureChaosGateSurface",
+        "RouteFeatureHermesShrineSurface",
     })
     lu.assertEquals(data.routeControlTabs(catalog, testImport).Underworld, {
         { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
@@ -360,7 +385,14 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
         { key = "H", label = "Fields", controlName = "RouteH" },
         { key = "I", label = "Tartarus", controlName = "RouteI" },
         { key = "NPCs", label = "NPCs", controlName = "RouteNpcsUnderworld" },
-        { key = "Features", label = "Features", controlName = "RouteFeaturesUnderworld" },
+        {
+            key = "Features",
+            label = "Features",
+            controlNames = {
+                "RouteFeatureChaosGateUnderworld",
+                "RouteFeatureStygianWellUnderworld",
+            },
+        },
     })
     lu.assertEquals(data.routeControlTabs(catalog, testImport).Surface, {
         { key = "Global", label = "Global", controlName = "RouteGlobalSurface" },
@@ -369,7 +401,14 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
         { key = "P", label = "Olympus", controlName = "RouteP" },
         { key = "Q", label = "Summit", controlName = "RouteQ" },
         { key = "NPCs", label = "NPCs", controlName = "RouteNpcsSurface" },
-        { key = "Features", label = "Features", controlName = "RouteFeaturesSurface" },
+        {
+            key = "Features",
+            label = "Features",
+            controlNames = {
+                "RouteFeatureChaosGateSurface",
+                "RouteFeatureHermesShrineSurface",
+            },
+        },
     })
     lu.assertEquals(controls.RouteGlobalUnderworld.template, "RouteGlobal")
     lu.assertEquals(controls.RouteF.template, "FixedLinearRoute")
@@ -377,14 +416,16 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
     lu.assertEquals(controls.RouteH.template, "FieldsCageRoute")
     lu.assertEquals(controls.RouteI.template, "ClockworkGoalRoute")
     lu.assertEquals(controls.RouteNpcsUnderworld.template, "RouteNpcs")
-    lu.assertEquals(controls.RouteFeaturesUnderworld.template, "RouteFeatures")
+    lu.assertEquals(controls.RouteFeatureChaosGateUnderworld.template, "RouteFeatures")
+    lu.assertEquals(controls.RouteFeatureStygianWellUnderworld.template, "RouteFeatures")
     lu.assertEquals(controls.RouteGlobalSurface.template, "RouteGlobal")
     lu.assertEquals(controls.RouteN.template, "HubPylonRoute")
     lu.assertEquals(controls.RouteO.template, "MultiEncounterFixedRoute")
     lu.assertEquals(controls.RouteP.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteQ.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteNpcsSurface.template, "RouteNpcs")
-    lu.assertEquals(controls.RouteFeaturesSurface.template, "RouteFeatures")
+    lu.assertEquals(controls.RouteFeatureChaosGateSurface.template, "RouteFeatures")
+    lu.assertEquals(controls.RouteFeatureHermesShrineSurface.template, "RouteFeatures")
 end
 
 function TestRunPlannerControls.testRouteGlobalTemplateStoresGodPool()
@@ -622,39 +663,53 @@ end
 function TestRunPlannerControls.testRouteFeaturesStorageDerivesSlotsFromDeclarations()
     local catalog = loadCatalog()
     local template = loadRouteFeaturesTemplate()
-    local underworld = template.prepare({
-        name = "RouteFeaturesUnderworld",
+    local underworldChaos = template.prepare({
+        name = "RouteFeatureChaosGateUnderworld",
         route = catalog.routes.lookup.Underworld,
-        features = catalog.features,
+        feature = catalog.features.byKey.ChaosGate,
         biomeLookup = catalog.lookup,
     })
-    local surface = template.prepare({
-        name = "RouteFeaturesSurface",
-        route = catalog.routes.lookup.Surface,
-        features = catalog.features,
+    local underworldWell = template.prepare({
+        name = "RouteFeatureStygianWellUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        feature = catalog.features.byKey.StygianWell,
         biomeLookup = catalog.lookup,
     })
 
-    lu.assertEquals(underworld.slotCount, 1)
-    lu.assertEquals(underworld.slots[1].key, "ChaosGate")
-    lu.assertEquals(underworld.slots[1].label, "Chaos")
-    lu.assertEquals(underworld.slots[1].featureKey, "chaos")
-    lu.assertEquals(underworld.slots[1].plannedSpacingRooms, 10)
+    lu.assertEquals(underworldChaos.slotCount, 10)
+    lu.assertEquals(underworldChaos.slots[1].key, "ChaosGate1")
+    lu.assertEquals(underworldChaos.slots[1].label, "Entry 1")
+    lu.assertEquals(underworldChaos.slots[1].featureKey, "chaos")
+    lu.assertEquals(underworldChaos.slots[1].plannedSpacingRooms, 10)
 
-    lu.assertEquals(surface.slotCount, 1)
-    lu.assertEquals(surface.slots[1].key, "ChaosGate")
-    lu.assertEquals(surface.slots[1].featureKey, "chaos")
+    lu.assertEquals(underworldWell.slotCount, 10)
+    lu.assertEquals(underworldWell.slots[1].key, "StygianWell1")
+    lu.assertEquals(underworldWell.slots[1].label, "Entry 1")
+    lu.assertEquals(underworldWell.slots[10].key, "StygianWell10")
+    lu.assertEquals(underworldWell.slots[10].featureKey, "wellShop")
+    lu.assertEquals(underworldWell.slots[10].plannedSpacingRooms, 4)
 
-    local storage = template.storage(underworld)
-    lu.assertEquals(#storage, 1)
-    lu.assertEquals(storage[1].key, "Targets")
-    lu.assertEquals(storage[1].type, "table")
-    lu.assertEquals(storage[1].minRows, 1)
-    lu.assertEquals(storage[1].defaultRows, 1)
-    lu.assertEquals(storage[1].maxRows, 1)
-    lu.assertEquals(storage[1].row[1].key, "TargetKey")
-    lu.assertEquals(storage[1].row[2].key, "BiomeKey")
-    lu.assertEquals(storage[1].row[3].key, "RowIndex")
+    local storage = template.storage(underworldWell)
+    lu.assertEquals(#storage, 2)
+    lu.assertEquals(storage[1].key, "ManagedCount")
+    lu.assertEquals(storage[1].type, "string")
+    lu.assertEquals(storage[1].default, "1")
+    lu.assertEquals(storage[2].key, "Targets")
+    lu.assertEquals(storage[2].type, "table")
+    lu.assertEquals(storage[2].minRows, 10)
+    lu.assertEquals(storage[2].defaultRows, 10)
+    lu.assertEquals(storage[2].maxRows, 10)
+    lu.assertEquals(storage[2].row[1].key, "TargetKey")
+    lu.assertEquals(storage[2].row[2].key, "BiomeKey")
+    lu.assertEquals(storage[2].row[3].key, "RowIndex")
+
+    local control = template.createRuntime(routeUiFields(storage), underworldWell)
+    lu.assertEquals(control:rowCapacity(), 10)
+    lu.assertEquals(control:rowCount(), 1)
+    control:writeManagedCount("10")
+    lu.assertEquals(control:rowCount(), 10)
+    control:writeManagedCount("99")
+    lu.assertEquals(control:rawManagedCount(), "10")
 end
 
 function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolicies()
@@ -666,9 +721,9 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
     }
     local template = loadRouteFeaturesTemplate()
     local instance = template.prepare({
-        name = "RouteFeaturesSurface",
+        name = "RouteFeatureChaosGateSurface",
         route = route,
-        features = catalog.features,
+        feature = catalog.features.byKey.ChaosGate,
         biomeLookup = catalog.lookup,
     })
     local fields = routeUiFields(template.storage(instance))
@@ -689,6 +744,43 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
                                 rows = {
                                     {
                                         rowIndex = 1,
+                                        coordinate = 0,
+                                        slotLabel = "Intro",
+                                        roomKey = "P_Intro",
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 2,
+                                        coordinate = 1,
+                                        slotLabel = "Depth 1",
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 3,
+                                        coordinate = 2,
+                                        slotLabel = "Depth 2",
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 4,
+                                        coordinate = 3,
+                                        slotLabel = "Depth 3",
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 5,
+                                        coordinate = 4,
+                                        slotLabel = "Depth 4",
+                                        features = { chaos = true },
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 6,
                                         coordinate = 5,
                                         slotLabel = "Depth 5",
                                         option = { key = "P_Combat01", label = "Combat 01" },
@@ -697,18 +789,10 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
                                         roomHistoryCost = 1,
                                     },
                                     {
-                                        rowIndex = 2,
+                                        rowIndex = 7,
                                         coordinate = 6,
                                         slotLabel = "Depth 6",
                                         option = { key = "P_Combat02", label = "Combat 02" },
-                                        features = { chaos = true },
-                                        valid = true,
-                                        roomHistoryCost = 1,
-                                    },
-                                    {
-                                        rowIndex = 3,
-                                        coordinate = 4,
-                                        slotLabel = "Depth 4",
                                         features = { chaos = true },
                                         valid = true,
                                         roomHistoryCost = 1,
@@ -731,16 +815,16 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
 
     control:writeBiome(1, "P")
     lu.assertEquals(fields.Targets:read(1, "BiomeKey"), "P")
-    lu.assertEquals(control:roomOptions(1).values, { "", "1" })
-    lu.assertEquals(control:roomOptions(1).displayValues["1"], "Depth 5 - Combat 01")
+    lu.assertEquals(control:roomOptions(1).values, { "", "6" })
+    lu.assertEquals(control:roomOptions(1).displayValues["6"], "Depth 5 - Combat 01")
 
-    control:writeRoom(1, "1")
-    lu.assertEquals(fields.Targets:read(1, "RowIndex"), "1")
-    lu.assertEquals(fields.Targets:read(1, "TargetKey"), "P:1")
-    lu.assertEquals(control:selectedTargetKey(1), "P:1")
+    control:writeRoom(1, "6")
+    lu.assertEquals(fields.Targets:read(1, "RowIndex"), "6")
+    lu.assertEquals(fields.Targets:read(1, "TargetKey"), "P:6")
+    lu.assertEquals(control:selectedTargetKey(1), "P:6")
     lu.assertTrue(control:rowValidation(1).valid)
 
-    control:writeTarget(1, "P:2")
+    control:writeTarget(1, "P:7")
     lu.assertEquals(control:rowValidation(1).code, "feature_target_unavailable")
 
     control:writeBiome(1, "")
@@ -748,6 +832,381 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
     lu.assertEquals(fields.Targets:read(1, "RowIndex"), nil)
     lu.assertEquals(fields.Targets:read(1, "TargetKey"), nil)
     lu.assertTrue(control:rowValidation(1).valid)
+end
+
+function TestRunPlannerControls.testRouteFeaturesUsesShopDepthPolicy()
+    local catalog = loadCatalog()
+    local route = {
+        key = "Surface",
+        label = "Surface",
+        biomes = { "O" },
+    }
+    local template = loadRouteFeaturesTemplate()
+    local instance = template.prepare({
+        name = "RouteFeatureHermesShrineSurface",
+        route = route,
+        feature = catalog.features.byKey.HermesShrine,
+        biomeLookup = catalog.lookup,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    local control = template.createRuntime(fields, instance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        biomes = catalog.lookup,
+        features = catalog.features,
+        controlResolver = function(controlName)
+            if controlName == "RouteO" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteO",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {
+                                    {
+                                        rowIndex = 1,
+                                        coordinate = 0,
+                                        slotLabel = "Intro",
+                                        roomKey = "O_Intro",
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 2,
+                                        coordinate = 1,
+                                        slotLabel = "Depth 1",
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 3,
+                                        coordinate = 2,
+                                        slotLabel = "Depth 2",
+                                        option = { key = "O_Combat01", label = "Combat 01" },
+                                        features = { surfaceShop = true },
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 4,
+                                        coordinate = 3,
+                                        slotLabel = "Depth 3",
+                                        option = { key = "O_Combat02", label = "Combat 02" },
+                                        features = { surfaceShop = true },
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                },
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+    control:setRouteContext(routeContext, "Surface")
+
+    control:writeBiome(1, "O")
+    lu.assertEquals(control:roomOptions(1).values, { "", "4" })
+    lu.assertEquals(control:roomOptions(1).displayValues["4"], "Depth 3 - Combat 02")
+end
+
+function TestRunPlannerControls.testRouteFeaturesRejectsRepeatedTargetsInsideSpacingWindow()
+    local catalog = loadCatalog()
+    local route = {
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }
+    local template = loadRouteFeaturesTemplate()
+    local instance = template.prepare({
+        name = "RouteFeatureStygianWellUnderworld",
+        route = route,
+        feature = catalog.features.byKey.StygianWell,
+        biomeLookup = catalog.lookup,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    local control = template.createRuntime(fields, instance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        biomes = catalog.lookup,
+        features = catalog.features,
+        controlResolver = function(controlName)
+            if controlName == "RouteF" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteF",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {
+                                    {
+                                        rowIndex = 1,
+                                        coordinate = 0,
+                                        slotLabel = "Opening",
+                                        roomKey = "F_Opening01",
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 2,
+                                        coordinate = 1,
+                                        slotLabel = "Depth 1",
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 3,
+                                        coordinate = 2,
+                                        slotLabel = "Depth 2",
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 4,
+                                        coordinate = 3,
+                                        slotLabel = "Depth 3",
+                                        option = { key = "F_Combat01", label = "Combat 01" },
+                                        features = { wellShop = true },
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 5,
+                                        coordinate = 4,
+                                        slotLabel = "Depth 4",
+                                        option = { key = "F_Combat02", label = "Combat 02" },
+                                        features = { wellShop = true },
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                },
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+    control:setRouteContext(routeContext, "Underworld")
+
+    control:writeBiome(1, "F")
+    control:writeRoom(1, "4")
+    control:writeBiome(2, "F")
+    control:writeRoom(2, "5")
+
+    lu.assertTrue(control:rowValidation(1).valid)
+    lu.assertTrue(control:rowValidation(2).valid)
+    lu.assertEquals(#control:buildSnapshot().rows, 1)
+
+    control:writeManagedCount("2")
+    lu.assertEquals(control:rowValidation(2).code, "feature_spacing")
+end
+
+function TestRunPlannerControls.testRouteFeaturesUsesTimelineBlockersForPostBossShops()
+    local catalog = loadCatalog()
+    local biomeLookup = {}
+    for key, biome in pairs(catalog.lookup) do
+        biomeLookup[key] = biome
+    end
+    biomeLookup.G = {}
+    for key, value in pairs(catalog.lookup.G) do
+        biomeLookup.G[key] = value
+    end
+    biomeLookup.G.featurePolicies = nil
+
+    local route = {
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G" },
+    }
+    local template = loadRouteFeaturesTemplate()
+    local instance = template.prepare({
+        name = "RouteFeatureStygianWellUnderworld",
+        route = route,
+        feature = catalog.features.byKey.StygianWell,
+        biomeLookup = catalog.lookup,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    local control = template.createRuntime(fields, instance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        biomes = biomeLookup,
+        features = catalog.features,
+        controlResolver = function(controlName)
+            if controlName == "RouteF" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteF",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {},
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            elseif controlName == "RouteG" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteG",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {
+                                    {
+                                        rowIndex = 1,
+                                        coordinate = 3,
+                                        slotLabel = "Depth 3",
+                                        option = { key = "G_Combat01", label = "Combat 01" },
+                                        features = { wellShop = true },
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                },
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+    control:setRouteContext(routeContext, "Underworld")
+
+    control:writeBiome(1, "G")
+    control:writeRoom(1, "1")
+
+    lu.assertEquals(control:rowValidation(1).code, "feature_spacing")
+end
+
+function TestRunPlannerControls.testRouteFeaturesCanTargetEnabledSideRooms()
+    local catalog = loadCatalog()
+    local route = {
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N" },
+    }
+    local template = loadRouteFeaturesTemplate()
+    local instance = template.prepare({
+        name = "RouteFeatureHermesShrineSurface",
+        route = route,
+        feature = catalog.features.byKey.HermesShrine,
+        biomeLookup = catalog.lookup,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    local control = template.createRuntime(fields, instance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        biomes = catalog.lookup,
+        features = catalog.features,
+        controlResolver = function(controlName)
+            if controlName == "RouteN" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteN",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {
+                                    {
+                                        rowIndex = 1,
+                                        coordinate = 0,
+                                        slotLabel = "Opening",
+                                        roomKey = "N_Opening01",
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 2,
+                                        coordinate = 1,
+                                        slotLabel = "Pre-Hub",
+                                        roomKey = "N_PreHub01",
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 3,
+                                        coordinate = 1,
+                                        slotLabel = "Hub",
+                                        roomKey = "N_Hub",
+                                        valid = true,
+                                        roomHistoryCost = 0,
+                                    },
+                                    {
+                                        rowIndex = 4,
+                                        coordinate = 1,
+                                        slotLabel = "Pylon 1",
+                                        option = { key = "N_Combat01", label = "Combat 01" },
+                                        valid = true,
+                                        roomHistoryCost = 2,
+                                        sideRooms = {
+                                            {
+                                                sideIndex = 1,
+                                                roomKey = "N_Sub01",
+                                                enabled = true,
+                                                features = { surfaceShop = true },
+                                            },
+                                        },
+                                    },
+                                    {
+                                        rowIndex = 5,
+                                        coordinate = 2,
+                                        slotLabel = "Pylon 2",
+                                        option = { key = "N_Combat02", label = "Combat 02" },
+                                        valid = true,
+                                        roomHistoryCost = 2,
+                                        sideRooms = {
+                                            {
+                                                sideIndex = 1,
+                                                roomKey = "N_Sub03",
+                                                enabled = true,
+                                                features = { surfaceShop = true },
+                                            },
+                                            {
+                                                sideIndex = 2,
+                                                roomKey = "N_Sub02",
+                                                enabled = false,
+                                                features = { surfaceShop = true },
+                                            },
+                                        },
+                                    },
+                                },
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+    control:setRouteContext(routeContext, "Surface")
+
+    control:writeBiome(1, "N")
+    lu.assertEquals(control:roomOptions(1).values, { "", "4.side1", "5.side1" })
+    lu.assertEquals(control:roomOptions(1).displayValues["4.side1"], "Pylon 1 - Combat 01 / Side 1 - N_Sub01")
+    lu.assertEquals(control:roomOptions(1).displayValues["5.side1"], "Pylon 2 - Combat 02 / Side 1 - N_Sub03")
+
+    control:writeRoom(1, "4.side1")
+    lu.assertEquals(fields.Targets:read(1, "RowIndex"), "4.side1")
+    lu.assertEquals(fields.Targets:read(1, "TargetKey"), "N:4.side1")
+    lu.assertTrue(control:rowValidation(1).valid)
+
+    local targets = routeContext:featureTargetsForSlot("Surface", "surfaceShop", "N")
+    lu.assertEquals(targets.lookup["N:4.side1"].biomeDepth, 4)
+    lu.assertEquals(targets.lookup["N:4.side1"].roomHistoryOrdinal, 5)
 end
 
 function TestRunPlannerControls.testFixedLinearSnapshotsExportDerivedFeaturesOnlyForConcreteRooms()
@@ -766,7 +1225,7 @@ function TestRunPlannerControls.testFixedLinearSnapshotsExportDerivedFeaturesOnl
 
     lu.assertNil(fSnapshot.rows[1].features)
     lu.assertNil(fSnapshot.rows[2].features)
-    lu.assertEquals(fSnapshot.rows[3].features, { chaos = true })
+    lu.assertEquals(fSnapshot.rows[3].features, { chaos = true, wellShop = true })
 
     local gInstance = template.prepare({
         name = "RouteG",
@@ -863,9 +1322,9 @@ function TestRunPlannerControls.testRouteTemplateViewsSupportNoOpUiTraversal()
 
     local routeFeaturesTemplate = loadRouteFeaturesTemplate()
     local routeFeaturesInstance = routeFeaturesTemplate.prepare({
-        name = "RouteFeaturesUnderworld",
+        name = "RouteFeatureChaosGateUnderworld",
         route = catalog.routes.lookup.Underworld,
-        features = catalog.features,
+        feature = catalog.features.byKey.ChaosGate,
         biomeLookup = catalog.lookup,
     })
     local routeFeaturesControl = routeFeaturesTemplate.createUi(
@@ -970,9 +1429,9 @@ function TestRunPlannerControls.testRouteTemplateViewAllocationsStayBounded()
 
     local routeFeaturesTemplate = loadRouteFeaturesTemplate()
     local routeFeaturesInstance = routeFeaturesTemplate.prepare({
-        name = "RouteFeaturesUnderworld",
+        name = "RouteFeatureChaosGateUnderworld",
         route = catalog.routes.lookup.Underworld,
-        features = catalog.features,
+        feature = catalog.features.byKey.ChaosGate,
         biomeLookup = catalog.lookup,
     })
     local routeFeaturesControl = routeFeaturesTemplate.createUi(
@@ -1479,6 +1938,7 @@ function TestRunPlannerControls.testHubPylonStorageMatchesEphyraRouteRows()
     lu.assertEquals(instance.routeSlots[2].label, "Pre-Hub")
     lu.assertEquals(instance.routeSlots[3].label, "Hub")
     lu.assertEquals(instance.routeSlots[3].roomKey, "N_Hub")
+    lu.assertEquals(instance.routeSlots[3].roomHistoryCost, 0)
     lu.assertEquals(instance.routeSlots[4].kind, "pylonPick")
     lu.assertEquals(instance.routeSlots[4].coordinate, 1)
     lu.assertEquals(instance.routeSlots[4].label, "Pylon 1")
@@ -1838,6 +2298,8 @@ function TestRunPlannerControls.testHubPylonRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[1].roleKey, "Opening")
     lu.assertTrue(snapshot.rows[1].valid)
     lu.assertEquals(snapshot.rows[1].rewardKind, "roomStore")
+    lu.assertEquals(snapshot.rows[3].slotLabel, "Hub")
+    lu.assertEquals(snapshot.rows[3].roomHistoryCost, 0)
 
     lu.assertEquals(snapshot.rows[4].slotKind, "pylonPick")
     lu.assertEquals(snapshot.rows[4].coordinate, 1)
@@ -3179,8 +3641,8 @@ function TestRunPlannerControls.testRouteContextUsesRoomHistoryTimelineForNpcTar
 
     local targets = routeContext:npcTargets("Surface")
 
-    lu.assertEquals(targets.byNpc.Heracles.lookup["N:4:HeraclesCombatN"].roomHistoryOrdinal, 5)
-    lu.assertEquals(targets.byNpc.Heracles.lookup["N:5:HeraclesCombatN"].roomHistoryOrdinal, 7)
+    lu.assertEquals(targets.byNpc.Heracles.lookup["N:4:HeraclesCombatN"].roomHistoryOrdinal, 4)
+    lu.assertEquals(targets.byNpc.Heracles.lookup["N:5:HeraclesCombatN"].roomHistoryOrdinal, 6)
 end
 
 function TestRunPlannerControls.testRouteContextAddsPostBiomeTimelineForNpcSpacing()

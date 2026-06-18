@@ -13,7 +13,13 @@ return function(importer)
             bossRooms = {
                 { key = "I_Boss01", label = "Boss" },
             },
+            postBossFeatures = { wellShop = true },
         }),
+        featurePolicies = {
+            wellShop = {
+                biomeDepth = { min = 3 },
+            },
+        },
         slotLayout = {
             coordinate = "ClockworkGoalRoute",
             routeStartRow = 1,

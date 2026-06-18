@@ -9,7 +9,14 @@ return function(importer)
         label = "Summit",
         region = "Surface",
         adapter = "scriptedFixedLinear",
-        timeline = timeline.standard("Q"),
+        timeline = timeline.standard("Q", {
+            postBossFeatures = { surfaceShop = true },
+        }),
+        featurePolicies = {
+            surfaceShop = {
+                biomeDepth = { min = 3 },
+            },
+        },
         slotLayout = {
             coordinate = "BiomeDepthCache",
             depthRange = { min = 1, max = 7 },

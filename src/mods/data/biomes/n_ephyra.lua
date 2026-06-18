@@ -13,7 +13,13 @@ return function(importer)
             roomHistoryCostBySlotKind = {
                 pylonPick = 2,
             },
+            postBossFeatures = { surfaceShop = true },
         }),
+        featurePolicies = {
+            surfaceShop = {
+                biomeDepth = { min = 3 },
+            },
+        },
         slotLayout = {
             coordinate = "SoulPylon",
             routeStartPick = 1,
@@ -44,6 +50,7 @@ return function(importer)
                     label = "Hub",
                     roomKey = "N_Hub",
                     reward = rewards.none(),
+                    roomHistoryCost = 0,
                     locked = true,
                 },
             },

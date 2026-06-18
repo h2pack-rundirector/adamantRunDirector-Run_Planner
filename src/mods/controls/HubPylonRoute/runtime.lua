@@ -150,6 +150,7 @@ local function sideRoomSnapshot(fields, sideRowIndex, sideIndex, sideDoor)
         modeKey = mode,
         storedModeKey = storedMode,
         enabled = enabled,
+        features = sideDoor.features,
         rewardStore = sideDoor.reward and sideDoor.reward.rewardStore or nil,
         rewards = readSideRewards(fields.SideRewards, sideRowIndex),
         rewardLoot = readSideRewardLoot(fields.SideRewards, sideRowIndex),

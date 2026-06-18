@@ -9,7 +9,14 @@ return function(importer)
         label = "Thessaly",
         region = "Surface",
         adapter = "multiEncounterFixed",
-        timeline = timeline.standard("O"),
+        timeline = timeline.standard("O", {
+            postBossFeatures = { surfaceShop = true },
+        }),
+        featurePolicies = {
+            surfaceShop = {
+                biomeDepth = { min = 3 },
+            },
+        },
         slotLayout = {
             coordinate = "BiomeDepthCache",
             depthRange = { min = 1, max = 7 },

@@ -13,10 +13,14 @@ return function(importer)
             bossRooms = {
                 { key = "P_Boss01", label = "Boss" },
             },
+            postBossFeatures = { surfaceShop = true },
         }),
         featurePolicies = {
             chaos = {
-                coordinate = { max = 5 },
+                biomeDepth = { max = 5 },
+            },
+            surfaceShop = {
+                biomeDepth = { min = 3 },
             },
         },
         slotLayout = {

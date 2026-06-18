@@ -9,6 +9,24 @@ local HARD_SUBROOMS = {
     N_Sub14 = true,
 }
 
+local SURFACE_SHOP_FEATURES = { surfaceShop = true }
+local SURFACE_SHOP_SUBROOMS = {
+    N_Sub01 = true,
+    N_Sub02 = true,
+    N_Sub03 = true,
+    N_Sub04 = true,
+    N_Sub06 = true,
+    N_Sub07 = true,
+    N_Sub08 = true,
+    N_Sub09 = true,
+    N_Sub10 = true,
+    N_Sub11 = true,
+    N_Sub12 = true,
+    N_Sub13 = true,
+    N_Sub14 = true,
+    N_Sub15 = true,
+}
+
 local function combatLabel(roomKey)
     return "Combat " .. string.sub(roomKey, -2)
 end
@@ -24,6 +42,7 @@ local function sideDoor(doorId, roomKey)
     return {
         doorId = doorId,
         roomKey = roomKey,
+        features = SURFACE_SHOP_SUBROOMS[roomKey] and SURFACE_SHOP_FEATURES or nil,
         reward = rewards.roomStore(subroomRewardStore(roomKey)),
     }
 end
@@ -49,6 +68,8 @@ local function indexByKey(items)
     end
     return lookup
 end
+
+layout.surfaceShopFeatures = SURFACE_SHOP_FEATURES
 
 local function buildHubDoorRooms()
     local rooms = {}

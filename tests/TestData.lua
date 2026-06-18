@@ -269,56 +269,121 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoomHistoryTimeline()
     lu.assertEquals(biomes.lookup.F.timeline.afterBiome[2].key, "PostBoss")
     lu.assertEquals(biomes.lookup.F.timeline.afterBiome[2].roomKey, "F_PostBoss01")
     lu.assertEquals(biomes.lookup.F.timeline.afterBiome[2].roomHistoryCost, 1)
+    lu.assertEquals(biomes.lookup.F.timeline.afterBiome[2].features, { wellShop = true })
 
     lu.assertEquals(biomes.lookup.N.timeline.roomHistoryCostBySlotKind.pylonPick, 2)
     lu.assertEquals(biomes.lookup.N.timeline.afterBiome[1].roomOptions[1].key, "N_Boss01")
     lu.assertEquals(biomes.lookup.N.timeline.afterBiome[2].roomKey, "N_PostBoss01")
+    lu.assertEquals(biomes.lookup.N.timeline.afterBiome[2].features, { surfaceShop = true })
     lu.assertEquals(biomes.lookup.I.timeline.afterBiome[1].roomOptions, {
         { key = "I_Boss01", label = "Boss" },
     })
+    lu.assertEquals(biomes.lookup.I.timeline.afterBiome[2].features, { wellShop = true })
     lu.assertEquals(biomes.lookup.P.timeline.afterBiome[1].roomOptions, {
         { key = "P_Boss01", label = "Boss" },
     })
+    lu.assertEquals(biomes.lookup.P.timeline.afterBiome[2].features, { surfaceShop = true })
+    lu.assertEquals(biomes.lookup.Q.timeline.afterBiome[2].features, { surfaceShop = true })
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareNaturalChaosFeatures()
     local data = dofile("src/mods/data.lua")
     local biomes = data.loadBiomes(testImport)
     local chaos = { chaos = true }
+    local chaosWell = { chaos = true, wellShop = true }
+    local chaosSurface = { chaos = true, surfaceShop = true }
 
     lu.assertNil(biomes.lookup.F.slotLayout.special[0].features)
+    lu.assertEquals(biomes.lookup.F.featurePolicies.wellShop.biomeDepth, { min = 3 })
     lu.assertEquals(biomes.lookup.F.slotLayout.special[0].roomOptions[1].features, chaos)
-    lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.mapOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.mapOptions[1].features, chaosWell)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Story.roomOptions[1].features, chaos)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Fountain.roomOptions[1].features, chaos)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Midshop.roomOptions[1].features, chaos)
-    lu.assertEquals(biomes.lookup.F.rolesByKey.Trial.mapOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Trial.mapOptions[1].features, chaosWell)
     lu.assertNil(biomes.lookup.F.rolesByKey.Miniboss.features)
 
     lu.assertEquals(biomes.lookup.G.slotLayout.entry.features, chaos)
-    lu.assertEquals(biomes.lookup.G.rolesByKey.Combat.mapOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.G.featurePolicies.wellShop.biomeDepth, { min = 3 })
+    lu.assertEquals(biomes.lookup.G.rolesByKey.Combat.mapOptions[1].features, chaosWell)
     lu.assertEquals(biomes.lookup.G.rolesByKey.Story.roomOptions[1].features, chaos)
     lu.assertEquals(biomes.lookup.G.rolesByKey.Fountain.roomOptions[1].features, chaos)
     lu.assertEquals(biomes.lookup.G.rolesByKey.Midshop.roomOptions[1].features, chaos)
-    lu.assertEquals(biomes.lookup.G.rolesByKey.Trial.mapOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.G.rolesByKey.Trial.mapOptions[1].features, chaosWell)
     lu.assertEquals(biomes.lookup.G.rolesByKey.Miniboss.roomOptions[1].features, chaos)
 
     lu.assertEquals(biomes.lookup.N.slotLayout.fixedBeforeHub[1].features, chaos)
+    lu.assertEquals(biomes.lookup.N.featurePolicies.surfaceShop.biomeDepth, { min = 3 })
     lu.assertNil(biomes.lookup.N.slotLayout.fixedBeforeHub[2].features)
     lu.assertNil(biomes.lookup.N.rolesByKey.Combat.features)
 
-    lu.assertEquals(biomes.lookup.P.featurePolicies.chaos.coordinate, { max = 5 })
+    lu.assertEquals(biomes.lookup.P.featurePolicies.chaos.biomeDepth, { max = 5 })
+    lu.assertEquals(biomes.lookup.P.featurePolicies.surfaceShop.biomeDepth, { min = 3 })
     lu.assertEquals(biomes.lookup.P.slotLayout.entry.features, chaos)
-    lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.mapOptions[1].features, chaos)
-    lu.assertEquals(biomes.lookup.P.rolesByKey.Fountain.roomOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.mapOptions[1].features, chaosSurface)
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Fountain.roomOptions[1].features, chaosSurface)
     lu.assertEquals(biomes.lookup.P.rolesByKey.Midshop.roomOptions[1].features, chaos)
     lu.assertNil(biomes.lookup.P.rolesByKey.Story.features)
     lu.assertNil(biomes.lookup.P.rolesByKey.Miniboss.features)
 
-    lu.assertNil(biomes.lookup.H.featurePolicies)
-    lu.assertNil(biomes.lookup.I.featurePolicies)
-    lu.assertNil(biomes.lookup.O.featurePolicies)
-    lu.assertNil(biomes.lookup.Q.featurePolicies)
+    lu.assertEquals(biomes.lookup.H.featurePolicies.wellShop.biomeDepth, { min = 3 })
+    lu.assertEquals(biomes.lookup.I.featurePolicies.wellShop.biomeDepth, { min = 3 })
+    lu.assertEquals(biomes.lookup.O.featurePolicies.surfaceShop.biomeDepth, { min = 3 })
+    lu.assertEquals(biomes.lookup.Q.featurePolicies.surfaceShop.biomeDepth, { min = 3 })
+end
+
+local function optionByKey(options, key)
+    for _, option in ipairs(options or {}) do
+        if option.key == key then
+            return option
+        end
+    end
+    return nil
+end
+
+function TestRunPlannerData.testBiomeDefinitionsDeclareShopFeatureEligibility()
+    local data = dofile("src/mods/data.lua")
+    local biomes = data.loadBiomes(testImport)
+    local chaos = { chaos = true }
+    local chaosWell = { chaos = true, wellShop = true }
+    local well = { wellShop = true }
+    local surface = { surfaceShop = true }
+    local chaosSurface = { chaos = true, surfaceShop = true }
+
+    local gCombat = biomes.lookup.G.rolesByKey.Combat.mapOptions
+    lu.assertEquals(optionByKey(gCombat, "G_Combat03").features, chaosWell)
+    lu.assertEquals(optionByKey(gCombat, "G_Combat04").features, chaos)
+    lu.assertEquals(optionByKey(gCombat, "G_Combat07").features, chaosWell)
+
+    lu.assertEquals(biomes.lookup.H.rolesByKey.Combat.mapOptions[1].features, well)
+    lu.assertNil(biomes.lookup.H.rolesByKey.Miniboss.roomOptions[1].features)
+
+    lu.assertEquals(optionByKey(biomes.lookup.I.rolesByKey.Goal.mapOptions, "I_Combat24").features, well)
+    lu.assertEquals(
+        biomes.lookup.I.clockwork.extensionRoom.specialOptions.miniboss[1].features,
+        well
+    )
+    lu.assertNil(biomes.lookup.I.clockwork.extensionRoom.specialOptions.fountain[1].features)
+
+    local nCombat02 = biomes.lookup.N.hub.combatRoomsByKey.N_Combat02
+    lu.assertEquals(nCombat02.sideDoors[1].features, surface)
+    local nCombat06 = biomes.lookup.N.hub.combatRoomsByKey.N_Combat06
+    lu.assertNil(nCombat06.sideDoors[2].features)
+
+    lu.assertNil(optionByKey(biomes.lookup.O.rolesByKey.Combat.mapOptions, "O_Combat01").features)
+    lu.assertEquals(optionByKey(biomes.lookup.O.rolesByKey.Combat.mapOptions, "O_Combat02").features, surface)
+    lu.assertEquals(biomes.lookup.O.rolesByKey.Fountain.roomOptions[1].features, surface)
+    lu.assertEquals(biomes.lookup.O.rolesByKey.Trial.roomOptions[1].features, surface)
+    lu.assertNil(biomes.lookup.O.rolesByKey.Miniboss.roomOptions[1].features)
+    lu.assertEquals(biomes.lookup.O.rolesByKey.Miniboss.roomOptions[2].features, surface)
+
+    lu.assertEquals(optionByKey(biomes.lookup.P.rolesByKey.Combat.mapOptions, "P_Combat03").features, chaosSurface)
+    lu.assertEquals(optionByKey(biomes.lookup.P.rolesByKey.Combat.mapOptions, "P_Combat04").features, chaos)
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Fountain.roomOptions[1].features, chaosSurface)
+
+    lu.assertEquals(optionByKey(biomes.lookup.Q.rolesByKey.Combat.mapOptions, "Q_Combat13").features, surface)
+    lu.assertNil(optionByKey(biomes.lookup.Q.rolesByKey.Combat.mapOptions, "Q_Combat14").features)
+    lu.assertNil(optionByKey(biomes.lookup.Q.rolesByKey.Miniboss.roomOptions, "Q_MiniBoss02").features)
 end
 
 function TestRunPlannerData.testRewardTypeMetadataSeparatesBoonHermesAndDevotion()
@@ -647,6 +712,7 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].reward, roomStoreReward("OpeningRunProgress"))
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].roomKey, "N_Hub")
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].reward, noneReward())
+    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].roomHistoryCost, 0)
     lu.assertEquals(ephyra.slotLayout.fixedAfterHub[1].roomKey, "N_PreBoss01")
     lu.assertEquals(ephyra.slotLayout.fixedAfterHub[1].reward, shopReward("WorldShop"))
 
@@ -669,11 +735,13 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     lu.assertEquals(combat12.sideDoors[1], {
         doorId = 558352,
         roomKey = "N_Sub09",
+        features = { surfaceShop = true },
         reward = roomStoreReward("SubRoomRewardsHard"),
     })
     lu.assertEquals(combat12.sideDoors[3], {
         doorId = 566545,
         roomKey = "N_Sub07",
+        features = { surfaceShop = true },
         reward = roomStoreReward("SubRoomRewards"),
     })
 

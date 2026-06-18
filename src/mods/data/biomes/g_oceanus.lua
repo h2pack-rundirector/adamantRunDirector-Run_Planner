@@ -9,7 +9,14 @@ return function(importer)
         label = "Oceanus",
         region = "Underworld",
         adapter = "fixedLinear",
-        timeline = timeline.standard("G"),
+        timeline = timeline.standard("G", {
+            postBossFeatures = { wellShop = true },
+        }),
+        featurePolicies = {
+            wellShop = {
+                biomeDepth = { min = 3 },
+            },
+        },
         slotLayout = {
             coordinate = "BiomeDepthCache",
             depthRange = { min = 1, max = 8 },

@@ -9,7 +9,14 @@ return function(importer)
         label = "Fields",
         region = "Underworld",
         adapter = "fieldsCageRoute",
-        timeline = timeline.standard("H"),
+        timeline = timeline.standard("H", {
+            postBossFeatures = { wellShop = true },
+        }),
+        featurePolicies = {
+            wellShop = {
+                biomeDepth = { min = 3 },
+            },
+        },
         slotLayout = {
             coordinate = "FieldsRoutePick",
             routeStartPick = 1,

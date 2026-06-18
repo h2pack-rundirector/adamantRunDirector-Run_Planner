@@ -14,8 +14,8 @@ local function routeNpcControlName(routeKey)
     return "RouteNpcs" .. tostring(routeKey or "")
 end
 
-local function routeFeatureControlName(routeKey)
-    return "RouteFeatures" .. tostring(routeKey or "")
+local function routeFeatureControlName(routeKey, featureKey)
+    return "RouteFeature" .. tostring(featureKey or "") .. tostring(routeKey or "")
 end
 
 local function buildRouteInfo(routes)
@@ -37,6 +37,43 @@ local function buildRouteInfo(routes)
         end
     end
     return routeInfoByRoute, routeInfoByBiome
+end
+
+local function routeBiomeLookup(route)
+    local routeLookup = {}
+    for _, biomeKey in ipairs(route and route.biomes or EMPTY_LIST) do
+        routeLookup[biomeKey] = true
+    end
+    return routeLookup
+end
+
+local function routeHasFeature(routeLookup, feature)
+    for biomeKey in pairs(feature and feature.biomes or {}) do
+        if routeLookup[biomeKey] then
+            return true
+        end
+    end
+    return false
+end
+
+local function buildRouteFeatureKeysByRoute(routes, features)
+    local byRoute = {}
+    for _, route in ipairs(routes and routes.ordered or EMPTY_LIST) do
+        local routeLookup = routeBiomeLookup(route)
+        local keys = {}
+        for _, featureKey in ipairs(features and features.ordered or EMPTY_LIST) do
+            local feature = features.byKey and features.byKey[featureKey] or nil
+            if feature ~= nil and routeHasFeature(routeLookup, feature) then
+                keys[#keys + 1] = feature.key
+            end
+        end
+        byRoute[route.key] = keys
+    end
+    return byRoute
+end
+
+local function routeFeatureKeys(context, route)
+    return context.routeFeatureKeysByRoute[route.key] or EMPTY_LIST
 end
 
 local function addGodLootSelection(selections, countedLookup, lootName)
@@ -184,11 +221,18 @@ local function targetKey(biomeKey, rowIndex, variant)
     return tostring(biomeKey) .. ":" .. tostring(rowIndex) .. ":" .. tostring(variantKey(variant))
 end
 
-local function featureTargetKey(biomeKey, rowIndex)
+local function featureTargetRowIndex(rowIndex, suffix)
+    if suffix == nil or suffix == "" then
+        return tostring(rowIndex or "")
+    end
+    return tostring(rowIndex or "") .. "." .. tostring(suffix)
+end
+
+local function featureTargetKey(biomeKey, rowIndex, suffix)
     if biomeKey == nil or rowIndex == nil then
         return ""
     end
-    return tostring(biomeKey) .. ":" .. tostring(rowIndex)
+    return tostring(biomeKey) .. ":" .. featureTargetRowIndex(rowIndex, suffix)
 end
 
 local function newTargetBucket()
@@ -198,6 +242,8 @@ local function newTargetBucket()
             [""] = "Vanilla",
         },
         lookup = {},
+        blockers = {},
+        blockerLookup = {},
     }
 end
 
@@ -258,6 +304,19 @@ local function addFeatureTarget(targets, candidate)
     addTargetToBucket(featureTargetBucket(targets, candidate.featureKey, candidate.biomeKey), candidate)
 end
 
+local function addBlockerToBucket(bucket, candidate)
+    if bucket.blockerLookup[candidate.key] ~= nil then
+        return
+    end
+    bucket.blockerLookup[candidate.key] = candidate
+    bucket.blockers[#bucket.blockers + 1] = candidate
+end
+
+local function addFeatureBlocker(targets, candidate)
+    addBlockerToBucket(featureTargetBucket(targets, candidate.featureKey), candidate)
+    addBlockerToBucket(featureTargetBucket(targets, candidate.featureKey, candidate.biomeKey), candidate)
+end
+
 local function buildKeyLookup(values)
     local lookup = {}
     for _, value in ipairs(values or EMPTY_LIST) do
@@ -282,11 +341,46 @@ local function timelineEntryCost(entry)
     return roomHistoryCost(entry and entry.roomHistoryCost)
 end
 
-local function addPostBiomeRoomHistoryCost(context, biomeKey, routeState)
+local function advanceBiomeDepth(state, rowCost)
+    state.roomHistoryOrdinal = state.roomHistoryOrdinal + rowCost
+    if state.biomeDepthOffset == nil then
+        state.biomeDepthOffset = state.roomHistoryOrdinal
+    end
+    return state.roomHistoryOrdinal - state.biomeDepthOffset
+end
+
+local function timelineFeatureLabel(context, biomeKey, entry)
+    local biome = context.biomeLookup and context.biomeLookup[biomeKey] or nil
+    return tostring(biome and (biome.label or biome.key) or biomeKey)
+        .. " "
+        .. tostring(entry and (entry.label or entry.key) or "Timeline")
+end
+
+local function addTimelineFeatureBlockers(context, targets, biomeKey, entry, routeState)
+    if targets == nil or entry == nil or entry.features == nil then
+        return
+    end
+
+    for featureKey, enabled in pairs(entry.features) do
+        if enabled == true then
+            addFeatureBlocker(targets, {
+                key = featureTargetKey(biomeKey, "timeline-" .. tostring(entry.key or featureKey)),
+                label = timelineFeatureLabel(context, biomeKey, entry),
+                featureKey = featureKey,
+                biomeKey = biomeKey,
+                hidden = true,
+                roomHistoryOrdinal = routeState.roomHistoryOrdinal,
+            })
+        end
+    end
+end
+
+local function addPostBiomeRoomHistoryCost(context, biomeKey, routeState, featureTargets)
     local biome = context.biomeLookup and context.biomeLookup[biomeKey] or nil
     local timeline = biome and biome.timeline or nil
     for _, entry in ipairs(timeline and timeline.afterBiome or EMPTY_LIST) do
         routeState.roomHistoryOrdinal = routeState.roomHistoryOrdinal + timelineEntryCost(entry)
+        addTimelineFeatureBlockers(context, featureTargets, biomeKey, entry, routeState)
     end
 end
 
@@ -502,16 +596,16 @@ local function variantMatchesRow(context, npc, biomeEntry, variant, row)
         and rowMatchesRequiredTag(row, biomeEntry.requiredRoomTag or variant.requiredRoomTag)
 end
 
-local function featureMatchesBiomePolicy(context, feature, biomeKey, row)
+local function featureMatchesBiomePolicy(context, feature, biomeKey, biomeDepth)
     local biome = context.biomeLookup and context.biomeLookup[biomeKey] or nil
     local policy = biome and biome.featurePolicies and biome.featurePolicies[feature.featureKey] or nil
     if policy == nil then
         return true
     end
-    return valueInRange(policy.coordinate, row and row.coordinate or nil)
+    return valueInRange(policy.biomeDepth, biomeDepth)
 end
 
-local function featureMatchesRow(context, feature, biomeKey, row)
+local function featureMatchesRow(context, feature, biomeKey, row, biomeDepth)
     if row == nil or row.valid == false then
         return false
     end
@@ -524,7 +618,18 @@ local function featureMatchesRow(context, feature, biomeKey, row)
     if not (row.features and row.features[feature.featureKey] == true) then
         return false
     end
-    return featureMatchesBiomePolicy(context, feature, biomeKey, row)
+    return featureMatchesBiomePolicy(context, feature, biomeKey, biomeDepth)
+end
+
+local function featureMatchesSideRoom(context, feature, biomeKey, sideRoom, sideBiomeDepth)
+    return sideRoom ~= nil
+        and sideRoom.enabled == true
+        and sideRoom.roomKey ~= nil
+        and feature.biomes
+        and feature.biomes[biomeKey]
+        and sideRoom.features
+        and sideRoom.features[feature.featureKey] == true
+        and featureMatchesBiomePolicy(context, feature, biomeKey, sideBiomeDepth)
 end
 
 local function candidateLabel(context, biomeKey, row, variant)
@@ -540,6 +645,14 @@ local function candidateLabel(context, biomeKey, row, variant)
         label = label .. " [" .. tostring(variant.label) .. "]"
     end
     return label
+end
+
+local function sideRoomCandidateLabel(context, biomeKey, row, sideRoom)
+    return candidateLabel(context, biomeKey, row, nil)
+        .. " / Side "
+        .. tostring(sideRoom.sideIndex or "")
+        .. " - "
+        .. tostring(sideRoom.roomKey or "")
 end
 
 local function buildNpcTargets(context, routeKey)
@@ -608,12 +721,17 @@ local function buildFeatureTargets(context, routeKey)
     }
     for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
         local snapshot = controlSnapshot(context, route.key, biomeKey)
+        local biomeState = {
+            roomHistoryOrdinal = 0,
+        }
         for _, row in ipairs(snapshot and snapshot.rows or EMPTY_LIST) do
+            local rowCost = rowRoomHistoryCost(row)
             routeOrdinal = routeOrdinal + 1
-            routeState.roomHistoryOrdinal = routeState.roomHistoryOrdinal + rowRoomHistoryCost(row)
+            routeState.roomHistoryOrdinal = routeState.roomHistoryOrdinal + rowCost
+            local biomeDepth = advanceBiomeDepth(biomeState, rowCost)
             for _, featureKey in ipairs(context.features.ordered or EMPTY_LIST) do
                 local feature = context.features.byKey and context.features.byKey[featureKey] or nil
-                if feature ~= nil and featureMatchesRow(context, feature, biomeKey, row) then
+                if feature ~= nil and featureMatchesRow(context, feature, biomeKey, row, biomeDepth) then
                     addFeatureTarget(targets, {
                         key = featureTargetKey(biomeKey, row.rowIndex),
                         label = candidateLabel(context, biomeKey, row, nil),
@@ -622,14 +740,38 @@ local function buildFeatureTargets(context, routeKey)
                         biomeKey = biomeKey,
                         biomeRouteIndex = routeBiomeIndex,
                         rowIndex = row.rowIndex,
+                        targetRowIndex = featureTargetRowIndex(row.rowIndex),
                         routeOrdinal = routeOrdinal,
                         roomHistoryOrdinal = routeState.roomHistoryOrdinal,
+                        biomeDepth = biomeDepth,
                         row = row,
                     })
                 end
+                for _, sideRoom in ipairs(row and row.sideRooms or EMPTY_LIST) do
+                    local sideBiomeDepth = biomeDepth + 1
+                    if feature ~= nil and featureMatchesSideRoom(context, feature, biomeKey, sideRoom, sideBiomeDepth) then
+                        local sideSuffix = "side" .. tostring(sideRoom.sideIndex or "")
+                        addFeatureTarget(targets, {
+                            key = featureTargetKey(biomeKey, row.rowIndex, sideSuffix),
+                            label = sideRoomCandidateLabel(context, biomeKey, row, sideRoom),
+                            slotKey = feature.key,
+                            featureKey = feature.featureKey,
+                            biomeKey = biomeKey,
+                            biomeRouteIndex = routeBiomeIndex,
+                            rowIndex = row.rowIndex,
+                            targetRowIndex = featureTargetRowIndex(row.rowIndex, sideSuffix),
+                            routeOrdinal = routeOrdinal,
+                            roomHistoryOrdinal = routeState.roomHistoryOrdinal + 1,
+                            biomeDepth = sideBiomeDepth,
+                            row = row,
+                            sideIndex = sideRoom.sideIndex,
+                            sideRoom = sideRoom,
+                        })
+                    end
+                end
             end
         end
-        addPostBiomeRoomHistoryCost(context, biomeKey, routeState)
+        addPostBiomeRoomHistoryCost(context, biomeKey, routeState, targets)
     end
     return targets
 end
@@ -646,6 +788,7 @@ function runContext.create(opts)
         features = opts.features or {},
         controlResolver = opts.controlResolver,
         controls = opts.controls,
+        routeFeatureKeysByRoute = buildRouteFeatureKeysByRoute(opts.routes, opts.features),
         snapshotByRoute = {},
         overviewByRoute = {},
         npcTargetsByRoute = {},
@@ -757,7 +900,9 @@ function runContext.create(opts)
         for _, route in ipairs(self.routes.ordered or EMPTY_LIST) do
             self:godSourceForRoute(route.key)
             self:controlByName(routeNpcControlName(route.key), route.key)
-            self:controlByName(routeFeatureControlName(route.key), route.key)
+            for _, featureKey in ipairs(routeFeatureKeys(self, route)) do
+                self:controlByName(routeFeatureControlName(route.key, featureKey), route.key)
+            end
             for _, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
                 self:controlForBiome(route.key, biomeKey)
             end
@@ -834,7 +979,7 @@ function runContext.create(opts)
         local snapshots = {}
         local invalidRows = {}
         local npcSnapshot
-        local featureSnapshot
+        local featureSnapshots = {}
         if route == nil then
             return {
                 routeKey = routeKey,
@@ -884,16 +1029,19 @@ function runContext.create(opts)
             end
         end
 
-        local featureControl = self:controlByName(routeFeatureControlName(route.key), route.key)
-        if featureControl ~= nil and featureControl.read ~= nil then
-            featureSnapshot = featureControl:read("snapshot")
-            for _, invalidRow in ipairs(featureSnapshot and featureSnapshot.invalidRows or EMPTY_LIST) do
-                invalidRows[#invalidRows + 1] = {
-                    controlName = featureSnapshot.controlName,
-                    rowIndex = invalidRow.rowIndex,
-                    code = invalidRow.code,
-                    message = invalidRow.message,
-                }
+        for _, featureKey in ipairs(routeFeatureKeys(self, route)) do
+            local featureControl = self:controlByName(routeFeatureControlName(route.key, featureKey), route.key)
+            if featureControl ~= nil and featureControl.read ~= nil then
+                local featureSnapshot = featureControl:read("snapshot")
+                featureSnapshots[#featureSnapshots + 1] = featureSnapshot
+                for _, invalidRow in ipairs(featureSnapshot and featureSnapshot.invalidRows or EMPTY_LIST) do
+                    invalidRows[#invalidRows + 1] = {
+                        controlName = featureSnapshot.controlName,
+                        rowIndex = invalidRow.rowIndex,
+                        code = invalidRow.code,
+                        message = invalidRow.message,
+                    }
+                end
             end
         end
 
@@ -905,7 +1053,7 @@ function runContext.create(opts)
             invalidRows = invalidRows,
             biomes = snapshots,
             npcs = npcSnapshot,
-            features = featureSnapshot,
+            features = featureSnapshots,
         }
     end
 

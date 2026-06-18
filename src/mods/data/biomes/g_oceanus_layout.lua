@@ -1,6 +1,26 @@
 local layout = {}
 
 local CHAOS_FEATURES = { chaos = true }
+local CHAOS_WELL_FEATURES = { chaos = true, wellShop = true }
+local WELL_SHOP_COMBAT_ROOMS = {
+    G_Combat01 = true,
+    G_Combat02 = true,
+    G_Combat03 = true,
+    G_Combat07 = true,
+    G_Combat08 = true,
+    G_Combat09 = true,
+    G_Combat10 = true,
+    G_Combat11 = true,
+    G_Combat12 = true,
+    G_Combat13 = true,
+    G_Combat14 = true,
+    G_Combat15 = true,
+    G_Combat16 = true,
+    G_Combat17 = true,
+    G_Combat18 = true,
+    G_Combat19 = true,
+    G_Combat20 = true,
+}
 
 local function option(key, label, opts)
     opts = opts or {}
@@ -19,7 +39,7 @@ local function combat(roomKey, opts)
     opts = opts or {}
     return option(roomKey, "Combat " .. string.sub(roomKey, -2), {
         exitCount = opts.exitCount,
-        features = opts.features or CHAOS_FEATURES,
+        features = opts.features or (WELL_SHOP_COMBAT_ROOMS[roomKey] and CHAOS_WELL_FEATURES or CHAOS_FEATURES),
         availability = opts.availability,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
@@ -43,6 +63,7 @@ local function pickByKey(lookup, keys)
 end
 
 layout.chaosFeatures = CHAOS_FEATURES
+layout.wellShopFeatures = CHAOS_WELL_FEATURES
 
 layout.introRoom = option("G_Intro", "Intro", {
     exitCount = 1,

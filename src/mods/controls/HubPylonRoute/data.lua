@@ -45,6 +45,7 @@ local function buildFixedSlot(instance, entry, section)
         role = role,
         locked = entry.locked,
         features = entry.features,
+        roomHistoryCost = entry.roomHistoryCost,
     }
 end
 

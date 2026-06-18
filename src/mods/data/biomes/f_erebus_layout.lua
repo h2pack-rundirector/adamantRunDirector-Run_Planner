@@ -1,6 +1,7 @@
 local layout = {}
 
 local CHAOS_FEATURES = { chaos = true }
+local CHAOS_WELL_FEATURES = { chaos = true, wellShop = true }
 
 local function option(key, label, opts)
     opts = opts or {}
@@ -19,7 +20,7 @@ local function combat(roomKey, opts)
     opts = opts or {}
     return option(roomKey, "Combat " .. string.sub(roomKey, -2), {
         exitCount = opts.exitCount,
-        features = opts.features or CHAOS_FEATURES,
+        features = opts.features or CHAOS_WELL_FEATURES,
         availability = opts.availability,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
@@ -43,6 +44,7 @@ local function pickByKey(lookup, keys)
 end
 
 layout.chaosFeatures = CHAOS_FEATURES
+layout.wellShopFeatures = CHAOS_WELL_FEATURES
 
 layout.openingRooms = {
     option("F_Opening01", "Opening 1", { exitCount = 1, features = CHAOS_FEATURES }),

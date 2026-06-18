@@ -4,6 +4,27 @@ local INDOOR_TAGS = { "Indoor" }
 local OUTDOOR_TAGS = { "Outdoor" }
 local INDOOR_OUTDOOR_TAGS = { "Indoor", "Outdoor" }
 local CHAOS_FEATURES = { chaos = true }
+local CHAOS_SURFACE_FEATURES = { chaos = true, surfaceShop = true }
+local SURFACE_SHOP_COMBAT_ROOMS = {
+    P_Combat01 = true,
+    P_Combat02 = true,
+    P_Combat03 = true,
+    P_Combat05 = true,
+    P_Combat06 = true,
+    P_Combat07 = true,
+    P_Combat08 = true,
+    P_Combat09 = true,
+    P_Combat10 = true,
+    P_Combat11 = true,
+    P_Combat12 = true,
+    P_Combat13 = true,
+    P_Combat14 = true,
+    P_Combat15 = true,
+    P_Combat16 = true,
+    P_Combat17 = true,
+    P_Combat18 = true,
+    P_Combat19 = true,
+}
 
 local function option(key, label, opts)
     opts = opts or {}
@@ -22,7 +43,7 @@ local function combat(roomKey, opts)
     opts = opts or {}
     return option(roomKey, "Combat " .. string.sub(roomKey, -2), {
         tags = opts.tags,
-        features = opts.features or CHAOS_FEATURES,
+        features = opts.features or (SURFACE_SHOP_COMBAT_ROOMS[roomKey] and CHAOS_SURFACE_FEATURES or CHAOS_FEATURES),
         availability = opts.availability,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
@@ -38,6 +59,7 @@ local function indexByKey(items)
 end
 
 layout.chaosFeatures = CHAOS_FEATURES
+layout.surfaceShopFeatures = CHAOS_SURFACE_FEATURES
 
 layout.introRoom = option("P_Intro", "Intro", {
     tags = OUTDOOR_TAGS,
@@ -88,7 +110,7 @@ layout.storyRooms = {
 layout.fountainRooms = {
     option("P_Reprieve01", "Fountain", {
         tags = INDOOR_TAGS,
-        features = CHAOS_FEATURES,
+        features = CHAOS_SURFACE_FEATURES,
         availability = {
             biomeDepth = { min = 4, max = 7 },
         },

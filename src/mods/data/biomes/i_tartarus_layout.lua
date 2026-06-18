@@ -2,6 +2,8 @@ return function(importer)
 local rewards = importer("mods/data/rewards.lua")(importer)
 local layout = {}
 
+local WELL_SHOP_FEATURES = { wellShop = true }
+
 local function combatLabel(roomKey)
     return "Combat " .. string.sub(roomKey, -2)
 end
@@ -13,6 +15,7 @@ local function combatRoom(roomKey, exitCount, opts)
         label = combatLabel(roomKey),
         exitCount = exitCount,
         supportsExtensionChoice = exitCount > 1,
+        features = opts.features or WELL_SHOP_FEATURES,
         reward = opts.reward or rewards.roomStore("ClockworkExtensionRewards"),
         availability = opts.availability,
     }
@@ -24,6 +27,7 @@ local function roomOption(roomKey, label, opts)
         key = roomKey,
         label = label,
         reward = opts.reward,
+        features = opts.features,
         availability = opts.availability,
         countsNonGoalReward = opts.countsNonGoalReward,
         exitCount = opts.exitCount,
@@ -40,6 +44,8 @@ local function indexByKey(items)
     end
     return lookup
 end
+
+layout.wellShopFeatures = WELL_SHOP_FEATURES
 
 layout.combatRooms = {
     combatRoom("I_Combat01", 2),
@@ -100,6 +106,7 @@ layout.specialExtensionRooms = {
     miniboss = {
         roomOption("I_MiniBoss01", "Satyr Ratcatcher", {
             reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
+            features = WELL_SHOP_FEATURES,
             countsNonGoalReward = true,
             exitCount = 2,
             maxCreationsThisRun = 1,
@@ -110,6 +117,7 @@ layout.specialExtensionRooms = {
         }),
         roomOption("I_MiniBoss02", "Gold Elemental", {
             reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
+            features = WELL_SHOP_FEATURES,
             countsNonGoalReward = true,
             exitCount = 2,
             maxCreationsThisRun = 1,

@@ -2,11 +2,30 @@ return function(importer)
 local rewards = importer("mods/data/rewards.lua")(importer)
 local layout = {}
 
+local SURFACE_SHOP_FEATURES = { surfaceShop = true }
+local SURFACE_SHOP_COMBAT_ROOMS = {
+    O_Combat02 = true,
+    O_Combat03 = true,
+    O_Combat04 = true,
+    O_Combat05 = true,
+    O_Combat06 = true,
+    O_Combat07 = true,
+    O_Combat08 = true,
+    O_Combat09 = true,
+    O_Combat10 = true,
+    O_Combat11 = true,
+    O_Combat12 = true,
+    O_Combat13 = true,
+    O_Combat14 = true,
+    O_Combat15 = true,
+}
+
 local function option(key, label, opts)
     opts = opts or {}
     return {
         key = key,
         label = label,
+        features = opts.features,
         availability = opts.availability,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
@@ -14,6 +33,8 @@ local function option(key, label, opts)
 end
 
 local function combat(roomKey, opts)
+    opts = opts or {}
+    opts.features = opts.features or (SURFACE_SHOP_COMBAT_ROOMS[roomKey] and SURFACE_SHOP_FEATURES or nil)
     return option(roomKey, "Combat " .. string.sub(roomKey, -2), opts)
 end
 
@@ -24,6 +45,8 @@ local function indexByKey(items)
     end
     return lookup
 end
+
+layout.surfaceShopFeatures = SURFACE_SHOP_FEATURES
 
 layout.introRoom = option("O_Intro", "Intro", {
     availability = { biomeDepth = { exact = 1 } },
@@ -122,6 +145,7 @@ layout.storyRooms = {
 
 layout.fountainRooms = {
     option("O_Reprieve01", "Fountain", {
+        features = SURFACE_SHOP_FEATURES,
         availability = {
             biomeDepth = { min = 3, max = 5 },
         },
@@ -141,6 +165,7 @@ layout.shopRooms = {
 
 layout.trialRooms = {
     option("O_Devotion01", "Trial", {
+        features = SURFACE_SHOP_FEATURES,
         availability = {
             biomeEncounterDepth = { min = 2 },
         },
@@ -157,6 +182,7 @@ layout.minibossRooms = {
         maxAppearancesThisBiome = 1,
     }),
     option("O_MiniBoss02", "Captain", {
+        features = SURFACE_SHOP_FEATURES,
         availability = {
             biomeDepth = { min = 3, max = 5 },
         },

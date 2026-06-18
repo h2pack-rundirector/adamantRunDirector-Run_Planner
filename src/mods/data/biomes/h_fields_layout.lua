@@ -1,11 +1,14 @@
 return function()
 local layout = {}
 
+local WELL_SHOP_FEATURES = { wellShop = true }
+
 local function option(key, label, opts)
     opts = opts or {}
     return {
         key = key,
         label = label,
+        features = opts.features,
         availability = opts.availability,
         encounter = opts.encounter,
         maxCageRewards = opts.maxCageRewards,
@@ -17,6 +20,7 @@ end
 local function combat(roomKey, maxCageRewards, opts)
     opts = opts or {}
     opts.maxCageRewards = maxCageRewards
+    opts.features = opts.features or WELL_SHOP_FEATURES
     return option(roomKey, "Combat " .. string.sub(roomKey, -2), opts)
 end
 
@@ -31,6 +35,8 @@ end
 local earlyCombatAvailability = {
     biomeDepth = { max = 3 },
 }
+
+layout.wellShopFeatures = WELL_SHOP_FEATURES
 
 layout.introRoom = option("H_Intro", "Intro", {
     availability = {

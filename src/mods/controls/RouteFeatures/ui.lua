@@ -17,6 +17,18 @@ local ROOM_OPTS = {
     label = "",
     controlWidth = 300,
 }
+local MANAGED_COUNT_OPTS = {
+    label = "Targets",
+    values = {},
+    displayValues = {},
+    labelWidth = 145,
+    controlWidth = 90,
+}
+
+for _, value in ipairs(deps.data.MANAGED_COUNT_VALUES) do
+    MANAGED_COUNT_OPTS.values[#MANAGED_COUNT_OPTS.values + 1] = value
+    MANAGED_COUNT_OPTS.displayValues[value] = value
+end
 
 local function copyBaseOpts(base)
     local copy = {}
@@ -56,6 +68,16 @@ local function roomOpts(control, rowIndex)
     )
 end
 
+local function managedCountOpts(control)
+    local opts = control._managedCountOpts
+    if opts == nil then
+        opts = copyBaseOpts(MANAGED_COUNT_OPTS)
+        control._managedCountOpts = opts
+    end
+    opts.label = control:featureLabel()
+    return opts
+end
+
 local function drawDropdownLine(draw, label, field, opts, onChange)
     local imgui = draw.imgui
     imgui.AlignTextToFramePadding()
@@ -93,24 +115,23 @@ local function drawFeatureRow(draw, control, rowIndex)
     end
 end
 
-local function drawSeparator(imgui)
-    imgui.Spacing()
-    imgui.Separator()
-    imgui.Spacing()
-end
-
 local function drawRows(draw, control)
     local rowCount = control:rowCount()
+    if draw.widgets.dropdown(control:managedCountField(), managedCountOpts(control)) then
+        control:writeManagedCount(control:rawManagedCount())
+    end
+    draw.imgui.Spacing()
+
     if rowCount == 0 then
         draw.imgui.Text("No route features")
         return
     end
 
     for rowIndex = 1, rowCount do
-        if rowIndex > 1 then
-            drawSeparator(draw.imgui)
-        end
         drawFeatureRow(draw, control, rowIndex)
+        if rowIndex < rowCount then
+            draw.imgui.Spacing()
+        end
     end
 end
 
@@ -123,6 +144,14 @@ function ui.create(fields, instance)
 
     function control:targetField(rowIndex)
         return fields.Targets:get(rowIndex, "TargetKey")
+    end
+
+    function control:managedCountField()
+        return fields.ManagedCount
+    end
+
+    function control:featureLabel()
+        return instance.label or (instance.feature and instance.feature.label) or "Targets"
     end
 
     function control:biomeField(rowIndex)
