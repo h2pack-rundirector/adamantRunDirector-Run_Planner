@@ -17,6 +17,11 @@ function data.loadRoutes(importer)
     return importer("mods/data/routes.lua").load()
 end
 
+function data.loadNpcs(importer)
+    importer = importer or import
+    return importer("mods/npcs/definitions.lua")
+end
+
 function data.loadCatalog(importer)
     return data.loadBiomes(importer)
 end

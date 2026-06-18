@@ -165,6 +165,92 @@ if pre-created:
 Reward reservation is a separate later layer. The first implementation should
 solve room identity collisions first.
 
+## NPC Encounters
+
+Field NPC encounters are route-level assignments derived from biome row plans.
+They are not room roles and they are not reward primitives. Vanilla chooses
+them in `ChooseEncounter(...)` after a room has been selected and after
+`ChosenRewardType` is known, so planner validation must see the resolved row
+role, room/map, and reward pick.
+
+NPC/route-encounter definitions live in `src/mods/npcs/definitions.lua`. The
+definition layer owns:
+
+- the route-major NPCs: Artemis, Nemesis, Heracles, Icarus, and Athena
+- Arachne cocoon combat as a separate normal-combat encounter replacement
+- which biomes can host each NPC
+- the vanilla encounter variants for each biome
+- vanilla depth gates such as `BiomeDepthCache >= 4`
+- reward incompatibilities from `RequireNotRoomReward`
+- encounter-leg hints for multi-encounter biomes such as O/P
+
+First-ever intro encounter variants and duplicate chance-booster variants are
+treated as meta-progression/probability plumbing, so planner definitions omit
+them and keep only canonical force targets.
+
+Modeled route-major field NPCs share one route group, `FieldNpc`, for the
+vanilla six-room spacing rule. Each modeled field NPC has its own
+`maxSelectionsPerRun = 1`; the group itself does not mean only one field NPC
+total can be planned. Personal vanilla cooldowns such as
+`NoRecentNemesisEncounter` and `NoRecentHeraclesEncounter` include shop,
+bridge, previous-run, and relationship state outside first-pass route planning,
+so they are treated as vanilla provenance rather than separate planner groups.
+
+Arachne cocoon combat is modeled on the same declaration surface but not in
+`FieldNpc`. Vanilla places `ArachneCombatF`/`ArachneCombatG` in the normal F/G
+encounter pools, replacing the combat encounter with cocoons while keeping the
+planned room reward. It has its own `ArachneCombat` group with
+`NoRecentArachneEncounter` provenance and per-biome uniqueness, but no
+per-run cap because F and G can both be valid in one route when spacing allows.
+
+Vanilla also has save/global progression gates for Arachne: G requires
+`ArachneCombatF` in `GameState.EncountersCompletedCache`, and F requires prior
+completed run / early Erebus encounter state. Those gates are meta progression,
+so the planner declaration does not model them. The route-relevant pieces kept
+in the declaration are F's depth cache window, per-biome uniqueness, and the
+`NoRecentArachneEncounter` previous-room spacing provenance.
+
+Nemesis is the first special NPC shape. In F/G, she has two routeable
+combat-slot variants:
+
+- `Combat`: forces `NemesisCombatF`/`NemesisCombatG` and keeps the normal
+  planned room reward relevant.
+- `Random`: forces `NemesisRandomEvent`, which occupies a combat slot but uses
+  a `NonCombat` encounter and lets Nemesis' vanilla random-event text-line
+  system choose the outcome. Planner should treat its reward as opaque
+  `nemesisRandomEvent` behavior on the first pass, not as a normal reward
+  bundle or picker.
+
+H passive `NemesisRandomEvent`, H bridge `BridgeNemesisRandomEvent`, shop
+Nemesis, and relationship-specific random events are outside the first-pass NPC
+target model.
+
+The planned UI shape is a route-level post-setup tab rendered after the biome
+tabs. The current Global tab remains pre-setup for route-wide inputs such as
+god pool filtering. The later NPC tab should consume normalized encounter-slot
+candidates exposed by biome snapshots rather than reaching into individual
+adapter internals.
+
+Planner NPC targets should be precise:
+
+```lua
+{
+    npcKey = "Artemis",
+    target = {
+        routeKey = "Underworld",
+        biomeKey = "F",
+        controlName = "RouteF",
+        rowIndex = 5,
+        coordinate = 4,
+    },
+}
+```
+
+If a target row changes and is no longer valid for that NPC, the NPC assignment
+should become invalid instead of silently moving to another row. Runtime should
+apply room/reward routing first, then use the NPC assignment snapshot to force
+or prefer the matching encounter at the selected target.
+
 ## Depth Roles
 
 The depth role controls which additional fields are valid.
@@ -245,7 +331,7 @@ Room-store contexts can also carry `eligibleRewardTypes` and
 Reward rendering is shared infrastructure, not owned by one route control
 template:
 
-- `mods/rewards/surfaces.lua` owns the curated planner-facing reward surfaces.
+- `mods/rewards/definitions.lua` owns the curated planner-facing reward surfaces.
   These surfaces are intentionally explicit instead of pretending to fully
   evaluate vanilla `RewardStoreData`/`StoreData` requirements.
 - `mods/rewards/catalog.lua` translates planner reward contexts plus curated
@@ -447,7 +533,7 @@ reward catalog surface instead of hard-coding a single boon field.
 
 Biome files should not duplicate shop internals. They only select the shop
 surface that applies to a route depth. Store-specific shape belongs inside
-`mods/rewards/surfaces.lua`:
+`mods/rewards/definitions.lua`:
 
 - `key`: stable route/storage identity, matching the source group/offer shape
   such as `Group4Offer1`.
