@@ -7,6 +7,7 @@ local routeControlByTab = {}
 local routeDefinitions = {}
 local biomeDefinitions = {}
 local npcDefinitions = {}
+local featureDefinitions = {}
 local routeContextFactory
 local routeStatusUi
 local activeRouteContext
@@ -70,6 +71,7 @@ local function beginRouteContext(ctx)
             routes = routeDefinitions,
             biomes = biomeDefinitions,
             npcs = npcDefinitions,
+            features = featureDefinitions,
         })
     end
     activeRouteContext:beginPass(ctx.controls)
@@ -146,6 +148,7 @@ function ui.bind(deps)
         or fallbackRouteDefinitions(deps.routeControlTabs)
     biomeDefinitions = deps.biomes or (deps.catalog and deps.catalog.lookup) or {}
     npcDefinitions = deps.npcs or (deps.catalog and deps.catalog.npcs) or {}
+    featureDefinitions = deps.features or (deps.catalog and deps.catalog.features) or {}
     routeContextFactory = deps.routeContext
     routeStatusUi = deps.routeStatusUi
     buildRegionTabs(deps.routeControlTabs)

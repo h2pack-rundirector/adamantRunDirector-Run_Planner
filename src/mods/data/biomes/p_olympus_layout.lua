@@ -3,6 +3,7 @@ local layout = {}
 local INDOOR_TAGS = { "Indoor" }
 local OUTDOOR_TAGS = { "Outdoor" }
 local INDOOR_OUTDOOR_TAGS = { "Indoor", "Outdoor" }
+local CHAOS_FEATURES = { chaos = true }
 
 local function option(key, label, opts)
     opts = opts or {}
@@ -10,6 +11,7 @@ local function option(key, label, opts)
         key = key,
         label = label,
         tags = opts.tags,
+        features = opts.features,
         availability = opts.availability,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
@@ -17,7 +19,14 @@ local function option(key, label, opts)
 end
 
 local function combat(roomKey, opts)
-    return option(roomKey, "Combat " .. string.sub(roomKey, -2), opts)
+    opts = opts or {}
+    return option(roomKey, "Combat " .. string.sub(roomKey, -2), {
+        tags = opts.tags,
+        features = opts.features or CHAOS_FEATURES,
+        availability = opts.availability,
+        maxCreationsThisRun = opts.maxCreationsThisRun,
+        maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
+    })
 end
 
 local function indexByKey(items)
@@ -28,8 +37,11 @@ local function indexByKey(items)
     return lookup
 end
 
+layout.chaosFeatures = CHAOS_FEATURES
+
 layout.introRoom = option("P_Intro", "Intro", {
     tags = OUTDOOR_TAGS,
+    features = CHAOS_FEATURES,
     availability = { biomeDepth = { exact = 1 } },
 })
 
@@ -76,6 +88,7 @@ layout.storyRooms = {
 layout.fountainRooms = {
     option("P_Reprieve01", "Fountain", {
         tags = INDOOR_TAGS,
+        features = CHAOS_FEATURES,
         availability = {
             biomeDepth = { min = 4, max = 7 },
         },
@@ -86,6 +99,7 @@ layout.fountainRooms = {
 layout.shopRooms = {
     option("P_Shop01", "Shop", {
         tags = OUTDOOR_TAGS,
+        features = CHAOS_FEATURES,
         availability = {
             biomeEncounterDepth = { minExclusive = 4 },
             biomeDepth = { max = 7 },

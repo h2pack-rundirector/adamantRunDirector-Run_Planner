@@ -321,6 +321,7 @@ function runtime.create(fields, instance)
             role = role,
             optionKey = optionKey,
             option = option,
+            features = data.rowFeatures(slot, role, option),
             roomKey = selectedRoomKey(slot, option),
             hubDoorId = option and option.hubDoorId or slot.hubDoorId,
             sideDoors = option and option.sideDoors or slot.sideDoors,

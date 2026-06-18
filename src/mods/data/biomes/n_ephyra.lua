@@ -29,6 +29,7 @@ return function(importer)
                     label = "Opening",
                     roomKey = "N_Opening01",
                     reward = rewards.roomStore("OpeningRunProgress"),
+                    features = { chaos = true },
                     locked = true,
                 },
                 {

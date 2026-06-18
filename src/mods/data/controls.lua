@@ -23,6 +23,10 @@ local function routeNpcControlName(routeKey)
     return "RouteNpcs" .. tostring(routeKey or "")
 end
 
+local function routeFeatureControlName(routeKey)
+    return "RouteFeatures" .. tostring(routeKey or "")
+end
+
 local function routeTabForBiome(catalog, biomeKey)
     local biome = catalog.lookup and catalog.lookup[biomeKey] or nil
     local template = biome and TEMPLATE_BY_ADAPTER[biome.adapter] or nil
@@ -48,6 +52,10 @@ function controls.routeNpcControlName(routeKey)
     return routeNpcControlName(routeKey)
 end
 
+function controls.routeFeatureControlName(routeKey)
+    return routeFeatureControlName(routeKey)
+end
+
 function controls.routeControlNames(catalog)
     local names = {}
     if catalog ~= nil and catalog.routes ~= nil and catalog.routes.ordered ~= nil then
@@ -60,6 +68,7 @@ function controls.routeControlNames(catalog)
                 end
             end
             names[#names + 1] = routeNpcControlName(route.key)
+            names[#names + 1] = routeFeatureControlName(route.key)
         end
     else
         for _, biome in ipairs(catalog and catalog.ordered or {}) do
@@ -92,6 +101,11 @@ function controls.routeControlTabs(catalog)
                 key = "NPCs",
                 label = "NPCs",
                 controlName = routeNpcControlName(route.key),
+            }
+            tabs[#tabs + 1] = {
+                key = "Features",
+                label = "Features",
+                controlName = routeFeatureControlName(route.key),
             }
             tabsByRoute[route.key] = tabs
         end
@@ -132,6 +146,13 @@ function controls.build(catalog)
                 label = "NPCs",
                 route = route,
                 npcs = catalog.npcs,
+                biomeLookup = catalog.lookup,
+            }
+            instances[routeFeatureControlName(route.key)] = {
+                template = "RouteFeatures",
+                label = "Features",
+                route = route,
+                features = catalog.features,
                 biomeLookup = catalog.lookup,
             }
         end

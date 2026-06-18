@@ -57,6 +57,9 @@ return {
     RouteNpcs = import("mods/controls/RouteNpcs/RouteNpcs.lua", nil, {
         routeStatusUi = routeStatusUi,
     }),
+    RouteFeatures = import("mods/controls/RouteFeatures/RouteFeatures.lua", nil, {
+        routeStatusUi = routeStatusUi,
+    }),
     RouteGlobal = import("mods/controls/RouteGlobal/RouteGlobal.lua", nil, {
         gods = godData,
     }),

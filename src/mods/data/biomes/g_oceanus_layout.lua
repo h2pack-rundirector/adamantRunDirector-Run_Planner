@@ -1,11 +1,14 @@
 local layout = {}
 
+local CHAOS_FEATURES = { chaos = true }
+
 local function option(key, label, opts)
     opts = opts or {}
     return {
         key = key,
         label = label,
         exitCount = opts.exitCount,
+        features = opts.features,
         availability = opts.availability,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
@@ -13,7 +16,14 @@ local function option(key, label, opts)
 end
 
 local function combat(roomKey, opts)
-    return option(roomKey, "Combat " .. string.sub(roomKey, -2), opts)
+    opts = opts or {}
+    return option(roomKey, "Combat " .. string.sub(roomKey, -2), {
+        exitCount = opts.exitCount,
+        features = opts.features or CHAOS_FEATURES,
+        availability = opts.availability,
+        maxCreationsThisRun = opts.maxCreationsThisRun,
+        maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
+    })
 end
 
 local function indexByKey(items)
@@ -32,8 +42,11 @@ local function pickByKey(lookup, keys)
     return values
 end
 
+layout.chaosFeatures = CHAOS_FEATURES
+
 layout.introRoom = option("G_Intro", "Intro", {
     exitCount = 1,
+    features = CHAOS_FEATURES,
     availability = { biomeDepth = { exact = 1 } },
 })
 
@@ -83,6 +96,7 @@ layout.trialCombatRooms = pickByKey(layout.combatRoomsByKey, {
 layout.storyRooms = {
     option("G_Story01", "Narcissus", {
         exitCount = 1,
+        features = CHAOS_FEATURES,
         availability = {
             biomeDepth = { min = 3, max = 6 },
         },
@@ -93,6 +107,7 @@ layout.storyRooms = {
 layout.fountainRooms = {
     option("G_Reprieve01", "Fountain", {
         exitCount = 2,
+        features = CHAOS_FEATURES,
         availability = {
             biomeDepth = { min = 4, max = 6 },
         },
@@ -103,6 +118,7 @@ layout.fountainRooms = {
 layout.shopRooms = {
     option("G_Shop01", "Shop", {
         exitCount = 2,
+        features = CHAOS_FEATURES,
         availability = {
             biomeDepth = { min = 3, max = 5 },
         },
@@ -113,12 +129,14 @@ layout.shopRooms = {
 layout.minibossRooms = {
     option("G_MiniBoss01", "Deep Serpent", {
         exitCount = 2,
+        features = CHAOS_FEATURES,
         availability = { biomeDepth = { min = 4, max = 7 } },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),
     option("G_MiniBoss02", "King Vermin", {
         exitCount = 1,
+        features = CHAOS_FEATURES,
         availability = {
             biomeDepth = { min = 4, max = 7 },
         },
@@ -127,6 +145,7 @@ layout.minibossRooms = {
     }),
     option("G_MiniBoss03", "Hellifish", {
         exitCount = 2,
+        features = CHAOS_FEATURES,
         availability = { biomeDepth = { min = 4, max = 7 } },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,

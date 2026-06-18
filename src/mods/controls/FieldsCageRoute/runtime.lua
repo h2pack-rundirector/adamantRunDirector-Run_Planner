@@ -297,6 +297,7 @@ function runtime.create(fields, instance)
             role = role,
             optionKey = optionKey,
             option = option,
+            features = data.rowFeatures(slot, role, option),
             roomKey = selectedRoomKey(slot, option),
             valid = validation.valid,
             invalidCode = validation.code,

@@ -248,6 +248,16 @@ function rowEngine.create(adapter)
         return optionListForRole(role)
     end
 
+    function data.rowFeatures(slot, _role, option)
+        if option ~= nil then
+            return option.features
+        end
+        if slot ~= nil and slot.roomKey ~= nil then
+            return slot.features
+        end
+        return nil
+    end
+
     function data.isFixedIdentityRow(instance, rowIndex)
         return isFixedIdentitySlot(slotForRow(instance, rowIndex))
     end

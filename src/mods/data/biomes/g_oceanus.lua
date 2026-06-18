@@ -18,6 +18,7 @@ return function(importer)
             entry = {
                 kind = "intro",
                 roomKey = layout.introRoom.key,
+                features = layout.chaosFeatures,
                 locked = true,
             },
             default = {

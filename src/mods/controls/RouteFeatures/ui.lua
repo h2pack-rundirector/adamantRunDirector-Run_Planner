@@ -17,10 +17,6 @@ local ROOM_OPTS = {
     label = "",
     controlWidth = 300,
 }
-local VARIANT_OPTS = {
-    label = "",
-    controlWidth = 140,
-}
 
 local function copyBaseOpts(base)
     local copy = {}
@@ -60,13 +56,6 @@ local function roomOpts(control, rowIndex)
     )
 end
 
-local function variantOpts(control, rowIndex)
-    return bindOptionValues(
-        cachedOpts(control, "_variantOptsByRow", rowIndex, VARIANT_OPTS),
-        control:variantOptions(rowIndex)
-    )
-end
-
 local function drawDropdownLine(draw, label, field, opts, onChange)
     local imgui = draw.imgui
     imgui.AlignTextToFramePadding()
@@ -79,7 +68,7 @@ local function drawDropdownLine(draw, label, field, opts, onChange)
     end
 end
 
-local function drawTargetRow(draw, control, rowIndex)
+local function drawFeatureRow(draw, control, rowIndex)
     local slot = control:slot(rowIndex)
     if slot == nil then
         return
@@ -102,12 +91,6 @@ local function drawTargetRow(draw, control, rowIndex)
             control:writeRoom(rowIndex, control:rawRowIndex(rowIndex))
         end)
     end
-
-    if control:shouldRenderVariant(rowIndex) then
-        drawDropdownLine(draw, "Type", control:variantField(rowIndex), variantOpts(control, rowIndex), function()
-            control:writeVariant(rowIndex, control:rawVariantKey(rowIndex))
-        end)
-    end
 end
 
 local function drawSeparator(imgui)
@@ -119,7 +102,7 @@ end
 local function drawRows(draw, control)
     local rowCount = control:rowCount()
     if rowCount == 0 then
-        draw.imgui.Text("No route NPCs")
+        draw.imgui.Text("No route features")
         return
     end
 
@@ -127,7 +110,7 @@ local function drawRows(draw, control)
         if rowIndex > 1 then
             drawSeparator(draw.imgui)
         end
-        drawTargetRow(draw, control, rowIndex)
+        drawFeatureRow(draw, control, rowIndex)
     end
 end
 
@@ -148,10 +131,6 @@ function ui.create(fields, instance)
 
     function control:roomField(rowIndex)
         return fields.Targets:get(rowIndex, "RowIndex")
-    end
-
-    function control:variantField(rowIndex)
-        return fields.Targets:get(rowIndex, "VariantKey")
     end
 
     return control

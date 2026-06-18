@@ -94,6 +94,14 @@ local function loadRouteNpcsTemplate()
     return template
 end
 
+local function loadRouteFeaturesTemplate()
+    local template
+    withTestImport(function()
+        template = testImport("mods/controls/templates.lua").RouteFeatures
+    end)
+    return template
+end
+
 local function loadFixedLinearData()
     return testImport("mods/controls/FixedLinearRoute/data.lua", nil, loadRouteDeps())
 end
@@ -336,12 +344,14 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
         "RouteH",
         "RouteI",
         "RouteNpcsUnderworld",
+        "RouteFeaturesUnderworld",
         "RouteGlobalSurface",
         "RouteN",
         "RouteO",
         "RouteP",
         "RouteQ",
         "RouteNpcsSurface",
+        "RouteFeaturesSurface",
     })
     lu.assertEquals(data.routeControlTabs(catalog, testImport).Underworld, {
         { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
@@ -350,6 +360,7 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
         { key = "H", label = "Fields", controlName = "RouteH" },
         { key = "I", label = "Tartarus", controlName = "RouteI" },
         { key = "NPCs", label = "NPCs", controlName = "RouteNpcsUnderworld" },
+        { key = "Features", label = "Features", controlName = "RouteFeaturesUnderworld" },
     })
     lu.assertEquals(data.routeControlTabs(catalog, testImport).Surface, {
         { key = "Global", label = "Global", controlName = "RouteGlobalSurface" },
@@ -358,6 +369,7 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
         { key = "P", label = "Olympus", controlName = "RouteP" },
         { key = "Q", label = "Summit", controlName = "RouteQ" },
         { key = "NPCs", label = "NPCs", controlName = "RouteNpcsSurface" },
+        { key = "Features", label = "Features", controlName = "RouteFeaturesSurface" },
     })
     lu.assertEquals(controls.RouteGlobalUnderworld.template, "RouteGlobal")
     lu.assertEquals(controls.RouteF.template, "FixedLinearRoute")
@@ -365,12 +377,14 @@ function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
     lu.assertEquals(controls.RouteH.template, "FieldsCageRoute")
     lu.assertEquals(controls.RouteI.template, "ClockworkGoalRoute")
     lu.assertEquals(controls.RouteNpcsUnderworld.template, "RouteNpcs")
+    lu.assertEquals(controls.RouteFeaturesUnderworld.template, "RouteFeatures")
     lu.assertEquals(controls.RouteGlobalSurface.template, "RouteGlobal")
     lu.assertEquals(controls.RouteN.template, "HubPylonRoute")
     lu.assertEquals(controls.RouteO.template, "MultiEncounterFixedRoute")
     lu.assertEquals(controls.RouteP.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteQ.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteNpcsSurface.template, "RouteNpcs")
+    lu.assertEquals(controls.RouteFeaturesSurface.template, "RouteFeatures")
 end
 
 function TestRunPlannerControls.testRouteGlobalTemplateStoresGodPool()
@@ -533,10 +547,29 @@ function TestRunPlannerControls.testRouteNpcsUsesBiomeRoomTypeSelection()
                                         coordinate = 5,
                                         slotLabel = "Depth 5",
                                         roleKey = "Combat",
-                                        option = { label = "Combat 04" },
+                                        option = { key = "F_Combat04", label = "Combat 04" },
                                         valid = true,
                                         rewardKind = "majorMinor",
                                         rewards = { "Major", "MaxHealthDrop" },
+                                    },
+                                    {
+                                        rowIndex = 4,
+                                        coordinate = 6,
+                                        slotLabel = "Depth 6",
+                                        roleKey = "Combat",
+                                        valid = true,
+                                        rewardKind = "majorMinor",
+                                        rewards = { "Major", "MaxHealthDrop" },
+                                    },
+                                    {
+                                        rowIndex = 5,
+                                        coordinate = 7,
+                                        slotLabel = "Depth 7",
+                                        roleKey = "Combat",
+                                        option = { key = "F_Combat05", label = "Combat 05" },
+                                        valid = true,
+                                        rewardKind = "majorMinor",
+                                        rewards = {},
                                     },
                                 },
                             }
@@ -584,6 +617,168 @@ function TestRunPlannerControls.testRouteNpcsUsesBiomeRoomTypeSelection()
     lu.assertEquals(fields.Targets:read(2, "VariantKey"), nil)
     lu.assertEquals(fields.Targets:read(2, "TargetKey"), nil)
     lu.assertTrue(control:rowValidation(2).valid)
+end
+
+function TestRunPlannerControls.testRouteFeaturesStorageDerivesSlotsFromDeclarations()
+    local catalog = loadCatalog()
+    local template = loadRouteFeaturesTemplate()
+    local underworld = template.prepare({
+        name = "RouteFeaturesUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        features = catalog.features,
+        biomeLookup = catalog.lookup,
+    })
+    local surface = template.prepare({
+        name = "RouteFeaturesSurface",
+        route = catalog.routes.lookup.Surface,
+        features = catalog.features,
+        biomeLookup = catalog.lookup,
+    })
+
+    lu.assertEquals(underworld.slotCount, 1)
+    lu.assertEquals(underworld.slots[1].key, "ChaosGate")
+    lu.assertEquals(underworld.slots[1].label, "Chaos")
+    lu.assertEquals(underworld.slots[1].featureKey, "chaos")
+    lu.assertEquals(underworld.slots[1].plannedSpacingRooms, 10)
+
+    lu.assertEquals(surface.slotCount, 1)
+    lu.assertEquals(surface.slots[1].key, "ChaosGate")
+    lu.assertEquals(surface.slots[1].featureKey, "chaos")
+
+    local storage = template.storage(underworld)
+    lu.assertEquals(#storage, 1)
+    lu.assertEquals(storage[1].key, "Targets")
+    lu.assertEquals(storage[1].type, "table")
+    lu.assertEquals(storage[1].minRows, 1)
+    lu.assertEquals(storage[1].defaultRows, 1)
+    lu.assertEquals(storage[1].maxRows, 1)
+    lu.assertEquals(storage[1].row[1].key, "TargetKey")
+    lu.assertEquals(storage[1].row[2].key, "BiomeKey")
+    lu.assertEquals(storage[1].row[3].key, "RowIndex")
+end
+
+function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolicies()
+    local catalog = loadCatalog()
+    local route = {
+        key = "Surface",
+        label = "Surface",
+        biomes = { "P" },
+    }
+    local template = loadRouteFeaturesTemplate()
+    local instance = template.prepare({
+        name = "RouteFeaturesSurface",
+        route = route,
+        features = catalog.features,
+        biomeLookup = catalog.lookup,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    local control = template.createRuntime(fields, instance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        biomes = catalog.lookup,
+        features = catalog.features,
+        controlResolver = function(controlName)
+            if controlName == "RouteP" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteP",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {
+                                    {
+                                        rowIndex = 1,
+                                        coordinate = 5,
+                                        slotLabel = "Depth 5",
+                                        option = { key = "P_Combat01", label = "Combat 01" },
+                                        features = { chaos = true },
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 2,
+                                        coordinate = 6,
+                                        slotLabel = "Depth 6",
+                                        option = { key = "P_Combat02", label = "Combat 02" },
+                                        features = { chaos = true },
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                    {
+                                        rowIndex = 3,
+                                        coordinate = 4,
+                                        slotLabel = "Depth 4",
+                                        features = { chaos = true },
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                },
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+    control:setRouteContext(routeContext, "Surface")
+
+    lu.assertEquals(control:biomeOptions(1).values, { "", "P" })
+    lu.assertEquals(control:biomeOptions(1).displayValues[""], "Vanilla")
+    lu.assertEquals(control:biomeOptions(1).displayValues.P, "Olympus")
+
+    control:writeBiome(1, "P")
+    lu.assertEquals(fields.Targets:read(1, "BiomeKey"), "P")
+    lu.assertEquals(control:roomOptions(1).values, { "", "1" })
+    lu.assertEquals(control:roomOptions(1).displayValues["1"], "Depth 5 - Combat 01")
+
+    control:writeRoom(1, "1")
+    lu.assertEquals(fields.Targets:read(1, "RowIndex"), "1")
+    lu.assertEquals(fields.Targets:read(1, "TargetKey"), "P:1")
+    lu.assertEquals(control:selectedTargetKey(1), "P:1")
+    lu.assertTrue(control:rowValidation(1).valid)
+
+    control:writeTarget(1, "P:2")
+    lu.assertEquals(control:rowValidation(1).code, "feature_target_unavailable")
+
+    control:writeBiome(1, "")
+    lu.assertEquals(fields.Targets:read(1, "BiomeKey"), nil)
+    lu.assertEquals(fields.Targets:read(1, "RowIndex"), nil)
+    lu.assertEquals(fields.Targets:read(1, "TargetKey"), nil)
+    lu.assertTrue(control:rowValidation(1).valid)
+end
+
+function TestRunPlannerControls.testFixedLinearSnapshotsExportDerivedFeaturesOnlyForConcreteRooms()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local fInstance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local fControl = template.createRuntime(routeFields({
+        {},
+        { RoleKey = "Combat" },
+        { RoleKey = "Combat", OptionKey = "F_Combat01" },
+    }), fInstance)
+    local fSnapshot = fControl:buildSnapshot()
+
+    lu.assertNil(fSnapshot.rows[1].features)
+    lu.assertNil(fSnapshot.rows[2].features)
+    lu.assertEquals(fSnapshot.rows[3].features, { chaos = true })
+
+    local gInstance = template.prepare({
+        name = "RouteG",
+        biome = catalog.lookup.G,
+    })
+    local gControl = template.createRuntime(routeFields({
+        {},
+    }), gInstance)
+    local gSnapshot = gControl:buildSnapshot()
+
+    lu.assertEquals(gSnapshot.rows[1].roomKey, "G_Intro")
+    lu.assertEquals(gSnapshot.rows[1].features, { chaos = true })
 end
 
 function TestRunPlannerControls.testRouteContextSuppliesRouteGlobalGodSource()
@@ -665,6 +860,19 @@ function TestRunPlannerControls.testRouteTemplateViewsSupportNoOpUiTraversal()
         routeNpcsInstance
     )
     routeNpcsTemplate.views.planner(draw, routeNpcsControl, routeNpcsInstance)
+
+    local routeFeaturesTemplate = loadRouteFeaturesTemplate()
+    local routeFeaturesInstance = routeFeaturesTemplate.prepare({
+        name = "RouteFeaturesUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        features = catalog.features,
+        biomeLookup = catalog.lookup,
+    })
+    local routeFeaturesControl = routeFeaturesTemplate.createUi(
+        routeUiFields(routeFeaturesTemplate.storage(routeFeaturesInstance)),
+        routeFeaturesInstance
+    )
+    routeFeaturesTemplate.views.planner(draw, routeFeaturesControl, routeFeaturesInstance)
 end
 
 function TestRunPlannerControls.testRouteTemplateViewAllocationsStayBounded()
@@ -757,6 +965,30 @@ function TestRunPlannerControls.testRouteTemplateViewAllocationsStayBounded()
             allocatedKb,
             iterations,
             96
+        )
+    )
+
+    local routeFeaturesTemplate = loadRouteFeaturesTemplate()
+    local routeFeaturesInstance = routeFeaturesTemplate.prepare({
+        name = "RouteFeaturesUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        features = catalog.features,
+        biomeLookup = catalog.lookup,
+    })
+    local routeFeaturesControl = routeFeaturesTemplate.createUi(
+        routeUiFields(routeFeaturesTemplate.storage(routeFeaturesInstance)),
+        routeFeaturesInstance
+    )
+    allocatedKb = measureAllocKb(iterations, function()
+        routeFeaturesTemplate.views.planner(draw, routeFeaturesControl, routeFeaturesInstance)
+    end)
+    lu.assertTrue(
+        allocatedKb < 64,
+        string.format(
+            "RouteFeatures traversal allocated %.1f KB across %d no-op draws; budget %.1f KB",
+            allocatedKb,
+            iterations,
+            64
         )
     )
 end
@@ -2857,7 +3089,7 @@ function TestRunPlannerControls.testRouteContextBuildsNpcTargetsFromValidCombatR
                                         coordinate = 3,
                                         slotLabel = "Depth 3",
                                         roleKey = "Combat",
-                                        option = { label = "Combat 02" },
+                                        option = { key = "F_Combat02", label = "Combat 02" },
                                         valid = true,
                                     },
                                     {
@@ -2865,7 +3097,7 @@ function TestRunPlannerControls.testRouteContextBuildsNpcTargetsFromValidCombatR
                                         coordinate = 4,
                                         slotLabel = "Depth 4",
                                         roleKey = "Combat",
-                                        option = { label = "Combat 03" },
+                                        option = { key = "F_Combat03", label = "Combat 03" },
                                         valid = true,
                                         rewardKind = "majorMinor",
                                         rewards = { "Major", "Boon", "ZeusUpgrade" },
@@ -2875,7 +3107,7 @@ function TestRunPlannerControls.testRouteContextBuildsNpcTargetsFromValidCombatR
                                         coordinate = 5,
                                         slotLabel = "Depth 5",
                                         roleKey = "Combat",
-                                        option = { label = "Combat 04" },
+                                        option = { key = "F_Combat04", label = "Combat 04" },
                                         valid = true,
                                         rewardKind = "majorMinor",
                                         rewards = { "Major", "MaxHealthDrop" },
@@ -2912,13 +3144,21 @@ function TestRunPlannerControls.testRouteContextUsesRoomHistoryTimelineForNpcTar
         name = "RouteN",
         biome = catalog.lookup.N,
     })
-    local nControl = hubTemplate.createRuntime(routeFields({
-        {},
-        {},
-        {},
-        { RoleKey = "Combat", OptionKey = "N_Combat01" },
-        { RoleKey = "Combat", OptionKey = "N_Combat02" },
-    }), nInstance)
+	    local nControl = hubTemplate.createRuntime(routeFields({
+	        {},
+	        {},
+	        {},
+	        {
+	            RoleKey = "Combat",
+	            OptionKey = "N_Combat01",
+	            Reward1Key = "MaxHealthDropBig",
+	        },
+	        {
+	            RoleKey = "Combat",
+	            OptionKey = "N_Combat02",
+	            Reward1Key = "MaxManaDropBig",
+	        },
+	    }), nInstance)
     local routeContext = loadRunContext().create({
         routes = routeDefinitions({
             {
@@ -2967,12 +3207,14 @@ function TestRunPlannerControls.testRouteContextAddsPostBiomeTimelineForNpcSpaci
                                 rows = {
                                     {
                                         rowIndex = 1,
-                                        coordinate = 4,
-                                        slotLabel = "Depth 4",
-                                        roleKey = "Combat",
-                                        option = { label = "Combat F" },
-                                        valid = true,
-                                    },
+	                                        coordinate = 4,
+	                                        slotLabel = "Depth 4",
+	                                        roleKey = "Combat",
+	                                        option = { key = "F_Combat03", label = "Combat F" },
+	                                        valid = true,
+	                                        rewardKind = "majorMinor",
+	                                        rewards = { "Major", "MaxHealthDrop" },
+	                                    },
                                 },
                             }
                         end
@@ -2990,12 +3232,14 @@ function TestRunPlannerControls.testRouteContextAddsPostBiomeTimelineForNpcSpaci
                                 rows = {
                                     {
                                         rowIndex = 1,
-                                        coordinate = 4,
-                                        slotLabel = "Depth 4",
-                                        roleKey = "Combat",
-                                        option = { label = "Combat G" },
-                                        valid = true,
-                                    },
+	                                        coordinate = 4,
+	                                        slotLabel = "Depth 4",
+	                                        roleKey = "Combat",
+	                                        option = { key = "G_Combat03", label = "Combat G" },
+	                                        valid = true,
+	                                        rewardKind = "majorMinor",
+	                                        rewards = { "Major", "MaxHealthDrop" },
+	                                    },
                                 },
                             }
                         end
@@ -3027,10 +3271,14 @@ function TestRunPlannerControls.testRouteContextFiltersOlympusNpcsByRoomTag()
         {
             RoleKey = "Combat",
             OptionKey = "P_Combat02",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
         },
         {
             RoleKey = "Combat",
             OptionKey = "P_Combat17",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
         },
     }), pInstance)
     local routeContext = loadRunContext().create({
@@ -3114,32 +3362,32 @@ function TestRunPlannerControls.testRouteNpcsSnapshotValidatesTargetsAndSpacing(
                                 rows = {
                                     {
                                         rowIndex = 2,
-                                        coordinate = 4,
-                                        slotLabel = "Depth 4",
-                                        roleKey = "Combat",
-                                        option = { label = "Combat 03" },
-                                        valid = true,
-                                        rewardKind = "majorMinor",
-                                        rewards = { "Major", "Boon", "ZeusUpgrade" },
+	                                        coordinate = 4,
+	                                        slotLabel = "Depth 4",
+	                                        roleKey = "Combat",
+	                                        option = { key = "F_Combat03", label = "Combat 03" },
+	                                        valid = true,
+	                                        rewardKind = "majorMinor",
+	                                        rewards = { "Major", "Boon", "ZeusUpgrade" },
                                     },
                                     {
                                         rowIndex = 3,
-                                        coordinate = 5,
-                                        slotLabel = "Depth 5",
-                                        roleKey = "Combat",
-                                        option = { label = "Combat 04" },
-                                        valid = true,
-                                        rewardKind = "majorMinor",
-                                        rewards = { "Major", "MaxHealthDrop" },
+	                                        coordinate = 5,
+	                                        slotLabel = "Depth 5",
+	                                        roleKey = "Combat",
+	                                        option = { key = "F_Combat04", label = "Combat 04" },
+	                                        valid = true,
+	                                        rewardKind = "majorMinor",
+	                                        rewards = { "Major", "MaxHealthDrop" },
                                     },
                                     {
                                         rowIndex = 4,
-                                        coordinate = 6,
-                                        slotLabel = "Depth 6",
-                                        roleKey = "Combat",
-                                        option = { label = "Combat 05" },
-                                        valid = true,
-                                        rewardKind = "majorMinor",
+	                                        coordinate = 6,
+	                                        slotLabel = "Depth 6",
+	                                        roleKey = "Combat",
+	                                        option = { key = "F_Combat05", label = "Combat 05" },
+	                                        valid = true,
+	                                        rewardKind = "majorMinor",
                                         rewards = { "Major", "MaxHealthDrop" },
                                     },
                                 },

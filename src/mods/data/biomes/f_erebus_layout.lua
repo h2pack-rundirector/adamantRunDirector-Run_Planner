@@ -1,11 +1,14 @@
 local layout = {}
 
+local CHAOS_FEATURES = { chaos = true }
+
 local function option(key, label, opts)
     opts = opts or {}
     return {
         key = key,
         label = label,
         exitCount = opts.exitCount,
+        features = opts.features,
         availability = opts.availability,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
@@ -13,7 +16,14 @@ local function option(key, label, opts)
 end
 
 local function combat(roomKey, opts)
-    return option(roomKey, "Combat " .. string.sub(roomKey, -2), opts)
+    opts = opts or {}
+    return option(roomKey, "Combat " .. string.sub(roomKey, -2), {
+        exitCount = opts.exitCount,
+        features = opts.features or CHAOS_FEATURES,
+        availability = opts.availability,
+        maxCreationsThisRun = opts.maxCreationsThisRun,
+        maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
+    })
 end
 
 local function indexByKey(items)
@@ -32,10 +42,12 @@ local function pickByKey(lookup, keys)
     return values
 end
 
+layout.chaosFeatures = CHAOS_FEATURES
+
 layout.openingRooms = {
-    option("F_Opening01", "Opening 1", { exitCount = 1 }),
-    option("F_Opening02", "Opening 2", { exitCount = 1 }),
-    option("F_Opening03", "Opening 3", { exitCount = 1 }),
+    option("F_Opening01", "Opening 1", { exitCount = 1, features = CHAOS_FEATURES }),
+    option("F_Opening02", "Opening 2", { exitCount = 1, features = CHAOS_FEATURES }),
+    option("F_Opening03", "Opening 3", { exitCount = 1, features = CHAOS_FEATURES }),
 }
 
 layout.prebossRoom = option("F_PreBoss01", "Preboss", {
@@ -82,6 +94,7 @@ layout.trialCombatRooms = pickByKey(layout.combatRoomsByKey, {
 layout.storyRooms = {
     option("F_Story01", "Arachne", {
         exitCount = 2,
+        features = CHAOS_FEATURES,
         availability = {
             biomeDepth = { min = 4, max = 8 },
         },
@@ -92,6 +105,7 @@ layout.storyRooms = {
 layout.fountainRooms = {
     option("F_Reprieve01", "Fountain", {
         exitCount = 2,
+        features = CHAOS_FEATURES,
         availability = {
             biomeDepth = { min = 4, max = 8 },
         },
@@ -102,6 +116,7 @@ layout.fountainRooms = {
 layout.shopRooms = {
     option("F_Shop01", "Shop", {
         exitCount = 2,
+        features = CHAOS_FEATURES,
         availability = {
             biomeDepth = { min = 4, max = 6 },
         },

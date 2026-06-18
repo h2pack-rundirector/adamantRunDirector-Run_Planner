@@ -281,6 +281,46 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoomHistoryTimeline()
     })
 end
 
+function TestRunPlannerData.testBiomeDefinitionsDeclareNaturalChaosFeatures()
+    local data = dofile("src/mods/data.lua")
+    local biomes = data.loadBiomes(testImport)
+    local chaos = { chaos = true }
+
+    lu.assertNil(biomes.lookup.F.slotLayout.special[0].features)
+    lu.assertEquals(biomes.lookup.F.slotLayout.special[0].roomOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.mapOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Story.roomOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Fountain.roomOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Midshop.roomOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Trial.mapOptions[1].features, chaos)
+    lu.assertNil(biomes.lookup.F.rolesByKey.Miniboss.features)
+
+    lu.assertEquals(biomes.lookup.G.slotLayout.entry.features, chaos)
+    lu.assertEquals(biomes.lookup.G.rolesByKey.Combat.mapOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.G.rolesByKey.Story.roomOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.G.rolesByKey.Fountain.roomOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.G.rolesByKey.Midshop.roomOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.G.rolesByKey.Trial.mapOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.G.rolesByKey.Miniboss.roomOptions[1].features, chaos)
+
+    lu.assertEquals(biomes.lookup.N.slotLayout.fixedBeforeHub[1].features, chaos)
+    lu.assertNil(biomes.lookup.N.slotLayout.fixedBeforeHub[2].features)
+    lu.assertNil(biomes.lookup.N.rolesByKey.Combat.features)
+
+    lu.assertEquals(biomes.lookup.P.featurePolicies.chaos.coordinate, { max = 5 })
+    lu.assertEquals(biomes.lookup.P.slotLayout.entry.features, chaos)
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.mapOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Fountain.roomOptions[1].features, chaos)
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Midshop.roomOptions[1].features, chaos)
+    lu.assertNil(biomes.lookup.P.rolesByKey.Story.features)
+    lu.assertNil(biomes.lookup.P.rolesByKey.Miniboss.features)
+
+    lu.assertNil(biomes.lookup.H.featurePolicies)
+    lu.assertNil(biomes.lookup.I.featurePolicies)
+    lu.assertNil(biomes.lookup.O.featurePolicies)
+    lu.assertNil(biomes.lookup.Q.featurePolicies)
+end
+
 function TestRunPlannerData.testRewardTypeMetadataSeparatesBoonHermesAndDevotion()
     local data = dofile("src/mods/data.lua")
     local biomes = data.loadBiomes(testImport)

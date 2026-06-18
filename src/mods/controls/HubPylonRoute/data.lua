@@ -30,6 +30,7 @@ local function buildFixedSlot(instance, entry, section)
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
         reward = entry.reward,
+        features = entry.features,
     }
     buildOptionChoices(role)
 
@@ -43,6 +44,7 @@ local function buildFixedSlot(instance, entry, section)
         roleKey = role.key,
         role = role,
         locked = entry.locked,
+        features = entry.features,
     }
 end
 

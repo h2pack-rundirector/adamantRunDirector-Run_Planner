@@ -22,6 +22,11 @@ function data.loadNpcs(importer)
     return importer("mods/npcs/definitions.lua")
 end
 
+function data.loadFeatures(importer)
+    importer = importer or import
+    return importer("mods/features/definitions.lua")
+end
+
 function data.loadCatalog(importer)
     return data.loadBiomes(importer)
 end

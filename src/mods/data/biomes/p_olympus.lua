@@ -14,6 +14,11 @@ return function(importer)
                 { key = "P_Boss01", label = "Boss" },
             },
         }),
+        featurePolicies = {
+            chaos = {
+                coordinate = { max = 5 },
+            },
+        },
         slotLayout = {
             coordinate = "BiomeDepthCache",
             depthRange = { min = 1, max = 9 },
@@ -23,6 +28,7 @@ return function(importer)
                 kind = "intro",
                 roomKey = layout.introRoom.key,
                 tags = layout.introRoom.tags,
+                features = layout.chaosFeatures,
                 locked = true,
             },
             default = {

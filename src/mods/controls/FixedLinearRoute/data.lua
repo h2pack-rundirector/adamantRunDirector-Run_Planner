@@ -80,6 +80,7 @@ local function buildFixedRoleSlot(instance, depth, special)
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
         reward = special.reward,
+        features = special.features,
     }
     buildOptionChoices(role)
 
@@ -92,6 +93,7 @@ local function buildFixedRoleSlot(instance, depth, special)
         roomKey = special.roomKey,
         roleKey = role.key,
         role = role,
+        features = special.features,
     }
 end
 
@@ -107,6 +109,7 @@ local function buildEntrySlot(instance, entry)
         roomKey = entry.roomKey,
         roomOptions = entry.roomOptions,
         reward = entry.reward,
+        features = entry.features,
         locked = entry.locked,
     })
 end
