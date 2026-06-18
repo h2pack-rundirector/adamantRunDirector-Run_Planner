@@ -7,12 +7,6 @@ local SHOP_BOON_SOURCE_VALUES = {
     RandomLoot = true,
     BoostedRandomLoot = true,
 }
-local SHOP_OPTION_LABELS = {
-    RandomLoot = "Boon",
-    BoostedRandomLoot = "Boosted Boon",
-    BlindBoxLoot = "Mystery Boon",
-    ShopHermesUpgrade = "Hermes",
-}
 
 local function copyList(source)
     local copy = {}
@@ -49,9 +43,14 @@ local function addOption(values, labels, key, label)
     labels[key] = label or key
 end
 
-local function displayLabel(key)
+local function displayLabel(definitions, key)
     if key == nil or key == "" then
         return "Vanilla"
+    end
+
+    local primitive = definitions.primitives and definitions.primitives[key]
+    if primitive ~= nil and primitive.label ~= nil then
+        return primitive.label
     end
 
     local label = tostring(key)
@@ -62,11 +61,50 @@ local function displayLabel(key)
     return label
 end
 
+local function bundleOptions(definitions, bundleName)
+    local bundle = definitions.bundles and definitions.bundles[bundleName]
+    if bundle ~= nil then
+        return bundle.options or {}
+    end
+    return {}
+end
+
+local function bundleLabel(definitions, bundleName, fallback)
+    local bundle = definitions.bundles and definitions.bundles[bundleName]
+    if bundle ~= nil and bundle.label ~= nil then
+        return bundle.label
+    end
+    return fallback
+end
+
+local function uniqueOfferGroups(shop, aliasBySlotKey)
+    local groups = {}
+    for _, group in ipairs(shop.uniqueOfferGroups or {}) do
+        local aliases = {}
+        for _, slotKey in ipairs(group.slots or {}) do
+            local alias = aliasBySlotKey[slotKey]
+            if alias ~= nil then
+                aliases[#aliases + 1] = alias
+            end
+        end
+        if aliases[2] ~= nil then
+            groups[#groups + 1] = {
+                aliases = aliases,
+                code = group.code,
+                message = group.message,
+            }
+        end
+    end
+    return groups
+end
+
 local function uniqueNames(items, eligible, ineligible, labelFor)
     local values = {}
     local labels = {}
     local seen = {}
-    labelFor = labelFor or displayLabel
+    labelFor = labelFor or function(name)
+        return displayLabel({ primitives = {} }, name)
+    end
 
     addOption(values, labels, VANILLA_VALUE, "Vanilla")
     for _, name in ipairs(items or {}) do
@@ -82,8 +120,8 @@ local function uniqueNames(items, eligible, ineligible, labelFor)
     return values, labels
 end
 
-local function shopOptionLabel(name)
-    return SHOP_OPTION_LABELS[name] or displayLabel(name)
+local function rewardOptionLabel(definitions, name)
+    return displayLabel(definitions, name)
 end
 
 local function godSourceOptions(definitions)
@@ -91,7 +129,7 @@ local function godSourceOptions(definitions)
     local labels = {}
     addOption(values, labels, VANILLA_VALUE, "Vanilla")
     for _, lootName in ipairs(definitions.godLoot or {}) do
-        addOption(values, labels, lootName, displayLabel(lootName))
+        addOption(values, labels, lootName, rewardOptionLabel(definitions, lootName))
     end
     return values, labels
 end
@@ -147,7 +185,7 @@ end
 
 local function roomStoreSurface(self, context)
     local rewardStore = context.rewardStore or "RunProgress"
-    local rewardTypes = self.definitions.rewardStores[rewardStore] or {}
+    local rewardTypes = bundleOptions(self.definitions, rewardStore)
     local eligible = lookupList(context.eligibleRewardTypes)
     local ineligible = lookupList(context.ineligibleRewardTypes)
 
@@ -168,7 +206,9 @@ local function roomStoreSurface(self, context)
         }
     end
 
-    local rewardValues, rewardLabels = uniqueNames(rewardTypes, eligible, ineligible)
+    local rewardValues, rewardLabels = uniqueNames(rewardTypes, eligible, ineligible, function(name)
+        return rewardOptionLabel(self.definitions, name)
+    end)
     local godValues, godLabels = godSourceOptions(self.definitions)
     return {
         kind = "roomStore",
@@ -191,14 +231,18 @@ end
 local function majorMinorSurface(self, context)
     local majorRewardStore = context.majorRewardStore or "RunProgress"
     local minorRewardStore = context.minorRewardStore or "MetaProgress"
-    local majorValues, majorLabels = uniqueNames(self.definitions.rewardStores[majorRewardStore])
-    local minorValues, minorLabels = uniqueNames(self.definitions.rewardStores[minorRewardStore])
+    local majorValues, majorLabels = uniqueNames(bundleOptions(self.definitions, majorRewardStore), nil, nil, function(name)
+        return rewardOptionLabel(self.definitions, name)
+    end)
+    local minorValues, minorLabels = uniqueNames(bundleOptions(self.definitions, minorRewardStore), nil, nil, function(name)
+        return rewardOptionLabel(self.definitions, name)
+    end)
     local godValues, godLabels = godSourceOptions(self.definitions)
     local rewardClassValues = { VANILLA_VALUE, MAJOR_VALUE, MINOR_VALUE }
     local rewardClassLabels = {
         [VANILLA_VALUE] = "Vanilla",
-        [MAJOR_VALUE] = "Major",
-        [MINOR_VALUE] = "Minor",
+        [MAJOR_VALUE] = bundleLabel(self.definitions, majorRewardStore, MAJOR_VALUE),
+        [MINOR_VALUE] = bundleLabel(self.definitions, minorRewardStore, MINOR_VALUE),
     }
 
     return {
@@ -286,11 +330,16 @@ local function shopSurface(self, context)
     local shop = self.definitions.shops[context.shopProfile] or {}
     local controls = {}
     local godValues, godLabels = godSourceOptions(self.definitions)
+    local aliasBySlotKey = {}
 
     for index, slot in ipairs(shop.slots or {}) do
         local rewardAlias = "Reward" .. tostring(index) .. "Key"
         local lootAlias = "Reward" .. tostring(index) .. "LootKey"
-        local values, labels = uniqueNames(slot.options, nil, nil, shopOptionLabel)
+        aliasBySlotKey[slot.key] = rewardAlias
+        local options = slot.options or bundleOptions(self.definitions, slot.bundle)
+        local values, labels = uniqueNames(options, nil, nil, function(name)
+            return rewardOptionLabel(self.definitions, name)
+        end)
         controls[#controls + 1] = dropdown(
             rewardAlias,
             slot.key,
@@ -304,7 +353,7 @@ local function shopSurface(self, context)
                 rowIndex = index,
             }
         )
-        for _, itemName in ipairs(slot.options or {}) do
+        for _, itemName in ipairs(options) do
             if SHOP_BOON_SOURCE_VALUES[itemName] then
                 controls[#controls + 1] = dropdown(
                     lootAlias,
@@ -335,6 +384,7 @@ local function shopSurface(self, context)
         context = context,
         shopProfile = context.shopProfile,
         rowHeader = "Reward",
+        uniqueOfferGroups = uniqueOfferGroups(shop, aliasBySlotKey),
         controls = controls,
     }
 end
@@ -364,11 +414,13 @@ local function surfaceFor(self, context)
 end
 
 function catalog.create(definitions)
+    local source = definitions or {}
     local instance = {
         definitions = {
-            godLoot = copyList(definitions and definitions.godLoot),
-            rewardStores = definitions and definitions.rewardStores or {},
-            shops = definitions and definitions.shops or {},
+            godLoot = copyList(source.godLoot),
+            bundles = source.bundles or {},
+            primitives = source.primitives or {},
+            shops = source.shops or {},
         },
         surfaceCache = {},
     }

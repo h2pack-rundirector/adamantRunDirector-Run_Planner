@@ -2,6 +2,7 @@ local deps = ... or {}
 local catalog = deps.catalog
 
 local runtime = {}
+local VALID = { valid = true }
 
 local function conditionMatches(condition, fields)
     return fields:read(condition.alias) == condition.value
@@ -55,6 +56,42 @@ function runtime.snapshot(surface, fields)
         end
     end
     return picks
+end
+
+local function duplicateAliasesInGroup(group, fields)
+    local aliases = group.aliases or {}
+    for index, alias in ipairs(aliases) do
+        local value = fields:read(alias) or ""
+        if value ~= "" then
+            for previousIndex = 1, index - 1 do
+                local previousValue = fields:read(aliases[previousIndex]) or ""
+                if previousValue == value then
+                    return aliases
+                end
+            end
+        end
+    end
+    return nil
+end
+
+function runtime.validate(surface, fields)
+    if surface == nil or fields == nil then
+        return VALID
+    end
+
+    for _, group in ipairs(surface.uniqueOfferGroups or {}) do
+        local aliases = duplicateAliasesInGroup(group, fields)
+        if aliases ~= nil then
+            return {
+                valid = false,
+                code = group.code or "duplicate_shop_group_option",
+                message = group.message or "Shop offers from the same vanilla group cannot duplicate the same reward",
+                aliases = aliases,
+            }
+        end
+    end
+
+    return VALID
 end
 
 function runtime.surfaceFor(context)

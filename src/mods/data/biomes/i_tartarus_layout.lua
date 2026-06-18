@@ -13,9 +13,7 @@ local function combatRoom(roomKey, exitCount, opts)
         label = combatLabel(roomKey),
         exitCount = exitCount,
         supportsExtensionChoice = exitCount > 1,
-        reward = opts.reward or rewards.roomStore("TartarusRewards", {
-            ineligibleRewardTypes = rewards.rewardSet("ClockworkExtensionCombatBans"),
-        }),
+        reward = opts.reward or rewards.roomStore("ClockworkExtensionRewards"),
         availability = opts.availability,
     }
 end

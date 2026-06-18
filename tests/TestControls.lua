@@ -659,6 +659,37 @@ function TestRunPlannerControls.testFixedLinearEntryMetadataRendersIntroRows()
     end
 end
 
+function TestRunPlannerControls.testFixedLinearQShopSharedOfferGroupInvalidatesDuplicates()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteQ",
+        biome = catalog.lookup.Q,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {
+            Reward1Key = "RandomLoot",
+            Reward2Key = "RandomLoot",
+        },
+    }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertFalse(snapshot.rows[8].valid)
+    lu.assertEquals(snapshot.rows[8].rewardKind, "shop")
+    lu.assertEquals(snapshot.rows[8].invalidCode, "duplicate_shop_group_option")
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 8)
+    lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_shop_group_option")
+end
+
 function TestRunPlannerControls.testClockworkGoalStorageMatchesTartarusRouteRows()
     local catalog = loadCatalog()
     local template = loadClockworkGoalTemplate()

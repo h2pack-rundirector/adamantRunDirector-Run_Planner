@@ -46,6 +46,18 @@ function routeStatusUi.drawInvalid(draw, validation, columnX)
     return true
 end
 
+function routeStatusUi.drawInvalidInline(draw, validation)
+    if validation == nil or validation.valid then
+        return false
+    end
+
+    local imgui = draw.imgui
+    imgui.SameLine()
+    imgui.AlignTextToFramePadding()
+    drawColoredText(imgui, INVALID_COLOR, "Invalid")
+    return true
+end
+
 function routeStatusUi.drawRouteStatus(draw, routeSnapshot)
     local label = tostring((routeSnapshot and routeSnapshot.label) or (routeSnapshot and routeSnapshot.routeKey) or "Route")
     local valid = routeSnapshot ~= nil and routeSnapshot.valid

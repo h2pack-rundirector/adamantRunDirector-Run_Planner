@@ -23,9 +23,7 @@ return function(importer)
                     key = "Opening",
                     label = "Opening",
                     roomOptions = layout.openingRooms,
-                    reward = rewards.roomStore("RunProgress", {
-                        ineligibleRewardTypes = rewards.rewardSet("OpeningRoomBans"),
-                    }),
+                    reward = rewards.roomStore("OpeningRunProgress"),
                     locked = true,
                 },
                 [10] = {
@@ -40,9 +38,7 @@ return function(importer)
                         {
                             key = "MajorReward",
                             label = "Preboss Room",
-                            reward = rewards.roomStore("RunProgress", {
-                                ineligibleRewardTypes = rewards.rewardSet("PreBossRoomBans"),
-                            }),
+                            reward = rewards.roomStore("PreBossRunProgress"),
                         },
                     },
                 },

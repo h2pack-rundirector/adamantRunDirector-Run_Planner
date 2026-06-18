@@ -55,6 +55,19 @@ local function rewardSurface(role, option)
     return rewardRuntime.surfaceFor(rewardContext(role, option))
 end
 
+local function rewardValidation(surface, rewardRows, rowIndex)
+    if rewardRuntime == nil or rewardRuntime.validate == nil then
+        return nil
+    end
+    if surface == nil
+        or surface.uniqueOfferGroups == nil
+        or surface.uniqueOfferGroups[1] == nil
+    then
+        return nil
+    end
+    return rewardRuntime.validate(surface, rewardFields(rewardRows, rowIndex))
+end
+
 local function prewarmRewardSurface(role, option)
     rewardSurface(role, option)
 end
@@ -138,6 +151,22 @@ function runtime.create(fields, instance)
         return rewardSurface(self:role(rowIndex), self:option(rowIndex))
     end
 
+    function control:rowValidation(rowIndex)
+        local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
+        local _, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
+        local validation = data.validateRow(instance, routeRows, rowIndex)
+        if not validation.valid then
+            return validation
+        end
+
+        local surface = rewardSurface(role, option)
+        local rewardInvalid = rewardValidation(surface, fields.Rewards, rowIndex)
+        if rewardInvalid ~= nil and not rewardInvalid.valid then
+            return rewardInvalid
+        end
+        return validation
+    end
+
     function control:beginReadPass()
         data.beginReadPass(instance)
     end
@@ -161,8 +190,8 @@ function runtime.create(fields, instance)
 
         local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
         local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
-        local validation = data.validateRow(instance, routeRows, rowIndex)
         local surface = rewardSurface(role, option)
+        local validation = self:rowValidation(rowIndex)
         return {
             rowIndex = rowIndex,
             coordinate = slot.coordinate,

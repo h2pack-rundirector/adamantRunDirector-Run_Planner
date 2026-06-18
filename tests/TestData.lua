@@ -38,25 +38,6 @@ local DEVOTION_REQUIREMENT_LOOT_NAMES = {
     "ZeusUpgrade",
 }
 
-local REWARD_SETS = {
-    OpeningRoomBans = {
-        "RoomMoneyDrop",
-        "MaxHealthDrop",
-        "MaxManaDrop",
-    },
-    HubCombatRoomEasyBans = {
-        "WeaponUpgrade",
-        "HermesUpgrade",
-        "HephaestusUpgrade",
-    },
-    PreBossRoomBans = {
-        "RoomMoneyDrop",
-    },
-    ClockworkExtensionCombatBans = {
-        "Boon",
-    },
-}
-
 local function noneReward()
     return { kind = "none" }
 end
@@ -298,9 +279,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
     lu.assertEquals(fOpening.kind, "opening")
     lu.assertEquals(fOpening.key, "Opening")
     lu.assertEquals(fOpening.roomOptions[1].key, "F_Opening01")
-    lu.assertEquals(fOpening.reward, roomStoreReward("RunProgress", {
-        ineligibleRewardTypes = REWARD_SETS.OpeningRoomBans,
-    }))
+    lu.assertEquals(fOpening.reward, roomStoreReward("OpeningRunProgress"))
     lu.assertTrue(fOpening.locked)
 
     local fPreboss = biomes.lookup.F.slotLayout.special[10]
@@ -310,9 +289,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
     lu.assertEquals(fPreboss.branches[1].reward, shopReward("WorldShop"))
     lu.assertEquals(fPreboss.branches[2].key, "MajorReward")
     lu.assertEquals(fPreboss.branches[2].label, "Preboss Room")
-    lu.assertEquals(fPreboss.branches[2].reward, roomStoreReward("RunProgress", {
-        ineligibleRewardTypes = REWARD_SETS.PreBossRoomBans,
-    }))
+    lu.assertEquals(fPreboss.branches[2].reward, roomStoreReward("PreBossRunProgress"))
 
     local gIntro = biomes.lookup.G.slotLayout.entry
     lu.assertEquals(gIntro.kind, "intro")
@@ -325,6 +302,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
     lu.assertEquals(gPreboss.branches[1].label, "Preboss Shop")
     lu.assertEquals(gPreboss.branches[2].label, "Preboss Room")
     lu.assertEquals(gPreboss.branches[1].reward, shopReward("WorldShop"))
+    lu.assertEquals(gPreboss.branches[2].reward, roomStoreReward("PreBossRunProgress"))
 
     lu.assertEquals(biomes.lookup.H.slotLayout.fixedBeforeRoute[1].roomKey, "H_Intro")
     lu.assertEquals(biomes.lookup.H.slotLayout.fixedBeforeRoute[1].reward, noneReward())
@@ -348,6 +326,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
     lu.assertEquals(pPreboss.branches[1].label, "Preboss Shop")
     lu.assertEquals(pPreboss.branches[2].label, "Preboss Room")
     lu.assertEquals(pPreboss.branches[1].reward, shopReward("WorldShop"))
+    lu.assertEquals(pPreboss.branches[2].reward, roomStoreReward("PreBossRunProgress"))
 
     local qIntro = biomes.lookup.Q.slotLayout.entry
     lu.assertEquals(qIntro.kind, "intro")
@@ -438,9 +417,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
 
     lu.assertEquals(biomes.lookup.I.rolesByKey.Goal.mapOptions[1].key, "I_Combat01")
     lu.assertEquals(biomes.lookup.I.rolesByKey.Goal.reward, forcedReward("ClockworkGoal"))
-    lu.assertEquals(biomes.lookup.I.rolesByKey.ExtensionCombat.reward, roomStoreReward("TartarusRewards", {
-        ineligibleRewardTypes = REWARD_SETS.ClockworkExtensionCombatBans,
-    }))
+    lu.assertEquals(biomes.lookup.I.rolesByKey.ExtensionCombat.reward, roomStoreReward("ClockworkExtensionRewards"))
     lu.assertEquals(biomes.lookup.I.rolesByKey.Trial.mapOptions[1].key, "I_Combat01")
     lu.assertEquals(biomes.lookup.I.rolesByKey.Trial.reward, devotionReward({ rewardStore = "RunProgress" }))
     assertOneShotRole(biomes.lookup.I.rolesByKey.Trial)
@@ -563,9 +540,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.clockwork.goalRoom.roomOptions[24].exitCount, 1)
     lu.assertFalse(tartarus.clockwork.goalRoom.roomOptions[24].supportsExtensionChoice)
     lu.assertEquals(tartarus.clockwork.goalRoom.reward, forcedReward("ClockworkGoal"))
-    lu.assertEquals(tartarus.clockwork.extensionRoom.combatOptions[1].reward, roomStoreReward("TartarusRewards", {
-        ineligibleRewardTypes = REWARD_SETS.ClockworkExtensionCombatBans,
-    }))
+    lu.assertEquals(tartarus.clockwork.extensionRoom.combatOptions[1].reward, roomStoreReward("ClockworkExtensionRewards"))
 
     local combat24 = tartarus.clockwork.goalRoom.roomOptions[24]
     lu.assertEquals(combat24.key, "I_Combat24")
@@ -596,13 +571,9 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     local ephyra = biomes.lookup.N
 
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].roomKey, "N_Opening01")
-    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].reward, roomStoreReward("RunProgress", {
-        ineligibleRewardTypes = REWARD_SETS.OpeningRoomBans,
-    }))
+    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].reward, roomStoreReward("OpeningRunProgress"))
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].roomKey, "N_PreHub01")
-    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].reward, roomStoreReward("RunProgress", {
-        ineligibleRewardTypes = REWARD_SETS.OpeningRoomBans,
-    }))
+    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].reward, roomStoreReward("OpeningRunProgress"))
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].roomKey, "N_Hub")
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].reward, noneReward())
     lu.assertEquals(ephyra.slotLayout.fixedAfterHub[1].roomKey, "N_PreBoss01")
@@ -622,9 +593,7 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
 
     local combat12 = ephyra.hub.combatRoomsByKey.N_Combat12
     lu.assertEquals(combat12.hubDoorId, 561389)
-    lu.assertEquals(combat12.reward, roomStoreReward("HubRewards", {
-        ineligibleRewardTypes = REWARD_SETS.HubCombatRoomEasyBans,
-    }))
+    lu.assertEquals(combat12.reward, roomStoreReward("EasyHubRewards"))
     lu.assertEquals(#combat12.sideDoors, 3)
     lu.assertEquals(combat12.sideDoors[1], {
         doorId = 558352,
@@ -638,9 +607,7 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     })
 
     lu.assertEquals(ephyra.hub.combatRoomsByKey.N_Combat01.sideDoors, {})
-    lu.assertEquals(ephyra.hub.combatRoomsByKey.N_Combat17.reward, roomStoreReward("HubRewards", {
-        ineligibleRewardTypes = REWARD_SETS.HubCombatRoomEasyBans,
-    }))
+    lu.assertEquals(ephyra.hub.combatRoomsByKey.N_Combat17.reward, roomStoreReward("EasyHubRewards"))
     lu.assertEquals(ephyra.hub.combatRoomsByKey.N_Combat23.sideDoors[3].roomKey, "N_Sub15")
     lu.assertEquals(ephyra.hub.subroomRewardStores.N_Sub14, "SubRoomRewardsHard")
     lu.assertEquals(ephyra.hub.subroomRewardStores.N_Sub15, "SubRoomRewards")

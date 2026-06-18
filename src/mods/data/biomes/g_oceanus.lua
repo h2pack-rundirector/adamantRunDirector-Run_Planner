@@ -35,9 +35,7 @@ return function(importer)
                         {
                             key = "MajorReward",
                             label = "Preboss Room",
-                            reward = rewards.roomStore("RunProgress", {
-                                ineligibleRewardTypes = rewards.rewardSet("PreBossRoomBans"),
-                            }),
+                            reward = rewards.roomStore("PreBossRunProgress"),
                         },
                     },
                 },

@@ -5,14 +5,27 @@ TestRunPlannerRewards = {}
 
 local function loadCatalog()
     local factory = dofile("src/mods/rewards/catalog.lua")
-    local surfaces = dofile("src/mods/rewards/surfaces.lua")
-    return factory.create(surfaces)
+    local definitions = dofile("src/mods/rewards/definitions.lua")
+    return factory.create(definitions)
+end
+
+local function loadCatalogWith(definitions)
+    local factory = dofile("src/mods/rewards/catalog.lua")
+    return factory.create(definitions)
 end
 
 local function loadRuntime()
     local chunk = assert(loadfile("src/mods/rewards/runtime.lua"))
     return chunk({
         catalog = loadCatalog(),
+    })
+end
+
+local function loadUi(routeStatusUi)
+    local chunk = assert(loadfile("src/mods/rewards/ui.lua"))
+    return chunk({
+        runtime = loadRuntime(),
+        routeStatusUi = routeStatusUi,
     })
 end
 
@@ -31,6 +44,22 @@ local function controlByKey(surface, key)
         end
     end
     return nil
+end
+
+local function fakeDrawFields(values)
+    return {
+        read = function(_, alias)
+            return values[alias]
+        end,
+        get = function(_, alias)
+            return {
+                alias = alias,
+                read = function()
+                    return values[alias]
+                end,
+            }
+        end,
+    }
 end
 
 function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()
@@ -53,11 +82,72 @@ function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()
         "StackUpgrade",
         "TalentDrop",
     })
+    lu.assertEquals(surface.controls[1].displayValues.WeaponUpgrade, "Hammer")
+    lu.assertEquals(surface.controls[1].displayValues.MaxHealthDrop, "Max Health")
+    lu.assertEquals(surface.controls[1].displayValues.MaxManaDrop, "Max Magick")
+    lu.assertEquals(surface.controls[1].displayValues.RoomMoneyDrop, "Gold")
+    lu.assertEquals(surface.controls[1].displayValues.TalentDrop, "Path of Stars")
     lu.assertEquals(surface.controls[1].genericRewardLabelHiddenDrawOpts.label, "")
     lu.assertEquals(surface.controls[2].key, "boonSource")
     lu.assertEquals(surface.controls[2].visibleWhen, {
         alias = "Reward1Key",
         value = "Boon",
+    })
+end
+
+function TestRunPlannerRewards.testCatalogNormalizesSpecializedRewardBundles()
+    local catalog = loadCatalog()
+
+    local opening = catalog:surfaceFor({
+        kind = "roomStore",
+        rewardStore = "OpeningRunProgress",
+    })
+    lu.assertEquals(opening.controls[1].values, {
+        "",
+        "Boon",
+        "HermesUpgrade",
+        "WeaponUpgrade",
+        "StackUpgrade",
+        "TalentDrop",
+    })
+
+    local preboss = catalog:surfaceFor({
+        kind = "roomStore",
+        rewardStore = "PreBossRunProgress",
+    })
+    lu.assertEquals(preboss.controls[1].values, {
+        "",
+        "Boon",
+        "HermesUpgrade",
+        "WeaponUpgrade",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+        "StackUpgrade",
+        "TalentDrop",
+    })
+
+    local easyHub = catalog:surfaceFor({
+        kind = "roomStore",
+        rewardStore = "EasyHubRewards",
+    })
+    lu.assertEquals(easyHub.controls[1].values, {
+        "",
+        "Boon",
+        "MaxHealthDropBig",
+        "MaxManaDropBig",
+        "SpellDrop",
+    })
+
+    local clockwork = catalog:surfaceFor({
+        kind = "roomStore",
+        rewardStore = "ClockworkExtensionRewards",
+    })
+    lu.assertEquals(clockwork.controls[1].values, {
+        "",
+        "WeaponUpgrade",
+        "StackUpgradeTriple",
+        "TalentBigDrop",
+        "RoomMoneyTripleDrop",
     })
 end
 
@@ -90,6 +180,8 @@ function TestRunPlannerRewards.testCatalogNormalizesMajorMinorSurface()
         "Major",
         "Minor",
     })
+    lu.assertEquals(surface.controls[1].displayValues.Major, "Major")
+    lu.assertEquals(surface.controls[1].displayValues.Minor, "Minor")
     lu.assertEquals(surface.controls[1].genericRewardLabelHiddenDrawOpts.label, "")
     lu.assertEquals(surface.controls[2].key, "rewardType")
     lu.assertEquals(surface.controls[2].rewardStore, "RunProgress")
@@ -135,6 +227,35 @@ function TestRunPlannerRewards.testCatalogNormalizesMajorMinorSurface()
         "MetaCardPointsCommonDrop",
         "MetaCardPointsCommonBigDrop",
     })
+    lu.assertEquals(surface.controls[4].displayValues.GiftDrop, "Nectar")
+    lu.assertEquals(surface.controls[4].displayValues.MetaCurrencyBigDrop, "Big Bones")
+    lu.assertEquals(surface.controls[4].displayValues.MetaCardPointsCommonBigDrop, "Big Ashes")
+end
+
+function TestRunPlannerRewards.testCatalogUsesBundleLabelsForMajorMinorCategories()
+    local catalog = loadCatalogWith({
+        godLoot = {},
+        primitives = {},
+        bundles = {
+            MajorBundle = {
+                label = "Primary",
+                options = {},
+            },
+            MinorBundle = {
+                label = "Secondary",
+                options = {},
+            },
+        },
+        shops = {},
+    })
+    local surface = catalog:surfaceFor({
+        kind = "majorMinor",
+        majorRewardStore = "MajorBundle",
+        minorRewardStore = "MinorBundle",
+    })
+
+    lu.assertEquals(surface.controls[1].displayValues.Major, "Primary")
+    lu.assertEquals(surface.controls[1].displayValues.Minor, "Secondary")
 end
 
 function TestRunPlannerRewards.testCatalogSplitsDevotionPairAcrossRows()
@@ -170,6 +291,7 @@ function TestRunPlannerRewards.testCatalogNormalizesBoonOnlySurface()
     lu.assertEquals(surface.controls[1].alias, "Reward1Key")
     lu.assertEquals(surface.controls[1].values[1], "")
     lu.assertEquals(surface.controls[1].values[2], "AphroditeUpgrade")
+    lu.assertEquals(surface.controls[1].displayValues.AphroditeUpgrade, "Aphrodite")
 end
 
 function TestRunPlannerRewards.testCatalogLeavesDevotionGodLabelsIntact()
@@ -223,6 +345,8 @@ function TestRunPlannerRewards.testCatalogNormalizesEphyraSubRoomRewardSurfaces(
         "StackUpgrade",
         "RoomMoneyDrop",
     })
+    lu.assertEquals(surface.controls[1].displayValues.EmptyMaxHealthSmallDrop, "Empty Max Health")
+    lu.assertEquals(surface.controls[1].displayValues.MinorTalentDrop, "Tiny Path")
 end
 
 function TestRunPlannerRewards.testCatalogUsesMajorMinorSurfaceForShipWheel()
@@ -333,6 +457,88 @@ function TestRunPlannerRewards.testRuntimeSnapshotsShopBoonSourcePicks()
     })
 end
 
+function TestRunPlannerRewards.testRuntimeInvalidatesLinkedShopOfferDuplicates()
+    local runtime = loadRuntime()
+    local surface = runtime.surfaceFor({
+        kind = "shop",
+        shopProfile = "Q_WorldShop",
+    })
+
+    lu.assertEquals(surface.uniqueOfferGroups[1].aliases, {
+        "Reward1Key",
+        "Reward2Key",
+    })
+
+    lu.assertTrue(runtime.validate(surface, fakeFields({
+        Reward1Key = "RandomLoot",
+        Reward2Key = "BoostedRandomLoot",
+    })).valid)
+    lu.assertTrue(runtime.validate(surface, fakeFields({
+        Reward1Key = "RandomLoot",
+        Reward2Key = "",
+    })).valid)
+
+    local validation = runtime.validate(surface, fakeFields({
+        Reward1Key = "RandomLoot",
+        Reward2Key = "RandomLoot",
+    }))
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "duplicate_shop_group_option")
+    lu.assertEquals(validation.aliases, {
+        "Reward1Key",
+        "Reward2Key",
+    })
+end
+
+function TestRunPlannerRewards.testUiDrawsLinkedShopInvalidationOnAffectedOfferRows()
+    local runtime = loadRuntime()
+    local surface = runtime.surfaceFor({
+        kind = "shop",
+        shopProfile = "Q_WorldShop",
+    })
+    local invalidAfterAliases = {}
+    local draw
+    draw = {
+        lastAlias = nil,
+        imgui = {
+            AlignTextToFramePadding = function()
+            end,
+            GetCursorPosX = function()
+                return 0
+            end,
+            SameLine = function()
+            end,
+            SetCursorPosX = function()
+            end,
+            Text = function()
+            end,
+        },
+        widgets = {
+            dropdown = function(field)
+                draw.lastAlias = field.alias
+                return false
+            end,
+        },
+    }
+    local routeStatusUi = {
+        drawInvalidInline = function()
+            invalidAfterAliases[#invalidAfterAliases + 1] = draw.lastAlias
+        end,
+    }
+    local rewardUi = loadUi(routeStatusUi)
+
+    lu.assertFalse(rewardUi.draw(draw, surface, fakeDrawFields({
+        Reward1Key = "RandomLoot",
+        Reward1LootKey = "ZeusUpgrade",
+        Reward2Key = "RandomLoot",
+        Reward2LootKey = "HeraUpgrade",
+    })))
+    lu.assertEquals(invalidAfterAliases, {
+        "Reward1LootKey",
+        "Reward2LootKey",
+    })
+end
+
 function TestRunPlannerRewards.testCatalogAppliesIneligibleRewardTypes()
     local catalog = loadCatalog()
     local surface = catalog:surfaceFor({
@@ -380,6 +586,9 @@ function TestRunPlannerRewards.testCatalogNormalizesStandardWorldShopSurface()
 
     lu.assertEquals(surface.kind, "shop")
     lu.assertEquals(#surface.controls, 4)
+    lu.assertEquals(controlByKey(surface, "Boon").label, "Offer 1")
+    lu.assertEquals(controlByKey(surface, "MajorNonBoon").label, "Offer 2")
+    lu.assertEquals(controlByKey(surface, "Minor").label, "Offer 3")
     lu.assertEquals(controlByKey(surface, "Boon").values, {
         "",
         "RandomLoot",
@@ -388,7 +597,7 @@ function TestRunPlannerRewards.testCatalogNormalizesStandardWorldShopSurface()
     })
     lu.assertEquals(controlByKey(surface, "Boon").displayValues.RandomLoot, "Boon")
     lu.assertEquals(controlByKey(surface, "Boon").displayValues.BlindBoxLoot, "Mystery Boon")
-    lu.assertEquals(controlByKey(surface, "Boon").displayValues.ShopHermesUpgrade, "Hermes")
+    lu.assertEquals(controlByKey(surface, "Boon").displayValues.ShopHermesUpgrade, "Hermes Boon")
     lu.assertEquals(controlByKey(surface, "Boon").rowIndex, 1)
     lu.assertEquals(controlByKey(surface, "BoonLoot").alias, "Reward1LootKey")
     lu.assertEquals(controlByKey(surface, "BoonLoot").rowIndex, 1)
@@ -408,6 +617,8 @@ function TestRunPlannerRewards.testCatalogNormalizesStandardWorldShopSurface()
         "SpellDrop",
         "TalentDrop",
     })
+    lu.assertEquals(controlByKey(surface, "Minor").displayValues.StoreRewardRandomStack, "Pom Slice")
+    lu.assertEquals(controlByKey(surface, "Minor").displayValues.SpellDrop, "Selene's Gift")
     lu.assertEquals(controlByKey(surface, "MajorNonBoon").rowIndex, 2)
     lu.assertEquals(controlByKey(surface, "Minor").rowIndex, 3)
 end
@@ -421,6 +632,11 @@ function TestRunPlannerRewards.testCatalogNormalizesTartarusShopSurface()
 
     lu.assertEquals(surface.kind, "shop")
     lu.assertEquals(#surface.controls, 8)
+    lu.assertEquals(controlByKey(surface, "Group1Offer1").label, "Offer 1")
+    lu.assertEquals(controlByKey(surface, "Group2Offer1").label, "Offer 2")
+    lu.assertEquals(controlByKey(surface, "Group3Offer1").label, "Offer 3")
+    lu.assertEquals(controlByKey(surface, "Group4Offer1").label, "Offer 4")
+    lu.assertEquals(controlByKey(surface, "Group5Offer1").label, "Offer 5")
     lu.assertEquals(controlByKey(surface, "Group4Offer1").values, {
         "",
         "WeaponUpgradeDrop",
@@ -434,6 +650,8 @@ function TestRunPlannerRewards.testCatalogNormalizesTartarusShopSurface()
     })
     lu.assertEquals(controlByKey(surface, "Group4Offer1").displayValues.RandomLoot, "Boon")
     lu.assertEquals(controlByKey(surface, "Group4Offer1").displayValues.BoostedRandomLoot, "Boosted Boon")
+    lu.assertEquals(controlByKey(surface, "Group4Offer1").displayValues.WeaponUpgradeDrop, "Hammer")
+    lu.assertEquals(controlByKey(surface, "Group4Offer1").displayValues.ChaosWeaponUpgrade, "Anvil")
     lu.assertEquals(controlByKey(surface, "Group4Offer1Loot").alias, "Reward4LootKey")
     lu.assertEquals(controlByKey(surface, "Group4Offer1Loot").visibleWhen, {
         any = {
@@ -447,6 +665,9 @@ function TestRunPlannerRewards.testCatalogNormalizesTartarusShopSurface()
         "CardUpgradePointsDrop",
         "CharonPointsDrop",
     })
+    lu.assertEquals(controlByKey(surface, "Group5Offer1").displayValues.WeaponPointsRareDrop, "Nightmare")
+    lu.assertEquals(controlByKey(surface, "Group5Offer1").displayValues.CardUpgradePointsDrop, "Moon Dust")
+    lu.assertEquals(controlByKey(surface, "Group5Offer1").displayValues.CharonPointsDrop, "Obol Points")
 end
 
 function TestRunPlannerRewards.testCatalogNormalizesCuratedShopSurface()
@@ -458,6 +679,12 @@ function TestRunPlannerRewards.testCatalogNormalizesCuratedShopSurface()
 
     lu.assertEquals(surface.kind, "shop")
     lu.assertEquals(#surface.controls, 10)
+    lu.assertEquals(controlByKey(surface, "Group1Offer1").label, "Offer 1")
+    lu.assertEquals(controlByKey(surface, "Group1Offer2").label, "Offer 2")
+    lu.assertEquals(controlByKey(surface, "Group2Offer1").label, "Offer 3")
+    lu.assertEquals(controlByKey(surface, "Group3Offer1").label, "Offer 4")
+    lu.assertEquals(controlByKey(surface, "Group4Offer1").label, "Offer 5")
+    lu.assertEquals(controlByKey(surface, "Group5Offer1").label, "Offer 6")
     lu.assertEquals(controlByKey(surface, "Group1Offer1").values, {
         "",
         "RandomLoot",

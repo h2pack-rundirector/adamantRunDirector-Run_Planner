@@ -22,18 +22,14 @@ return function(importer)
                     key = "Opening",
                     label = "Opening",
                     roomKey = "N_Opening01",
-                    reward = rewards.roomStore("RunProgress", {
-                        ineligibleRewardTypes = rewards.rewardSet("OpeningRoomBans"),
-                    }),
+                    reward = rewards.roomStore("OpeningRunProgress"),
                     locked = true,
                 },
                 {
                     key = "PreHub",
                     label = "Pre-Hub",
                     roomKey = "N_PreHub01",
-                    reward = rewards.roomStore("RunProgress", {
-                        ineligibleRewardTypes = rewards.rewardSet("OpeningRoomBans"),
-                    }),
+                    reward = rewards.roomStore("OpeningRunProgress"),
                     locked = true,
                 },
                 {

@@ -13,7 +13,7 @@ local route = {
 route.rowEngine = import("mods/route/row_engine.lua", nil, route)
 
 local rewardCatalogFactory = import("mods/rewards/catalog.lua")
-local rewardCatalog = rewardCatalogFactory.create(import("mods/rewards/surfaces.lua"))
+local rewardCatalog = rewardCatalogFactory.create(import("mods/rewards/definitions.lua"))
 local rewardRuntime = import("mods/rewards/runtime.lua", nil, {
     catalog = rewardCatalog,
 })
@@ -23,6 +23,7 @@ local rewards = {
     runtime = rewardRuntime,
     ui = import("mods/rewards/ui.lua", nil, {
         runtime = rewardRuntime,
+        routeStatusUi = routeStatusUi,
     }),
 }
 

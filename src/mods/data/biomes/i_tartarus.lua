@@ -84,9 +84,7 @@ return function(importer)
                 key = "ExtensionCombat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,
-                reward = rewards.roomStore("TartarusRewards", {
-                    ineligibleRewardTypes = rewards.rewardSet("ClockworkExtensionCombatBans"),
-                }),
+                reward = rewards.roomStore("ClockworkExtensionRewards"),
                 countsNonGoalReward = true,
             },
             {

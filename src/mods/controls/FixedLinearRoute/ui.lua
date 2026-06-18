@@ -156,7 +156,9 @@ local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey, co
 end
 
 local function drawRowValidation(draw, control, instance, rowIndex)
-    local validation = data.validateRow(instance, control:routeRows(), rowIndex)
+    local validation = control.rowValidation ~= nil
+        and control:rowValidation(rowIndex)
+        or data.validateRow(instance, control:routeRows(), rowIndex)
     if validation.valid then
         return
     end
@@ -224,8 +226,6 @@ local function drawRewardRow(draw, control, instance, rowIndex)
     local surface = control:rewardSurface(rowIndex)
 
     drawRewardRowHeader(imgui, control, rowIndex, slot)
-    drawRowValidation(draw, control, instance, rowIndex)
-
     if rewardUi ~= nil
         and rewardRuntime ~= nil
         and rewardRuntime.hasControls(surface)

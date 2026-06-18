@@ -2,25 +2,6 @@ return function(importer)
 local routeRules = importer("mods/data/route_rules.lua")
 local rewards = {}
 
-local REWARD_SETS = {
-    OpeningRoomBans = {
-        "RoomMoneyDrop",
-        "MaxHealthDrop",
-        "MaxManaDrop",
-    },
-    HubCombatRoomEasyBans = {
-        "WeaponUpgrade",
-        "HermesUpgrade",
-        "HephaestusUpgrade",
-    },
-    PreBossRoomBans = {
-        "RoomMoneyDrop",
-    },
-    ClockworkExtensionCombatBans = {
-        "Boon",
-    },
-}
-
 local function copyList(items)
     local copy = {}
     for index, item in ipairs(items or {}) do
@@ -65,14 +46,6 @@ function rewards.majorMinor(opts)
         majorRewardStore = opts.majorRewardStore or "RunProgress",
         minorRewardStore = opts.minorRewardStore or "MetaProgress",
     }
-end
-
-function rewards.rewardSet(name)
-    local set = REWARD_SETS[name]
-    if set == nil then
-        error("unknown reward set: " .. tostring(name), 2)
-    end
-    return copyList(set)
 end
 
 function rewards.forcedReward(rewardType, opts)
