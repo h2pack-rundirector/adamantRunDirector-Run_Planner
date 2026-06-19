@@ -59,7 +59,7 @@ local function buildPylonSlot(instance, pick)
         coordinate = pick,
         kind = "pylonPick",
         label = "Pylon " .. tostring(pick),
-    }, instance.biome.slotLayout and instance.biome.slotLayout.default or nil)
+    })
 end
 
 local function buildRouteSlots(instance)

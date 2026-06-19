@@ -58,9 +58,7 @@ local function combatRoom(roomKey, hubDoorId, sideDoors, opts)
     if opts.reward ~= nil then
         room.reward = opts.reward
     end
-    if opts.biomeEncounterDepthCost ~= nil then
-        room.biomeEncounterDepthCost = opts.biomeEncounterDepthCost
-    end
+    room.biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1
     return room
 end
 

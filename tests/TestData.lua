@@ -350,11 +350,14 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
     local biomes = data.loadBiomes(testImport)
 
     lu.assertEquals(biomes.lookup.F.slotLayout.special[0].biomeEncounterDepthCost, 1)
-    lu.assertEquals(biomes.lookup.F.slotLayout.default.biomeEncounterDepthCost, 1)
-    lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.biomeEncounterDepthCost, 1)
+    lu.assertNil(biomes.lookup.F.slotLayout.default)
+    lu.assertNil(biomes.lookup.F.rolesByKey.Vanilla.biomeEncounterDepthCost)
+    lu.assertNil(biomes.lookup.F.rolesByKey.Combat.biomeEncounterDepthCost)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.mapOptions[1].biomeEncounterDepthCost, 1)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Story.biomeEncounterDepthCost, 0)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Fountain.biomeEncounterDepthCost, 0)
-    lu.assertEquals(biomes.lookup.F.rolesByKey.Trial.biomeEncounterDepthCost, 1)
+    lu.assertNil(biomes.lookup.F.rolesByKey.Trial.biomeEncounterDepthCost)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Trial.mapOptions[1].biomeEncounterDepthCost, 1)
 
     assertMinibossCosts(biomes.lookup.F.rolesByKey.Miniboss, {
         F_MiniBoss01 = 1,
@@ -397,7 +400,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
     lu.assertEquals(biomes.lookup.F.slotLayout.special[10].biomeEncounterDepthCost, 0)
 
     local thessalyPolicy = biomes.lookup.O.combatEncounterPolicy.countControl.options
-    lu.assertEquals(thessalyPolicy[1].biomeEncounterDepthCost, 1)
+    lu.assertNil(thessalyPolicy[1].biomeEncounterDepthCost)
     lu.assertEquals(thessalyPolicy[2].biomeEncounterDepthCost, 1)
     lu.assertEquals(thessalyPolicy[3].biomeEncounterDepthCost, 2)
 end

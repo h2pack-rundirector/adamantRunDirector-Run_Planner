@@ -2562,6 +2562,7 @@ function TestRunPlannerControls.testMultiEncounterStorageMatchesThessalyRouteRow
         },
         {
             RoleKey = "Combat",
+            VariantKey = "TwoCombats",
         },
         {
             RoleKey = "Combat",
@@ -3652,9 +3653,9 @@ function TestRunPlannerControls.testFixedLinearAvailabilityFiltersRolesByRouteRo
 
     rows = fakeRows({
         { RoleKey = "" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
+        { RoleKey = "Combat", OptionKey = "F_Combat01" },
+        { RoleKey = "Combat", OptionKey = "F_Combat02" },
+        { RoleKey = "Combat", OptionKey = "F_Combat03" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat02",
@@ -3682,6 +3683,13 @@ function TestRunPlannerControls.testFixedLinearAvailabilityFiltersOptionsByRoute
     lu.assertTrue(hasValue(values, "F_Combat01"))
     lu.assertFalse(hasValue(values, "F_Combat05"))
 
+    rows = fakeRows({
+        { RoleKey = "" },
+        { RoleKey = "Combat", OptionKey = "F_Combat01" },
+        { RoleKey = "Combat", OptionKey = "F_Combat02" },
+        { RoleKey = "Combat", OptionKey = "F_Combat03" },
+        { RoleKey = "Combat", OptionKey = "F_Combat04" },
+    })
     data.fillOptionValues(instance, rows, 6, "Combat", values)
     lu.assertTrue(hasValue(values, "F_Combat05"))
     lu.assertFalse(hasValue(values, "F_Combat09"))
@@ -3796,13 +3804,16 @@ function TestRunPlannerControls.testFixedLinearAvailabilityConsumesPriorOneShotR
             OptionKey = "F_Story01",
         },
         {
-            RoleKey = "Vanilla",
+            RoleKey = "Combat",
+            OptionKey = "F_Combat01",
         },
         {
-            RoleKey = "Vanilla",
+            RoleKey = "Combat",
+            OptionKey = "F_Combat02",
         },
         {
-            RoleKey = "Vanilla",
+            RoleKey = "Combat",
+            OptionKey = "F_Combat03",
         },
         {
             RoleKey = "Story",
@@ -3829,9 +3840,9 @@ function TestRunPlannerControls.testFixedLinearAvailabilityChecksPreviousRoomExi
 
     data.fillRoleValues(instance, fakeRows({
         { RoleKey = "" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
+        { RoleKey = "Combat", OptionKey = "F_Combat01" },
+        { RoleKey = "Combat", OptionKey = "F_Combat02" },
+        { RoleKey = "Combat", OptionKey = "F_Combat03" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat01",
@@ -3841,9 +3852,9 @@ function TestRunPlannerControls.testFixedLinearAvailabilityChecksPreviousRoomExi
 
     data.fillRoleValues(instance, fakeRows({
         { RoleKey = "" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
+        { RoleKey = "Combat", OptionKey = "F_Combat01" },
+        { RoleKey = "Combat", OptionKey = "F_Combat02" },
+        { RoleKey = "Combat", OptionKey = "F_Combat03" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat02",
@@ -3861,9 +3872,9 @@ function TestRunPlannerControls.testFixedLinearReadPassInvalidationRefreshesCach
     })
     local rowState = {
         { RoleKey = "" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
+        { RoleKey = "Combat", OptionKey = "F_Combat01" },
+        { RoleKey = "Combat", OptionKey = "F_Combat02" },
+        { RoleKey = "Combat", OptionKey = "F_Combat03" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat01",
@@ -3895,13 +3906,16 @@ function TestRunPlannerControls.testFixedLinearRowContextUsesSelectionDepthCosts
             RoleKey = "",
         },
         {
-            RoleKey = "Vanilla",
+            RoleKey = "Combat",
+            OptionKey = "F_Combat01",
         },
         {
-            RoleKey = "Vanilla",
+            RoleKey = "Combat",
+            OptionKey = "F_Combat02",
         },
         {
-            RoleKey = "Vanilla",
+            RoleKey = "Combat",
+            OptionKey = "F_Combat03",
         },
         {
             RoleKey = "Story",
@@ -3918,7 +3932,9 @@ function TestRunPlannerControls.testFixedLinearRowContextUsesSelectionDepthCosts
         coordinate = 0,
         biomeDepthCache = 0,
         biomeEncounterDepth = 0,
+        biomeEncounterDepthKnown = true,
         biomeEncounterDepthCost = 1,
+        biomeEncounterDepthCostKnown = true,
         roomHistoryCost = 1,
     })
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeDepthCache, 4)
@@ -3927,6 +3943,36 @@ function TestRunPlannerControls.testFixedLinearRowContextUsesSelectionDepthCosts
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeDepthCache, 5)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepth, 4)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthCost, 1)
+end
+
+function TestRunPlannerControls.testFixedLinearUnknownEncounterDepthBlocksDepthGatedOptions()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local rows = fakeRows({
+        {
+            RoleKey = "",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat05",
+        },
+    })
+
+    local context = data.rowContext(instance, rows, 3)
+    lu.assertNil(context.biomeEncounterDepth)
+    lu.assertFalse(context.biomeEncounterDepthKnown)
+    lu.assertFalse(data.isOptionAvailable(instance, rows, 3, "Combat", "F_Combat05"))
+
+    local validation = data.validateRow(instance, rows, 3)
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "encounter_depth_unknown")
 end
 
 function TestRunPlannerControls.testFixedLinearRowContextUsesOptionDepthCostOverrides()
@@ -3953,7 +3999,8 @@ function TestRunPlannerControls.testFixedLinearRowContextUsesOptionDepthCostOver
             OptionKey = "Q_MiniBoss02",
         },
         {
-            RoleKey = "Vanilla",
+            RoleKey = "Combat",
+            OptionKey = "Q_Combat04",
         },
         {
             RoleKey = "Combat",
@@ -4118,7 +4165,8 @@ function TestRunPlannerControls.testFixedLinearAvailabilityChecksTrialRewardRequ
             Reward3Key = "ApolloUpgrade",
         },
         {
-            RoleKey = "Vanilla",
+            RoleKey = "Combat",
+            OptionKey = "F_Combat01",
         },
         {
             RoleKey = "Combat",
@@ -4515,8 +4563,8 @@ function TestRunPlannerControls.testRouteContextFiltersOlympusNpcsByRoomTag()
     })
     local pControl = template.createRuntime(routeFields({
         {},
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
+        { RoleKey = "Combat", OptionKey = "P_Combat02" },
+        { RoleKey = "Combat", OptionKey = "P_Combat04" },
         {
             RoleKey = "Combat",
             OptionKey = "P_Combat02",
@@ -4801,8 +4849,8 @@ function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesPreviousRoomExi
     })
 	    local control = template.createRuntime(routeFields({
 	            { RoleKey = "" },
-	            { RoleKey = "Vanilla" },
-	            { RoleKey = "Vanilla" },
+	            { RoleKey = "Combat", OptionKey = "F_Combat02" },
+	            { RoleKey = "Combat", OptionKey = "F_Combat03" },
 	            {
                 RoleKey = "Combat",
                 OptionKey = "F_Combat01",
@@ -4843,10 +4891,12 @@ function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesTrialRewardRequ
                 Reward3Key = "ZeusUpgrade",
             },
             {
-                RoleKey = "Vanilla",
+                RoleKey = "Combat",
+                OptionKey = "F_Combat03",
             },
             {
-                RoleKey = "Vanilla",
+                RoleKey = "Combat",
+                OptionKey = "F_Combat04",
             },
             {
                 RoleKey = "Combat",
@@ -4909,7 +4959,7 @@ function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesOutOfRangeAndDu
     lu.assertTrue(snapshot.disabled)
     lu.assertEquals(#snapshot.invalidRows, 2)
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
-    lu.assertEquals(snapshot.invalidRows[1].code, "option_unavailable")
+    lu.assertEquals(snapshot.invalidRows[1].code, "biome_depth_unavailable")
     lu.assertEquals(snapshot.invalidRows[2].rowIndex, 7)
     lu.assertEquals(snapshot.invalidRows[2].code, "role_limit")
     lu.assertEquals(snapshot.rows[2].roleKey, "Story")

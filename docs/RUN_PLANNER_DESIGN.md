@@ -26,6 +26,12 @@ own any coordinate translation. Encounter-depth context is computed from prior
 row costs; the current row's cost is exported for snapshots but does not make
 that row eligible for its own encounter-depth gates.
 
+Encounter depth is intentionally unknown after an unresolved row such as
+Vanilla/Auto or a mixed-cost role without a concrete option. Options with
+`availability.biomeEncounterDepth` fail closed while encounter depth is unknown;
+the user must make prior rows concrete enough for the planner to prove the
+counter.
+
 - The boss room is excluded.
 - The preboss room is included at its vanilla force depth.
 - Post-boss transition rooms are excluded. Boss rooms link to them, and they
@@ -127,16 +133,9 @@ Each normal route depth has one primary plan:
 }
 ```
 
-The unplanned alternate branch defaults to `VanillaSafe`:
-
-```lua
-{
-    alternate = "VanillaSafe",
-}
-```
-
-`VanillaSafe` means vanilla/random selection, excluding rooms reserved for later
-planned depths.
+Unplanned alternate branches are currently deferred to vanilla/runtime
+reservation policy. They should not contribute encounter-depth cost until the
+runtime implementation can prove what room was selected.
 
 ## Run-Start Plan Snapshot
 
@@ -681,13 +680,12 @@ The main declaration file is the source of truth for route and role semantics:
 - `slotLayout.routeStartDepth` and `slotLayout.routeEndDepth`: normal planned
   route depths. Locked intros and preboss depths sit outside this range. The
   `F` opening is also outside this range, but is rendered as a fixed special row.
-- `slotLayout.default`: default depth behavior, currently `VanillaSafe`
-  alternate generation.
 - `slotLayout.special`: per-depth overrides such as intro/opening and preboss
   branch shape.
-- `biomeEncounterDepthCost`: default row cost on `slotLayout.default`, fixed
-  slots, roles, or concrete room options. Concrete options override roles when
-  vanilla marks one room in a role as non-counting.
+- `biomeEncounterDepthCost`: known encounter-depth cost on fixed slots,
+  concrete room options, or roles whose every selectable option shares the same
+  cost. Vanilla/Auto rows do not declare a cost; they make later encounter-depth
+  availability unknown until the user selects concrete prior rows.
 - `requiresConcreteOption`: option-bearing roles such as Miniboss can disable
   Auto and require a concrete vanilla room selection. Miniboss costs live on the
   leaf options because later availability can depend on the selected variant.
@@ -924,4 +922,4 @@ store comes from the subroom declaration: most use `SubRoomRewards`, while
 - Decide how much reward reservation belongs in this module versus God Pool or
   Boon Bans interactions.
 - Decide whether the UI should ever expose alternate branch planning. The first
-  version should not; `VanillaSafe` is the simpler default.
+  version should not; alternate branches stay vanilla/runtime-owned.

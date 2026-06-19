@@ -82,7 +82,7 @@ local function buildRouteSlot(instance, row)
         routeRow = row,
         kind = "clockworkRoute",
         label = "Step " .. tostring(row),
-    }, instance.biome.slotLayout and instance.biome.slotLayout.default or nil)
+    })
 end
 
 local function buildRouteSlots(instance)

@@ -25,11 +25,6 @@ return function(importer)
             routeStartPick = 1,
             routeEndPick = 6,
             requiredPylons = 6,
-            default = {
-                kind = "pylonPick",
-                alternate = "VanillaSafe",
-                biomeEncounterDepthCost = 1,
-            },
             fixedBeforeHub = {
                 {
                     key = "Opening",
@@ -103,7 +98,6 @@ return function(importer)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
-                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Combat",
@@ -113,7 +107,6 @@ return function(importer)
                 sideRooms = {
                     identity = "parentCombatRoomAndDoorId",
                 },
-                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Story",

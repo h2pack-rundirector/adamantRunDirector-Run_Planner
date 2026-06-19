@@ -108,7 +108,7 @@ local function buildRouteSlots(instance)
             coordinate = depth,
             kind = "route",
             label = "Depth " .. tostring(depth),
-        }, slotLayout.default)
+        })
     end
 
     local specialDepths = {}
@@ -219,6 +219,11 @@ end
 
 local function isVariantAvailableAtContext(variant, context)
     if variant == nil then
+        return false
+    end
+    if variant.availableAtBiomeEncounterDepth ~= nil
+        and (context == nil or context.biomeEncounterDepthKnown == false or context.biomeEncounterDepth == nil)
+    then
         return false
     end
     return isInRange(context and context.biomeEncounterDepth, variant.availableAtBiomeEncounterDepth)

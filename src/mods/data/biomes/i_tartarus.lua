@@ -26,11 +26,6 @@ return function(importer)
             routeEndRow = 12,
             requiredGoalRewards = 5,
             maxRouteRows = 12,
-            default = {
-                kind = "goal",
-                alternate = "VanillaSafe",
-                biomeEncounterDepthCost = 1,
-            },
             fixedBeforeRoute = {
                 {
                     key = "Intro",
@@ -87,7 +82,6 @@ return function(importer)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
-                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Goal",
@@ -95,7 +89,6 @@ return function(importer)
                 mapOptions = layout.combatRooms,
                 reward = rewards.forcedReward("ClockworkGoal"),
                 countsGoalReward = true,
-                biomeEncounterDepthCost = 1,
             },
             {
                 key = "ExtensionCombat",
@@ -103,7 +96,6 @@ return function(importer)
                 mapOptions = layout.combatRooms,
                 reward = rewards.roomStore("ClockworkExtensionRewards"),
                 countsNonGoalReward = true,
-                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Trial",
@@ -112,7 +104,6 @@ return function(importer)
                 reward = rewards.devotion({ rewardStore = "RunProgress" }),
                 routeRules = routeRules.role("Trial"),
                 countsNonGoalReward = true,
-                biomeEncounterDepthCost = 1,
                 reserve = true,
             },
             {

@@ -29,11 +29,6 @@ return function(importer)
                 biomeEncounterDepthCost = 0,
                 locked = true,
             },
-            default = {
-                kind = "route",
-                alternate = "VanillaSafe",
-                biomeEncounterDepthCost = 1,
-            },
             special = {
                 [8] = {
                     kind = "preboss",
@@ -59,14 +54,12 @@ return function(importer)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
-                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Combat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,
                 reward = rewards.majorMinor(),
-                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Story",
@@ -101,7 +94,6 @@ return function(importer)
                 label = "Trial",
                 mapOptions = layout.trialCombatRooms,
                 reward = rewards.devotion({ rewardStore = "RunProgress" }),
-                biomeEncounterDepthCost = 1,
                 routeRules = routeRules.role("Trial"),
                 reserve = true,
             },

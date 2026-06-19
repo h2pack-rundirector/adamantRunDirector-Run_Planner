@@ -18,7 +18,7 @@ local function combatRoom(roomKey, exitCount, opts)
         features = opts.features or WELL_SHOP_FEATURES,
         reward = opts.reward or rewards.roomStore("ClockworkExtensionRewards"),
         availability = opts.availability,
-        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
     }
 end
 

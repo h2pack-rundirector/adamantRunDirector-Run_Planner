@@ -147,7 +147,7 @@ local function buildRouteSlots(instance)
             coordinate = depth,
             kind = "route",
             label = "Depth " .. tostring(depth),
-        }, slotLayout.default)
+        })
     end
 
     local specialDepths = {}

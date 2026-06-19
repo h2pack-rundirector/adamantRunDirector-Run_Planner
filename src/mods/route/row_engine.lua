@@ -19,6 +19,7 @@ local buildRoleChoices = common.buildRoleChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
 local isAvailable = availability.isAvailable
+local availabilityStatus = availability.status
 local optionCap = availability.optionCap
 local activeReadCache = readCache.active
 local rowRecord = readCache.rowRecord
@@ -204,7 +205,7 @@ function rowEngine.create(adapter)
         if cost ~= nil then
             return cost
         end
-        return 0
+        return nil
     end
 
     local function rowBiomeEncounterDepthCost(instance, rows, rowIndex)
@@ -218,17 +219,29 @@ function rowEngine.create(adapter)
     local function rowContextUncached(instance, rows, rowIndex, target)
         local slot = slotForRow(instance, rowIndex)
         local biomeEncounterDepth = 0
+        local biomeEncounterDepthKnown = true
         if rowIndex > 1 then
             local previous = data.rowContext(instance, rows, rowIndex - 1)
-            biomeEncounterDepth = (previous and previous.biomeEncounterDepth or 0)
-                + (previous and previous.biomeEncounterDepthCost or 0)
+            if previous == nil
+                or previous.biomeEncounterDepthKnown == false
+                or previous.biomeEncounterDepth == nil
+                or previous.biomeEncounterDepthCost == nil
+            then
+                biomeEncounterDepth = nil
+                biomeEncounterDepthKnown = false
+            else
+                biomeEncounterDepth = previous.biomeEncounterDepth + previous.biomeEncounterDepthCost
+            end
         end
+        local biomeEncounterDepthCost = rowBiomeEncounterDepthCost(instance, rows, rowIndex)
         target = target or {}
         target.rowIndex = rowIndex
         target.coordinate = slot and slot.coordinate or nil
         target.biomeDepthCache = common.slotBiomeDepthCache(slot)
         target.biomeEncounterDepth = biomeEncounterDepth
-        target.biomeEncounterDepthCost = rowBiomeEncounterDepthCost(instance, rows, rowIndex)
+        target.biomeEncounterDepthKnown = biomeEncounterDepthKnown
+        target.biomeEncounterDepthCost = biomeEncounterDepthCost
+        target.biomeEncounterDepthCostKnown = biomeEncounterDepthCost ~= nil
         target.roomHistoryCost = slot and slot.roomHistoryCost or nil
         return target
     end
@@ -610,6 +623,12 @@ function rowEngine.create(adapter)
                 return validStatus()
             end
             return invalidStatus("option_unavailable", tostring(role.label or roleKey) .. " has no valid option here")
+        end
+        if resolvedOptionKey ~= "" then
+            local status = availabilityStatus(option, data.rowContext(instance, rows, rowIndex))
+            if not status.valid then
+                return invalidStatus(status.code, status.message)
+            end
         end
         if resolvedOptionKey == "" or not data.isOptionAvailable(instance, rows, rowIndex, roleKey, resolvedOptionKey) then
             local message

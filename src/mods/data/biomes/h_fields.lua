@@ -21,11 +21,6 @@ return function(importer)
             coordinate = "FieldsRoutePick",
             routeStartPick = 1,
             routeEndPick = 4,
-            default = {
-                kind = "fieldsPick",
-                alternate = "VanillaSafe",
-                biomeEncounterDepthCost = 0,
-            },
             fixedBeforeRoute = {
                 {
                     key = "Intro",
@@ -66,7 +61,6 @@ return function(importer)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
-                biomeEncounterDepthCost = 0,
             },
             {
                 key = "Combat",
@@ -76,7 +70,6 @@ return function(importer)
                     rewardStore = "RunProgress",
                 }),
                 cageRewardPolicy = "H_FieldsCageRewards",
-                biomeEncounterDepthCost = 0,
             },
             {
                 key = "Miniboss",

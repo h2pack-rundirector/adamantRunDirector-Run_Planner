@@ -61,7 +61,7 @@ local function buildPickSlot(instance, pick)
         coordinate = pick,
         kind = "fieldsPick",
         label = "Pick " .. tostring(pick),
-    }, instance.biome.slotLayout and instance.biome.slotLayout.default or nil)
+    })
 end
 
 local function buildRouteSlots(instance)

@@ -46,7 +46,7 @@ local function combat(roomKey, opts)
         tags = opts.tags,
         features = opts.features or (SURFACE_SHOP_COMBAT_ROOMS[roomKey] and CHAOS_SURFACE_FEATURES or CHAOS_FEATURES),
         availability = opts.availability,
-        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
     })

@@ -36,6 +36,7 @@ end
 local function combat(roomKey, opts)
     opts = opts or {}
     opts.features = opts.features or (SURFACE_SHOP_COMBAT_ROOMS[roomKey] and SURFACE_SHOP_FEATURES or nil)
+    opts.biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1
     return option(roomKey, "Combat " .. string.sub(roomKey, -2), opts)
 end
 
@@ -68,7 +69,6 @@ layout.combatEncounterPolicy = {
             {
                 key = "Vanilla",
                 label = "Vanilla",
-                biomeEncounterDepthCost = 1,
             },
             {
                 key = "TwoCombats",
@@ -169,6 +169,7 @@ layout.shopRooms = {
 
 layout.trialRooms = {
     option("O_Devotion01", "Trial", {
+        biomeEncounterDepthCost = 1,
         features = SURFACE_SHOP_FEATURES,
         availability = {
             biomeEncounterDepth = { min = 2 },
