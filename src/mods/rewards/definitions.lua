@@ -100,7 +100,7 @@ definitions.bundles = {
             "HermesUpgrade",
             "WeaponUpgrade",
             "StackUpgrade",
-            "TalentDrop",
+            "SpellDrop",
         },
     },
     PreBossRunProgress = {

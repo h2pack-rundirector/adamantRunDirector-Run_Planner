@@ -108,7 +108,7 @@ function TestRunPlannerRewards.testCatalogNormalizesSpecializedRewardBundles()
         "HermesUpgrade",
         "WeaponUpgrade",
         "StackUpgrade",
-        "TalentDrop",
+        "SpellDrop",
     })
 
     local preboss = catalog:surfaceFor({
