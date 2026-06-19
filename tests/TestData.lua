@@ -228,6 +228,15 @@ function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
     lu.assertEquals(biomes.lookup.O.slotLayout.depthRange, { min = 1, max = 7 })
     lu.assertEquals(biomes.lookup.O.slotLayout.routeStartDepth, 1)
     lu.assertEquals(biomes.lookup.O.slotLayout.routeEndDepth, 6)
+    lu.assertEquals(biomes.lookup.O.biomeRules[1], {
+        key = "story_or_shop_deadline",
+        type = "requireAnyRoomByCounter",
+        counter = "biomeDepthCache",
+        deadline = 5,
+        roomKeys = { "O_Story01", "O_Shop01" },
+        code = "thessaly_story_or_shop_deadline",
+        message = "Thessaly requires Circe or Shop by depth 5",
+    })
 
     lu.assertEquals(biomes.lookup.P.slotLayout.depthRange, { min = 1, max = 9 })
     lu.assertEquals(biomes.lookup.P.slotLayout.routeStartDepth, 1)

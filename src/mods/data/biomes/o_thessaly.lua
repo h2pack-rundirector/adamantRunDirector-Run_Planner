@@ -17,6 +17,17 @@ return function(importer)
                 roomHistoryDepth = { min = 3 },
             },
         },
+        biomeRules = {
+            {
+                key = "story_or_shop_deadline",
+                type = "requireAnyRoomByCounter",
+                counter = "biomeDepthCache",
+                deadline = 5,
+                roomKeys = { "O_Story01", "O_Shop01" },
+                code = "thessaly_story_or_shop_deadline",
+                message = "Thessaly requires Circe or Shop by depth 5",
+            },
+        },
         slotLayout = {
             coordinate = "BiomeDepthCache",
             depthRange = { min = 1, max = 7 },

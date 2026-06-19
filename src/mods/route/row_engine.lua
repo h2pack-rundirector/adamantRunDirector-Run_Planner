@@ -3,6 +3,7 @@ local common = deps.common
 local availability = deps.availability
 local readCache = deps.readCache
 local requirements = deps.requirements
+local biomeRules = deps.biomeRules
 
 local rowEngine = {}
 
@@ -543,7 +544,24 @@ function rowEngine.create(adapter)
         return optionKey, option
     end
 
-    local function validateRowUncached(instance, rows, rowIndex)
+    local function rowRoomKeyUncached(instance, rows, rowIndex)
+        local slot = slotForRow(instance, rowIndex)
+        local roleKey, role = data.resolveRole(instance, rows, rowIndex)
+        local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
+        if option ~= nil and option.key ~= nil and option.key ~= "" then
+            return option.key
+        end
+        if role ~= nil and role.roomKey ~= nil and role.roomKey ~= "" then
+            return role.roomKey
+        end
+        return slot and slot.roomKey or nil
+    end
+
+    function data.rowRoomKey(instance, rows, rowIndex)
+        return rowRoomKeyUncached(instance, rows, rowIndex)
+    end
+
+    local function validateBaseRowUncached(instance, rows, rowIndex)
         local slot = slotForRow(instance, rowIndex)
         local roleKey, role = data.resolveRole(instance, rows, rowIndex)
         if role == nil then
@@ -607,6 +625,24 @@ function rowEngine.create(adapter)
             return invalidStatus(requirementStatus.code, requirementStatus.message)
         end
         return validStatus()
+    end
+
+    function data.validateBaseRow(instance, rows, rowIndex)
+        return validateBaseRowUncached(instance, rows, rowIndex)
+    end
+
+    local function validateRowUncached(instance, rows, rowIndex)
+        local status = validateBaseRowUncached(instance, rows, rowIndex)
+        if not status.valid then
+            return status
+        end
+        if biomeRules ~= nil then
+            status = biomeRules.status(routeApi, instance, rows, rowIndex)
+            if not status.valid then
+                return status
+            end
+        end
+        return status
     end
 
     function data.validateRow(instance, rows, rowIndex)
@@ -736,6 +772,9 @@ function rowEngine.create(adapter)
     routeApi = {
         resolveRole = data.resolveRole,
         resolveOption = data.resolveOption,
+        rowContext = data.rowContext,
+        rowRoomKey = data.rowRoomKey,
+        validateBaseRow = data.validateBaseRow,
         validateRow = data.validateRow,
     }
 

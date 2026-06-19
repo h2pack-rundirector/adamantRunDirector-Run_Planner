@@ -2,11 +2,15 @@ local routeCommon = import("mods/route/common.lua")
 local routeRequirements = import("mods/route/requirements.lua", nil, {
     common = routeCommon,
 })
+local routeBiomeRules = import("mods/route/biome_rules.lua", nil, {
+    common = routeCommon,
+})
 local route = {
     common = routeCommon,
     availability = import("mods/route/availability.lua"),
     readCache = import("mods/route/read_cache.lua"),
     requirements = routeRequirements,
+    biomeRules = routeBiomeRules,
     timeline = import("mods/route/timeline.lua"),
     rewardOfferPolicies = import("mods/data/reward_offer_policies.lua"),
     rewardOfferRules = import("mods/route/reward_offer_rules.lua"),

@@ -33,6 +33,9 @@ local function loadRouteDeps()
         requirements = testImport("mods/route/requirements.lua", nil, {
             common = common,
         }),
+        biomeRules = testImport("mods/route/biome_rules.lua", nil, {
+            common = common,
+        }),
     }
     route.rowEngine = testImport("mods/route/row_engine.lua", nil, route)
     return route
@@ -1920,6 +1923,70 @@ function TestRunPlannerControls.testFixedLinearQShopSharedOfferGroupInvalidatesD
     lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_shop_group_option")
 end
 
+local function buildThessalyRuntime(rows)
+    local catalog = loadCatalog()
+    local template = loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    return template.createRuntime(routeFields(rows), instance)
+end
+
+function TestRunPlannerControls.testThessalyRequiresStoryOrShopByDepthFive()
+    local control = buildThessalyRuntime({
+        {},
+        { RoleKey = "Combat", OptionKey = "O_Combat01" },
+        { RoleKey = "Combat", OptionKey = "O_Combat02" },
+        { RoleKey = "Combat", OptionKey = "O_Combat03" },
+        { RoleKey = "Combat", OptionKey = "O_Combat05" },
+        { RoleKey = "Combat", OptionKey = "O_Combat06" },
+    })
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertTrue(snapshot.rows[5].valid)
+    lu.assertFalse(snapshot.rows[6].valid)
+    lu.assertEquals(snapshot.rows[6].coordinate, 5)
+    lu.assertEquals(snapshot.rows[6].invalidCode, "thessaly_story_or_shop_deadline")
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 6)
+    lu.assertEquals(snapshot.invalidRows[1].code, "thessaly_story_or_shop_deadline")
+end
+
+function TestRunPlannerControls.testThessalyDepthFiveStorySatisfiesDeadline()
+    local control = buildThessalyRuntime({
+        {},
+        { RoleKey = "Combat", OptionKey = "O_Combat01" },
+        { RoleKey = "Combat", OptionKey = "O_Combat02" },
+        { RoleKey = "Combat", OptionKey = "O_Combat03" },
+        { RoleKey = "Combat", OptionKey = "O_Combat05" },
+        { RoleKey = "Story", OptionKey = "O_Story01" },
+    })
+    local snapshot = control:buildSnapshot()
+
+    lu.assertTrue(snapshot.valid)
+    lu.assertFalse(snapshot.disabled)
+    lu.assertTrue(snapshot.rows[6].valid)
+end
+
+function TestRunPlannerControls.testThessalyPriorShopSatisfiesDeadline()
+    local control = buildThessalyRuntime({
+        {},
+        { RoleKey = "Combat", OptionKey = "O_Combat01" },
+        { RoleKey = "Combat", OptionKey = "O_Combat02" },
+        { RoleKey = "Combat", OptionKey = "O_Combat03", VariantKey = "ThreeCombats" },
+        { RoleKey = "Midshop", OptionKey = "O_Shop01" },
+        { RoleKey = "Combat", OptionKey = "O_Combat06" },
+    })
+    local snapshot = control:buildSnapshot()
+
+    lu.assertTrue(snapshot.valid)
+    lu.assertFalse(snapshot.disabled)
+    lu.assertTrue(snapshot.rows[5].valid)
+    lu.assertTrue(snapshot.rows[6].valid)
+end
+
 function TestRunPlannerControls.testClockworkGoalStorageMatchesTartarusRouteRows()
     local catalog = loadCatalog()
     local template = loadClockworkGoalTemplate()
@@ -2982,12 +3049,13 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
                 Reward4Key = "GiftDrop",
             },
             {
+                RoleKey = "Story",
+                OptionKey = "O_Story01",
+            },
+            {
                 RoleKey = "Combat",
                 OptionKey = "O_Combat05",
                 VariantKey = "TwoCombats",
-            },
-            {
-                RoleKey = "Vanilla",
             },
             {},
         }, nil, nil, {
@@ -3016,11 +3084,14 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
             },
             {},
             {},
+            {},
+            {},
             {
                 Reward1Key = "Major",
                 Reward2Key = "Boon",
                 Reward3Key = "HestiaUpgrade",
             },
+            {},
         }), instance)
     local snapshot = control:buildSnapshot()
 
@@ -3087,13 +3158,21 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
     lu.assertEquals(snapshot.rows[5].rewardPicks[1].value, "Minor")
     lu.assertEquals(snapshot.rows[5].rewardPicks[2].value, "GiftDrop")
 
-    lu.assertEquals(snapshot.rows[6].roleKey, "Combat")
-    lu.assertEquals(snapshot.rows[6].variantKey, "TwoCombats")
-    lu.assertEquals(snapshot.rows[6].realCombatCount, 2)
+    lu.assertEquals(snapshot.rows[6].roleKey, "Story")
+    lu.assertEquals(snapshot.rows[6].optionKey, "O_Story01")
+    lu.assertEquals(snapshot.rows[6].variantKey, "")
+    lu.assertNil(snapshot.rows[6].variant)
+    lu.assertNil(snapshot.rows[6].realCombatCount)
     lu.assertEquals(snapshot.rows[6].rewardKind, "none")
-    lu.assertEquals(#snapshot.rows[6].encounterRewardLegs, 1)
-    lu.assertEquals(snapshot.rows[6].encounterRewardLegs[1].key, "Combat1")
-    lu.assertEquals(snapshot.rows[6].encounterRewardLegs[1].rewardPicks[3].value, "HestiaUpgrade")
+    lu.assertEquals(snapshot.rows[6].encounterRewardLegs, {})
+
+    lu.assertEquals(snapshot.rows[7].roleKey, "Combat")
+    lu.assertEquals(snapshot.rows[7].variantKey, "TwoCombats")
+    lu.assertEquals(snapshot.rows[7].realCombatCount, 2)
+    lu.assertEquals(snapshot.rows[7].rewardKind, "none")
+    lu.assertEquals(#snapshot.rows[7].encounterRewardLegs, 1)
+    lu.assertEquals(snapshot.rows[7].encounterRewardLegs[1].key, "Combat1")
+    lu.assertEquals(snapshot.rows[7].encounterRewardLegs[1].rewardPicks[3].value, "HestiaUpgrade")
 
     lu.assertEquals(snapshot.rows[8].slotKind, "preboss")
     lu.assertEquals(snapshot.rows[8].roomKey, "O_PreBoss01")
