@@ -15,6 +15,7 @@ local invalidStatus = common.invalidStatus
 local applySlotDepthContext = common.applySlotDepthContext
 
 local data
+local routeTerminatedBeforeRow
 
 local function slotForRow(instance, rowIndex)
     return instance.routeSlots[math.floor(tonumber(rowIndex) or 0)]
@@ -235,7 +236,7 @@ local function countPriorGoals(instance, rows, rowIndex)
     return count
 end
 
-local function isRouteCompleteBeforeRow(instance, rows, rowIndex, slot)
+local function goalsCompleteBeforeRow(instance, rows, rowIndex, slot)
     return isRouteSlot(slot)
         and countPriorGoals(instance, rows, rowIndex) >= requiredGoalRewards(instance)
 end
@@ -268,20 +269,22 @@ end
 
 local function countRouteRows(instance, rows, predicate)
     local count = 0
-    local goalsSeen = 0
     local goalLimit = requiredGoalRewards(instance)
     for rowIndex, slot in ipairs(instance.routeSlots or {}) do
         if isRouteSlot(slot) then
-            if goalsSeen >= goalLimit then
+            if routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
                 break
             end
             local roleKey, role = roleForCount(instance, rows, rowIndex)
             local option = optionForCount(instance, rows, rowIndex, roleKey)
-            if predicate(roleKey, role, option) then
-                count = count + 1
-            end
+            local shouldCount = true
             if rowCountsGoal(roleKey, role) then
-                goalsSeen = goalsSeen + 1
+                shouldCount = countPriorGoals(instance, rows, rowIndex) < goalLimit
+            elseif rowCountsNonGoal(role, option) then
+                shouldCount = countPriorNonGoals(instance, rows, rowIndex) < maxNonGoalRewards(instance)
+            end
+            if shouldCount and predicate(roleKey, role, option) then
+                count = count + 1
             end
         end
     end
@@ -296,6 +299,13 @@ local function canOfferIExit(option)
         return option.supportsExtensionChoice == true
     end
     return tonumber(option.exitCount) ~= nil and tonumber(option.exitCount) > 1
+end
+
+local function canSpendBranchingRoom(instance, rows, rowIndex, option)
+    if not canOfferIExit(option) then
+        return true
+    end
+    return countPriorNonGoals(instance, rows, rowIndex) < maxNonGoalRewards(instance) - 1
 end
 
 local function roleRequiresPreviousIExit(role)
@@ -333,9 +343,17 @@ local function requiresPreviousIExit(role, option)
     return roleRequiresPreviousIExit(role) or optionRequiresPreviousIExit(option)
 end
 
+routeTerminatedBeforeRow = function(instance, rows, rowIndex, slot)
+    return goalsCompleteBeforeRow(instance, rows, rowIndex, slot)
+        and not previousRouteSupportsIExit(instance, rows, rowIndex)
+end
+
 local function roleIsAllowedByCounters(instance, rows, rowIndex, roleKey, role)
     if roleKey == VANILLA_ROLE_KEY then
         return true
+    end
+    if routeTerminatedBeforeRow(instance, rows, rowIndex, slotForRow(instance, rowIndex)) then
+        return false
     end
     if rowCountsGoal(roleKey, role) then
         return countPriorGoals(instance, rows, rowIndex) < requiredGoalRewards(instance)
@@ -343,7 +361,7 @@ local function roleIsAllowedByCounters(instance, rows, rowIndex, roleKey, role)
     if role ~= nil and role.countsNonGoalReward == true then
         return countPriorNonGoals(instance, rows, rowIndex) < maxNonGoalRewards(instance)
     end
-    return countPriorGoals(instance, rows, rowIndex) < requiredGoalRewards(instance)
+    return true
 end
 
 local function roleIsAllowed(instance, rows, rowIndex, roleKey, role)
@@ -393,7 +411,7 @@ local adapter = {
         if forcedRoleKey ~= nil and forcedRoleKey ~= "" then
             return forcedRoleKey
         end
-        if isRouteCompleteBeforeRow(instance, rows, rowIndex, slot) then
+        if routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
             return VANILLA_ROLE_KEY
         end
         return defaultReadRoleKey(instance, rows, rowIndex, slot)
@@ -424,7 +442,7 @@ local adapter = {
         if forcedRoleKey ~= nil and forcedRoleKey ~= "" then
             return roleKey == forcedRoleKey
         end
-        if isRouteCompleteBeforeRow(instance, rows, rowIndex, slot) then
+        if routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
             return roleKey == VANILLA_ROLE_KEY
         end
         return nil
@@ -440,7 +458,7 @@ local adapter = {
             values[#values + 1] = forcedRoleKey
             return true
         end
-        if isRouteCompleteBeforeRow(instance, rows, rowIndex, slot) then
+        if routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
             values[#values + 1] = VANILLA_ROLE_KEY
             return true
         end
@@ -452,7 +470,7 @@ local adapter = {
     end,
 
     biomeEncounterDepthCost = function(instance, rows, rowIndex, _, _, _, _, slot)
-        if isRouteCompleteBeforeRow(instance, rows, rowIndex, slot) then
+        if routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
             return 0
         end
         return nil
@@ -468,6 +486,9 @@ local adapter = {
     isOptionAllowed = function(instance, rows, rowIndex, _, _, _, option, slot)
         if not isRouteSlot(slot) then
             return true
+        end
+        if not canSpendBranchingRoom(instance, rows, rowIndex, option) then
+            return false
         end
         if optionRequiresPreviousIExit(option) and not previousRouteSupportsIExit(instance, rows, rowIndex) then
             return false
@@ -497,7 +518,7 @@ local adapter = {
         if not isRouteSlot(slot) or roleKey == VANILLA_ROLE_KEY then
             return nil
         end
-        if isRouteCompleteBeforeRow(instance, rows, rowIndex, slot) then
+        if routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
             return validStatus()
         end
         if not roleIsAllowed(instance, rows, rowIndex, roleKey, role) then
@@ -584,7 +605,7 @@ function data.isRouteSlot(slot)
 end
 
 function data.isInactiveRouteRow(instance, rows, rowIndex)
-    return isRouteCompleteBeforeRow(instance, rows, rowIndex, slotForRow(instance, rowIndex))
+    return routeTerminatedBeforeRow(instance, rows, rowIndex, slotForRow(instance, rowIndex))
 end
 
 return data

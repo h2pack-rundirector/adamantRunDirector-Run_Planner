@@ -2088,10 +2088,10 @@ function TestRunPlannerControls.testClockworkGoalRuntimeBuildsValidatedSnapshot(
             { RoleKey = "ExtensionCombat", OptionKey = "I_Combat11" },
             { RoleKey = "ExtensionCombat", OptionKey = "I_Combat12" },
             { RoleKey = "Goal", OptionKey = "I_Combat15" },
-            { RoleKey = "ExtensionCombat", OptionKey = "I_Combat18" },
+            { RoleKey = "Goal", OptionKey = "I_Combat18" },
             { RoleKey = "ExtensionCombat", OptionKey = "I_Combat21" },
             { RoleKey = "Story", OptionKey = "I_Story01" },
-            { RoleKey = "Goal", OptionKey = "I_Combat22" },
+            {},
             {},
         }), instance)
     local snapshot = control:buildSnapshot()
@@ -2102,7 +2102,7 @@ function TestRunPlannerControls.testClockworkGoalRuntimeBuildsValidatedSnapshot(
     lu.assertFalse(snapshot.disabled)
     lu.assertEquals(snapshot.clockwork.goalCount, 5)
     lu.assertEquals(snapshot.clockwork.requiredGoalRewards, 5)
-    lu.assertEquals(snapshot.clockwork.nonGoalRewardCount, 6)
+    lu.assertEquals(snapshot.clockwork.nonGoalRewardCount, 5)
     lu.assertEquals(snapshot.clockwork.maxNonGoalRewards, 6)
     lu.assertEquals(snapshot.clockwork.storyCount, 1)
     lu.assertEquals(#snapshot.rows, 14)
@@ -2219,7 +2219,37 @@ function TestRunPlannerControls.testClockworkGoalValidationModelsCountersAndSide
     })
     validation = data.validateRow(instance, seventhExtension, 9)
     lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "clockwork_extension_budget")
+    lu.assertEquals(validation.code, "clockwork_previous_i_exit")
+
+    local finalExtensionTwoExit = fakeRows({
+        {},
+        { RoleKey = "Goal", OptionKey = "I_Combat01" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat03" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat04" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat09" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat10" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat11" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat12" },
+    })
+    validation = data.validateRow(instance, finalExtensionTwoExit, 8)
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "option_unavailable")
+    local finalExtensionOptions = data.optionValuesForRow(instance, finalExtensionTwoExit, 8, "ExtensionCombat")
+    lu.assertFalse(hasValue(finalExtensionOptions, "I_Combat12"))
+    lu.assertTrue(hasValue(finalExtensionOptions, "I_Combat13"))
+
+    local finalExtensionOneExit = fakeRows({
+        {},
+        { RoleKey = "Goal", OptionKey = "I_Combat01" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat03" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat04" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat09" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat10" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat11" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat13" },
+    })
+    validation = data.validateRow(instance, finalExtensionOneExit, 8)
+    lu.assertTrue(validation.valid)
 
     local sixthGoal = fakeRows({
         {},
@@ -2231,8 +2261,12 @@ function TestRunPlannerControls.testClockworkGoalValidationModelsCountersAndSide
         { RoleKey = "Goal", OptionKey = "I_Combat11" },
     })
     validation = data.validateRow(instance, sixthGoal, 7)
-    lu.assertTrue(validation.valid)
-    lu.assertEquals(data.readRoleKey(instance, sixthGoal, 7), "Vanilla")
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "clockwork_goal_limit")
+    lu.assertEquals(data.readRoleKey(instance, sixthGoal, 7), "Goal")
+    local postGoalRoles = data.roleValuesForRow(instance, sixthGoal, 7)
+    lu.assertFalse(hasValue(postGoalRoles, "Goal"))
+    lu.assertTrue(hasValue(postGoalRoles, "Story"))
 
     local missingGoal = fakeRows({
         {},
@@ -2279,7 +2313,7 @@ function TestRunPlannerControls.testClockworkGoalLateVanillaRowIsValidButCanInva
     lu.assertEquals(validation.code, "clockwork_goal_count")
 end
 
-function TestRunPlannerControls.testClockworkGoalIgnoresStaleRowsAfterFifthGoal()
+function TestRunPlannerControls.testClockworkGoalAllowsPostGoalExtensionBehindTwoExitRoom()
     local catalog = loadCatalog()
     local data = loadClockworkGoalData()
     local template = loadClockworkGoalTemplate()
@@ -2294,25 +2328,33 @@ function TestRunPlannerControls.testClockworkGoalIgnoresStaleRowsAfterFifthGoal(
         { RoleKey = "Goal", OptionKey = "I_Combat04" },
         { RoleKey = "Goal", OptionKey = "I_Combat09" },
         { RoleKey = "Goal", OptionKey = "I_Combat10" },
-        { RoleKey = "Goal", OptionKey = "I_Combat11" },
         { RoleKey = "Story", OptionKey = "I_Story01" },
         { RoleKey = "ExtensionCombat", OptionKey = "I_Combat12", Reward1Key = "MaxHealthDrop" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat18", Reward1Key = "MoneyDrop" },
-        { RoleKey = "Trial", OptionKey = "I_Combat21", Reward1Key = "ZeusUpgrade", Reward2Key = "ApolloUpgrade" },
-        { RoleKey = "Fountain", OptionKey = "I_Reprieve01", Reward1Key = "MaxManaDrop" },
-        { RoleKey = "Miniboss", OptionKey = "I_MiniBoss01", Reward1Key = "DemeterUpgrade" },
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
         {},
     }
     local rows = fakeRows(rowData)
 
-    lu.assertEquals(data.readRoleKey(instance, rows, 7), "Vanilla")
-    lu.assertEquals(data.roleValuesForRow(instance, rows, 7), { "Vanilla" })
+    lu.assertEquals(data.readRoleKey(instance, rows, 7), "Story")
+    lu.assertFalse(data.isInactiveRouteRow(instance, rows, 7))
     lu.assertTrue(data.validateRow(instance, rows, 7).valid)
-    lu.assertTrue(data.isInactiveRouteRow(instance, rows, 7))
+    local postGoalRoles = data.roleValuesForRow(instance, rows, 7)
+    lu.assertFalse(hasValue(postGoalRoles, "Goal"))
+    lu.assertTrue(hasValue(postGoalRoles, "Story"))
+
+    lu.assertEquals(data.readRoleKey(instance, rows, 8), "Vanilla")
+    lu.assertEquals(data.roleValuesForRow(instance, rows, 8), { "Vanilla" })
+    lu.assertTrue(data.validateRow(instance, rows, 8).valid)
+    lu.assertTrue(data.isInactiveRouteRow(instance, rows, 8))
     lu.assertFalse(data.isInactiveRouteRow(instance, rows, 14))
     lu.assertEquals(data.countGoals(instance, rows), 5)
     lu.assertEquals(data.countNonGoals(instance, rows), 0)
-    lu.assertEquals(data.countStories(instance, rows), 0)
+    lu.assertEquals(data.countStories(instance, rows), 1)
     lu.assertTrue(data.validateRow(instance, rows, 14).valid)
 
     instance = template.prepare({
@@ -2325,11 +2367,38 @@ function TestRunPlannerControls.testClockworkGoalIgnoresStaleRowsAfterFifthGoal(
     lu.assertTrue(snapshot.valid)
     lu.assertEquals(snapshot.clockwork.goalCount, 5)
     lu.assertEquals(snapshot.clockwork.nonGoalRewardCount, 0)
-    lu.assertEquals(snapshot.clockwork.storyCount, 0)
-    lu.assertEquals(snapshot.rows[7].roleKey, "Vanilla")
+    lu.assertEquals(snapshot.clockwork.storyCount, 1)
+    lu.assertEquals(snapshot.rows[7].roleKey, "Story")
     lu.assertTrue(snapshot.rows[7].valid)
-    lu.assertEquals(snapshot.rows[11].roleKey, "Vanilla")
+    lu.assertEquals(snapshot.rows[8].roleKey, "Vanilla")
     lu.assertTrue(snapshot.rows[14].valid)
+end
+
+function TestRunPlannerControls.testClockworkGoalTerminatesAfterOneExitFifthGoal()
+    local catalog = loadCatalog()
+    local data = loadClockworkGoalData()
+    local instance = data.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local rows = fakeRows({
+        {},
+        { RoleKey = "Goal", OptionKey = "I_Combat01" },
+        { RoleKey = "Goal", OptionKey = "I_Combat03" },
+        { RoleKey = "Goal", OptionKey = "I_Combat04" },
+        { RoleKey = "Goal", OptionKey = "I_Combat09" },
+        { RoleKey = "Goal", OptionKey = "I_Combat02" },
+        { RoleKey = "Story", OptionKey = "I_Story01" },
+        {},
+    })
+
+    lu.assertEquals(data.readRoleKey(instance, rows, 7), "Vanilla")
+    lu.assertEquals(data.roleValuesForRow(instance, rows, 7), { "Vanilla" })
+    lu.assertTrue(data.validateRow(instance, rows, 7).valid)
+    lu.assertTrue(data.isInactiveRouteRow(instance, rows, 7))
+    lu.assertEquals(data.countGoals(instance, rows), 5)
+    lu.assertEquals(data.countStories(instance, rows), 0)
+    lu.assertTrue(data.validateRow(instance, rows, 14).valid)
 end
 
 function TestRunPlannerControls.testHubPylonStorageMatchesEphyraRouteRows()

@@ -48,7 +48,7 @@ Current working depths:
 | `F` | Erebus | `0..10` | `0, 1..9` | Starter biome. Depth `0` is one of `F_Opening01/02/03` with `RunProgress` reward controls. Preboss offers shop and non-shop `RunProgress` branches. |
 | `G` | Oceanus | `1..8` | `1..7` | `G_Intro` is a locked entry before the planned row list. Preboss offers shop and non-shop `RunProgress` branches. |
 | `H` | Fields | Route picks | Picks `1..4` | `H_Intro`, then four preboss picks, then `H_PreBoss01`. Combat maps expose reward cages rather than a single room reward. |
-| `I` | Tartarus | Clockwork | Rows `1..12` | `I_Intro` initializes five required `ClockworkGoal` rewards and a vanilla non-goal reward budget of `3..6`; story can consume a route row without advancing either counter. |
+| `I` | Tartarus | Clockwork | Rows `1..12` | `I_Intro` initializes five required `ClockworkGoal` rewards and a vanilla non-goal reward budget of `3..6`; story can consume a route row without advancing either counter. Post-goal extensions remain possible only behind a planned room that can offer an I exit. |
 | `N` | Ephyra | Hub pylon | Picks `1..6` | Fixed `N_Opening01` into `N_PreHub01`, then hub pylon picks from `N_Hub`. Preboss is shop-only after six pylons. |
 | `O` | Thessaly | `1..7` | `1..6` | `O_Intro` is a locked entry before the planned row list. Combat route depths use ship multi-encounter policy. Preboss is shop-only. |
 | `P` | Olympus | `1..9` | `1..8` | `P_Intro` is a locked entry before the planned row list. Preboss offers shop and non-shop `RunProgress` branches. |
@@ -94,10 +94,11 @@ Confirmed source notes:
   `MaxNonGoalRewards = 6`. `ClockworkGoal` decrements
   `RemainingClockworkGoals`; the preboss becomes eligible when that reaches
   zero.
-- `I_TwoExits` marks maps that can offer an extension path, but the extension
-  room itself can be a combat map, fountain, story room, or miniboss. The first offered
-  `I_BaseCombat` reward is forced to `ClockworkGoal`; additional offered
-  I-room doors can be non-goal rewards or special rooms.
+- `I_TwoExits` marks maps that can offer an extension path and is only eligible
+  while `BiomeRewardsSpawned < MaxClockworkNonGoalRewards - 1`. The extension
+  room itself can be a combat map, fountain, story room, or miniboss. The first
+  offered `I_BaseCombat` reward is forced to `ClockworkGoal`; additional
+  offered I-room doors can be non-goal rewards or special rooms.
 - `O_CombatData` uses `MultipleEncountersData`: pre-spawned intro encounter,
   first encounter, and a conditional second encounter.
 - `N_Hub` chooses 9 or 10 available doors from a fixed `PredeterminedDoorRooms`
@@ -787,7 +788,7 @@ paths. `I_Intro` initializes:
 
 The player must take five `ClockworkGoal` rewards before `I_PreBoss01` or
 `I_PreBoss02` can appear. The planner should therefore render a flat route
-tape of up to 12 rows:
+tape of up to 12 storage rows:
 
 ```text
 Row 1: Goal (forced by the biome declaration)
@@ -797,8 +798,10 @@ Row 3: Extension or Goal
 Row 12: Story, Extension, or Goal
 ```
 
-Rows below the fifth planned goal are inactive because the preboss follows once
-`RemainingClockworkGoals` reaches zero.
+Rows below the fifth planned goal are active only when the previous planned
+room can still offer an I exit. Once the previous planned row is a one-exit
+room, the route terminates and later rows are treated as inactive vanilla rows.
+Additional `ClockworkGoal` rows are invalid after the fifth planned goal.
 The first route row is not user-selectable as Vanilla or an extension: Tartarus
 forces the first offered combat reward to `ClockworkGoal`.
 
@@ -820,10 +823,10 @@ Extension rows can be:
 after inheritance is processed. The reachable Tartarus shop surface is the
 preboss shop using `I_PreBoss01/I_PreBoss02` and the `I_WorldShop` profile.
 
-The extension budget is vanilla-random by default. The data records the
-vanilla range, but the UI should treat promises beyond the active budget as
-runtime fallback until the runtime adapter intentionally owns and sets
-`MaxClockworkNonGoalRewards`.
+The extension budget is vanilla-random by default. The data records the vanilla
+range and plans against the maximum budget. Two-exit room maps become invalid
+when only the final non-goal reward remains, matching vanilla `I_TwoExits`;
+the final extension, if used, must be a one-exit room.
 
 ## Fields Cage Route
 
