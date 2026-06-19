@@ -61,6 +61,8 @@ local function compactRewardEntry(entry)
     return {
         rowIndex = entry.rowIndex,
         coordinate = entry.coordinate,
+        biomeDepthCache = entry.biomeDepthCache,
+        biomeEncounterDepth = entry.biomeEncounterDepth,
         legIndex = entry.legIndex,
         cageIndex = entry.cageIndex,
         sideIndex = entry.sideIndex,
@@ -86,6 +88,8 @@ local function compactRoomRow(row)
     return {
         rowIndex = row.rowIndex,
         coordinate = row.coordinate,
+        biomeDepthCache = row.biomeDepthCache,
+        biomeEncounterDepth = row.biomeEncounterDepth,
         slotKind = row.slotKind,
         roomKey = row.roomKey,
         branchKey = row.branchKey,
@@ -260,7 +264,7 @@ local function compactTarget(target)
         targetRowIndex = target.targetRowIndex,
         routeOrdinal = target.routeOrdinal,
         roomHistoryOrdinal = target.roomHistoryOrdinal,
-        biomeDepth = target.biomeDepth,
+        roomHistoryDepth = target.roomHistoryDepth,
         sideIndex = target.sideIndex,
         variantKey = target.variantKey,
         encounterName = target.encounterName,

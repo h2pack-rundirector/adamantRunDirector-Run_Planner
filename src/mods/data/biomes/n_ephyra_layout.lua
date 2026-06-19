@@ -58,6 +58,9 @@ local function combatRoom(roomKey, hubDoorId, sideDoors, opts)
     if opts.reward ~= nil then
         room.reward = opts.reward
     end
+    if opts.biomeEncounterDepthCost ~= nil then
+        room.biomeEncounterDepthCost = opts.biomeEncounterDepthCost
+    end
     return room
 end
 
@@ -182,12 +185,14 @@ layout.minibossRooms = {
         label = "Satyr Crossbow",
         hubDoorId = 617043,
         encounter = "MiniBossSatyrCrossbow",
+        biomeEncounterDepthCost = 1,
     },
     {
         key = "N_MiniBoss02",
         label = "Boar",
         hubDoorId = 560889,
         encounter = "MiniBossBoar",
+        biomeEncounterDepthCost = 1,
     },
 }
 

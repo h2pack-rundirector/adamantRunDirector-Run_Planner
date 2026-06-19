@@ -305,9 +305,13 @@ function runtime.create(fields, instance)
         local validation = data.validateRow(instance, routeRows, rowIndex)
         local rewardsConfigured = self:rewardsConfigured()
         local surface = rewardsConfigured and role ~= nil and role.cageRewardPolicy == nil and rewardSurface(role, option) or nil
+        local context = data.rowContext(instance, routeRows, rowIndex)
         return {
             rowIndex = rowIndex,
             coordinate = slot.coordinate,
+            biomeDepthCache = context.biomeDepthCache,
+            biomeEncounterDepth = context.biomeEncounterDepth,
+            biomeEncounterDepthCost = context.biomeEncounterDepthCost,
             slotKind = slot.kind or "fieldsPick",
             slotLabel = slot.label,
             roomHistoryCost = slot.roomHistoryCost,

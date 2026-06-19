@@ -17,7 +17,7 @@ local shouldOfferAutoOption = common.shouldOfferAutoOption
 local buildRoleChoices = common.buildRoleChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
-local isAvailableAtSlot = availability.isAvailableAtSlot
+local isAvailable = availability.isAvailable
 local optionCap = availability.optionCap
 local activeReadCache = readCache.active
 local rowRecord = readCache.rowRecord
@@ -149,6 +149,106 @@ function rowEngine.create(adapter)
         return adapter.isOptionAllowed(instance, rows, rowIndex, roleKey, optionKey, role, option, slotForRow(instance, rowIndex))
     end
 
+    local function selectedOptionForCost(role, rows, rowIndex)
+        if role == nil then
+            return "", nil
+        end
+
+        local optionKey = readOptionKey(rows, rowIndex) or ""
+        if optionKey ~= "" then
+            return optionKey, role.optionsByKey and role.optionsByKey[optionKey] or nil
+        end
+
+        local options = optionListForRole(role)
+        if #options == 1 and not shouldOfferAutoOption(role, options) then
+            local option = options[1]
+            return option.key or "", option
+        end
+        return "", nil
+    end
+
+    local function explicitBiomeEncounterDepthCost(value)
+        if value == nil then
+            return nil
+        end
+        return common.numericCost(value, 0)
+    end
+
+    local function adapterBiomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        if adapter.biomeEncounterDepthCost == nil then
+            return nil
+        end
+
+        local cost = adapter.biomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        if cost ~= nil then
+            return common.numericCost(cost, 0)
+        end
+        return nil
+    end
+
+    local function effectiveBiomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        local cost = adapterBiomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        if cost ~= nil then
+            return cost
+        end
+        cost = explicitBiomeEncounterDepthCost(option and option.biomeEncounterDepthCost)
+        if cost ~= nil then
+            return cost
+        end
+        cost = explicitBiomeEncounterDepthCost(role and role.biomeEncounterDepthCost)
+        if cost ~= nil then
+            return cost
+        end
+        cost = explicitBiomeEncounterDepthCost(slot and slot.biomeEncounterDepthCost)
+        if cost ~= nil then
+            return cost
+        end
+        return 0
+    end
+
+    local function rowBiomeEncounterDepthCost(instance, rows, rowIndex)
+        local slot = slotForRow(instance, rowIndex)
+        local roleKey = readRoleKey(instance, rows, rowIndex)
+        local role = roleForRow(instance, rowIndex, roleKey)
+        local optionKey, option = selectedOptionForCost(role, rows, rowIndex)
+        return effectiveBiomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+    end
+
+    local function rowContextUncached(instance, rows, rowIndex, target)
+        local slot = slotForRow(instance, rowIndex)
+        local biomeEncounterDepth = 0
+        if rowIndex > 1 then
+            local previous = data.rowContext(instance, rows, rowIndex - 1)
+            biomeEncounterDepth = (previous and previous.biomeEncounterDepth or 0)
+                + (previous and previous.biomeEncounterDepthCost or 0)
+        end
+        target = target or {}
+        target.rowIndex = rowIndex
+        target.coordinate = slot and slot.coordinate or nil
+        target.biomeDepthCache = common.slotBiomeDepthCache(slot)
+        target.biomeEncounterDepth = biomeEncounterDepth
+        target.biomeEncounterDepthCost = rowBiomeEncounterDepthCost(instance, rows, rowIndex)
+        target.roomHistoryCost = slot and slot.roomHistoryCost or nil
+        return target
+    end
+
+    function data.rowContext(instance, rows, rowIndex)
+        local cache = activeReadCache(instance)
+        if cache == nil then
+            return rowContextUncached(instance, rows, rowIndex)
+        end
+
+        local record = rowRecord(cache.rowContexts, rowIndex)
+        if record.pass == cache.pass then
+            return record.value
+        end
+
+        local value = rowContextUncached(instance, rows, rowIndex, record.value)
+        record.pass = cache.pass
+        record.value = value
+        return value
+    end
+
     local function countPriorRoleSelections(instance, rows, rowIndex, roleKey)
         if rows == nil or roleKey == nil or roleKey == "" then
             return 0
@@ -198,9 +298,9 @@ function rowEngine.create(adapter)
         return countPriorOptionSelections(instance, role, rows, rowIndex, option.key) < maxSelections
     end
 
-    local function hasAvailableConcreteOption(instance, role, rows, rowIndex, slot)
+    local function hasAvailableConcreteOption(instance, role, rows, rowIndex, rowContext)
         for _, option in ipairs(optionListForRole(role)) do
-            if isAvailableAtSlot(option, slot)
+            if isAvailable(option, rowContext)
                 and isOptionWithinSelectionCap(instance, role, option, rows, rowIndex)
                 and isOptionAllowed(instance, rows, rowIndex, role.key, option.key, role, option)
             then
@@ -281,14 +381,14 @@ function rowEngine.create(adapter)
 
         if optionKey == "" then
             return shouldOfferAutoOption(role, optionListForRole(role))
-                and hasAvailableConcreteOption(instance, role, rows, rowIndex, slot)
+                and hasAvailableConcreteOption(instance, role, rows, rowIndex, data.rowContext(instance, rows, rowIndex))
         end
 
         local option = role.optionsByKey and role.optionsByKey[optionKey] or nil
         if option == nil then
             return false
         end
-        return isAvailableAtSlot(option, slot)
+        return isAvailable(option, data.rowContext(instance, rows, rowIndex))
             and isOptionWithinSelectionCap(instance, role, option, rows, rowIndex)
             and isOptionAllowed(instance, rows, rowIndex, roleKey, optionKey, role, option)
     end
@@ -413,6 +513,9 @@ function rowEngine.create(adapter)
         if optionKey ~= "" then
             return optionKey, role.optionsByKey and role.optionsByKey[optionKey] or nil
         end
+        if role.requiresConcreteOption then
+            return "", nil
+        end
 
         if shouldOfferAutoOption(role, options) then
             return "", nil
@@ -480,6 +583,9 @@ function rowEngine.create(adapter)
         local resolvedOptionKey, option = data.resolveOption(instance, rows, rowIndex, roleKey)
         if optionKey ~= "" and option == nil then
             return invalidStatus("unknown_option", "Unknown route option: " .. tostring(optionKey))
+        end
+        if optionKey == "" and role.requiresConcreteOption then
+            return invalidStatus("option_required", "Choose a " .. tostring(role.label or roleKey))
         end
         if resolvedOptionKey == "" and shouldOfferAutoOption(role, options) then
             if data.isOptionAvailable(instance, rows, rowIndex, roleKey, "") then

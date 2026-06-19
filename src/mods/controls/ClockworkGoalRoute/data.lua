@@ -12,6 +12,7 @@ local buildLookup = common.buildLookup
 local buildOptionChoices = common.buildOptionChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
+local applySlotDepthContext = common.applySlotDepthContext
 
 local data
 
@@ -48,6 +49,7 @@ local function buildFixedSlot(instance, entry, kind, defaultKey)
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
         reward = entry.reward,
+        biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
     }
     if kind == "preboss" then
         role.roomOptions = nil
@@ -57,7 +59,7 @@ local function buildFixedSlot(instance, entry, kind, defaultKey)
     end
 
     local rowIndex = #instance.routeSlots + 1
-    instance.routeSlots[rowIndex] = {
+    instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
         coordinate = entry.coordinate or 0,
         kind = kind or entry.kind or "fixed",
@@ -67,18 +69,19 @@ local function buildFixedSlot(instance, entry, kind, defaultKey)
         roleKey = role.key,
         role = role,
         locked = entry.locked,
-    }
+        biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
+    }, entry)
 end
 
 local function buildRouteSlot(instance, row)
     local rowIndex = #instance.routeSlots + 1
-    instance.routeSlots[rowIndex] = {
+    instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
         coordinate = row,
         routeRow = row,
         kind = "clockworkRoute",
         label = "Step " .. tostring(row),
-    }
+    }, instance.biome.slotLayout and instance.biome.slotLayout.default or nil)
 end
 
 local function buildRouteSlots(instance)
@@ -446,6 +449,13 @@ local adapter = {
 
     skipOptionsForSlot = function(_, _, _, slot)
         return isPrebossSlot(slot)
+    end,
+
+    biomeEncounterDepthCost = function(instance, rows, rowIndex, _, _, _, _, slot)
+        if isRouteCompleteBeforeRow(instance, rows, rowIndex, slot) then
+            return 0
+        end
+        return nil
     end,
 
     isRoleAllowed = function(instance, rows, rowIndex, roleKey, role, slot)

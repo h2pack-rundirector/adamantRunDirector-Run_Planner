@@ -18,6 +18,7 @@ local function combatRoom(roomKey, exitCount, opts)
         features = opts.features or WELL_SHOP_FEATURES,
         reward = opts.reward or rewards.roomStore("ClockworkExtensionRewards"),
         availability = opts.availability,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
     }
 end
 
@@ -29,6 +30,7 @@ local function roomOption(roomKey, label, opts)
         reward = opts.reward,
         features = opts.features,
         availability = opts.availability,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         countsNonGoalReward = opts.countsNonGoalReward,
         exitCount = opts.exitCount,
         supportsExtensionChoice = opts.exitCount ~= nil and opts.exitCount > 1,
@@ -73,7 +75,7 @@ layout.combatRooms = {
     combatRoom("I_Combat23", 1),
     combatRoom("I_Combat24", 1, {
         availability = {
-            biomeDepth = { max = 5 },
+            biomeDepthCache = { max = 5 },
         },
     }),
 }
@@ -87,7 +89,7 @@ layout.specialExtensionRooms = {
             maxCreationsThisRun = 1,
             requiresExistingIExit = true,
             availability = {
-                biomeDepth = { min = 4 },
+                biomeDepthCache = { min = 4 },
             },
         }),
     },
@@ -99,7 +101,7 @@ layout.specialExtensionRooms = {
             maxCreationsThisRun = 1,
             requiresExistingIExit = true,
             availability = {
-                biomeDepth = { min = 2 },
+                biomeDepthCache = { min = 2 },
             },
         }),
     },
@@ -107,23 +109,25 @@ layout.specialExtensionRooms = {
         roomOption("I_MiniBoss01", "Satyr Ratcatcher", {
             reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
             features = WELL_SHOP_FEATURES,
+            biomeEncounterDepthCost = 1,
             countsNonGoalReward = true,
             exitCount = 2,
             maxCreationsThisRun = 1,
             requiresExistingIExit = true,
             availability = {
-                biomeDepth = { min = 3, max = 7 },
+                biomeDepthCache = { min = 3, max = 7 },
             },
         }),
         roomOption("I_MiniBoss02", "Gold Elemental", {
             reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
             features = WELL_SHOP_FEATURES,
+            biomeEncounterDepthCost = 1,
             countsNonGoalReward = true,
             exitCount = 2,
             maxCreationsThisRun = 1,
             requiresExistingIExit = true,
             availability = {
-                biomeDepth = { min = 3, max = 7 },
+                biomeDepthCache = { min = 3, max = 7 },
             },
         }),
     },

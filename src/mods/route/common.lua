@@ -55,6 +55,9 @@ function common.shouldOfferAutoOption(role, options)
     if #options == 0 then
         return false
     end
+    if role.requiresConcreteOption then
+        return false
+    end
     if #options == 1 and role.roomOptions ~= nil then
         return false
     end
@@ -126,6 +129,28 @@ function common.invalidStatus(code, message)
         code = code,
         message = message,
     }
+end
+
+function common.slotBiomeDepthCache(slot)
+    return slot and (slot.biomeDepthCache or slot.coordinate) or nil
+end
+
+function common.numericCost(value, fallback)
+    local cost = math.floor(tonumber(value) or fallback or 0)
+    if cost < 0 then
+        return 0
+    end
+    return cost
+end
+
+function common.applySlotDepthContext(slot, source)
+    if slot == nil then
+        return slot
+    end
+    source = source or {}
+    slot.biomeDepthCache = source.biomeDepthCache or slot.coordinate
+    slot.biomeEncounterDepthCost = source.biomeEncounterDepthCost
+    return slot
 end
 
 function common.layerConfigured(routeContext, routeKey, layer)

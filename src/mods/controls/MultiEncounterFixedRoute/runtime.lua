@@ -251,9 +251,13 @@ function runtime.create(fields, instance)
         local rewardsConfigured = self:rewardsConfigured()
         local encounterRewardLegs = encounterRewardLegSnapshots(fields, instance, routeRows, rowIndex, rewardsConfigured)
         local surface = rewardsConfigured and role ~= nil and role.encounterPolicy == nil and rewardSurface(role, option) or nil
+        local context = data.rowContext(instance, routeRows, rowIndex)
         return {
             rowIndex = rowIndex,
             coordinate = slot.coordinate,
+            biomeDepthCache = context.biomeDepthCache,
+            biomeEncounterDepth = context.biomeEncounterDepth,
+            biomeEncounterDepthCost = context.biomeEncounterDepthCost,
             slotKind = slot.kind or "route",
             roomKey = selectedRoomKey(slot, option),
             branchKey = slot.branchKey,

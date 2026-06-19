@@ -13,6 +13,7 @@ local function ensure(instance)
             optionAvailability = {},
             roleValues = {},
             optionValues = {},
+            rowContexts = {},
         }
         instance._readCache = cache
     end

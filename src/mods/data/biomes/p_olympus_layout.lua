@@ -34,6 +34,7 @@ local function option(key, label, opts)
         tags = opts.tags,
         features = opts.features,
         availability = opts.availability,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
     }
@@ -45,6 +46,7 @@ local function combat(roomKey, opts)
         tags = opts.tags,
         features = opts.features or (SURFACE_SHOP_COMBAT_ROOMS[roomKey] and CHAOS_SURFACE_FEATURES or CHAOS_FEATURES),
         availability = opts.availability,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
     })
@@ -64,12 +66,12 @@ layout.surfaceShopFeatures = CHAOS_SURFACE_FEATURES
 layout.introRoom = option("P_Intro", "Intro", {
     tags = OUTDOOR_TAGS,
     features = CHAOS_FEATURES,
-    availability = { biomeDepth = { exact = 1 } },
+    availability = { biomeDepthCache = { exact = 1 } },
 })
 
 layout.prebossRoom = option("P_PreBoss01", "Preboss", {
     tags = INDOOR_OUTDOOR_TAGS,
-    availability = { biomeDepth = { exact = 9 } },
+    availability = { biomeDepthCache = { exact = 9 } },
 })
 
 layout.combatRooms = {
@@ -101,7 +103,7 @@ layout.storyRooms = {
         tags = INDOOR_TAGS,
         availability = {
             biomeEncounterDepth = { minExclusive = 2 },
-            biomeDepth = { max = 7 },
+            biomeDepthCache = { max = 7 },
         },
         maxCreationsThisRun = 1,
     }),
@@ -112,7 +114,7 @@ layout.fountainRooms = {
         tags = INDOOR_TAGS,
         features = CHAOS_SURFACE_FEATURES,
         availability = {
-            biomeDepth = { min = 4, max = 7 },
+            biomeDepthCache = { min = 4, max = 7 },
         },
         maxCreationsThisRun = 1,
     }),
@@ -124,7 +126,7 @@ layout.shopRooms = {
         features = CHAOS_FEATURES,
         availability = {
             biomeEncounterDepth = { minExclusive = 4 },
-            biomeDepth = { max = 7 },
+            biomeDepthCache = { max = 7 },
         },
         maxCreationsThisRun = 1,
     }),
@@ -133,8 +135,9 @@ layout.shopRooms = {
 layout.minibossRooms = {
     option("P_MiniBoss01", "Talos", {
         tags = INDOOR_TAGS,
+        biomeEncounterDepthCost = 0,
         availability = {
-            biomeDepth = { min = 4, max = 7 },
+            biomeDepthCache = { min = 4, max = 7 },
             requiresMultipleOfferedDoors = true,
         },
         maxCreationsThisRun = 1,
@@ -142,8 +145,9 @@ layout.minibossRooms = {
     }),
     option("P_MiniBoss02", "Mega-Dracon", {
         tags = INDOOR_TAGS,
+        biomeEncounterDepthCost = 1,
         availability = {
-            biomeDepth = { min = 4, max = 7 },
+            biomeDepthCache = { min = 4, max = 7 },
             requiresMultipleOfferedDoors = true,
         },
         maxCreationsThisRun = 1,

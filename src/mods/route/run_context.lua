@@ -341,12 +341,12 @@ local function timelineEntryCost(entry)
     return roomHistoryCost(entry and entry.roomHistoryCost)
 end
 
-local function advanceBiomeDepth(state, rowCost)
+local function advanceRoomHistoryDepth(state, rowCost)
     state.roomHistoryOrdinal = state.roomHistoryOrdinal + rowCost
-    if state.biomeDepthOffset == nil then
-        state.biomeDepthOffset = state.roomHistoryOrdinal
+    if state.roomHistoryDepthOffset == nil then
+        state.roomHistoryDepthOffset = state.roomHistoryOrdinal
     end
-    return state.roomHistoryOrdinal - state.biomeDepthOffset
+    return state.roomHistoryOrdinal - state.roomHistoryDepthOffset
 end
 
 local function timelineFeatureLabel(context, biomeKey, entry)
@@ -591,21 +591,21 @@ local function variantMatchesRow(context, npc, biomeEntry, variant, row)
         and rowHasConcreteNpcReward(row, banned)
         and roleMatches(context, npc, row)
         and targetKindMatches(npc, biomeEntry, variant, row)
-        and valueInRange(variant.biomeDepthCache, row.coordinate)
-        and valueInRange(variant.biomeEncounterDepth, row.coordinate)
+        and valueInRange(variant.biomeDepthCache, row.biomeDepthCache)
+        and valueInRange(variant.biomeEncounterDepth, row.biomeEncounterDepth)
         and rowMatchesRequiredTag(row, biomeEntry.requiredRoomTag or variant.requiredRoomTag)
 end
 
-local function featureMatchesBiomePolicy(context, feature, biomeKey, biomeDepth)
+local function featureMatchesBiomePolicy(context, feature, biomeKey, roomHistoryDepth)
     local biome = context.biomeLookup and context.biomeLookup[biomeKey] or nil
     local policy = biome and biome.featurePolicies and biome.featurePolicies[feature.featureKey] or nil
     if policy == nil then
         return true
     end
-    return valueInRange(policy.biomeDepth, biomeDepth)
+    return valueInRange(policy.roomHistoryDepth, roomHistoryDepth)
 end
 
-local function featureMatchesRow(context, feature, biomeKey, row, biomeDepth)
+local function featureMatchesRow(context, feature, biomeKey, row, roomHistoryDepth)
     if row == nil or row.valid == false then
         return false
     end
@@ -618,10 +618,10 @@ local function featureMatchesRow(context, feature, biomeKey, row, biomeDepth)
     if not (row.features and row.features[feature.featureKey] == true) then
         return false
     end
-    return featureMatchesBiomePolicy(context, feature, biomeKey, biomeDepth)
+    return featureMatchesBiomePolicy(context, feature, biomeKey, roomHistoryDepth)
 end
 
-local function featureMatchesSideRoom(context, feature, biomeKey, sideRoom, sideBiomeDepth)
+local function featureMatchesSideRoom(context, feature, biomeKey, sideRoom, sideRoomHistoryDepth)
     return sideRoom ~= nil
         and sideRoom.enabled == true
         and sideRoom.roomKey ~= nil
@@ -629,7 +629,7 @@ local function featureMatchesSideRoom(context, feature, biomeKey, sideRoom, side
         and feature.biomes[biomeKey]
         and sideRoom.features
         and sideRoom.features[feature.featureKey] == true
-        and featureMatchesBiomePolicy(context, feature, biomeKey, sideBiomeDepth)
+        and featureMatchesBiomePolicy(context, feature, biomeKey, sideRoomHistoryDepth)
 end
 
 local function candidateLabel(context, biomeKey, row, variant)
@@ -728,10 +728,10 @@ local function buildFeatureTargets(context, routeKey)
             local rowCost = rowRoomHistoryCost(row)
             routeOrdinal = routeOrdinal + 1
             routeState.roomHistoryOrdinal = routeState.roomHistoryOrdinal + rowCost
-            local biomeDepth = advanceBiomeDepth(biomeState, rowCost)
+            local roomHistoryDepth = advanceRoomHistoryDepth(biomeState, rowCost)
             for _, featureKey in ipairs(context.features.ordered or EMPTY_LIST) do
                 local feature = context.features.byKey and context.features.byKey[featureKey] or nil
-                if feature ~= nil and featureMatchesRow(context, feature, biomeKey, row, biomeDepth) then
+                if feature ~= nil and featureMatchesRow(context, feature, biomeKey, row, roomHistoryDepth) then
                     addFeatureTarget(targets, {
                         key = featureTargetKey(biomeKey, row.rowIndex),
                         label = candidateLabel(context, biomeKey, row, nil),
@@ -743,13 +743,13 @@ local function buildFeatureTargets(context, routeKey)
                         targetRowIndex = featureTargetRowIndex(row.rowIndex),
                         routeOrdinal = routeOrdinal,
                         roomHistoryOrdinal = routeState.roomHistoryOrdinal,
-                        biomeDepth = biomeDepth,
+                        roomHistoryDepth = roomHistoryDepth,
                         row = row,
                     })
                 end
                 for _, sideRoom in ipairs(row and row.sideRooms or EMPTY_LIST) do
-                    local sideBiomeDepth = biomeDepth + 1
-                    if feature ~= nil and featureMatchesSideRoom(context, feature, biomeKey, sideRoom, sideBiomeDepth) then
+                    local sideRoomHistoryDepth = roomHistoryDepth + 1
+                    if feature ~= nil and featureMatchesSideRoom(context, feature, biomeKey, sideRoom, sideRoomHistoryDepth) then
                         local sideSuffix = "side" .. tostring(sideRoom.sideIndex or "")
                         addFeatureTarget(targets, {
                             key = featureTargetKey(biomeKey, row.rowIndex, sideSuffix),
@@ -762,7 +762,7 @@ local function buildFeatureTargets(context, routeKey)
                             targetRowIndex = featureTargetRowIndex(row.rowIndex, sideSuffix),
                             routeOrdinal = routeOrdinal,
                             roomHistoryOrdinal = routeState.roomHistoryOrdinal + 1,
-                            biomeDepth = sideBiomeDepth,
+                            roomHistoryDepth = sideRoomHistoryDepth,
                             row = row,
                             sideIndex = sideRoom.sideIndex,
                             sideRoom = sideRoom,

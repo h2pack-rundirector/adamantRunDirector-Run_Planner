@@ -14,7 +14,7 @@ return function(importer)
         }),
         featurePolicies = {
             wellShop = {
-                biomeDepth = { min = 3 },
+                roomHistoryDepth = { min = 3 },
             },
         },
         slotLayout = {
@@ -24,6 +24,7 @@ return function(importer)
             default = {
                 kind = "fieldsPick",
                 alternate = "VanillaSafe",
+                biomeEncounterDepthCost = 0,
             },
             fixedBeforeRoute = {
                 {
@@ -31,6 +32,7 @@ return function(importer)
                     label = "Intro",
                     roomKey = layout.introRoom.key,
                     reward = rewards.none(),
+                    biomeEncounterDepthCost = 0,
                     locked = true,
                 },
             },
@@ -40,6 +42,7 @@ return function(importer)
                     label = "Preboss Shop",
                     roomKey = layout.prebossRoom.key,
                     reward = rewards.shop("WorldShop"),
+                    biomeEncounterDepthCost = 0,
                 },
             },
         },
@@ -63,6 +66,7 @@ return function(importer)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
+                biomeEncounterDepthCost = 0,
             },
             {
                 key = "Combat",
@@ -72,12 +76,14 @@ return function(importer)
                     rewardStore = "RunProgress",
                 }),
                 cageRewardPolicy = "H_FieldsCageRewards",
+                biomeEncounterDepthCost = 0,
             },
             {
                 key = "Miniboss",
                 label = "Miniboss",
                 roomOptions = layout.minibossRooms,
                 reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
+                requiresConcreteOption = true,
                 routeRules = routeRules.role("Miniboss"),
                 reserve = true,
             },
@@ -86,6 +92,7 @@ return function(importer)
                 label = "Echo",
                 roomOptions = { layout.bridgeRoom },
                 reward = rewards.fieldsBridge(),
+                biomeEncounterDepthCost = 0,
                 reserve = true,
             },
         },

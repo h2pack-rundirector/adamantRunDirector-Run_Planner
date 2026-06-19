@@ -10,6 +10,7 @@ local DISABLED_SIDE_ROOM_MODE = "Disabled"
 local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
 local buildOptionChoices = common.buildOptionChoices
+local applySlotDepthContext = common.applySlotDepthContext
 
 local data
 
@@ -31,11 +32,12 @@ local function buildFixedSlot(instance, entry, section)
         optionsByKey = buildLookup(roomOptions),
         reward = entry.reward,
         features = entry.features,
+        biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
     }
     buildOptionChoices(role)
 
     local rowIndex = #instance.routeSlots + 1
-    instance.routeSlots[rowIndex] = {
+    instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
         coordinate = entry.coordinate,
         kind = entry.kind or section or "fixed",
@@ -46,17 +48,18 @@ local function buildFixedSlot(instance, entry, section)
         locked = entry.locked,
         features = entry.features,
         roomHistoryCost = entry.roomHistoryCost,
-    }
+        biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
+    }, entry)
 end
 
 local function buildPylonSlot(instance, pick)
     local rowIndex = #instance.routeSlots + 1
-    instance.routeSlots[rowIndex] = {
+    instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
         coordinate = pick,
         kind = "pylonPick",
         label = "Pylon " .. tostring(pick),
-    }
+    }, instance.biome.slotLayout and instance.biome.slotLayout.default or nil)
 end
 
 local function buildRouteSlots(instance)

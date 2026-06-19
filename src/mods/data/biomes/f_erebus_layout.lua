@@ -11,6 +11,7 @@ local function option(key, label, opts)
         exitCount = opts.exitCount,
         features = opts.features,
         availability = opts.availability,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
     }
@@ -22,6 +23,7 @@ local function combat(roomKey, opts)
         exitCount = opts.exitCount,
         features = opts.features or CHAOS_WELL_FEATURES,
         availability = opts.availability,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
     })
@@ -55,7 +57,7 @@ layout.openingRooms = {
 layout.prebossRoom = option("F_PreBoss01", "Preboss", {
     exitCount = 1,
     availability = {
-        biomeDepth = { exact = 10 },
+        biomeDepthCache = { exact = 10 },
     },
 })
 
@@ -98,7 +100,7 @@ layout.storyRooms = {
         exitCount = 2,
         features = CHAOS_FEATURES,
         availability = {
-            biomeDepth = { min = 4, max = 8 },
+            biomeDepthCache = { min = 4, max = 8 },
         },
         maxCreationsThisRun = 1,
     }),
@@ -109,7 +111,7 @@ layout.fountainRooms = {
         exitCount = 2,
         features = CHAOS_FEATURES,
         availability = {
-            biomeDepth = { min = 4, max = 8 },
+            biomeDepthCache = { min = 4, max = 8 },
         },
         maxCreationsThisRun = 1,
     }),
@@ -120,7 +122,7 @@ layout.shopRooms = {
         exitCount = 2,
         features = CHAOS_FEATURES,
         availability = {
-            biomeDepth = { min = 4, max = 6 },
+            biomeDepthCache = { min = 4, max = 6 },
         },
         maxCreationsThisRun = 1,
     }),
@@ -129,22 +131,25 @@ layout.shopRooms = {
 layout.minibossRooms = {
     option("F_MiniBoss01", "Root-Stalker", {
         exitCount = 1,
-        availability = { biomeDepth = { min = 4, max = 6 } },
+        biomeEncounterDepthCost = 1,
+        availability = { biomeDepthCache = { min = 4, max = 6 } },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),
     option("F_MiniBoss02", "Shadow-Spiller", {
         exitCount = 1,
+        biomeEncounterDepthCost = 1,
         availability = {
-            biomeDepth = { min = 4, max = 6 },
+            biomeDepthCache = { min = 4, max = 6 },
         },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),
     option("F_MiniBoss03", "Master-Slicer", {
         exitCount = 1,
+        biomeEncounterDepthCost = 1,
         availability = {
-            biomeDepth = { min = 4, max = 6 },
+            biomeDepthCache = { min = 4, max = 6 },
         },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,

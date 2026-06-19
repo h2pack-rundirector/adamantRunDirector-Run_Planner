@@ -14,7 +14,7 @@ return function(importer)
         }),
         featurePolicies = {
             surfaceShop = {
-                biomeDepth = { min = 3 },
+                roomHistoryDepth = { min = 3 },
             },
         },
         slotLayout = {
@@ -25,16 +25,19 @@ return function(importer)
             entry = {
                 kind = "intro",
                 roomKey = layout.introRoom.key,
+                biomeEncounterDepthCost = 0,
                 locked = true,
             },
             default = {
                 kind = "route",
                 alternate = "VanillaSafe",
+                biomeEncounterDepthCost = 1,
             },
             special = {
                 [7] = {
                     kind = "preboss",
                     roomKey = layout.prebossRoom.key,
+                    biomeEncounterDepthCost = 0,
                     branches = {
                         {
                             key = "Shop",
@@ -51,6 +54,7 @@ return function(importer)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Combat",
@@ -58,12 +62,14 @@ return function(importer)
                 mapOptions = layout.combatRooms,
                 reward = rewards.shipWheel(),
                 encounterPolicy = "O_CombatData",
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Story",
                 label = "Story",
                 roomOptions = layout.storyRooms,
                 reward = rewards.none(),
+                biomeEncounterDepthCost = 0,
                 routeRules = routeRules.role("Story"),
                 reserve = true,
             },
@@ -72,6 +78,7 @@ return function(importer)
                 label = "Fountain",
                 roomOptions = layout.fountainRooms,
                 reward = rewards.majorMinor(),
+                biomeEncounterDepthCost = 0,
                 routeRules = routeRules.role("Fountain"),
                 reserve = true,
             },
@@ -80,6 +87,7 @@ return function(importer)
                 label = "Shop",
                 roomOptions = layout.shopRooms,
                 reward = rewards.shop("WorldShop"),
+                biomeEncounterDepthCost = 0,
                 routeRules = routeRules.role("Midshop"),
                 reserve = true,
             },
@@ -91,6 +99,7 @@ return function(importer)
                     rewardStore = "RunProgress",
                     previousRoomExitCount = false,
                 }),
+                biomeEncounterDepthCost = 1,
                 routeRules = routeRules.role("Trial"),
                 reserve = true,
             },
@@ -99,6 +108,7 @@ return function(importer)
                 label = "Miniboss",
                 roomOptions = layout.minibossRooms,
                 reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
+                requiresConcreteOption = true,
                 routeRules = routeRules.role("Miniboss"),
                 reserve = true,
             },

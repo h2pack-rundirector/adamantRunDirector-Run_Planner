@@ -14,6 +14,7 @@ local buildOptionChoices = common.buildOptionChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
 local slotDepth = availability.slotDepth
+local applySlotDepthContext = common.applySlotDepthContext
 
 local data
 
@@ -82,11 +83,12 @@ local function buildFixedRoleSlot(instance, depth, special)
         optionsByKey = buildLookup(roomOptions),
         reward = special.reward,
         features = special.features,
+        biomeEncounterDepthCost = special.biomeEncounterDepthCost,
     }
     buildOptionChoices(role)
 
     local rowIndex = #instance.routeSlots + 1
-    instance.routeSlots[rowIndex] = {
+    instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
         coordinate = depth,
         kind = kind,
@@ -95,7 +97,7 @@ local function buildFixedRoleSlot(instance, depth, special)
         roleKey = role.key,
         role = role,
         features = special.features,
-    }
+    }, special)
 end
 
 local function buildEntrySlot(instance, entry)
@@ -111,6 +113,7 @@ local function buildEntrySlot(instance, entry)
         roomOptions = entry.roomOptions,
         reward = entry.reward,
         features = entry.features,
+        biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
         locked = entry.locked,
     })
 end
@@ -139,12 +142,12 @@ local function buildRouteSlots(instance)
 
     for depth = startDepth, endDepth do
         local rowIndex = #instance.routeSlots + 1
-        instance.routeSlots[rowIndex] = {
+        instance.routeSlots[rowIndex] = applySlotDepthContext({
             rowIndex = rowIndex,
             coordinate = depth,
             kind = "route",
             label = "Depth " .. tostring(depth),
-        }
+        }, slotLayout.default)
     end
 
     local specialDepths = {}
@@ -159,7 +162,7 @@ local function buildRouteSlots(instance)
         for _, branch in ipairs(special.branches or {}) do
             local branches = { branch }
             local rowIndex = #instance.routeSlots + 1
-            local slot = {
+            local slot = applySlotDepthContext({
                 rowIndex = rowIndex,
                 coordinate = depth,
                 kind = "preboss",
@@ -171,7 +174,7 @@ local function buildRouteSlots(instance)
                 branchesByKey = buildLookup(branches),
                 branchValues = {},
                 branchLabels = {},
-            }
+            }, special)
             addChoice(slot.branchValues, slot.branchLabels, branch.key, branch.label)
             instance.routeSlots[rowIndex] = slot
         end

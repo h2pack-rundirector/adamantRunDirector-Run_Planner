@@ -14,7 +14,7 @@ return function(importer)
         }),
         featurePolicies = {
             surfaceShop = {
-                biomeDepth = { min = 3 },
+                roomHistoryDepth = { min = 3 },
             },
         },
         slotLayout = {
@@ -25,16 +25,19 @@ return function(importer)
             entry = {
                 kind = "intro",
                 roomKey = layout.introRoom.key,
+                biomeEncounterDepthCost = 0,
                 locked = true,
             },
             default = {
                 kind = "route",
                 alternate = "VanillaSafe",
+                biomeEncounterDepthCost = 1,
             },
             special = {
                 [7] = {
                     kind = "preboss",
                     roomKey = layout.prebossRoom.key,
+                    biomeEncounterDepthCost = 0,
                     branches = {
                         {
                             key = "Shop",
@@ -52,18 +55,21 @@ return function(importer)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Combat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,
                 reward = rewards.none(),
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Miniboss",
                 label = "Miniboss",
                 roomOptions = layout.minibossRooms,
                 reward = rewards.roomStore("TyphonBossRewards"),
+                requiresConcreteOption = true,
                 routeRules = routeRules.role("Miniboss", { maxSelectionsPerBiome = 2 }),
                 reserve = true,
             },

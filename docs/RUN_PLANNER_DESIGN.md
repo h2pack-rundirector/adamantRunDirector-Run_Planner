@@ -1,7 +1,9 @@
 # Run Planner Design Notes
 
-Run Planner models a biome using vanilla `BiomeDepthCache` coordinates. A
-planner depth is the same depth value vanilla room selection sees.
+Run Planner keeps route coordinates separate from vanilla depth counters. A
+route coordinate identifies the planned row or pick the user sees, while room
+eligibility can depend on either vanilla `BiomeDepthCache` or vanilla
+`BiomeEncounterDepth`.
 
 The first implementation should focus on the linear biomes where this model is
 mostly true: `F`, `G`, `P`, and `Q`, plus route-level declarations for fields
@@ -10,7 +12,19 @@ Other biomes need separate adapters.
 
 ## Depth Standard
 
-Planner depths use vanilla `BiomeDepthCache` directly:
+Planner rows expose explicit depth context:
+
+- `coordinate`: stable planner row identity.
+- `biomeDepthCache`: vanilla `CurrentRun.BiomeDepthCache` semantics.
+- `biomeEncounterDepth`: vanilla `CurrentRun.BiomeEncounterDepth` semantics.
+- `biomeEncounterDepthCost`: how the selected row advances encounter depth for
+  later rows.
+
+Layout requirements should declare which vanilla axis they came from. Do not
+shift raw vanilla values in the room catalogue; biome adapters/context builders
+own any coordinate translation. Encounter-depth context is computed from prior
+row costs; the current row's cost is exported for snapshots but does not make
+that row eligible for its own encounter-depth gates.
 
 - The boss room is excluded.
 - The preboss room is included at its vanilla force depth.
@@ -454,7 +468,9 @@ facts:
 - F/G midshop roles require a previous room with at least two exits.
 - `Trial` roles require a previous room with at least two exits and two prior
   devotion-counted gods.
-- Miniboss roles allow at most one miniboss selection per biome.
+- Miniboss roles usually allow at most one miniboss selection per biome, with
+  biome-specific overrides where vanilla allows more than one planned miniboss
+  gate, such as Summit.
 
 Biome layout files should not repeat these as per-room conditions. They should
 only declare room-local facts such as depth windows, exit counts, one-time room
@@ -668,6 +684,12 @@ The main declaration file is the source of truth for route and role semantics:
   alternate generation.
 - `slotLayout.special`: per-depth overrides such as intro/opening and preboss
   branch shape.
+- `biomeEncounterDepthCost`: default row cost on `slotLayout.default`, fixed
+  slots, roles, or concrete room options. Concrete options override roles when
+  vanilla marks one room in a role as non-counting.
+- `requiresConcreteOption`: option-bearing roles such as Miniboss can disable
+  Auto and require a concrete vanilla room selection. Miniboss costs live on the
+  leaf options because later availability can depend on the selected variant.
 - `slotLayout.fixedBeforeHub` and `slotLayout.fixedAfterHub`: hub-adapter
   fixed rooms that do not use normal depth coordinates.
 - `slotLayout.fixedBeforeRoute` and `slotLayout.fixedAfterGoals`:
@@ -687,8 +709,11 @@ The layout file is the source of truth for concrete vanilla room catalogues:
 - combat maps, story rooms, fountain rooms, shops, trials, minibosses, intros,
   and preboss rooms.
 - `availability`: planner-owned vanilla eligibility metadata for a role option.
-  Current fields include `biomeDepth`, `biomeEncounterDepth`,
+  Current fields include `biomeDepthCache`, `biomeEncounterDepth`,
   `requiresGeneratedIntroEncounters`, and `requiresMultipleOfferedDoors`.
+- `biomeEncounterDepthCost`: optional concrete room override for
+  `CountsForRoomEncounterDepth` exceptions such as Talos, Charybdis, or Typhon
+  Eye.
 - `maxCreationsThisRun` and `maxAppearancesThisBiome`: reservation metadata for
   one-time or one-per-biome room creation behavior.
 
@@ -744,9 +769,9 @@ ship-wheel reward selection. `Combat2` is vanilla-optional: it appears with a
 60% chance when room-entry `BiomeEncounterDepth` is between `2` and `5`.
 
 Planner UI should therefore expose combat count as `Vanilla`, `2 Combats`, or
-`3 Combats`. `3 Combats` is only valid for room-entry encounter depth `2..5`;
-outside that range, runtime should fall back to vanilla behavior and surface a
-warning rather than fabricating an invalid room state.
+`3 Combats`. `3 Combats` is only valid for room-entry encounter depth `2..5`.
+If the stored route selects it outside that range, snapshot validation should
+mark the row invalid instead of fabricating a replacement.
 
 ## Tartarus Clockwork Route
 

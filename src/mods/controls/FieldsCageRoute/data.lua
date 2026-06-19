@@ -9,8 +9,8 @@ local buildLookup = common.buildLookup
 local buildOptionChoices = common.buildOptionChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
-local isAvailableAtSlot = availability.isAvailableAtSlot
 local isInRange = availability.isInRange
+local applySlotDepthContext = common.applySlotDepthContext
 
 local data
 local EMPTY_VALUES = {}
@@ -36,11 +36,12 @@ local function buildFixedSlot(instance, entry, section)
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
         reward = entry.reward,
+        biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
     }
     buildOptionChoices(role)
 
     local rowIndex = #instance.routeSlots + 1
-    instance.routeSlots[rowIndex] = {
+    instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
         coordinate = entry.coordinate,
         kind = entry.kind or section or "fixed",
@@ -49,17 +50,18 @@ local function buildFixedSlot(instance, entry, section)
         roleKey = role.key,
         role = role,
         locked = entry.locked,
-    }
+        biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
+    }, entry)
 end
 
 local function buildPickSlot(instance, pick)
     local rowIndex = #instance.routeSlots + 1
-    instance.routeSlots[rowIndex] = {
+    instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
         coordinate = pick,
         kind = "fieldsPick",
         label = "Pick " .. tostring(pick),
-    }
+    }, instance.biome.slotLayout and instance.biome.slotLayout.default or nil)
 end
 
 local function buildRouteSlots(instance)
@@ -191,9 +193,6 @@ local function cagePolicyForRole(instance, role)
 end
 
 local function isOptionAvailableAtFieldsPick(option, slot)
-    if not isAvailableAtSlot(option, slot) then
-        return false
-    end
     local optionAvailability = option and option.availability
     return isInRange(slot and slot.coordinate or nil, optionAvailability and optionAvailability.routePick)
 end

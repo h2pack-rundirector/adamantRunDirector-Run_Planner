@@ -10,8 +10,9 @@ local addChoice = common.addChoice
 local buildOptionChoices = common.buildOptionChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
-local slotDepth = availability.slotDepth
 local isInRange = availability.isInRange
+local applySlotDepthContext = common.applySlotDepthContext
+local clearList = common.clearList
 
 local data
 
@@ -45,11 +46,12 @@ local function buildFixedRoleSlot(instance, depth, special)
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
         reward = special.reward,
+        biomeEncounterDepthCost = special.biomeEncounterDepthCost,
     }
     buildOptionChoices(role)
 
     local rowIndex = #instance.routeSlots + 1
-    instance.routeSlots[rowIndex] = {
+    instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
         coordinate = depth,
         kind = kind,
@@ -57,7 +59,7 @@ local function buildFixedRoleSlot(instance, depth, special)
         roomKey = special.roomKey,
         roleKey = role.key,
         role = role,
-    }
+    }, special)
 end
 
 local function buildEntrySlot(instance, entry)
@@ -72,6 +74,7 @@ local function buildEntrySlot(instance, entry)
         roomKey = entry.roomKey,
         roomOptions = entry.roomOptions,
         reward = entry.reward,
+        biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
         locked = entry.locked,
     })
 end
@@ -100,12 +103,12 @@ local function buildRouteSlots(instance)
 
     for depth = startDepth, endDepth do
         local rowIndex = #instance.routeSlots + 1
-        instance.routeSlots[rowIndex] = {
+        instance.routeSlots[rowIndex] = applySlotDepthContext({
             rowIndex = rowIndex,
             coordinate = depth,
             kind = "route",
             label = "Depth " .. tostring(depth),
-        }
+        }, slotLayout.default)
     end
 
     local specialDepths = {}
@@ -120,7 +123,7 @@ local function buildRouteSlots(instance)
         for _, branch in ipairs(special.branches or {}) do
             local branches = { branch }
             local rowIndex = #instance.routeSlots + 1
-            local slot = {
+            local slot = applySlotDepthContext({
                 rowIndex = rowIndex,
                 coordinate = depth,
                 kind = "preboss",
@@ -132,7 +135,7 @@ local function buildRouteSlots(instance)
                 branchesByKey = buildLookup(branches),
                 branchValues = {},
                 branchLabels = {},
-            }
+            }, special)
             addChoice(slot.branchValues, slot.branchLabels, branch.key, branch.label)
             instance.routeSlots[rowIndex] = slot
         end
@@ -178,6 +181,7 @@ local function prepareEncounterPolicy(policy)
             sourceKey = option.key,
             label = option.label or option.key,
             realCombatCount = option.realCombatCount,
+            biomeEncounterDepthCost = option.biomeEncounterDepthCost,
             availableAtBiomeEncounterDepth = option.availableAtBiomeEncounterDepth,
         }
         prepared.values[#prepared.values + 1] = storageKey
@@ -213,33 +217,46 @@ local function encounterPolicyForRole(instance, role)
     return instance.encounterPoliciesByKey and instance.encounterPoliciesByKey[role.encounterPolicy] or nil
 end
 
-local function isVariantAvailableAtSlot(variant, slot)
+local function isVariantAvailableAtContext(variant, context)
     if variant == nil then
         return false
     end
-    local depth = slotDepth(slot)
-    return isInRange(depth, variant.availableAtBiomeEncounterDepth)
+    return isInRange(context and context.biomeEncounterDepth, variant.availableAtBiomeEncounterDepth)
 end
 
-local function buildVariantChoices(instance)
+local function prepareVariantChoiceCache(instance)
     instance.variantValuesByRowRole = {}
     for _, slot in ipairs(instance.routeSlots or {}) do
         local valuesByRole = {}
         for _, role in ipairs(instance.roles or {}) do
             local policy = encounterPolicyForRole(instance, role)
             if policy ~= nil then
-                local values = {}
-                for _, variantKey in ipairs(policy.values or {}) do
-                    local variant = policy.optionsByKey[variantKey]
-                    if isVariantAvailableAtSlot(variant, slot) then
-                        values[#values + 1] = variantKey
-                    end
-                end
-                valuesByRole[role.key] = values
+                valuesByRole[role.key] = {}
             end
         end
         instance.variantValuesByRowRole[slot.rowIndex] = valuesByRole
     end
+end
+
+local function variantValuesForContext(instance, rows, rowIndex, roleKey)
+    local values = instance.variantValuesByRowRole
+        and instance.variantValuesByRowRole[rowIndex]
+        and instance.variantValuesByRowRole[rowIndex][roleKey]
+        or nil
+    if values == nil then
+        return {}
+    end
+
+    clearList(values)
+    local policy = data.variantPolicyForRole(instance, roleKey)
+    local context = data.rowContext(instance, rows, rowIndex)
+    for _, variantKey in ipairs(policy and policy.values or {}) do
+        local variant = policy.optionsByKey[variantKey]
+        if isVariantAvailableAtContext(variant, context) then
+            values[#values + 1] = variantKey
+        end
+    end
+    return values
 end
 
 local function maxEncounterRewardLegCount(instance)
@@ -321,6 +338,13 @@ local adapter = {
         return isPrebossSlot(slot)
     end,
 
+    biomeEncounterDepthCost = function(instance, rows, rowIndex, roleKey, role)
+        if encounterPolicyForRole(instance, role) == nil then
+            return nil
+        end
+        return data.biomeEncounterDepthCostForVariant(instance, rows, rowIndex, roleKey)
+    end,
+
     validateSlot = function(instance, rows, rowIndex, _, role, slot)
         if isPrebossSlot(slot) then
             return validStatus()
@@ -336,7 +360,7 @@ local adapter = {
         if variant == nil then
             return invalidStatus("unknown_variant", "Unknown encounter count: " .. tostring(variantKey))
         end
-        if not isVariantAvailableAtSlot(variant, slot) then
+        if not isVariantAvailableAtContext(variant, data.rowContext(instance, rows, rowIndex)) then
             return invalidStatus(
                 "variant_unavailable",
                 tostring(variant.label or variantKey) .. " is not valid at this depth"
@@ -361,7 +385,7 @@ function data.prepare(instance)
 
     buildRouteSlots(instance)
     timeline.applyRouteSlots(instance)
-    buildVariantChoices(instance)
+    prepareVariantChoiceCache(instance)
     prepareEncounterRewardRows(instance)
     data.buildRoleChoices(instance)
     addBranchLabels(instance)
@@ -378,11 +402,8 @@ function data.variantLabelsForRow(instance, roleKey)
     return policy and policy.labels or {}
 end
 
-function data.variantValuesForRow(instance, rowIndex, roleKey)
-    return instance.variantValuesByRowRole
-        and instance.variantValuesByRowRole[rowIndex]
-        and instance.variantValuesByRowRole[rowIndex][roleKey]
-        or {}
+function data.variantValuesForRow(instance, rows, rowIndex, roleKey)
+    return variantValuesForContext(instance, rows, rowIndex, roleKey)
 end
 
 function data.resolveVariant(instance, rows, rowIndex, roleKey)
@@ -423,7 +444,7 @@ function data.encounterRewardLegCountForRow(instance, rows, rowIndex)
     if realCombatCount <= 0 then
         return 0
     end
-    if not isVariantAvailableAtSlot(variant, slotForRow(instance, rowIndex)) then
+    if not isVariantAvailableAtContext(variant, data.rowContext(instance, rows, rowIndex)) then
         return 0
     end
 
@@ -455,6 +476,14 @@ function data.encounterRewardLegsForRow(instance, rows, rowIndex)
         legs[#legs + 1] = data.encounterRewardLegForRow(instance, rows, rowIndex, legIndex)
     end
     return legs
+end
+
+function data.biomeEncounterDepthCostForVariant(instance, rows, rowIndex, roleKey)
+    local _, variant = data.resolveVariant(instance, rows, rowIndex, roleKey)
+    if variant == nil then
+        return nil
+    end
+    return variant.biomeEncounterDepthCost
 end
 
 function data.storage(instance)

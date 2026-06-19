@@ -134,7 +134,7 @@ local function getVariantOpts(control, instance, rowIndex, roleKey)
         opts.displayValues = data.variantLabelsForRow(instance, roleKey)
         optsByRole[roleKey] = opts
     end
-    opts.values = data.variantValuesForRow(instance, rowIndex, roleKey)
+    opts.values = data.variantValuesForRow(instance, control:routeRows(), rowIndex, roleKey)
     return opts
 end
 

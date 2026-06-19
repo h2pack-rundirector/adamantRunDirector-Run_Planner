@@ -17,7 +17,7 @@ return function(importer)
         }),
         featurePolicies = {
             wellShop = {
-                biomeDepth = { min = 3 },
+                roomHistoryDepth = { min = 3 },
             },
         },
         slotLayout = {
@@ -29,6 +29,7 @@ return function(importer)
             default = {
                 kind = "goal",
                 alternate = "VanillaSafe",
+                biomeEncounterDepthCost = 1,
             },
             fixedBeforeRoute = {
                 {
@@ -36,6 +37,7 @@ return function(importer)
                     label = "Intro",
                     roomKey = "I_Intro",
                     reward = rewards.none(),
+                    biomeEncounterDepthCost = 0,
                     locked = true,
                 },
             },
@@ -48,6 +50,7 @@ return function(importer)
                         { key = "I_PreBoss02", label = "Chronos Shop Restored" },
                     },
                     reward = rewards.shop("I_WorldShop"),
+                    biomeEncounterDepthCost = 0,
                 },
             },
         },
@@ -84,6 +87,7 @@ return function(importer)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Goal",
@@ -91,6 +95,7 @@ return function(importer)
                 mapOptions = layout.combatRooms,
                 reward = rewards.forcedReward("ClockworkGoal"),
                 countsGoalReward = true,
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "ExtensionCombat",
@@ -98,6 +103,7 @@ return function(importer)
                 mapOptions = layout.combatRooms,
                 reward = rewards.roomStore("ClockworkExtensionRewards"),
                 countsNonGoalReward = true,
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Trial",
@@ -106,6 +112,7 @@ return function(importer)
                 reward = rewards.devotion({ rewardStore = "RunProgress" }),
                 routeRules = routeRules.role("Trial"),
                 countsNonGoalReward = true,
+                biomeEncounterDepthCost = 1,
                 reserve = true,
             },
             {
@@ -114,6 +121,7 @@ return function(importer)
                 roomOptions = layout.specialExtensionRooms.story,
                 reward = rewards.none(),
                 routeRules = routeRules.role("Story"),
+                biomeEncounterDepthCost = 0,
                 reserve = true,
             },
             {
@@ -122,6 +130,7 @@ return function(importer)
                 roomOptions = layout.specialExtensionRooms.fountain,
                 reward = rewards.roomStore("TartarusRewards"),
                 routeRules = routeRules.role("Fountain"),
+                biomeEncounterDepthCost = 0,
                 reserve = true,
             },
             {
@@ -129,6 +138,7 @@ return function(importer)
                 label = "Miniboss",
                 roomOptions = layout.specialExtensionRooms.miniboss,
                 reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
+                requiresConcreteOption = true,
                 routeRules = routeRules.role("Miniboss"),
                 reserve = true,
             },

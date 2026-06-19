@@ -30,6 +30,7 @@ local function option(key, label, opts)
         exitCount = opts.exitCount,
         features = opts.features,
         availability = opts.availability,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
     }
@@ -41,6 +42,7 @@ local function combat(roomKey, opts)
         exitCount = opts.exitCount,
         features = opts.features or (WELL_SHOP_COMBAT_ROOMS[roomKey] and CHAOS_WELL_FEATURES or CHAOS_FEATURES),
         availability = opts.availability,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
     })
@@ -68,12 +70,12 @@ layout.wellShopFeatures = CHAOS_WELL_FEATURES
 layout.introRoom = option("G_Intro", "Intro", {
     exitCount = 1,
     features = CHAOS_FEATURES,
-    availability = { biomeDepth = { exact = 1 } },
+    availability = { biomeDepthCache = { exact = 1 } },
 })
 
 layout.prebossRoom = option("G_PreBoss01", "Preboss", {
     exitCount = 1,
-    availability = { biomeDepth = { exact = 8 } },
+    availability = { biomeDepthCache = { exact = 8 } },
 })
 
 layout.combatRooms = {
@@ -98,7 +100,7 @@ layout.combatRooms = {
         exitCount = 3,
         availability = {
             biomeEncounterDepth = { max = 2 },
-            biomeDepth = { max = 3 },
+            biomeDepthCache = { max = 3 },
         },
     }),
     combat("G_Combat19", { exitCount = 2, availability = { biomeEncounterDepth = { max = 3 } } }),
@@ -119,7 +121,7 @@ layout.storyRooms = {
         exitCount = 1,
         features = CHAOS_FEATURES,
         availability = {
-            biomeDepth = { min = 3, max = 6 },
+            biomeDepthCache = { min = 3, max = 6 },
         },
         maxCreationsThisRun = 1,
     }),
@@ -130,7 +132,7 @@ layout.fountainRooms = {
         exitCount = 2,
         features = CHAOS_FEATURES,
         availability = {
-            biomeDepth = { min = 4, max = 6 },
+            biomeDepthCache = { min = 4, max = 6 },
         },
         maxCreationsThisRun = 1,
     }),
@@ -141,7 +143,7 @@ layout.shopRooms = {
         exitCount = 2,
         features = CHAOS_FEATURES,
         availability = {
-            biomeDepth = { min = 3, max = 5 },
+            biomeDepthCache = { min = 3, max = 5 },
         },
         maxCreationsThisRun = 1,
     }),
@@ -151,15 +153,17 @@ layout.minibossRooms = {
     option("G_MiniBoss01", "Deep Serpent", {
         exitCount = 2,
         features = CHAOS_FEATURES,
-        availability = { biomeDepth = { min = 4, max = 7 } },
+        biomeEncounterDepthCost = 1,
+        availability = { biomeDepthCache = { min = 4, max = 7 } },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),
     option("G_MiniBoss02", "King Vermin", {
         exitCount = 1,
         features = CHAOS_FEATURES,
+        biomeEncounterDepthCost = 0,
         availability = {
-            biomeDepth = { min = 4, max = 7 },
+            biomeDepthCache = { min = 4, max = 7 },
         },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
@@ -167,7 +171,8 @@ layout.minibossRooms = {
     option("G_MiniBoss03", "Hellifish", {
         exitCount = 2,
         features = CHAOS_FEATURES,
-        availability = { biomeDepth = { min = 4, max = 7 } },
+        biomeEncounterDepthCost = 1,
+        availability = { biomeDepthCache = { min = 4, max = 7 } },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),

@@ -17,7 +17,7 @@ return function(importer)
         }),
         featurePolicies = {
             surfaceShop = {
-                biomeDepth = { min = 3 },
+                roomHistoryDepth = { min = 3 },
             },
         },
         slotLayout = {
@@ -28,6 +28,7 @@ return function(importer)
             default = {
                 kind = "pylonPick",
                 alternate = "VanillaSafe",
+                biomeEncounterDepthCost = 1,
             },
             fixedBeforeHub = {
                 {
@@ -36,6 +37,7 @@ return function(importer)
                     roomKey = "N_Opening01",
                     reward = rewards.roomStore("OpeningRunProgress"),
                     features = { chaos = true },
+                    biomeEncounterDepthCost = 1,
                     locked = true,
                 },
                 {
@@ -43,6 +45,7 @@ return function(importer)
                     label = "Pre-Hub",
                     roomKey = "N_PreHub01",
                     reward = rewards.roomStore("OpeningRunProgress"),
+                    biomeEncounterDepthCost = 0,
                     locked = true,
                 },
                 {
@@ -51,6 +54,7 @@ return function(importer)
                     roomKey = "N_Hub",
                     reward = rewards.none(),
                     roomHistoryCost = 0,
+                    biomeEncounterDepthCost = 0,
                     locked = true,
                 },
             },
@@ -60,6 +64,7 @@ return function(importer)
                     label = "Preboss Shop",
                     roomKey = "N_PreBoss01",
                     reward = rewards.shop("WorldShop"),
+                    biomeEncounterDepthCost = 0,
                 },
             },
         },
@@ -98,6 +103,7 @@ return function(importer)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Combat",
@@ -107,12 +113,14 @@ return function(importer)
                 sideRooms = {
                     identity = "parentCombatRoomAndDoorId",
                 },
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Story",
                 label = "Story",
                 roomOptions = layout.storyRooms,
                 reward = rewards.none(),
+                biomeEncounterDepthCost = 0,
                 routeRules = routeRules.role("Story"),
                 reserve = true,
             },
@@ -121,6 +129,7 @@ return function(importer)
                 label = "Miniboss",
                 roomOptions = layout.minibossRooms,
                 reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
+                requiresConcreteOption = true,
                 routeRules = routeRules.role("Miniboss"),
                 reserve = true,
             },

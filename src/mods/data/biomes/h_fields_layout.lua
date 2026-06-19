@@ -11,6 +11,7 @@ local function option(key, label, opts)
         features = opts.features,
         availability = opts.availability,
         encounter = opts.encounter,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         maxCageRewards = opts.maxCageRewards,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
@@ -33,14 +34,14 @@ local function indexByKey(items)
 end
 
 local earlyCombatAvailability = {
-    biomeDepth = { max = 3 },
+    biomeDepthCache = { max = 3 },
 }
 
 layout.wellShopFeatures = WELL_SHOP_FEATURES
 
 layout.introRoom = option("H_Intro", "Intro", {
     availability = {
-        biomeDepth = { min = 0, max = 1 },
+        biomeDepthCache = { min = 0, max = 1 },
     },
 })
 
@@ -156,16 +157,18 @@ layout.combatRoomsByKey = indexByKey(layout.combatRooms)
 layout.minibossRooms = {
     option("H_MiniBoss01", "Vampire", {
         encounter = "MiniBossVampire",
+        biomeEncounterDepthCost = 1,
         availability = {
-            biomeDepth = { min = 2, max = 4 },
+            biomeDepthCache = { min = 2, max = 4 },
         },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),
     option("H_MiniBoss02", "Lamia", {
         encounter = "MiniBossLamia",
+        biomeEncounterDepthCost = 1,
         availability = {
-            biomeDepth = { min = 2, max = 4 },
+            biomeDepthCache = { min = 2, max = 4 },
         },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,

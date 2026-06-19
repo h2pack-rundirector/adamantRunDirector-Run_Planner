@@ -275,7 +275,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareNaturalChaosFeatures()
     local chaosSurface = { chaos = true, surfaceShop = true }
 
     lu.assertNil(biomes.lookup.F.slotLayout.special[0].features)
-    lu.assertEquals(biomes.lookup.F.featurePolicies.wellShop.biomeDepth, { min = 3 })
+    lu.assertEquals(biomes.lookup.F.featurePolicies.wellShop.roomHistoryDepth, { min = 3 })
     lu.assertEquals(biomes.lookup.F.slotLayout.special[0].roomOptions[1].features, chaos)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.mapOptions[1].features, chaosWell)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Story.roomOptions[1].features, chaos)
@@ -285,7 +285,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareNaturalChaosFeatures()
     lu.assertNil(biomes.lookup.F.rolesByKey.Miniboss.features)
 
     lu.assertEquals(biomes.lookup.G.slotLayout.entry.features, chaos)
-    lu.assertEquals(biomes.lookup.G.featurePolicies.wellShop.biomeDepth, { min = 3 })
+    lu.assertEquals(biomes.lookup.G.featurePolicies.wellShop.roomHistoryDepth, { min = 3 })
     lu.assertEquals(biomes.lookup.G.rolesByKey.Combat.mapOptions[1].features, chaosWell)
     lu.assertEquals(biomes.lookup.G.rolesByKey.Story.roomOptions[1].features, chaos)
     lu.assertEquals(biomes.lookup.G.rolesByKey.Fountain.roomOptions[1].features, chaos)
@@ -294,12 +294,12 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareNaturalChaosFeatures()
     lu.assertEquals(biomes.lookup.G.rolesByKey.Miniboss.roomOptions[1].features, chaos)
 
     lu.assertEquals(biomes.lookup.N.slotLayout.fixedBeforeHub[1].features, chaos)
-    lu.assertEquals(biomes.lookup.N.featurePolicies.surfaceShop.biomeDepth, { min = 3 })
+    lu.assertEquals(biomes.lookup.N.featurePolicies.surfaceShop.roomHistoryDepth, { min = 3 })
     lu.assertNil(biomes.lookup.N.slotLayout.fixedBeforeHub[2].features)
     lu.assertNil(biomes.lookup.N.rolesByKey.Combat.features)
 
-    lu.assertEquals(biomes.lookup.P.featurePolicies.chaos.biomeDepth, { max = 5 })
-    lu.assertEquals(biomes.lookup.P.featurePolicies.surfaceShop.biomeDepth, { min = 3 })
+    lu.assertEquals(biomes.lookup.P.featurePolicies.chaos.roomHistoryDepth, { max = 5 })
+    lu.assertEquals(biomes.lookup.P.featurePolicies.surfaceShop.roomHistoryDepth, { min = 3 })
     lu.assertEquals(biomes.lookup.P.slotLayout.entry.features, chaos)
     lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.mapOptions[1].features, chaosSurface)
     lu.assertEquals(biomes.lookup.P.rolesByKey.Fountain.roomOptions[1].features, chaosSurface)
@@ -307,10 +307,10 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareNaturalChaosFeatures()
     lu.assertNil(biomes.lookup.P.rolesByKey.Story.features)
     lu.assertNil(biomes.lookup.P.rolesByKey.Miniboss.features)
 
-    lu.assertEquals(biomes.lookup.H.featurePolicies.wellShop.biomeDepth, { min = 3 })
-    lu.assertEquals(biomes.lookup.I.featurePolicies.wellShop.biomeDepth, { min = 3 })
-    lu.assertEquals(biomes.lookup.O.featurePolicies.surfaceShop.biomeDepth, { min = 3 })
-    lu.assertEquals(biomes.lookup.Q.featurePolicies.surfaceShop.biomeDepth, { min = 3 })
+    lu.assertEquals(biomes.lookup.H.featurePolicies.wellShop.roomHistoryDepth, { min = 3 })
+    lu.assertEquals(biomes.lookup.I.featurePolicies.wellShop.roomHistoryDepth, { min = 3 })
+    lu.assertEquals(biomes.lookup.O.featurePolicies.surfaceShop.roomHistoryDepth, { min = 3 })
+    lu.assertEquals(biomes.lookup.Q.featurePolicies.surfaceShop.roomHistoryDepth, { min = 3 })
 end
 
 local function optionByKey(options, key)
@@ -320,6 +320,77 @@ local function optionByKey(options, key)
         end
     end
     return nil
+end
+
+local function assertMinibossCosts(role, expectedCosts)
+    lu.assertTrue(role.requiresConcreteOption)
+    lu.assertNil(role.biomeEncounterDepthCost)
+    for _, option in ipairs(role.roomOptions or {}) do
+        lu.assertNotNil(
+            option.biomeEncounterDepthCost,
+            "Miniboss option must declare cost: " .. tostring(option.key)
+        )
+    end
+    for optionKey, expectedCost in pairs(expectedCosts) do
+        lu.assertEquals(optionByKey(role.roomOptions, optionKey).biomeEncounterDepthCost, expectedCost)
+    end
+end
+
+function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
+    local data = dofile("src/mods/data.lua")
+    local biomes = data.loadBiomes(testImport)
+
+    lu.assertEquals(biomes.lookup.F.slotLayout.special[0].biomeEncounterDepthCost, 1)
+    lu.assertEquals(biomes.lookup.F.slotLayout.default.biomeEncounterDepthCost, 1)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.biomeEncounterDepthCost, 1)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Story.biomeEncounterDepthCost, 0)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Fountain.biomeEncounterDepthCost, 0)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Trial.biomeEncounterDepthCost, 1)
+
+    assertMinibossCosts(biomes.lookup.F.rolesByKey.Miniboss, {
+        F_MiniBoss01 = 1,
+        F_MiniBoss02 = 1,
+        F_MiniBoss03 = 1,
+    })
+    assertMinibossCosts(biomes.lookup.H.rolesByKey.Miniboss, {
+        H_MiniBoss01 = 1,
+        H_MiniBoss02 = 1,
+    })
+    assertMinibossCosts(biomes.lookup.I.rolesByKey.Miniboss, {
+        I_MiniBoss01 = 1,
+        I_MiniBoss02 = 1,
+    })
+    assertMinibossCosts(biomes.lookup.N.rolesByKey.Miniboss, {
+        N_MiniBoss01 = 1,
+        N_MiniBoss02 = 1,
+    })
+    assertMinibossCosts(biomes.lookup.G.rolesByKey.Miniboss, {
+        G_MiniBoss01 = 1,
+        G_MiniBoss02 = 0,
+        G_MiniBoss03 = 1,
+    })
+    assertMinibossCosts(biomes.lookup.O.rolesByKey.Miniboss, {
+        O_MiniBoss01 = 0,
+        O_MiniBoss02 = 1,
+    })
+    assertMinibossCosts(biomes.lookup.P.rolesByKey.Miniboss, {
+        P_MiniBoss01 = 0,
+        P_MiniBoss02 = 1,
+    })
+    assertMinibossCosts(biomes.lookup.Q.rolesByKey.Miniboss, {
+        Q_MiniBoss02 = 1,
+        Q_MiniBoss03 = 1,
+        Q_MiniBoss04 = 0,
+        Q_MiniBoss05 = 1,
+    })
+
+    lu.assertNil(biomes.lookup.F.slotLayout.special[10].branches[1].biomeEncounterDepthCost)
+    lu.assertEquals(biomes.lookup.F.slotLayout.special[10].biomeEncounterDepthCost, 0)
+
+    local thessalyPolicy = biomes.lookup.O.combatEncounterPolicy.countControl.options
+    lu.assertEquals(thessalyPolicy[1].biomeEncounterDepthCost, 1)
+    lu.assertEquals(thessalyPolicy[2].biomeEncounterDepthCost, 1)
+    lu.assertEquals(thessalyPolicy[3].biomeEncounterDepthCost, 2)
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareShopFeatureEligibility()
@@ -569,9 +640,9 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(erebus.Combat.mapOptions[1].exitCount, 1)
     lu.assertEquals(erebus.Combat.mapOptions[5].availability.biomeEncounterDepth, { min = 5 })
     lu.assertEquals(erebus.Combat.mapOptions[9].exitCount, 1)
-    lu.assertEquals(erebus.Story.roomOptions[1].availability.biomeDepth, { min = 4, max = 8 })
+    lu.assertEquals(erebus.Story.roomOptions[1].availability.biomeDepthCache, { min = 4, max = 8 })
     lu.assertEquals(erebus.Story.roomOptions[1].exitCount, 2)
-    lu.assertEquals(erebus.Midshop.roomOptions[1].availability.biomeDepth, { min = 4, max = 6 })
+    lu.assertEquals(erebus.Midshop.roomOptions[1].availability.biomeDepthCache, { min = 4, max = 6 })
     lu.assertEquals(erebus.Midshop.routeRequirements, midshopRequirements())
     lu.assertEquals(erebus.Trial.mapOptions[1].key, "F_Combat05")
     lu.assertEquals(erebus.Trial.mapOptions[1].availability.biomeEncounterDepth, { min = 5 })
@@ -580,11 +651,11 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
 
     local oceanus = biomes.lookup.G.rolesByKey
     lu.assertEquals(oceanus.Combat.mapOptions[18].availability.biomeEncounterDepth, { max = 2 })
-    lu.assertEquals(oceanus.Combat.mapOptions[18].availability.biomeDepth, { max = 3 })
+    lu.assertEquals(oceanus.Combat.mapOptions[18].availability.biomeDepthCache, { max = 3 })
     lu.assertEquals(oceanus.Combat.mapOptions[18].exitCount, 3)
-    lu.assertEquals(oceanus.Story.roomOptions[1].availability.biomeDepth, { min = 3, max = 6 })
+    lu.assertEquals(oceanus.Story.roomOptions[1].availability.biomeDepthCache, { min = 3, max = 6 })
     lu.assertEquals(oceanus.Story.roomOptions[1].exitCount, 1)
-    lu.assertEquals(oceanus.Midshop.roomOptions[1].availability.biomeDepth, { min = 3, max = 5 })
+    lu.assertEquals(oceanus.Midshop.roomOptions[1].availability.biomeDepthCache, { min = 3, max = 5 })
     lu.assertEquals(oceanus.Midshop.routeRequirements, midshopRequirements())
     lu.assertEquals(oceanus.Trial.mapOptions[2].availability.biomeEncounterDepth, { min = 3 })
     lu.assertEquals(oceanus.Trial.reward.routeRequirements[2], previousExitCountRequirement())
@@ -594,17 +665,17 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(fields.Combat.mapOptions[1].maxCageRewards, 5)
     lu.assertEquals(fields.Combat.mapOptions[4].maxCageRewards, 4)
     lu.assertEquals(fields.Combat.mapOptions[9].maxCageRewards, 2)
-    lu.assertEquals(fields.Combat.mapOptions[9].availability.biomeDepth, { max = 3 })
-    lu.assertEquals(fields.Combat.mapOptions[15].availability.biomeDepth, { max = 3 })
-    lu.assertEquals(fields.Miniboss.roomOptions[1].availability.biomeDepth, { min = 2, max = 4 })
+    lu.assertEquals(fields.Combat.mapOptions[9].availability.biomeDepthCache, { max = 3 })
+    lu.assertEquals(fields.Combat.mapOptions[15].availability.biomeDepthCache, { max = 3 })
+    lu.assertEquals(fields.Miniboss.roomOptions[1].availability.biomeDepthCache, { min = 2, max = 4 })
     lu.assertEquals(fields.Miniboss.routeRules, oneShotRouteRules())
     lu.assertEquals(fields.Bridge.roomOptions[1].availability.routePick, { exact = 3 })
 
     local thessaly = biomes.lookup.O.rolesByKey
-    lu.assertEquals(thessaly.Combat.mapOptions[13].availability.biomeDepth, { min = 6 })
+    lu.assertEquals(thessaly.Combat.mapOptions[13].availability.biomeDepthCache, { min = 6 })
     lu.assertEquals(thessaly.Combat.mapOptions[13].availability.requiresGeneratedIntroEncounters, 3)
     lu.assertEquals(thessaly.Story.roomOptions[1].availability.biomeEncounterDepth, { minExclusive = 3 })
-    lu.assertEquals(thessaly.Fountain.roomOptions[1].availability.biomeDepth, { min = 3, max = 5 })
+    lu.assertEquals(thessaly.Fountain.roomOptions[1].availability.biomeDepthCache, { min = 3, max = 5 })
     lu.assertEquals(thessaly.Trial.roomOptions[1].availability.biomeEncounterDepth, { min = 2 })
     lu.assertEquals(thessaly.Miniboss.routeRules, oneShotRouteRules())
 
@@ -613,15 +684,15 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(olympus.Combat.mapOptions[3].availability.biomeEncounterDepth, { max = 4 })
     lu.assertEquals(olympus.Story.roomOptions[1].availability.biomeEncounterDepth, { minExclusive = 2 })
     lu.assertEquals(olympus.Midshop.roomOptions[1].availability.biomeEncounterDepth, { minExclusive = 4 })
-    lu.assertEquals(olympus.Miniboss.roomOptions[1].availability.biomeDepth, { min = 4, max = 7 })
+    lu.assertEquals(olympus.Miniboss.roomOptions[1].availability.biomeDepthCache, { min = 4, max = 7 })
     lu.assertTrue(olympus.Miniboss.roomOptions[1].availability.requiresMultipleOfferedDoors)
 
     local summit = biomes.lookup.Q.rolesByKey
-    lu.assertEquals(summit.Combat.mapOptions[10].availability.biomeDepth, { exact = 1 })
-    lu.assertEquals(summit.Combat.mapOptions[12].availability.biomeDepth, { exact = 5 })
+    lu.assertEquals(summit.Combat.mapOptions[10].availability.biomeDepthCache, { exact = 1 })
+    lu.assertEquals(summit.Combat.mapOptions[12].availability.biomeDepthCache, { exact = 5 })
     lu.assertEquals(summit.Miniboss.roomOptions[1].key, "Q_MiniBoss02")
-    lu.assertEquals(summit.Miniboss.roomOptions[1].availability.biomeDepth, { exact = 3 })
-    lu.assertEquals(summit.Miniboss.roomOptions[4].availability.biomeDepth, { exact = 3 })
+    lu.assertEquals(summit.Miniboss.roomOptions[1].availability.biomeDepthCache, { exact = 3 })
+    lu.assertEquals(summit.Miniboss.roomOptions[4].availability.biomeDepthCache, { exact = 3 })
 end
 
 function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
@@ -661,14 +732,14 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
 
     local combat24 = tartarus.clockwork.goalRoom.roomOptions[24]
     lu.assertEquals(combat24.key, "I_Combat24")
-    lu.assertEquals(combat24.availability.biomeDepth, { max = 5 })
+    lu.assertEquals(combat24.availability.biomeDepthCache, { max = 5 })
 
     lu.assertEquals(tartarus.clockwork.extensionRoom.combatOptions[1].key, "I_Combat01")
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].key, "I_Story01")
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].reward, noneReward())
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].countsNonGoalReward, false)
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].exitCount, 1)
-    lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].availability.biomeDepth, { min = 2 })
+    lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].availability.biomeDepthCache, { min = 2 })
     lu.assertTrue(tartarus.clockwork.extensionRoom.specialOptions.story[1].requiresExistingIExit)
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.fountain[1].key, "I_Reprieve01")
     lu.assertEquals(
@@ -751,7 +822,7 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
     lu.assertEquals(fields.fields.combatRoomsByKey.H_Combat01.maxCageRewards, 5)
     lu.assertEquals(fields.fields.combatRoomsByKey.H_Combat04.maxCageRewards, 4)
     lu.assertEquals(fields.fields.combatRoomsByKey.H_Combat13.maxCageRewards, 2)
-    lu.assertEquals(fields.fields.combatRoomsByKey.H_Combat13.availability.biomeDepth, { max = 3 })
+    lu.assertEquals(fields.fields.combatRoomsByKey.H_Combat13.availability.biomeDepthCache, { max = 3 })
 
     lu.assertEquals(#fields.fields.minibossRooms, 2)
     lu.assertEquals(fields.fields.minibossRoomsByKey.H_MiniBoss01.encounter, "MiniBossVampire")

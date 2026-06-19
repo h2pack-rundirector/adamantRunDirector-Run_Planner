@@ -26,15 +26,14 @@ function availability.isInRange(value, range)
     return true
 end
 
-function availability.isAvailableAtSlot(option, slot)
+function availability.isAvailable(option, context)
     local optionAvailability = option and option.availability
     if optionAvailability == nil then
         return true
     end
 
-    local depth = availability.slotDepth(slot)
-    return availability.isInRange(depth, optionAvailability.biomeDepth)
-        and availability.isInRange(depth, optionAvailability.biomeEncounterDepth)
+    return availability.isInRange(context and context.biomeDepthCache, optionAvailability.biomeDepthCache)
+        and availability.isInRange(context and context.biomeEncounterDepth, optionAvailability.biomeEncounterDepth)
 end
 
 function availability.optionCap(option)

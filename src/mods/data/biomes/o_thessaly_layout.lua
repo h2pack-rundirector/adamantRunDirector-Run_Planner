@@ -27,6 +27,7 @@ local function option(key, label, opts)
         label = label,
         features = opts.features,
         availability = opts.availability,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
     }
@@ -49,11 +50,11 @@ end
 layout.surfaceShopFeatures = SURFACE_SHOP_FEATURES
 
 layout.introRoom = option("O_Intro", "Intro", {
-    availability = { biomeDepth = { exact = 1 } },
+    availability = { biomeDepthCache = { exact = 1 } },
 })
 
 layout.prebossRoom = option("O_PreBoss01", "Preboss", {
-    availability = { biomeDepth = { exact = 7 } },
+    availability = { biomeDepthCache = { exact = 7 } },
 })
 
 layout.combatEncounterPolicy = {
@@ -67,16 +68,19 @@ layout.combatEncounterPolicy = {
             {
                 key = "Vanilla",
                 label = "Vanilla",
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "TwoCombats",
                 label = "2 Combats",
                 realCombatCount = 2,
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "ThreeCombats",
                 label = "3 Combats",
                 realCombatCount = 3,
+                biomeEncounterDepthCost = 2,
                 availableAtBiomeEncounterDepth = { min = 2, max = 5 },
             },
         },
@@ -112,23 +116,23 @@ layout.combatRooms = {
     combat("O_Combat01"),
     combat("O_Combat02"),
     combat("O_Combat03"),
-    combat("O_Combat04", { availability = { biomeDepth = { max = 3 } } }),
+    combat("O_Combat04", { availability = { biomeDepthCache = { max = 3 } } }),
     combat("O_Combat05"),
     combat("O_Combat06"),
-    combat("O_Combat07", { availability = { biomeDepth = { max = 3 } } }),
+    combat("O_Combat07", { availability = { biomeDepthCache = { max = 3 } } }),
     combat("O_Combat08"),
     combat("O_Combat09"),
     combat("O_Combat10"),
-    combat("O_Combat11", { availability = { biomeDepth = { max = 3 } } }),
+    combat("O_Combat11", { availability = { biomeDepthCache = { max = 3 } } }),
     combat("O_Combat12"),
     combat("O_Combat13", {
         availability = {
-            biomeDepth = { min = 6 },
+            biomeDepthCache = { min = 6 },
             requiresGeneratedIntroEncounters = 3,
         },
     }),
     combat("O_Combat14"),
-    combat("O_Combat15", { availability = { biomeDepth = { max = 3 } } }),
+    combat("O_Combat15", { availability = { biomeDepthCache = { max = 3 } } }),
 }
 
 layout.combatRoomsByKey = indexByKey(layout.combatRooms)
@@ -137,7 +141,7 @@ layout.storyRooms = {
     option("O_Story01", "Circe", {
         availability = {
             biomeEncounterDepth = { minExclusive = 3 },
-            biomeDepth = { max = 5 },
+            biomeDepthCache = { max = 5 },
         },
         maxCreationsThisRun = 1,
     }),
@@ -147,7 +151,7 @@ layout.fountainRooms = {
     option("O_Reprieve01", "Fountain", {
         features = SURFACE_SHOP_FEATURES,
         availability = {
-            biomeDepth = { min = 3, max = 5 },
+            biomeDepthCache = { min = 3, max = 5 },
         },
         maxCreationsThisRun = 1,
     }),
@@ -157,7 +161,7 @@ layout.shopRooms = {
     option("O_Shop01", "Shop", {
         availability = {
             biomeEncounterDepth = { minExclusive = 3 },
-            biomeDepth = { max = 5 },
+            biomeDepthCache = { max = 5 },
         },
         maxCreationsThisRun = 1,
     }),
@@ -175,16 +179,18 @@ layout.trialRooms = {
 
 layout.minibossRooms = {
     option("O_MiniBoss01", "Charybdis", {
+        biomeEncounterDepthCost = 0,
         availability = {
-            biomeDepth = { min = 3, max = 5 },
+            biomeDepthCache = { min = 3, max = 5 },
         },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),
     option("O_MiniBoss02", "Captain", {
         features = SURFACE_SHOP_FEATURES,
+        biomeEncounterDepthCost = 1,
         availability = {
-            biomeDepth = { min = 3, max = 5 },
+            biomeDepthCache = { min = 3, max = 5 },
         },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,

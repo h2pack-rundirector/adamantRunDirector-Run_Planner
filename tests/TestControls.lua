@@ -1511,7 +1511,7 @@ function TestRunPlannerControls.testRouteFeaturesCanTargetEnabledSideRooms()
     lu.assertTrue(control:rowValidation(1).valid)
 
     local targets = routeContext:featureTargetsForSlot("Surface", "surfaceShop", "N")
-    lu.assertEquals(targets.lookup["N:4.side1"].biomeDepth, 4)
+    lu.assertEquals(targets.lookup["N:4.side1"].roomHistoryDepth, 4)
     lu.assertEquals(targets.lookup["N:4.side1"].roomHistoryOrdinal, 5)
 end
 
@@ -1650,12 +1650,12 @@ function TestRunPlannerControls.testRouteTemplateViewAllocationsStayBounded()
         {
             key = "F",
             template = loadFixedLinearTemplate(),
-            budgets = { rooms = 160, rewards = 128 },
+            budgets = { rooms = 224, rewards = 128 },
         },
         {
             key = "G",
             template = loadFixedLinearTemplate(),
-            budgets = { rooms = 128, rewards = 128 },
+            budgets = { rooms = 192, rewards = 128 },
         },
         {
             key = "H",
@@ -1665,27 +1665,27 @@ function TestRunPlannerControls.testRouteTemplateViewAllocationsStayBounded()
         {
             key = "I",
             template = loadClockworkGoalTemplate(),
-            budgets = { rooms = 192, rewards = 160 },
+            budgets = { rooms = 256, rewards = 160 },
         },
         {
             key = "N",
             template = loadHubPylonTemplate(),
-            budgets = { rooms = 96, rewards = 128, sideRooms = 96 },
+            budgets = { rooms = 128, rewards = 128, sideRooms = 96 },
         },
         {
             key = "O",
             template = loadMultiEncounterTemplate(),
-            budgets = { rooms = 128, rewards = 96 },
+            budgets = { rooms = 160, rewards = 96 },
         },
         {
             key = "P",
             template = loadFixedLinearTemplate(),
-            budgets = { rooms = 96, rewards = 128 },
+            budgets = { rooms = 224, rewards = 128 },
         },
         {
             key = "Q",
             template = loadFixedLinearTemplate(),
-            budgets = { rooms = 96, rewards = 96 },
+            budgets = { rooms = 160, rewards = 96 },
         },
     }
 
@@ -1962,7 +1962,6 @@ function TestRunPlannerControls.testClockworkGoalStorageMatchesTartarusRouteRows
     lu.assertEquals(instance.optionValuesByRole.Story, { "I_Story01" })
     lu.assertEquals(instance.optionValuesByRole.Fountain, { "I_Reprieve01" })
     lu.assertEquals(instance.optionValuesByRole.Miniboss, {
-        "",
         "I_MiniBoss01",
         "I_MiniBoss02",
     })
@@ -2303,7 +2302,6 @@ function TestRunPlannerControls.testHubPylonStorageMatchesEphyraRouteRows()
     lu.assertEquals(instance.optionValuesByRole.Story, { "N_Story01" })
     lu.assertEquals(instance.optionValuesByRole.Combat[1], "")
     lu.assertEquals(instance.optionValuesByRole.Miniboss, {
-        "",
         "N_MiniBoss01",
         "N_MiniBoss02",
     })
@@ -2416,20 +2414,53 @@ function TestRunPlannerControls.testMultiEncounterStorageMatchesThessalyRouteRow
         TwoCombats = "2 Combats",
         ThreeCombats = "3 Combats",
     })
-    lu.assertEquals(routeData.variantValuesForRow(instance, 2, "Combat"), {
+    local rows = fakeRows({
+        {},
+        {
+            RoleKey = "Combat",
+            VariantKey = "TwoCombats",
+        },
+        {
+            RoleKey = "Combat",
+            VariantKey = "TwoCombats",
+        },
+        {
+            RoleKey = "Combat",
+        },
+        {
+            RoleKey = "Combat",
+            VariantKey = "ThreeCombats",
+        },
+    })
+
+    lu.assertEquals(routeData.variantValuesForRow(instance, rows, 2, "Combat"), {
         "",
         "TwoCombats",
     })
-    lu.assertEquals(routeData.variantValuesForRow(instance, 3, "Combat"), {
+    lu.assertEquals(routeData.variantValuesForRow(instance, rows, 3, "Combat"), {
+        "",
+        "TwoCombats",
+    })
+    lu.assertEquals(routeData.variantValuesForRow(instance, rows, 4, "Combat"), {
         "",
         "TwoCombats",
         "ThreeCombats",
     })
-    lu.assertEquals(routeData.variantValuesForRow(instance, 7, "Combat"), {
+    lu.assertEquals(routeData.variantValuesForRow(instance, rows, 6, "Combat"), {
+        "",
+        "TwoCombats",
+        "ThreeCombats",
+    })
+    lu.assertEquals(routeData.variantValuesForRow(instance, rows, 7, "Combat"), {
         "",
         "TwoCombats",
     })
-    lu.assertEquals(routeData.variantValuesForRow(instance, 3, "Story"), {})
+    lu.assertEquals(routeData.variantValuesForRow(instance, rows, 3, "Story"), {})
+    lu.assertEquals(routeData.rowContext(instance, rows, 2).biomeEncounterDepth, 0)
+    lu.assertEquals(routeData.rowContext(instance, rows, 3).biomeEncounterDepth, 1)
+    lu.assertEquals(routeData.rowContext(instance, rows, 4).biomeEncounterDepth, 2)
+    lu.assertEquals(routeData.rowContext(instance, rows, 5).biomeEncounterDepth, 3)
+    lu.assertEquals(routeData.rowContext(instance, rows, 6).biomeEncounterDepth, 5)
 end
 
 function TestRunPlannerControls.testMultiEncounterSnapshotUsesSelectedOptionRoomKey()
@@ -2937,6 +2968,11 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
             {
                 RoleKey = "Combat",
                 OptionKey = "O_Combat02",
+                VariantKey = "TwoCombats",
+            },
+            {
+                RoleKey = "Combat",
+                OptionKey = "O_Combat03",
                 VariantKey = "ThreeCombats",
             },
             {
@@ -2951,11 +2987,6 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
                 VariantKey = "TwoCombats",
             },
             {
-                RoleKey = "Miniboss",
-                OptionKey = "O_MiniBoss01",
-                Reward1Key = "AphroditeUpgrade",
-            },
-            {
                 RoleKey = "Vanilla",
             },
             {},
@@ -2963,9 +2994,17 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
             {
                 Reward1Key = "Major",
                 Reward2Key = "Boon",
-                Reward3Key = "PoseidonUpgrade",
             },
             {},
+            {
+                Reward1Key = "Major",
+                Reward2Key = "Boon",
+                Reward3Key = "ZeusUpgrade",
+            },
+            {
+                Reward1Key = "Minor",
+                Reward4Key = "GiftDrop",
+            },
             {
                 Reward1Key = "Major",
                 Reward2Key = "Boon",
@@ -3011,41 +3050,50 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
     lu.assertEquals(snapshot.rows[3].coordinate, 2)
     lu.assertEquals(snapshot.rows[3].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[3].optionKey, "O_Combat02")
-    lu.assertEquals(snapshot.rows[3].variantKey, "ThreeCombats")
-    lu.assertEquals(snapshot.rows[3].variant.sourceKey, "ThreeCombats")
-    lu.assertEquals(snapshot.rows[3].variant.label, "3 Combats")
-    lu.assertEquals(snapshot.rows[3].realCombatCount, 3)
+    lu.assertEquals(snapshot.rows[3].variantKey, "TwoCombats")
+    lu.assertEquals(snapshot.rows[3].variant.sourceKey, "TwoCombats")
+    lu.assertEquals(snapshot.rows[3].variant.label, "2 Combats")
+    lu.assertEquals(snapshot.rows[3].realCombatCount, 2)
     lu.assertEquals(snapshot.rows[3].encounterPolicyKey, "O_CombatData")
     lu.assertEquals(snapshot.rows[3].rewardKind, "none")
     lu.assertEquals(snapshot.rows[3].rewardPicks, {})
-    lu.assertEquals(#snapshot.rows[3].encounterRewardLegs, 2)
+    lu.assertEquals(#snapshot.rows[3].encounterRewardLegs, 1)
     lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].key, "Combat1")
     lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].label, "First Combat")
     lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].rewardKind, "majorMinor")
     lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].rewardPicks[1].value, "Major")
     lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].rewardPicks[2].value, "Boon")
     lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].rewardPicks[3].value, "ZeusUpgrade")
-    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[2].key, "Combat2")
-    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[2].label, "Second Combat")
-    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[2].rewardKind, "majorMinor")
-    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[2].rewardPicks[1].value, "Minor")
-    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[2].rewardPicks[2].value, "GiftDrop")
 
-    lu.assertEquals(snapshot.rows[4].roleKey, "Fountain")
-    lu.assertEquals(snapshot.rows[4].variantKey, "")
-    lu.assertNil(snapshot.rows[4].variant)
-    lu.assertNil(snapshot.rows[4].encounterPolicyKey)
-    lu.assertEquals(snapshot.rows[4].rewardKind, "majorMinor")
-    lu.assertEquals(snapshot.rows[4].rewardPicks[1].value, "Minor")
-    lu.assertEquals(snapshot.rows[4].rewardPicks[2].value, "GiftDrop")
+    lu.assertEquals(snapshot.rows[4].coordinate, 3)
+    lu.assertEquals(snapshot.rows[4].roleKey, "Combat")
+    lu.assertEquals(snapshot.rows[4].optionKey, "O_Combat03")
+    lu.assertEquals(snapshot.rows[4].variantKey, "ThreeCombats")
+    lu.assertEquals(snapshot.rows[4].variant.sourceKey, "ThreeCombats")
+    lu.assertEquals(snapshot.rows[4].variant.label, "3 Combats")
+    lu.assertEquals(snapshot.rows[4].realCombatCount, 3)
+    lu.assertEquals(#snapshot.rows[4].encounterRewardLegs, 2)
+    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[1].key, "Combat1")
+    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[1].rewardPicks[3].value, "ZeusUpgrade")
+    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[2].key, "Combat2")
+    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[2].rewardPicks[1].value, "Minor")
+    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[2].rewardPicks[2].value, "GiftDrop")
 
-    lu.assertEquals(snapshot.rows[5].roleKey, "Combat")
-    lu.assertEquals(snapshot.rows[5].variantKey, "TwoCombats")
-    lu.assertEquals(snapshot.rows[5].realCombatCount, 2)
-    lu.assertEquals(snapshot.rows[5].rewardKind, "none")
-    lu.assertEquals(#snapshot.rows[5].encounterRewardLegs, 1)
-    lu.assertEquals(snapshot.rows[5].encounterRewardLegs[1].key, "Combat1")
-    lu.assertEquals(snapshot.rows[5].encounterRewardLegs[1].rewardPicks[3].value, "HestiaUpgrade")
+    lu.assertEquals(snapshot.rows[5].roleKey, "Fountain")
+    lu.assertEquals(snapshot.rows[5].variantKey, "")
+    lu.assertNil(snapshot.rows[5].variant)
+    lu.assertNil(snapshot.rows[5].encounterPolicyKey)
+    lu.assertEquals(snapshot.rows[5].rewardKind, "majorMinor")
+    lu.assertEquals(snapshot.rows[5].rewardPicks[1].value, "Minor")
+    lu.assertEquals(snapshot.rows[5].rewardPicks[2].value, "GiftDrop")
+
+    lu.assertEquals(snapshot.rows[6].roleKey, "Combat")
+    lu.assertEquals(snapshot.rows[6].variantKey, "TwoCombats")
+    lu.assertEquals(snapshot.rows[6].realCombatCount, 2)
+    lu.assertEquals(snapshot.rows[6].rewardKind, "none")
+    lu.assertEquals(#snapshot.rows[6].encounterRewardLegs, 1)
+    lu.assertEquals(snapshot.rows[6].encounterRewardLegs[1].key, "Combat1")
+    lu.assertEquals(snapshot.rows[6].encounterRewardLegs[1].rewardPicks[3].value, "HestiaUpgrade")
 
     lu.assertEquals(snapshot.rows[8].slotKind, "preboss")
     lu.assertEquals(snapshot.rows[8].roomKey, "O_PreBoss01")
@@ -3685,6 +3733,161 @@ function TestRunPlannerControls.testFixedLinearReadPassInvalidationRefreshesCach
     data.invalidateReadPass(instance)
     lu.assertTrue(hasValue(data.roleValuesForRow(instance, rows, 6), "Midshop"))
     data.endReadPass(instance)
+end
+
+function TestRunPlannerControls.testFixedLinearRowContextUsesSelectionDepthCosts()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local rows = fakeRows({
+        {
+            RoleKey = "",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Story",
+            OptionKey = "F_Story01",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat04",
+        },
+    })
+
+    lu.assertEquals(data.rowContext(instance, rows, 1), {
+        rowIndex = 1,
+        coordinate = 0,
+        biomeDepthCache = 0,
+        biomeEncounterDepth = 0,
+        biomeEncounterDepthCost = 1,
+        roomHistoryCost = 1,
+    })
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeDepthCache, 4)
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepth, 4)
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCost, 0)
+    lu.assertEquals(data.rowContext(instance, rows, 6).biomeDepthCache, 5)
+    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepth, 4)
+    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthCost, 1)
+end
+
+function TestRunPlannerControls.testFixedLinearRowContextUsesOptionDepthCostOverrides()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteQ",
+        biome = catalog.lookup.Q,
+    })
+    local rows = fakeRows({
+        {
+            RoleKey = "",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "Q_Combat10",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "Q_Combat03",
+        },
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "Q_MiniBoss02",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "Q_Combat12",
+        },
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "Q_MiniBoss04",
+        },
+        {
+            RoleKey = "Shop",
+        },
+    })
+
+    lu.assertEquals(data.rowContext(instance, rows, 7).biomeDepthCache, 6)
+    lu.assertEquals(data.rowContext(instance, rows, 7).biomeEncounterDepth, 5)
+    lu.assertEquals(data.rowContext(instance, rows, 7).biomeEncounterDepthCost, 0)
+    lu.assertEquals(data.rowContext(instance, rows, 8).biomeEncounterDepth, 5)
+end
+
+function TestRunPlannerControls.testMinibossRequiresConcreteOption()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local rows = fakeRows({
+        {
+            RoleKey = "",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Miniboss",
+        },
+    })
+    local values = {}
+
+    data.fillOptionValues(instance, rows, 5, "Miniboss", values)
+    lu.assertEquals(values[1], "F_MiniBoss01")
+
+    local validation = data.validateRow(instance, rows, 5)
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "option_required")
+end
+
+function TestRunPlannerControls.testConcreteMinibossOptionUsesLeafDepthCost()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteP",
+        biome = catalog.lookup.P,
+    })
+    local rows = fakeRows({
+        {
+            RoleKey = "",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Vanilla",
+        },
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "P_MiniBoss01",
+        },
+    })
+
+    lu.assertTrue(data.validateRow(instance, rows, 5).valid)
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCost, 0)
 end
 
 function TestRunPlannerControls.testFixedLinearAvailabilityChecksTrialRewardRequirements()
@@ -4428,13 +4631,17 @@ function TestRunPlannerControls.testMultiEncounterTrialRequirementsUsePriorSurfa
             RoleKey = "Combat",
             OptionKey = "O_Combat01",
         },
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat02",
+        },
         {},
     })
 
-    lu.assertFalse(hasValue(data.roleValuesForRow(oInstance, rows, 3), "Trial"))
+    lu.assertFalse(hasValue(data.roleValuesForRow(oInstance, rows, 4), "Trial"))
 
     oInstance.routeContext = routeContext
-    lu.assertTrue(hasValue(data.roleValuesForRow(oInstance, rows, 3), "Trial"))
+    lu.assertTrue(hasValue(data.roleValuesForRow(oInstance, rows, 4), "Trial"))
 end
 
 function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesPreviousRoomExitRequirement()

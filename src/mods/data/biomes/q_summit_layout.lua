@@ -25,6 +25,7 @@ local function option(key, label, opts)
         label = label,
         features = opts.features,
         availability = opts.availability,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
     }
 end
 
@@ -45,51 +46,51 @@ end
 layout.surfaceShopFeatures = SURFACE_SHOP_FEATURES
 
 layout.introRoom = option("Q_Intro", "Intro", {
-    availability = { biomeDepth = { exact = 1 } },
+    availability = { biomeDepthCache = { exact = 1 } },
 })
 
 layout.prebossRoom = option("Q_PreBoss01", "Preboss", {
-    availability = { biomeDepth = { exact = 7 } },
+    availability = { biomeDepthCache = { exact = 7 } },
 })
 
 layout.combatRooms = {
-    combat("Q_Combat01", { availability = { biomeDepth = { maxExclusive = 7 } } }),
-    combat("Q_Combat02", { availability = { biomeDepth = { maxExclusive = 7 } } }),
+    combat("Q_Combat01", { availability = { biomeDepthCache = { maxExclusive = 7 } } }),
+    combat("Q_Combat02", { availability = { biomeDepthCache = { maxExclusive = 7 } } }),
     combat("Q_Combat03", {
         availability = {
-            biomeDepth = { exact = 2 },
+            biomeDepthCache = { exact = 2 },
         },
     }),
-    combat("Q_Combat04", { availability = { biomeDepth = { maxExclusive = 7 } } }),
+    combat("Q_Combat04", { availability = { biomeDepthCache = { maxExclusive = 7 } } }),
     combat("Q_Combat05", {
         availability = {
-            biomeDepth = { exact = 2 },
+            biomeDepthCache = { exact = 2 },
         },
     }),
-    combat("Q_Combat06", { availability = { biomeDepth = { minExclusive = 3 } } }),
+    combat("Q_Combat06", { availability = { biomeDepthCache = { minExclusive = 3 } } }),
     combat("Q_Combat07"),
-    combat("Q_Combat08", { availability = { biomeDepth = { maxExclusive = 7 } } }),
-    combat("Q_Combat09", { availability = { biomeDepth = { minExclusive = 3 } } }),
-    combat("Q_Combat10", { availability = { biomeDepth = { exact = 1 } } }),
-    combat("Q_Combat11", { availability = { biomeDepth = { exact = 1 } } }),
+    combat("Q_Combat08", { availability = { biomeDepthCache = { maxExclusive = 7 } } }),
+    combat("Q_Combat09", { availability = { biomeDepthCache = { minExclusive = 3 } } }),
+    combat("Q_Combat10", { availability = { biomeDepthCache = { exact = 1 } } }),
+    combat("Q_Combat11", { availability = { biomeDepthCache = { exact = 1 } } }),
     combat("Q_Combat12", {
         availability = {
-            biomeDepth = { exact = 5 },
+            biomeDepthCache = { exact = 5 },
         },
     }),
     combat("Q_Combat13", {
         availability = {
-            biomeDepth = { exact = 5 },
+            biomeDepthCache = { exact = 5 },
         },
     }),
     combat("Q_Combat14", {
         availability = {
-            biomeDepth = { exact = 5 },
+            biomeDepthCache = { exact = 5 },
         },
     }),
     combat("Q_Combat15", {
         availability = {
-            biomeDepth = { exact = 2 },
+            biomeDepthCache = { exact = 2 },
         },
     }),
     combat("Q_Combat16"),
@@ -119,23 +120,27 @@ layout.forcedDepthOptions = {
 
 layout.minibossRooms = {
     option("Q_MiniBoss02", "Brute", {
+        biomeEncounterDepthCost = 1,
         availability = {
-            biomeDepth = { exact = 3 },
+            biomeDepthCache = { exact = 3 },
         },
     }),
     option("Q_MiniBoss03", "Typhon Tail", {
+        biomeEncounterDepthCost = 1,
         availability = {
-            biomeDepth = { exact = 6 },
+            biomeDepthCache = { exact = 6 },
         },
     }),
     option("Q_MiniBoss04", "Typhon Eye", {
+        biomeEncounterDepthCost = 0,
         availability = {
-            biomeDepth = { exact = 6 },
+            biomeDepthCache = { exact = 6 },
         },
     }),
     option("Q_MiniBoss05", "Stalker", {
+        biomeEncounterDepthCost = 1,
         availability = {
-            biomeDepth = { exact = 3 },
+            biomeDepthCache = { exact = 3 },
         },
     }),
 }

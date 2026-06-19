@@ -402,7 +402,7 @@ local function nextDecisionDetail(runtime, currentRun, args, otherDoors, nextArg
     return "next detail set=" .. fieldValue(biomeKey)
         .. " current=" .. fieldValue(roomName(currentRoom))
         .. " runDepth=" .. fieldValue(currentRun and currentRun.RunDepthCache)
-        .. " biomeDepth=" .. fieldValue(currentRun and currentRun.BiomeDepthCache)
+        .. " biomeDepthCache=" .. fieldValue(currentRun and currentRun.BiomeDepthCache)
         .. " coord=" .. fieldValue(coordinate)
         .. " planned=" .. fieldValue(plannedRoomKey)
         .. " eligible=" .. fieldValue(eligible)
