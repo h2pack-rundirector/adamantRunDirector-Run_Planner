@@ -72,10 +72,11 @@ local function isOptionAllowedByForcedRule(instance, rowIndex, roleKey, optionKe
 end
 
 local function buildFixedRoleSlot(instance, depth, special)
+    local kind = special.kind
     local roomOptions = shallowCopyList(special.roomOptions)
     local role = {
-        key = special.key or special.kind,
-        label = special.label or special.key or special.kind,
+        key = special.key or kind,
+        label = special.label or special.key or kind,
         roomKey = special.roomKey,
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
@@ -88,7 +89,7 @@ local function buildFixedRoleSlot(instance, depth, special)
     instance.routeSlots[rowIndex] = {
         rowIndex = rowIndex,
         coordinate = depth,
-        kind = special.kind,
+        kind = kind,
         label = special.label or role.label,
         roomKey = special.roomKey,
         roleKey = role.key,

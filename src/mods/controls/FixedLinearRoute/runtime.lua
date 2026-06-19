@@ -89,6 +89,13 @@ local function prewarmRewardSurfaces(instance)
     end
 end
 
+local function selectedRoomKey(slot, option)
+    if option ~= nil and option.key ~= nil and option.key ~= "" then
+        return option.key
+    end
+    return slot and slot.roomKey or nil
+end
+
 function runtime.create(fields, instance)
     prewarmRewardSurfaces(instance)
     local routeRows = createRouteRows(fields)
@@ -206,7 +213,7 @@ function runtime.create(fields, instance)
             rowIndex = rowIndex,
             coordinate = slot.coordinate,
             slotKind = slot.kind or "route",
-            roomKey = slot.roomKey,
+            roomKey = selectedRoomKey(slot, option),
             branchKey = slot.branchKey,
             slotLabel = slot.label,
             roomHistoryCost = slot.roomHistoryCost,

@@ -1523,14 +1523,16 @@ function TestRunPlannerControls.testFixedLinearSnapshotsExportDerivedFeaturesOnl
         biome = catalog.lookup.F,
     })
     local fControl = template.createRuntime(routeFields({
-        {},
+        { OptionKey = "F_Opening02" },
         { RoleKey = "Combat" },
         { RoleKey = "Combat", OptionKey = "F_Combat01" },
     }), fInstance)
     local fSnapshot = fControl:buildSnapshot()
 
-    lu.assertNil(fSnapshot.rows[1].features)
+    lu.assertEquals(fSnapshot.rows[1].roomKey, "F_Opening02")
+    lu.assertEquals(fSnapshot.rows[1].features, { chaos = true })
     lu.assertNil(fSnapshot.rows[2].features)
+    lu.assertEquals(fSnapshot.rows[3].roomKey, "F_Combat01")
     lu.assertEquals(fSnapshot.rows[3].features, { chaos = true, wellShop = true })
 
     local gInstance = template.prepare({
@@ -1845,6 +1847,22 @@ function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(storage[2].row[6].key, "Reward6Key")
     lu.assertEquals(storage[2].row[7].key, "Reward1LootKey")
     lu.assertEquals(storage[2].row[12].key, "Reward6LootKey")
+end
+
+function TestRunPlannerControls.testErebusSpecialRoomsUseRawVanillaDepthWindow()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local rows = fakeRows({})
+
+    lu.assertEquals(instance.routeSlots[4].coordinate, 3)
+    lu.assertFalse(hasValue(data.optionValuesForRow(instance, rows, 4, "Story"), "F_Story01"))
+
+    lu.assertEquals(instance.routeSlots[5].coordinate, 4)
+    lu.assertTrue(hasValue(data.optionValuesForRow(instance, rows, 5, "Story"), "F_Story01"))
 end
 
 function TestRunPlannerControls.testFixedLinearEntryMetadataRendersIntroRows()
@@ -2412,6 +2430,26 @@ function TestRunPlannerControls.testMultiEncounterStorageMatchesThessalyRouteRow
         "TwoCombats",
     })
     lu.assertEquals(routeData.variantValuesForRow(instance, 3, "Story"), {})
+end
+
+function TestRunPlannerControls.testMultiEncounterSnapshotUsesSelectedOptionRoomKey()
+    local catalog = loadCatalog()
+    local template = loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat01",
+            VariantKey = "TwoCombats",
+        },
+    }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertEquals(snapshot.rows[2].roomKey, "O_Combat01")
 end
 
 function TestRunPlannerControls.testFieldsCageStorageMatchesFieldsRouteRows()
@@ -3345,25 +3383,28 @@ function TestRunPlannerControls.testSingleRoomRolesDefaultToConcreteOption()
         name = "RouteF",
         biome = catalog.lookup.F,
     })
-	    local control = template.createRuntime(routeFields({
-	            {
-	                RoleKey = "Vanilla",
-	            },
-	            {
-	                RoleKey = "Vanilla",
-	            },
-	            {
-	                RoleKey = "Vanilla",
-	            },
-	            {
-	                RoleKey = "Vanilla",
-	            },
-	            {
-	                RoleKey = "Story",
-	                OptionKey = "",
-	            },
-	        }), instance)
-	    local row = control:rowSnapshot(5)
+    local control = template.createRuntime(routeFields({
+            {
+                RoleKey = "Vanilla",
+            },
+            {
+                RoleKey = "Vanilla",
+            },
+            {
+                RoleKey = "Vanilla",
+            },
+            {
+                RoleKey = "Vanilla",
+            },
+            {
+                RoleKey = "Vanilla",
+            },
+            {
+                RoleKey = "Story",
+                OptionKey = "",
+            },
+        }), instance)
+    local row = control:rowSnapshot(6)
 
     lu.assertEquals(row.roleKey, "Story")
     lu.assertEquals(row.optionKey, "F_Story01")
@@ -3417,12 +3458,13 @@ function TestRunPlannerControls.testFixedLinearAvailabilityFiltersRolesByRouteRo
         { RoleKey = "" },
         { RoleKey = "Vanilla" },
         { RoleKey = "Vanilla" },
+        { RoleKey = "Vanilla" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat02",
         },
     })
-    data.fillRoleValues(instance, rows, 5, values)
+    data.fillRoleValues(instance, rows, 6, values)
     lu.assertTrue(hasValue(values, "Story"))
     lu.assertTrue(hasValue(values, "Fountain"))
     lu.assertTrue(hasValue(values, "Midshop"))
@@ -3564,16 +3606,19 @@ function TestRunPlannerControls.testFixedLinearAvailabilityConsumesPriorOneShotR
             RoleKey = "Vanilla",
         },
         {
+            RoleKey = "Vanilla",
+        },
+        {
             RoleKey = "Story",
             OptionKey = "F_Story01",
         },
     })
     local values = {}
 
-    data.fillRoleValues(instance, rows, 5, values)
+    data.fillRoleValues(instance, rows, 6, values)
     lu.assertTrue(hasValue(values, "Story"))
 
-    data.fillRoleValues(instance, rows, 6, values)
+    data.fillRoleValues(instance, rows, 7, values)
     lu.assertFalse(hasValue(values, "Story"))
 end
 
@@ -3590,22 +3635,24 @@ function TestRunPlannerControls.testFixedLinearAvailabilityChecksPreviousRoomExi
         { RoleKey = "" },
         { RoleKey = "Vanilla" },
         { RoleKey = "Vanilla" },
+        { RoleKey = "Vanilla" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat01",
         },
-    }), 5, values)
+    }), 6, values)
     lu.assertFalse(hasValue(values, "Midshop"))
 
     data.fillRoleValues(instance, fakeRows({
         { RoleKey = "" },
         { RoleKey = "Vanilla" },
         { RoleKey = "Vanilla" },
+        { RoleKey = "Vanilla" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat02",
         },
-    }), 5, values)
+    }), 6, values)
     lu.assertTrue(hasValue(values, "Midshop"))
 end
 
@@ -3620,6 +3667,7 @@ function TestRunPlannerControls.testFixedLinearReadPassInvalidationRefreshesCach
         { RoleKey = "" },
         { RoleKey = "Vanilla" },
         { RoleKey = "Vanilla" },
+        { RoleKey = "Vanilla" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat01",
@@ -3628,14 +3676,14 @@ function TestRunPlannerControls.testFixedLinearReadPassInvalidationRefreshesCach
     local rows = fakeRows(rowState)
 
     data.beginReadPass(instance)
-    local values = data.roleValuesForRow(instance, rows, 5)
+    local values = data.roleValuesForRow(instance, rows, 6)
     lu.assertFalse(hasValue(values, "Midshop"))
 
-    rowState[4].OptionKey = "F_Combat02"
-    lu.assertFalse(hasValue(data.roleValuesForRow(instance, rows, 5), "Midshop"))
+    rowState[5].OptionKey = "F_Combat02"
+    lu.assertFalse(hasValue(data.roleValuesForRow(instance, rows, 6), "Midshop"))
 
     data.invalidateReadPass(instance)
-    lu.assertTrue(hasValue(data.roleValuesForRow(instance, rows, 5), "Midshop"))
+    lu.assertTrue(hasValue(data.roleValuesForRow(instance, rows, 6), "Midshop"))
     data.endReadPass(instance)
 end
 
@@ -4489,14 +4537,17 @@ function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesOutOfRangeAndDu
                 RoleKey = "Vanilla",
             },
             {
+                RoleKey = "Vanilla",
+            },
+            {
                 RoleKey = "Story",
                 OptionKey = "F_Story01",
             },
-	            {
-	                RoleKey = "Story",
-	                OptionKey = "F_Story01",
-	            },
-	        }), instance)
+            {
+                RoleKey = "Story",
+                OptionKey = "F_Story01",
+            },
+        }), instance)
     local snapshot = control:buildSnapshot()
 
     lu.assertFalse(snapshot.valid)
@@ -4504,16 +4555,16 @@ function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesOutOfRangeAndDu
     lu.assertEquals(#snapshot.invalidRows, 2)
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
     lu.assertEquals(snapshot.invalidRows[1].code, "option_unavailable")
-    lu.assertEquals(snapshot.invalidRows[2].rowIndex, 6)
+    lu.assertEquals(snapshot.invalidRows[2].rowIndex, 7)
     lu.assertEquals(snapshot.invalidRows[2].code, "role_limit")
     lu.assertEquals(snapshot.rows[2].roleKey, "Story")
     lu.assertEquals(snapshot.rows[2].optionKey, "F_Story01")
     lu.assertFalse(snapshot.rows[2].valid)
-    lu.assertEquals(snapshot.rows[5].roleKey, "Story")
-    lu.assertEquals(snapshot.rows[5].optionKey, "F_Story01")
-    lu.assertTrue(snapshot.rows[5].valid)
     lu.assertEquals(snapshot.rows[6].roleKey, "Story")
     lu.assertEquals(snapshot.rows[6].optionKey, "F_Story01")
-    lu.assertFalse(snapshot.rows[6].valid)
-    lu.assertEquals(snapshot.rows[6].invalidCode, "role_limit")
+    lu.assertTrue(snapshot.rows[6].valid)
+    lu.assertEquals(snapshot.rows[7].roleKey, "Story")
+    lu.assertEquals(snapshot.rows[7].optionKey, "F_Story01")
+    lu.assertFalse(snapshot.rows[7].valid)
+    lu.assertEquals(snapshot.rows[7].invalidCode, "role_limit")
 end

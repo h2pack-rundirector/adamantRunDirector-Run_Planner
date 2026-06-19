@@ -6,6 +6,9 @@ function logic.bind(data)
         executionPlan = import("mods/logic/execution_plan.lua"),
         routeContext = import("mods/route/run_context.lua"),
     })
+    local roomRouting = import("mods/logic/room_routing.lua", nil, {
+        routePlan = routePlan,
+    })
     local bound = {}
 
     function bound.defineCache(moduleRef)
@@ -14,6 +17,7 @@ function logic.bind(data)
 
     function bound.registerHooks(moduleRef)
         routePlan.registerHooks(moduleRef, catalog)
+        roomRouting.registerHooks(moduleRef, catalog)
     end
 
     function bound.attach(moduleRef)

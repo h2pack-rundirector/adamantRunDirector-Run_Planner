@@ -30,6 +30,22 @@ local function loadRoutePlan()
     })
 end
 
+local function loadRoomRouting(routePlan, game)
+    return testImport("mods/logic/room_routing.lua", nil, {
+        routePlan = routePlan,
+        game = game,
+    })
+end
+
+local function logsContain(logs, text)
+    for _, line in ipairs(logs) do
+        if line:find(text, 1, true) ~= nil then
+            return true
+        end
+    end
+    return false
+end
+
 local function validBiomeSnapshot(biomeKey)
     return {
         controlName = "Route" .. biomeKey,
@@ -38,6 +54,18 @@ local function validBiomeSnapshot(biomeKey)
         disabled = false,
         invalidRows = {},
         rows = {},
+    }
+end
+
+local function plannedBiomeSnapshot(biomeKey, adapter, rows)
+    return {
+        controlName = "Route" .. biomeKey,
+        biomeKey = biomeKey,
+        adapter = adapter,
+        valid = true,
+        disabled = false,
+        invalidRows = {},
+        rows = rows,
     }
 end
 
@@ -311,6 +339,356 @@ function TestRunPlannerLogic.testRoutePlanKeepsPrebossBranchesAtSharedCoordinate
     lu.assertEquals(reservation.entries[2].branchKey, "MajorReward")
 end
 
+function TestRunPlannerLogic.testRoomRoutingForcesPlannedLinearRoom()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan, {
+        RoomData = {
+            F_Story01 = { Name = "F_Story01" },
+        },
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = plannedBiomeSnapshot("F", "fixedLinear", {
+            {
+                rowIndex = 3,
+                coordinate = 2,
+                slotKind = "route",
+                roomKey = "F_Story01",
+                roleKey = "Story",
+                optionKey = "Arachne",
+                valid = true,
+            },
+        }),
+    })
+    routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+    }, {
+        StartingBiome = "F",
+    })
+
+    local originalArgs = {
+        PreserveMe = true,
+    }
+    local args = roomRouting.buildArgs(runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+        BiomeDepthCache = 1,
+    }, originalArgs, {})
+
+    lu.assertEquals(args.ForceNextRoom, "F_Story01")
+    lu.assertEquals(args.PreserveMe, true)
+    lu.assertNil(originalArgs.ForceNextRoom)
+end
+
+function TestRunPlannerLogic.testRoomRoutingExcludesFutureReservedRooms()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan)
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = plannedBiomeSnapshot("F", "fixedLinear", {
+            {
+                rowIndex = 4,
+                coordinate = 3,
+                slotKind = "route",
+                roomKey = "F_Story01",
+                roleKey = "Story",
+                optionKey = "Arachne",
+                valid = true,
+            },
+        }),
+    })
+    routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+    }, {
+        StartingBiome = "F",
+    })
+
+    local args = roomRouting.buildArgs(runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+        BiomeDepthCache = 1,
+    }, {
+        ExcludedNames = {
+            ExistingBan = true,
+        },
+    }, {})
+
+    lu.assertNil(args.ForceNextRoom)
+    lu.assertEquals(args.ExcludedNames.ExistingBan, true)
+    lu.assertEquals(args.ExcludedNames.F_Story01, true)
+end
+
+function TestRunPlannerLogic.testRoomRoutingDoesNotDuplicateNormalPlannedRoom()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan)
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = plannedBiomeSnapshot("F", "fixedLinear", {
+            {
+                rowIndex = 3,
+                coordinate = 2,
+                slotKind = "route",
+                roomKey = "F_Story01",
+                roleKey = "Story",
+                optionKey = "Arachne",
+                valid = true,
+            },
+        }),
+    })
+    routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+    }, {
+        StartingBiome = "F",
+    })
+
+    local args = roomRouting.buildArgs(runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+        BiomeDepthCache = 1,
+    }, {}, {
+        {
+            Room = {
+                Name = "F_Story01",
+            },
+        },
+    })
+
+    lu.assertNil(args.ForceNextRoom)
+    lu.assertEquals(args.ExcludedNames.F_Story01, true)
+end
+
+function TestRunPlannerLogic.testRoomRoutingAllowsSharedPrebossBranchRoom()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan, {
+        RoomData = {
+            F_PreBoss01 = { Name = "F_PreBoss01" },
+        },
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = plannedBiomeSnapshot("F", "fixedLinear", {
+            {
+                rowIndex = 10,
+                coordinate = 10,
+                slotKind = "preboss",
+                roomKey = "F_PreBoss01",
+                branchKey = "Shop",
+                roleKey = "Shop",
+                valid = true,
+            },
+            {
+                rowIndex = 11,
+                coordinate = 10,
+                slotKind = "preboss",
+                roomKey = "F_PreBoss01",
+                branchKey = "MajorReward",
+                roleKey = "MajorReward",
+                valid = true,
+            },
+        }),
+    })
+    routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+    }, {
+        StartingBiome = "F",
+    })
+
+    local args = roomRouting.buildArgs(runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+        BiomeDepthCache = 9,
+    }, {}, {
+        {
+            Room = {
+                Name = "F_PreBoss01",
+            },
+        },
+    })
+
+    lu.assertEquals(args.ForceNextRoom, "F_PreBoss01")
+end
+
+function TestRunPlannerLogic.testRoomRoutingSupportsSummitLinearAdapter()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan, {
+        RoomData = {
+            Q_MiniBoss01 = { Name = "Q_MiniBoss01" },
+        },
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        Q = plannedBiomeSnapshot("Q", "scriptedFixedLinear", {
+            {
+                rowIndex = 3,
+                coordinate = 3,
+                slotKind = "route",
+                roomKey = "Q_MiniBoss01",
+                roleKey = "Miniboss",
+                optionKey = "Q_MiniBoss01",
+                valid = true,
+            },
+        }),
+    })
+    routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "Q",
+        },
+    }, {
+        StartingBiome = "Q",
+    })
+
+    local args = roomRouting.buildArgs(runtime, {
+        CurrentRoom = {
+            RoomSetName = "Q",
+        },
+        BiomeDepthCache = 2,
+    }, {}, {})
+
+    lu.assertEquals(args.ForceNextRoom, "Q_MiniBoss01")
+end
+
+function TestRunPlannerLogic.testRoomRoutingForcesPlannedStartingRoom()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local createdArgs
+    local logs = {}
+    local roomRouting = loadRoomRouting(routePlan, {
+        RoomData = {
+            F_Opening02 = {
+                Name = "F_Opening02",
+                Starting = true,
+            },
+        },
+        IsRoomEligible = function()
+            return true
+        end,
+        CreateRoom = function(roomData, args)
+            createdArgs = args
+            return {
+                Name = roomData.Name,
+            }
+        end,
+        print = function(text)
+            logs[#logs + 1] = text
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = plannedBiomeSnapshot("F", "fixedLinear", {
+            {
+                rowIndex = 1,
+                coordinate = 0,
+                slotKind = "opening",
+                roomKey = "F_Opening02",
+                roleKey = "Opening",
+                optionKey = "F_Opening02",
+                valid = true,
+            },
+        }),
+    })
+    local chooseStartingRoomHook
+    roomRouting.registerHooks({
+        hooks = {
+            wrap = function(name, callback)
+                if name == "ChooseStartingRoom" then
+                    chooseStartingRoomHook = callback
+                end
+            end,
+        },
+    }, catalog)
+
+    local originalArgs = {
+        StartingBiome = "F",
+    }
+    local baseCalled = false
+    local result = chooseStartingRoomHook({
+        isEnabled = function()
+            return true
+        end,
+    }, runtime, function()
+        baseCalled = true
+    end, {}, originalArgs)
+
+    lu.assertFalse(baseCalled)
+    lu.assertEquals(result.Name, "F_Opening02")
+    lu.assertNotIs(createdArgs, originalArgs)
+    lu.assertEquals(createdArgs.StartingBiome, "F")
+    lu.assertEquals(routePlan.get(runtime).routeKey, "Underworld")
+    lu.assertTrue(logsContain(logs, "plan begin route=Underworld active=true valid=true"))
+    lu.assertTrue(logsContain(logs, "plan row biome=F row=1 coord=0 kind=opening room=F_Opening02"))
+end
+
+function TestRunPlannerLogic.testRoomRoutingFallsBackWhenPlannedStartingRoomIsIneligible()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan, {
+        RoomData = {
+            F_Opening02 = {
+                Name = "F_Opening02",
+                Starting = true,
+            },
+        },
+        IsRoomEligible = function()
+            return false
+        end,
+        print = function()
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = plannedBiomeSnapshot("F", "fixedLinear", {
+            {
+                rowIndex = 1,
+                coordinate = 0,
+                slotKind = "opening",
+                roomKey = "F_Opening02",
+                roleKey = "Opening",
+                optionKey = "F_Opening02",
+                valid = true,
+            },
+        }),
+    })
+    local chooseStartingRoomHook
+    roomRouting.registerHooks({
+        hooks = {
+            wrap = function(name, callback)
+                if name == "ChooseStartingRoom" then
+                    chooseStartingRoomHook = callback
+                end
+            end,
+        },
+    }, catalog)
+
+    local baseCalled = false
+    local result = chooseStartingRoomHook({
+        isEnabled = function()
+            return true
+        end,
+    }, runtime, function(_, args)
+        baseCalled = true
+        lu.assertEquals(routePlan.get(runtime).routeKey, "Underworld")
+        return {
+            Name = "Vanilla",
+            Args = args,
+        }
+    end, {}, {
+        StartingBiome = "F",
+    })
+
+    lu.assertTrue(baseCalled)
+    lu.assertEquals(result.Name, "Vanilla")
+end
+
 function TestRunPlannerLogic.testRoutePlanDefersDreamDive()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
@@ -413,6 +791,8 @@ function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
 
     local cacheDefined = false
     local hookedStartNewRun = false
+    local hookedChooseStartingRoom = false
+    local hookedChooseNextRoomData = false
     bound.attach({
         cache = {
             define = function(defs)
@@ -423,6 +803,10 @@ function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
             wrap = function(name)
                 if name == "StartNewRun" then
                     hookedStartNewRun = true
+                elseif name == "ChooseStartingRoom" then
+                    hookedChooseStartingRoom = true
+                elseif name == "ChooseNextRoomData" then
+                    hookedChooseNextRoomData = true
                 end
             end,
         },
@@ -430,4 +814,6 @@ function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
 
     lu.assertTrue(cacheDefined)
     lu.assertTrue(hookedStartNewRun)
+    lu.assertTrue(hookedChooseStartingRoom)
+    lu.assertTrue(hookedChooseNextRoomData)
 end
