@@ -1,0 +1,433 @@
+local lu = require("luaunit")
+
+-- luacheck: globals TestRunPlannerLogic
+TestRunPlannerLogic = {}
+
+local function testImport(path, _, deps)
+    local chunk = assert(loadfile("src/" .. path))
+    return chunk(deps)
+end
+
+local function withTestImport(callback)
+    local previousImport = _G.import
+    _G.import = testImport
+    local ok, err = pcall(callback)
+    _G.import = previousImport
+    if not ok then
+        error(err, 0)
+    end
+end
+
+local function loadCatalog()
+    local data = dofile("src/mods/data.lua")
+    return data.loadCatalog(testImport), data
+end
+
+local function loadRoutePlan()
+    return testImport("mods/logic/route_plan.lua", nil, {
+        executionPlan = testImport("mods/logic/execution_plan.lua"),
+        routeContext = testImport("mods/route/run_context.lua"),
+    })
+end
+
+local function validBiomeSnapshot(biomeKey)
+    return {
+        controlName = "Route" .. biomeKey,
+        biomeKey = biomeKey,
+        valid = true,
+        disabled = false,
+        invalidRows = {},
+        rows = {},
+    }
+end
+
+local function invalidBiomeSnapshot(biomeKey)
+    return {
+        controlName = "Route" .. biomeKey,
+        biomeKey = biomeKey,
+        valid = false,
+        disabled = true,
+        invalidRows = {
+            {
+                rowIndex = 1,
+                code = "test_invalid",
+                message = "test invalid",
+            },
+        },
+        rows = {},
+    }
+end
+
+local function routeGlobalControl()
+    return {
+        setRouteContext = function()
+        end,
+        isLayerConfigured = function(_, layer)
+            return layer == "rewards"
+        end,
+    }
+end
+
+local function biomeControl(snapshot)
+    return {
+        setRouteContext = function()
+        end,
+        read = function(_, path)
+            if path == "snapshot" then
+                return snapshot
+            end
+            return nil
+        end,
+    }
+end
+
+local function buildControls(catalog, snapshots)
+    local controlsByName = {
+        RouteGlobalUnderworld = routeGlobalControl(),
+        RouteGlobalSurface = routeGlobalControl(),
+    }
+
+    for _, biome in ipairs(catalog.ordered or {}) do
+        controlsByName["Route" .. biome.key] = biomeControl(snapshots[biome.key] or validBiomeSnapshot(biome.key))
+    end
+
+    return {
+        get = function(controlName)
+            return controlsByName[controlName]
+        end,
+    }
+end
+
+local function runtimeWithControls(routePlan, controls)
+    local state
+    local runtime = {
+        controls = controls,
+        data = {
+            cache = {
+                currentRun = {
+                    get = function(cacheName)
+                        if cacheName ~= routePlan.cacheName() then
+                            return nil
+                        end
+                        state = state or {}
+                        return state
+                    end,
+                },
+            },
+        },
+    }
+    return runtime
+end
+
+local function runtimeForCatalog(routePlan, catalog, snapshots)
+    return runtimeWithControls(routePlan, buildControls(catalog, snapshots or {}))
+end
+
+function TestRunPlannerLogic.testRoutePlanSelectsUnderworldForErebusStart()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local runtime = runtimeForCatalog(routePlan, catalog)
+
+    local plan = routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+    }, {
+        StartingBiome = "F",
+    })
+
+    lu.assertTrue(plan.active)
+    lu.assertTrue(plan.valid)
+    lu.assertEquals(plan.routeKey, "Underworld")
+    lu.assertNil(plan.snapshot)
+    lu.assertEquals(plan.executionPlan.routeKey, "Underworld")
+    lu.assertEquals(plan.executionPlan.layers.rooms, true)
+    lu.assertEquals(plan.executionPlan.layers.rewards, true)
+    lu.assertEquals(plan.executionPlan.layers.npcs, false)
+    lu.assertEquals(plan.executionPlan.layers.features, false)
+    lu.assertIs(routePlan.get(runtime), plan)
+end
+
+function TestRunPlannerLogic.testRoutePlanSelectsSurfaceForEphyraStart()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local runtime = runtimeForCatalog(routePlan, catalog)
+
+    local plan = routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "N",
+        },
+    }, {
+        StartingBiome = "N",
+    })
+
+    lu.assertTrue(plan.active)
+    lu.assertTrue(plan.valid)
+    lu.assertEquals(plan.routeKey, "Surface")
+    lu.assertNil(plan.snapshot)
+    lu.assertEquals(plan.executionPlan.routeKey, "Surface")
+end
+
+function TestRunPlannerLogic.testRoutePlanCompilesRuntimeExecutionPlan()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = {
+            controlName = "RouteF",
+            biomeKey = "F",
+            adapter = "FixedLinearRoute",
+            valid = true,
+            disabled = false,
+            invalidRows = {},
+            rows = {
+                {
+                    rowIndex = 1,
+                    coordinate = 0,
+                    slotKind = "intro",
+                    roomKey = "F_PreRun",
+                    roleKey = "Intro",
+                    optionKey = "",
+                    valid = true,
+                    rewardKind = "roomStore",
+                    rewards = { "Boon", "ZeusUpgrade" },
+                    rewardLoot = { "ZeusUpgrade" },
+                    rewardPicks = {
+                        {
+                            key = "boonSource",
+                            kind = "dropdown",
+                            alias = "Reward1LootKey",
+                            value = "ZeusUpgrade",
+                        },
+                    },
+                },
+                {
+                    rowIndex = 2,
+                    coordinate = 1,
+                    slotKind = "route",
+                    roomKey = "",
+                    roleKey = "Vanilla",
+                    optionKey = "",
+                    valid = true,
+                },
+                {
+                    rowIndex = 3,
+                    coordinate = 2,
+                    slotKind = "route",
+                    roomKey = "F_Story01",
+                    roleKey = "Story",
+                    optionKey = "Arachne",
+                    valid = true,
+                    features = {
+                        chaos = true,
+                    },
+                },
+            },
+        },
+    })
+
+    local plan = routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+    }, {
+        StartingBiome = "F",
+    })
+
+    local execution = plan.executionPlan
+    local biome = execution.biomes.F
+    lu.assertEquals(#biome.plannedRows, 2)
+    lu.assertEquals(biome.plannedByRowIndex[1].roomKey, "F_PreRun")
+    lu.assertEquals(biome.plannedByCoordinate[2].primary.roomKey, "F_Story01")
+    lu.assertEquals(biome.reservedRoomKeys.F_Story01.primary.rowIndex, 3)
+    lu.assertEquals(execution.reservedRoomKeys.F_Story01.primary.biomeKey, "F")
+    lu.assertEquals(biome.plannedByRowIndex[1].reward.kind, "roomStore")
+    lu.assertEquals(biome.plannedByRowIndex[1].reward.rewards[2], "ZeusUpgrade")
+    lu.assertEquals(biome.plannedByRowIndex[1].reward.picks[1].value, "ZeusUpgrade")
+    lu.assertEquals(biome.plannedByRowIndex[3].features.chaos, true)
+end
+
+function TestRunPlannerLogic.testRoutePlanKeepsPrebossBranchesAtSharedCoordinate()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = {
+            controlName = "RouteF",
+            biomeKey = "F",
+            adapter = "FixedLinearRoute",
+            valid = true,
+            disabled = false,
+            invalidRows = {},
+            rows = {
+                {
+                    rowIndex = 10,
+                    coordinate = 10,
+                    slotKind = "preboss",
+                    roomKey = "F_PreBoss01",
+                    branchKey = "Shop",
+                    roleKey = "Shop",
+                    optionKey = "",
+                    valid = true,
+                    rewardKind = "roomStore",
+                    rewards = { "Shop" },
+                },
+                {
+                    rowIndex = 11,
+                    coordinate = 10,
+                    slotKind = "preboss",
+                    roomKey = "F_PreBoss01",
+                    branchKey = "MajorReward",
+                    roleKey = "MajorReward",
+                    optionKey = "",
+                    valid = true,
+                    rewardKind = "roomStore",
+                    rewards = { "Boon" },
+                },
+            },
+        },
+    })
+
+    local plan = routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+    }, {
+        StartingBiome = "F",
+    })
+
+    local biome = plan.executionPlan.biomes.F
+    local coordinate = biome.plannedByCoordinate[10]
+    local room = coordinate.byRoomKey.F_PreBoss01
+    local reservation = plan.executionPlan.reservedRoomKeys.F_PreBoss01
+
+    lu.assertEquals(#coordinate.rows, 2)
+    lu.assertTrue(coordinate.branchGroup)
+    lu.assertEquals(coordinate.primary.branchKey, "Shop")
+    lu.assertEquals(coordinate.byBranchKey.Shop.rowIndex, 10)
+    lu.assertEquals(coordinate.byBranchKey.MajorReward.rowIndex, 11)
+    lu.assertEquals(#room.rows, 2)
+    lu.assertEquals(room.byBranchKey.MajorReward.reward.rewards[1], "Boon")
+    lu.assertEquals(#biome.plannedByRoomKey.F_PreBoss01.rows, 2)
+    lu.assertEquals(#reservation.entries, 2)
+    lu.assertEquals(reservation.entries[2].branchKey, "MajorReward")
+end
+
+function TestRunPlannerLogic.testRoutePlanDefersDreamDive()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local runtime = runtimeForCatalog(routePlan, catalog)
+
+    local plan = routePlan.refresh(catalog, runtime, {
+        IsDreamRun = true,
+        CurrentRoom = {
+            RoomSetName = "G",
+        },
+    }, {
+        StartingBiome = "G",
+    })
+
+    lu.assertFalse(plan.active)
+    lu.assertFalse(plan.valid)
+    lu.assertEquals(plan.reason, routePlan.REASON_DREAM_DIVE)
+    lu.assertNil(plan.routeKey)
+    lu.assertNil(plan.snapshot)
+end
+
+function TestRunPlannerLogic.testRoutePlanInvalidatesBadRouteSnapshot()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = invalidBiomeSnapshot("F"),
+    })
+
+    local plan = routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+    }, {
+        StartingBiome = "F",
+    })
+
+    lu.assertFalse(plan.active)
+    lu.assertFalse(plan.valid)
+    lu.assertEquals(plan.reason, routePlan.REASON_INVALID_SNAPSHOT)
+    lu.assertEquals(plan.routeKey, "Underworld")
+    lu.assertEquals(plan.invalidRows[1].biomeKey, "F")
+    lu.assertEquals(plan.invalidRows[1].code, "test_invalid")
+end
+
+function TestRunPlannerLogic.testRoutePlanRegistersCacheAndStartNewRunHook()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local runtime = runtimeForCatalog(routePlan, catalog)
+    local cacheDefs
+    local startNewRunHook
+    local moduleRef = {
+        cache = {
+            define = function(defs)
+                cacheDefs = defs
+            end,
+        },
+        hooks = {
+            wrap = function(name, callback)
+                if name == "StartNewRun" then
+                    startNewRunHook = callback
+                end
+            end,
+        },
+    }
+
+    routePlan.defineCache(moduleRef)
+    routePlan.registerHooks(moduleRef, catalog)
+
+    lu.assertNotNil(cacheDefs.RoutePlan)
+    lu.assertEquals(cacheDefs.RoutePlan.domain, "currentRun")
+    lu.assertNotNil(startNewRunHook)
+
+    local baseCalled = false
+    local result = startNewRunHook({
+        isEnabled = function()
+            return true
+        end,
+    }, runtime, function(_, args)
+        baseCalled = true
+        return {
+            CurrentRoom = {
+                RoomSetName = args.StartingBiome,
+            },
+        }
+    end, nil, {
+        StartingBiome = "N",
+    })
+
+    lu.assertTrue(baseCalled)
+    lu.assertEquals(result.CurrentRoom.RoomSetName, "N")
+    lu.assertEquals(routePlan.get(runtime).routeKey, "Surface")
+end
+
+function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
+    local _, data = loadCatalog()
+    local bound
+    withTestImport(function()
+        bound = testImport("mods/logic.lua").bind(data)
+    end)
+
+    local cacheDefined = false
+    local hookedStartNewRun = false
+    bound.attach({
+        cache = {
+            define = function(defs)
+                cacheDefined = defs.RoutePlan ~= nil
+            end,
+        },
+        hooks = {
+            wrap = function(name)
+                if name == "StartNewRun" then
+                    hookedStartNewRun = true
+                end
+            end,
+        },
+    })
+
+    lu.assertTrue(cacheDefined)
+    lu.assertTrue(hookedStartNewRun)
+end
