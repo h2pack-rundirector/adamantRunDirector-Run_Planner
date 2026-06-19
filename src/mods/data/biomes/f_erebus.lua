@@ -19,6 +19,7 @@ return function(importer)
         },
         slotLayout = {
             coordinate = "BiomeDepthCache",
+            selectionBiomeDepthOffset = -1,
             depthRange = { min = 0, max = 10 },
             routeStartDepth = 1,
             routeEndDepth = 9,

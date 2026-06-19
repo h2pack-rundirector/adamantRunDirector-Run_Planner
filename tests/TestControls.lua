@@ -1852,7 +1852,7 @@ function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(storage[2].row[12].key, "Reward6LootKey")
 end
 
-function TestRunPlannerControls.testErebusSpecialRoomsUseRawVanillaDepthWindow()
+function TestRunPlannerControls.testErebusSpecialRoomsUseSelectionDepthWindow()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
     local instance = data.prepare({
@@ -1865,7 +1865,10 @@ function TestRunPlannerControls.testErebusSpecialRoomsUseRawVanillaDepthWindow()
     lu.assertFalse(hasValue(data.optionValuesForRow(instance, rows, 4, "Story"), "F_Story01"))
 
     lu.assertEquals(instance.routeSlots[5].coordinate, 4)
-    lu.assertTrue(hasValue(data.optionValuesForRow(instance, rows, 5, "Story"), "F_Story01"))
+    lu.assertFalse(hasValue(data.optionValuesForRow(instance, rows, 5, "Story"), "F_Story01"))
+
+    lu.assertEquals(instance.routeSlots[6].coordinate, 5)
+    lu.assertTrue(hasValue(data.optionValuesForRow(instance, rows, 6, "Story"), "F_Story01"))
 end
 
 function TestRunPlannerControls.testFixedLinearEntryMetadataRendersIntroRows()
@@ -3937,10 +3940,10 @@ function TestRunPlannerControls.testFixedLinearRowContextUsesSelectionDepthCosts
         biomeEncounterDepthCostKnown = true,
         roomHistoryCost = 1,
     })
-    lu.assertEquals(data.rowContext(instance, rows, 5).biomeDepthCache, 4)
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeDepthCache, 3)
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepth, 4)
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCost, 0)
-    lu.assertEquals(data.rowContext(instance, rows, 6).biomeDepthCache, 5)
+    lu.assertEquals(data.rowContext(instance, rows, 6).biomeDepthCache, 4)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepth, 4)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthCost, 1)
 end
@@ -4042,15 +4045,18 @@ function TestRunPlannerControls.testMinibossRequiresConcreteOption()
             RoleKey = "Vanilla",
         },
         {
+            RoleKey = "Vanilla",
+        },
+        {
             RoleKey = "Miniboss",
         },
     })
     local values = {}
 
-    data.fillOptionValues(instance, rows, 5, "Miniboss", values)
+    data.fillOptionValues(instance, rows, 6, "Miniboss", values)
     lu.assertEquals(values[1], "F_MiniBoss01")
 
-    local validation = data.validateRow(instance, rows, 5)
+    local validation = data.validateRow(instance, rows, 6)
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "option_required")
 end

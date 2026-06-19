@@ -122,6 +122,7 @@ local function buildRouteSlots(instance)
     local slotLayout = instance.biome.slotLayout or {}
     local startDepth = math.floor(tonumber(slotLayout.routeStartDepth) or 1)
     local endDepth = math.floor(tonumber(slotLayout.routeEndDepth) or startDepth)
+    local selectionBiomeDepthOffset = tonumber(slotLayout.selectionBiomeDepthOffset) or 0
     if endDepth < startDepth then
         endDepth = startDepth
     end
@@ -147,6 +148,8 @@ local function buildRouteSlots(instance)
             coordinate = depth,
             kind = "route",
             label = "Depth " .. tostring(depth),
+        }, {
+            biomeDepthCache = depth + selectionBiomeDepthOffset,
         })
     end
 

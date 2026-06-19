@@ -43,7 +43,9 @@ counter.
   entries unless the normal run route uses that room as an actual reward surface.
 - `F` is special: its opening room is routeable depth `0` because vanilla
   explicitly sets `BiomeDepthCache = 0` for the starter room. Normal runs use
-  `RunProgress` with `OpeningRoomBans` there.
+  `RunProgress` with `OpeningRoomBans` there. F route rows use a
+  `selectionBiomeDepthOffset` of `-1` so `BiomeDepthCache` availability checks
+  model the room the player is standing in while the next room is selected.
 - Normal planned route depths are the depths between the locked entry/opening
   and the preboss.
 
