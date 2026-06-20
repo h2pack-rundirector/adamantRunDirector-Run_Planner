@@ -279,6 +279,48 @@ function TestRunPlannerLogic.testRoutePlanCompilesRuntimeExecutionPlan()
     lu.assertEquals(biome.plannedByRowIndex[3].features.chaos, true)
 end
 
+function TestRunPlannerLogic.testExecutionPlanPreservesDisabledNpcRows()
+    local executionPlan = testImport("mods/logic/execution_plan.lua")
+    local plan = executionPlan.compile({
+        routeKey = "Underworld",
+        biomes = {},
+        npcs = {
+            rows = {
+                {
+                    rowIndex = 1,
+                    slotKey = "Artemis",
+                    npcKey = "Artemis",
+                    groupKey = "FieldNPC",
+                    disabled = true,
+                    mode = "Disabled",
+                    valid = true,
+                },
+                {
+                    rowIndex = 2,
+                    slotKey = "Nemesis",
+                    npcKey = "Nemesis",
+                    groupKey = "FieldNPC",
+                    mode = "Vanilla",
+                    targetKey = "",
+                    valid = true,
+                },
+            },
+        },
+    }, {
+        layers = {
+            npcs = true,
+        },
+    })
+
+    lu.assertEquals(#plan.npcs.rows, 1)
+    lu.assertEquals(plan.npcs.rows[1].slotKey, "Artemis")
+    lu.assertTrue(plan.npcs.rows[1].disabled)
+    lu.assertEquals(plan.npcs.rows[1].mode, "Disabled")
+    lu.assertNil(plan.npcs.rows[1].target)
+    lu.assertEquals(plan.npcs.bySlotKey.Artemis.slotKey, "Artemis")
+    lu.assertNil(plan.npcs.bySlotKey.Nemesis)
+end
+
 function TestRunPlannerLogic.testRoutePlanKeepsPrebossBranchesAtSharedRouteOrdinal()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()

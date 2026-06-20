@@ -317,6 +317,8 @@ local function compactNpcRow(row)
         slotKey = row.slotKey,
         npcKey = row.npcKey,
         groupKey = row.groupKey,
+        disabled = row.disabled == true,
+        mode = row.mode,
         biomeKey = row.biomeKey,
         targetRowIndex = row.targetRowIndex,
         variantKey = row.variantKey,
@@ -344,11 +346,17 @@ local function hasSelectedTarget(row)
         and row.targetKey ~= ""
 end
 
+local function hasDisabledRow(row)
+    return row ~= nil
+        and row.valid ~= false
+        and row.disabled == true
+end
+
 local function compileRows(rows, compactRow)
     local compiled = {}
     local bySlotKey = {}
     for _, row in ipairs(rows or EMPTY_LIST) do
-        if hasSelectedTarget(row) then
+        if hasSelectedTarget(row) or hasDisabledRow(row) then
             local item = compactRow(row)
             compiled[#compiled + 1] = item
             if item.slotKey ~= nil then

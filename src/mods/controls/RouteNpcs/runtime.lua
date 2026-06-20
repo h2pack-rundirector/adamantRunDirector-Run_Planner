@@ -6,6 +6,7 @@ local data = deps.data
 local runtime = {}
 
 local EMPTY_LIST = {}
+local DISABLED_BIOME_KEY = "Disabled"
 
 local EMPTY_TARGETS = {
     values = { "" },
@@ -74,6 +75,13 @@ local function resetTarget(fields, rowIndex)
     writeField(fields, rowIndex, "RowIndex", "")
 end
 
+local function writeDisabled(fields, rowIndex)
+    writeField(fields, rowIndex, "TargetKey", "")
+    writeField(fields, rowIndex, "VariantKey", "")
+    writeField(fields, rowIndex, "BiomeKey", DISABLED_BIOME_KEY)
+    writeField(fields, rowIndex, "RowIndex", "")
+end
+
 local function writeSelection(fields, rowIndex, biomeKey, targetRowIndex, variantKey)
     writeField(fields, rowIndex, "BiomeKey", biomeKey or "")
     writeField(fields, rowIndex, "RowIndex", targetRowIndex or "")
@@ -94,12 +102,14 @@ end
 
 local function buildBiomeOptions(instance, slot)
     local opts = {
-        values = { "" },
+        values = { "", DISABLED_BIOME_KEY },
         displayValues = {
             [""] = "Vanilla",
+            [DISABLED_BIOME_KEY] = "Disabled",
         },
         lookup = {
             [""] = true,
+            [DISABLED_BIOME_KEY] = true,
         },
     }
 
@@ -323,6 +333,10 @@ function runtime.create(fields, instance)
         return readField(fields, rowIndex, "VariantKey")
     end
 
+    function control:isDisabled(rowIndex)
+        return self:rawBiomeKey(rowIndex) == DISABLED_BIOME_KEY
+    end
+
     function control:selectedBiomeKey(rowIndex)
         local biomeKey = self:rawBiomeKey(rowIndex)
         if biomeKey ~= "" then
@@ -356,6 +370,9 @@ function runtime.create(fields, instance)
     end
 
     function control:selectedTargetKey(rowIndex)
+        if self:isDisabled(rowIndex) then
+            return ""
+        end
         local biomeKey = self:selectedBiomeKey(rowIndex)
         local targetRowIndex = self:selectedRowIndex(rowIndex)
         if biomeKey == "" or targetRowIndex == "" then
@@ -397,7 +414,7 @@ function runtime.create(fields, instance)
 
     function control:roomOptions(rowIndex)
         local biomeKey = self:selectedBiomeKey(rowIndex)
-        if biomeKey == "" then
+        if biomeKey == "" or self:isDisabled(rowIndex) then
             return EMPTY_ROOMS
         end
 
@@ -408,7 +425,7 @@ function runtime.create(fields, instance)
     function control:variantOptions(rowIndex)
         local biomeKey = self:selectedBiomeKey(rowIndex)
         local targetRowIndex = self:selectedRowIndex(rowIndex)
-        if biomeKey == "" or targetRowIndex == "" then
+        if biomeKey == "" or self:isDisabled(rowIndex) or targetRowIndex == "" then
             return EMPTY_VARIANTS
         end
 
@@ -417,11 +434,12 @@ function runtime.create(fields, instance)
     end
 
     function control:shouldRenderRoom(rowIndex)
-        return self:selectedBiomeKey(rowIndex) ~= ""
+        return self:selectedBiomeKey(rowIndex) ~= "" and not self:isDisabled(rowIndex)
     end
 
     function control:shouldRenderVariant(rowIndex)
         return self:selectedBiomeKey(rowIndex) ~= ""
+            and not self:isDisabled(rowIndex)
             and self:selectedRowIndex(rowIndex) ~= ""
             and self:variantOptions(rowIndex).values[2] ~= nil
     end
@@ -429,6 +447,8 @@ function runtime.create(fields, instance)
     function control:writeBiome(rowIndex, biomeKey)
         if biomeKey == nil or biomeKey == "" then
             resetTarget(fields, rowIndex)
+        elseif biomeKey == DISABLED_BIOME_KEY then
+            writeDisabled(fields, rowIndex)
         else
             writeSelection(fields, rowIndex, biomeKey, "", "")
         end
@@ -439,6 +459,8 @@ function runtime.create(fields, instance)
         local biomeKey = self:selectedBiomeKey(rowIndex)
         if biomeKey == "" then
             resetTarget(fields, rowIndex)
+        elseif self:isDisabled(rowIndex) then
+            writeDisabled(fields, rowIndex)
         elseif targetRowIndex == nil or targetRowIndex == "" then
             writeSelection(fields, rowIndex, biomeKey, "", "")
         else
@@ -452,7 +474,9 @@ function runtime.create(fields, instance)
     function control:writeVariant(rowIndex, variantKey)
         local biomeKey = self:selectedBiomeKey(rowIndex)
         local targetRowIndex = self:selectedRowIndex(rowIndex)
-        if biomeKey == "" or targetRowIndex == "" then
+        if self:isDisabled(rowIndex) then
+            writeDisabled(fields, rowIndex)
+        elseif biomeKey == "" or targetRowIndex == "" then
             resetTarget(fields, rowIndex)
         else
             writeSelection(fields, rowIndex, biomeKey, targetRowIndex, variantKey or "")
@@ -487,6 +511,9 @@ function runtime.create(fields, instance)
         end
 
         local biomeKey = self:selectedBiomeKey(rowIndex)
+        if self:isDisabled(rowIndex) then
+            return VALID
+        end
         if biomeKey == "" then
             return VALID
         end
@@ -517,15 +544,19 @@ function runtime.create(fields, instance)
         local targetKey = self:selectedTargetKey(rowIndex)
         local candidate = targetKey ~= "" and self:targetCandidates(rowIndex).lookup[targetKey] or nil
         local validation = self:rowValidation(rowIndex)
+        local disabled = self:isDisabled(rowIndex)
+        local biomeKey = disabled and "" or self:selectedBiomeKey(rowIndex)
         return {
             rowIndex = rowIndex,
             slotKey = slot.key,
             label = slot.label,
             npcKey = slot.npcKey,
             groupKey = slot.groupKey,
-            biomeKey = self:selectedBiomeKey(rowIndex),
-            targetRowIndex = self:selectedRowIndex(rowIndex),
-            variantKey = self:selectedVariantKey(rowIndex),
+            disabled = disabled,
+            mode = disabled and "Disabled" or (biomeKey == "" and "Vanilla" or "Target"),
+            biomeKey = biomeKey,
+            targetRowIndex = disabled and "" or self:selectedRowIndex(rowIndex),
+            variantKey = disabled and "" or self:selectedVariantKey(rowIndex),
             targetKey = targetKey,
             target = candidate,
             valid = validation.valid,
