@@ -34,6 +34,7 @@ local function loadRoutePlan()
         executionPlan = testImport("mods/logic/execution_plan.lua"),
         routeContext = testImport("mods/route/run_context.lua", nil, {
             rewardLegality = loadRewardLegality(),
+            timeline = testImport("mods/route/timeline.lua"),
         }),
     })
 end

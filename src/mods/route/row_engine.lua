@@ -4,6 +4,10 @@ local availability = deps.availability
 local readCache = deps.readCache
 local requirements = deps.requirements
 local biomeRules = deps.biomeRules
+local timeline = deps.timeline
+if timeline == nil then
+    error("row_engine requires route timeline")
+end
 
 local rowEngine = {}
 
@@ -201,21 +205,6 @@ function rowEngine.create(adapter)
         return common.numericCost(value, 0)
     end
 
-    local function biomeDepthCacheStart(instance)
-        local slotLayout = instance and instance.biome and instance.biome.slotLayout or nil
-        if slotLayout == nil then
-            return 0
-        end
-        if slotLayout.biomeDepthCacheStart ~= nil then
-            return math.floor(tonumber(slotLayout.biomeDepthCacheStart) or 0)
-        end
-        local depthRange = slotLayout.depthRange
-        if depthRange ~= nil and depthRange.min ~= nil then
-            return math.floor(tonumber(depthRange.min) or 0)
-        end
-        return 0
-    end
-
     local function adapterBiomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
         if adapter.biomeEncounterDepthCost == nil then
             return nil
@@ -319,35 +308,8 @@ function rowEngine.create(adapter)
             previous = data.rowContext(instance, rows, rowIndex - 1)
         end
 
-        local biomeDepthCache = biomeDepthCacheStart(instance)
-        local biomeDepthCacheKnown = true
-        if rowIndex > 1 then
-            if previous == nil
-                or previous.biomeDepthCacheKnown == false
-                or previous.biomeDepthCache == nil
-                or previous.biomeDepthCacheCost == nil
-            then
-                biomeDepthCache = nil
-                biomeDepthCacheKnown = false
-            else
-                biomeDepthCache = previous.biomeDepthCache + previous.biomeDepthCacheCost
-            end
-        end
-
-        local biomeEncounterDepth = 0
-        local biomeEncounterDepthKnown = true
-        if rowIndex > 1 then
-            if previous == nil
-                or previous.biomeEncounterDepthKnown == false
-                or previous.biomeEncounterDepth == nil
-                or previous.biomeEncounterDepthCost == nil
-            then
-                biomeEncounterDepth = nil
-                biomeEncounterDepthKnown = false
-            else
-                biomeEncounterDepth = previous.biomeEncounterDepth + previous.biomeEncounterDepthCost
-            end
-        end
+        target = target or {}
+        timeline.nextBiomeRowCounters(instance, previous, target)
         local roleKey = readRoleKey(instance, rows, rowIndex)
         local role = roleForRow(instance, rowIndex, roleKey)
         local optionKey, option = selectedOptionForCost(role, rows, rowIndex)
@@ -381,15 +343,10 @@ function rowEngine.create(adapter)
             option,
             slot
         )
-        target = target or {}
         target.rowIndex = rowIndex
         target.routeOrdinal = slot and slot.routeOrdinal or nil
-        target.biomeDepthCache = biomeDepthCache
-        target.biomeDepthCacheKnown = biomeDepthCacheKnown
         target.biomeDepthCacheCost = biomeDepthCacheCost
         target.biomeDepthCacheCostKnown = biomeDepthCacheCost ~= nil
-        target.biomeEncounterDepth = biomeEncounterDepth
-        target.biomeEncounterDepthKnown = biomeEncounterDepthKnown
         target.biomeEncounterDepthCost = biomeEncounterDepthCost
         target.biomeEncounterDepthCostKnown = biomeEncounterDepthCost ~= nil
         target.roomHistoryCost = roomHistoryCost

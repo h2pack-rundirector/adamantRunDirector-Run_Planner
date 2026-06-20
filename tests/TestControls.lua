@@ -134,6 +134,7 @@ end
 local function loadRunContext()
     return testImport("mods/route/run_context.lua", nil, {
         rewardLegality = loadRewardLegality(),
+        timeline = testImport("mods/route/timeline.lua"),
     })
 end
 

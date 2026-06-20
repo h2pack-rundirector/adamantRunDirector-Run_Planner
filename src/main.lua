@@ -26,8 +26,10 @@ local function init()
     local rewardLegality = import("mods/route/reward_legality.lua", nil, {
         routeRules = import("mods/rewards/route_rules.lua"),
     })
+    local routeTimeline = import("mods/route/timeline.lua")
     local routeContext = import("mods/route/run_context.lua", nil, {
         rewardLegality = rewardLegality,
+        timeline = routeTimeline,
     })
     local logic = import("mods/logic.lua").bind(data)
     local ui = import("mods/ui.lua").bind({

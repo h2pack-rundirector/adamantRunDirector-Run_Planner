@@ -1,5 +1,9 @@
 local deps = ... or {}
 local defaultRewardLegality = deps.rewardLegality
+local routeTimeline = deps.timeline
+if routeTimeline == nil then
+    error("run_context requires route timeline")
+end
 
 local runContext = {}
 local EMPTY_LIST = {}
@@ -361,30 +365,6 @@ local function buildKeyLookup(values)
     return lookup
 end
 
-local function roomHistoryCost(value)
-    local cost = math.floor(tonumber(value) or 1)
-    if cost < 0 then
-        return 0
-    end
-    return cost
-end
-
-local function rowRoomHistoryCost(row)
-    return roomHistoryCost(row and row.roomHistoryCost)
-end
-
-local function timelineEntryCost(entry)
-    return roomHistoryCost(entry and entry.roomHistoryCost)
-end
-
-local function advanceRoomHistoryDepth(state, rowCost)
-    state.roomHistoryOrdinal = state.roomHistoryOrdinal + rowCost
-    if state.roomHistoryDepthOffset == nil then
-        state.roomHistoryDepthOffset = state.roomHistoryOrdinal
-    end
-    return state.roomHistoryOrdinal - state.roomHistoryDepthOffset
-end
-
 local function timelineFeatureLabel(context, biomeKey, entry)
     local biome = context.biomeLookup and context.biomeLookup[biomeKey] or nil
     return tostring(biome and (biome.label or biome.key) or biomeKey)
@@ -392,7 +372,9 @@ local function timelineFeatureLabel(context, biomeKey, entry)
         .. tostring(entry and (entry.label or entry.key) or "Timeline")
 end
 
-local function addTimelineFeatureBlockers(context, targets, biomeKey, entry, routeState)
+local function addTimelineFeatureBlockers(context, targets, entryContext)
+    local biomeKey = entryContext and entryContext.biomeKey or nil
+    local entry = entryContext and entryContext.entry or nil
     if targets == nil or entry == nil or entry.features == nil then
         return
     end
@@ -405,18 +387,10 @@ local function addTimelineFeatureBlockers(context, targets, biomeKey, entry, rou
                 featureKey = featureKey,
                 biomeKey = biomeKey,
                 hidden = true,
-                roomHistoryOrdinal = routeState.roomHistoryOrdinal,
+                roomHistoryOrdinal = entryContext.roomHistoryOrdinal,
+                runDepthCache = entryContext.runDepthCache,
             })
         end
-    end
-end
-
-local function addPostBiomeRoomHistoryCost(context, biomeKey, routeState, featureTargets)
-    local biome = context.biomeLookup and context.biomeLookup[biomeKey] or nil
-    local timeline = biome and biome.timeline or nil
-    for _, entry in ipairs(timeline and timeline.afterBiome or EMPTY_LIST) do
-        routeState.roomHistoryOrdinal = routeState.roomHistoryOrdinal + timelineEntryCost(entry)
-        addTimelineFeatureBlockers(context, featureTargets, biomeKey, entry, routeState)
     end
 end
 
@@ -701,15 +675,14 @@ local function buildNpcTargets(context, routeKey)
         return targets
     end
 
-    local routeOrdinal = 0
-    local routeState = {
-        roomHistoryOrdinal = 0,
-    }
-    for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
-        local snapshot = controlSnapshot(context, route.key, biomeKey)
-        for _, row in ipairs(snapshot and snapshot.rows or EMPTY_LIST) do
-            routeOrdinal = routeOrdinal + 1
-            routeState.roomHistoryOrdinal = routeState.roomHistoryOrdinal + rowRoomHistoryCost(row)
+    routeTimeline.walkRoute(route, {
+        biomeLookup = context.biomeLookup,
+        snapshotForBiome = function(_, biomeKey)
+            return controlSnapshot(context, route.key, biomeKey)
+        end,
+        onRow = function(rowContext)
+            local row = rowContext.row
+            local biomeKey = rowContext.biomeKey
             for _, npcKey in ipairs(context.npcs.ordered or EMPTY_LIST) do
                 local npc = context.npcs.byKey and context.npcs.byKey[npcKey] or nil
                 local biomeEntry = npc and npc.biomes and npc.biomes[biomeKey] or nil
@@ -722,10 +695,11 @@ local function buildNpcTargets(context, routeKey)
                                 label = candidateLabel(context, biomeKey, row, variant),
                                 npcKey = npc.key,
                                 biomeKey = biomeKey,
-                                biomeRouteIndex = routeBiomeIndex,
+                                biomeRouteIndex = rowContext.routeBiomeIndex,
                                 rowIndex = row.rowIndex,
-                                routeOrdinal = routeOrdinal,
-                                roomHistoryOrdinal = routeState.roomHistoryOrdinal,
+                                routeOrdinal = rowContext.routeOrdinal,
+                                roomHistoryOrdinal = rowContext.roomHistoryOrdinal,
+                                runDepthCache = rowContext.runDepthCache,
                                 variantKey = variantKey(variant),
                                 variantLabel = variant.label or variant.key or variant.encounterName,
                                 encounterName = variant.encounterName,
@@ -735,9 +709,8 @@ local function buildNpcTargets(context, routeKey)
                     end
                 end
             end
-        end
-        addPostBiomeRoomHistoryCost(context, biomeKey, routeState)
-    end
+        end,
+    })
     return targets
 end
 
@@ -751,41 +724,38 @@ local function buildFeatureTargets(context, routeKey)
         return targets
     end
 
-    local routeOrdinal = 0
-    local routeState = {
-        roomHistoryOrdinal = 0,
-    }
-    for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
-        local snapshot = controlSnapshot(context, route.key, biomeKey)
-        local biomeState = {
-            roomHistoryOrdinal = 0,
-        }
-        for _, row in ipairs(snapshot and snapshot.rows or EMPTY_LIST) do
-            local rowCost = rowRoomHistoryCost(row)
-            routeOrdinal = routeOrdinal + 1
-            routeState.roomHistoryOrdinal = routeState.roomHistoryOrdinal + rowCost
-            local roomHistoryDepth = advanceRoomHistoryDepth(biomeState, rowCost)
+    routeTimeline.walkRoute(route, {
+        biomeLookup = context.biomeLookup,
+        snapshotForBiome = function(_, biomeKey)
+            return controlSnapshot(context, route.key, biomeKey)
+        end,
+        onRow = function(rowContext)
+            local row = rowContext.row
+            local biomeKey = rowContext.biomeKey
             for _, featureKey in ipairs(context.features.ordered or EMPTY_LIST) do
                 local feature = context.features.byKey and context.features.byKey[featureKey] or nil
-                if feature ~= nil and featureMatchesRow(context, feature, biomeKey, row, roomHistoryDepth) then
+                if feature ~= nil and featureMatchesRow(context, feature, biomeKey, row, rowContext.roomHistoryDepth) then
                     addFeatureTarget(targets, {
                         key = featureTargetKey(biomeKey, row.rowIndex),
                         label = candidateLabel(context, biomeKey, row, nil),
                         slotKey = feature.key,
                         featureKey = feature.featureKey,
                         biomeKey = biomeKey,
-                        biomeRouteIndex = routeBiomeIndex,
+                        biomeRouteIndex = rowContext.routeBiomeIndex,
                         rowIndex = row.rowIndex,
                         targetRowIndex = featureTargetRowIndex(row.rowIndex),
-                        routeOrdinal = routeOrdinal,
-                        roomHistoryOrdinal = routeState.roomHistoryOrdinal,
-                        roomHistoryDepth = roomHistoryDepth,
+                        routeOrdinal = rowContext.routeOrdinal,
+                        roomHistoryOrdinal = rowContext.roomHistoryOrdinal,
+                        runDepthCache = rowContext.runDepthCache,
+                        roomHistoryDepth = rowContext.roomHistoryDepth,
                         row = row,
                     })
                 end
                 for _, sideRoom in ipairs(row and row.sideRooms or EMPTY_LIST) do
-                    local sideRoomHistoryDepth = roomHistoryDepth + 1
-                    if feature ~= nil and featureMatchesSideRoom(context, feature, biomeKey, sideRoom, sideRoomHistoryDepth) then
+                    local sideRoomContext = routeTimeline.sideRoomContext(rowContext, sideRoom)
+                    if feature ~= nil
+                        and featureMatchesSideRoom(context, feature, biomeKey, sideRoom, sideRoomContext.roomHistoryDepth)
+                    then
                         local sideSuffix = "side" .. tostring(sideRoom.sideIndex or "")
                         addFeatureTarget(targets, {
                             key = featureTargetKey(biomeKey, row.rowIndex, sideSuffix),
@@ -793,12 +763,13 @@ local function buildFeatureTargets(context, routeKey)
                             slotKey = feature.key,
                             featureKey = feature.featureKey,
                             biomeKey = biomeKey,
-                            biomeRouteIndex = routeBiomeIndex,
+                            biomeRouteIndex = rowContext.routeBiomeIndex,
                             rowIndex = row.rowIndex,
                             targetRowIndex = featureTargetRowIndex(row.rowIndex, sideSuffix),
-                            routeOrdinal = routeOrdinal,
-                            roomHistoryOrdinal = routeState.roomHistoryOrdinal + 1,
-                            roomHistoryDepth = sideRoomHistoryDepth,
+                            routeOrdinal = rowContext.routeOrdinal,
+                            roomHistoryOrdinal = sideRoomContext.roomHistoryOrdinal,
+                            runDepthCache = sideRoomContext.runDepthCache,
+                            roomHistoryDepth = sideRoomContext.roomHistoryDepth,
                             row = row,
                             sideIndex = sideRoom.sideIndex,
                             sideRoom = sideRoom,
@@ -806,9 +777,11 @@ local function buildFeatureTargets(context, routeKey)
                     end
                 end
             end
-        end
-        addPostBiomeRoomHistoryCost(context, biomeKey, routeState, targets)
-    end
+        end,
+        onAfterBiomeEntry = function(entryContext)
+            addTimelineFeatureBlockers(context, targets, entryContext)
+        end,
+    })
     return targets
 end
 
