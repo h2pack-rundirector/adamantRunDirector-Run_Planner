@@ -12,17 +12,6 @@ local GOD_LOOT_NAMES = {
     "ZeusUpgrade",
 }
 
-local DEVOTION_REQUIREMENT_LOOT_NAMES = {
-    "AphroditeUpgrade",
-    "ApolloUpgrade",
-    "DemeterUpgrade",
-    "HephaestusUpgrade",
-    "HestiaUpgrade",
-    "HeraUpgrade",
-    "PoseidonUpgrade",
-    "ZeusUpgrade",
-}
-
 local ROLE_RULES = {
     Story = {
         maxSelectionsPerBiome = 1,
@@ -33,7 +22,7 @@ local ROLE_RULES = {
     Midshop = {
         maxSelectionsPerBiome = 1,
     },
-    Trial = {
+    Devotion = {
         maxSelectionsPerBiome = 1,
     },
     Miniboss = {
@@ -87,14 +76,6 @@ function routeRules.previousRoomExitCount(minCount)
     }
 end
 
-function routeRules.priorDistinctGodLoot(minDistinct)
-    return {
-        kind = "priorDistinctGodLoot",
-        minDistinct = minDistinct,
-        countedLootNames = copyList(DEVOTION_REQUIREMENT_LOOT_NAMES),
-    }
-end
-
 function routeRules.midshopRequirements()
     return {
         routeRules.previousRoomExitCount(2),
@@ -108,17 +89,6 @@ function routeRules.devotionPick()
         minDistinct = 2,
         allowedLootNames = copyList(GOD_LOOT_NAMES),
     }
-end
-
-function routeRules.devotionRequirements(opts)
-    opts = opts or {}
-    local requirements = {
-        routeRules.priorDistinctGodLoot(2),
-    }
-    if opts.previousRoomExitCount ~= false then
-        requirements[#requirements + 1] = routeRules.previousRoomExitCount(2)
-    end
-    return requirements
 end
 
 return routeRules

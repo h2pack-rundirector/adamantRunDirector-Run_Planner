@@ -132,15 +132,18 @@ Tartarus `Devotion` requirements include:
 - The same 15-room devotion spacing.
 - The same 2-exit requirement.
 
-Planner status: Trial is modeled as a room role, and some structural room
-requirements are already enforced. The reward layer still needs the current-run
-god count and devotion spacing.
+Planner status: Devotion is modeled as a selectable reward on F/G/I
+devotion-capable combat maps, while O keeps its special `O_Devotion01` room.
+Route reward legality enforces the prior-god requirement, previous-room exit
+requirement, and one planned Devotion reward per biome. Full vanilla 15-room
+spacing and current-run encounter-depth checks remain deferred.
 
 Recommended model:
 
-- Keep `Devotion` out of reward bundles because Trial is a room role.
-- Add Trial legality to the route reward/room validator, not to bundle
-  composition.
+- Keep `Devotion` in vanilla-derived reward bundles and filter it at the
+  room/reward-context layer.
+- Keep Devotion legality in route reward validation rather than duplicating it
+  in every biome template.
 - Count Ares as a possible chosen devotion god, but do not let Ares satisfy the
   vanilla "two prior gods" requirement because vanilla's requirement list
   excludes Ares.

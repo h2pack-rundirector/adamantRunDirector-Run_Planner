@@ -13,6 +13,7 @@ definitions.primitives = {
     ZeusUpgrade = { label = "Zeus" },
 
     Boon = { label = "Boon" },
+    Devotion = { label = "Trial" },
     RandomLoot = { label = "Boon" },
     BoostedRandomLoot = { label = "Boosted Boon" },
     BlindBoxLoot = { label = "Mystery Boon" },
@@ -86,6 +87,7 @@ definitions.bundles = {
         options = {
             "Boon",
             "HermesUpgrade",
+            "Devotion",
             "WeaponUpgrade",
             "MaxHealthDrop",
             "MaxManaDrop",
@@ -174,6 +176,7 @@ definitions.bundles = {
         options = {
             "Boon",
             "WeaponUpgrade",
+            "Devotion",
             "StackUpgradeTriple",
             "TalentBigDrop",
             "RoomMoneyTripleDrop",
@@ -182,6 +185,7 @@ definitions.bundles = {
     ClockworkExtensionRewards = {
         options = {
             "WeaponUpgrade",
+            "Devotion",
             "StackUpgradeTriple",
             "TalentBigDrop",
             "RoomMoneyTripleDrop",

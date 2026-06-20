@@ -50,6 +50,15 @@ local function controlByKey(surface, key)
     return nil
 end
 
+local function hasValue(values, expected)
+    for _, value in ipairs(values or {}) do
+        if value == expected then
+            return true
+        end
+    end
+    return false
+end
+
 local function ruleByTarget(rules, target)
     for _, rule in ipairs(rules or {}) do
         for _, value in ipairs(rule.targets or {}) do
@@ -108,6 +117,23 @@ function TestRunPlannerRewards.testRouteRulesGroupTalentVariantsBehindSpellRequi
     })
 end
 
+function TestRunPlannerRewards.testRouteRulesApplyDevotionByRewardTypeWithThessalyExitException()
+    local rules = loadRouteRules()
+    local devotionRule = ruleByTarget(rules, "Devotion")
+
+    lu.assertNotNil(devotionRule)
+    lu.assertNil(devotionRule.appliesToRewardKinds)
+    lu.assertEquals(devotionRule.requirements[3], {
+        kind = "previousRoomExitCount",
+        minCount = 2,
+        exceptBiomes = {
+            "O",
+        },
+        code = "previous_room_exit_count",
+        message = "Previous planned room must have at least 2 exits",
+    })
+end
+
 function TestRunPlannerRewards.testRouteRulesBlockTalentAfterShopTalent()
     local rules = loadRouteRules()
     local blockerRule = ruleByRequirementCode(rules, "talent_shop_conflict")
@@ -159,6 +185,7 @@ function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()
         "",
         "Boon",
         "HermesUpgrade",
+        "Devotion",
         "WeaponUpgrade",
         "MaxHealthDrop",
         "MaxManaDrop",
@@ -177,6 +204,12 @@ function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()
         alias = "Reward1Key",
         value = "Boon",
     })
+    lu.assertEquals(surface.controls[3].key, "lootAName")
+    lu.assertEquals(surface.controls[3].visibleWhen, {
+        alias = "Reward1Key",
+        value = "Devotion",
+    })
+    lu.assertEquals(surface.controls[4].key, "lootBName")
 end
 
 function TestRunPlannerRewards.testCatalogNormalizesSpecializedRewardBundles()
@@ -229,6 +262,7 @@ function TestRunPlannerRewards.testCatalogNormalizesSpecializedRewardBundles()
     lu.assertEquals(clockwork.controls[1].values, {
         "",
         "WeaponUpgrade",
+        "Devotion",
         "StackUpgradeTriple",
         "TalentBigDrop",
         "RoomMoneyTripleDrop",
@@ -314,6 +348,37 @@ function TestRunPlannerRewards.testCatalogNormalizesMajorMinorSurface()
     lu.assertEquals(surface.controls[4].displayValues.GiftDrop, "Nectar")
     lu.assertEquals(surface.controls[4].displayValues.MetaCurrencyBigDrop, "Big Bones")
     lu.assertEquals(surface.controls[4].displayValues.MetaCardPointsCommonBigDrop, "Big Ashes")
+end
+
+function TestRunPlannerRewards.testCatalogOptInDevotionForMajorMinorSurface()
+    local catalog = loadCatalog()
+    local surface = catalog:surfaceFor({
+        kind = "majorMinor",
+        majorRewardStore = "RunProgress",
+        minorRewardStore = "MetaProgress",
+        allowDevotion = true,
+    })
+
+    lu.assertEquals(surface.controls[2].values, {
+        "",
+        "Boon",
+        "HermesUpgrade",
+        "Devotion",
+        "WeaponUpgrade",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+        "RoomMoneyDrop",
+        "StackUpgrade",
+        "TalentDrop",
+    })
+    lu.assertEquals(surface.controls[5].key, "lootAName")
+    lu.assertEquals(surface.controls[5].visibleWhen, {
+        all = {
+            { alias = "Reward1Key", value = "Major" },
+            { alias = "Reward2Key", value = "Devotion" },
+        },
+    })
+    lu.assertEquals(surface.controls[6].key, "lootBName")
 end
 
 function TestRunPlannerRewards.testCatalogUsesBundleLabelsForMajorMinorCategories()
@@ -444,6 +509,7 @@ function TestRunPlannerRewards.testCatalogUsesMajorMinorSurfaceForShipWheel()
     lu.assertEquals(surface.kind, "majorMinor")
     lu.assertEquals(surface.majorRewardStore, "RunProgress")
     lu.assertEquals(surface.minorRewardStore, "MetaProgress")
+    lu.assertFalse(hasValue(surface.controls[2].values, "Devotion"))
 end
 
 function TestRunPlannerRewards.testRuntimeSnapshotsMajorMinorVisiblePicks()
@@ -636,6 +702,7 @@ function TestRunPlannerRewards.testCatalogAppliesIneligibleRewardTypes()
         "",
         "Boon",
         "HermesUpgrade",
+        "Devotion",
         "WeaponUpgrade",
         "MaxHealthDrop",
         "MaxManaDrop",

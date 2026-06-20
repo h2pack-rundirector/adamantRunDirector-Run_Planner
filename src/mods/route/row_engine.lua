@@ -137,7 +137,18 @@ function rowEngine.create(adapter)
         return defaultReadRoleKey(instance, rows, rowIndex, slot)
     end
 
+    local function isRoleLayerConfigured(instance, role)
+        local layer = role and role.requiredLayer or nil
+        if layer == nil then
+            return true
+        end
+        return common.layerConfigured(instance and instance.routeContext, instance and instance.routeKey, layer)
+    end
+
     local function isRoleAllowed(instance, rows, rowIndex, roleKey, role)
+        if not isRoleLayerConfigured(instance, role) then
+            return false
+        end
         if adapter.isRoleAllowed == nil then
             return true
         end

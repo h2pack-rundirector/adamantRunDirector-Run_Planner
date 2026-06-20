@@ -122,6 +122,17 @@ local function collectRewardGodLoot(item, countedLookup, selections)
                 countedLookup,
                 pickValueByKey(item, "boonSource") or rewards[2]
             )
+        elseif rewards[1] == "Devotion" then
+            count = count + addGodLootSelection(
+                selections,
+                countedLookup,
+                pickValueByKey(item, "lootAName") or rewards[3]
+            )
+            count = count + addGodLootSelection(
+                selections,
+                countedLookup,
+                pickValueByKey(item, "lootBName") or rewards[4]
+            )
         end
     elseif item.rewardKind == "majorMinor" or item.rewardKind == "shipWheel" then
         if rewards[1] == "Major" and rewards[2] == "Boon" then
@@ -129,6 +140,17 @@ local function collectRewardGodLoot(item, countedLookup, selections)
                 selections,
                 countedLookup,
                 pickValueByKey(item, "boonSource") or rewards[3]
+            )
+        elseif rewards[1] == "Major" and rewards[2] == "Devotion" then
+            count = count + addGodLootSelection(
+                selections,
+                countedLookup,
+                pickValueByKey(item, "lootAName") or rewards[5]
+            )
+            count = count + addGodLootSelection(
+                selections,
+                countedLookup,
+                pickValueByKey(item, "lootBName") or rewards[6]
             )
         end
     end

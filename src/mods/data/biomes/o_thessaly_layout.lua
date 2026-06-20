@@ -167,7 +167,7 @@ layout.shopRooms = {
     }),
 }
 
-layout.trialRooms = {
+layout.devotionRooms = {
     option("O_Devotion01", "Trial", {
         biomeEncounterDepthCost = 1,
         features = SURFACE_SHOP_FEATURES,

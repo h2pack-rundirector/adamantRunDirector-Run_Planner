@@ -288,18 +288,17 @@ The depth role controls which additional fields are valid.
 | Role | Map selection | Reward selection | Notes |
 | --- | --- | --- | --- |
 | `Vanilla` | None | None | Leave depth to vanilla, except reservations still protect future planned rooms. |
-| `Combat` | Optional combat room map | Major/Minor reward split when the room uses `ChooseNextRewardStore`; special stores otherwise | Standard generated combat room. Some biomes, such as `Q`, have no combat reward. |
+| `Combat` | Optional combat room map | Major/Minor reward split when the room uses `ChooseNextRewardStore`; special stores otherwise | Standard generated combat room. F/G/I devotion-capable combat maps can expose `Devotion` as a reward. Some biomes, such as `Q`, have no combat reward. |
 | `Story` | Fixed story room | None | Story rooms are one-time/special and should be reserved when planned. |
 | `Fountain` | Fixed fountain room | Major/Minor reward split when the room uses `ChooseNextRewardStore`; special stores otherwise | Must preserve room-specific reward rules. |
 | `Midshop` | Fixed shop room | Shop inventory control | This is shop option control, not normal `ForcedReward`. |
-| `Trial` | Optional trial-capable combat map | `Devotion` | Trial/devotion rewards are a special path. |
+| `Devotion` | Fixed devotion room | `Devotion` | O declares a real `O_Devotion01` room, so it stays a special room role. |
 | `Miniboss` | Specific miniboss room | Store-defined reward primitive | Most minibosses restrict `RunProgress` to `Boon`; `Q` uses `TyphonBossRewards`. |
 
-In F/G/I, vanilla can represent Devotion through reward data on normal maps,
-but the planner exposes it as the `Trial` role. Planner-facing reward-store
-surfaces do not include `Devotion`, so the same user choice is not exposed in
-two languages. O is different because vanilla declares an actual
-`O_Devotion01` room, so that room is the Trial option.
+In F/G/I, vanilla represents Devotion through reward data on normal combat maps,
+so the planner exposes `Devotion` as a reward on devotion-capable combat maps.
+O is different because vanilla declares an actual `O_Devotion01` room, so that
+room remains a special Devotion role.
 
 Target-side availability can depend on shared route rules. For example, F/G
 midshops and devotion rewards require the previous room to have at least two
@@ -340,7 +339,7 @@ reward = {
     ineligibleRewardTypes = { "RoomMoneyDrop" },
 }
 reward = { kind = "roomStore", rewardStore = "HubRewards" }
-reward = { kind = "forcedReward", rewardType = "Devotion", rewardStore = "RunProgress" }
+reward = { kind = "forcedReward", rewardType = "Devotion" }
 reward = { kind = "shop", shopProfile = "WorldShop" }
 reward = { kind = "shipWheel", storeSource = "ChooseNextRewardStore" }
 ```
@@ -457,7 +456,7 @@ interacted god loot names, not the full reward or Hermes surfaces.
 
 The planner keeps two related sets in `route_rules.lua`: the god loot names that
 can be picked for boon/devotion source fields, and the current vanilla
-`Devotion` `CountOf` requirement list used to decide whether Trial is pickable.
+`Devotion` `CountOf` requirement list used to decide whether Devotion is legal.
 They are intentionally separate because the live data can differ. In current
 vanilla data, Ares can be picked as a boon/devotion source but does not count
 toward the two prior gods required to make `Devotion` eligible.
@@ -468,8 +467,8 @@ toward the two prior gods required to make `Devotion` eligible.
 facts:
 
 - F/G midshop roles require a previous room with at least two exits.
-- `Trial` roles require a previous room with at least two exits and two prior
-  devotion-counted gods.
+- Devotion rewards require a previous planned room with at least two exits and
+  two prior devotion-counted gods.
 - Miniboss roles usually allow at most one miniboss selection per biome, with
   biome-specific overrides where vanilla allows more than one planned miniboss
   gate, such as Summit.
@@ -538,8 +537,7 @@ For `Q` and `O`, the preboss depth only has the shop branch:
 
 `PrebossShop` is shop inventory control. `PrebossNoShop` is normal
 `RunProgress` reward control on the non-shop branch, narrowed by the room's
-`IneligibleRewards` so `RoomMoneyDrop` is not exposed. `Devotion` is absent
-from planner reward stores and is exposed only through the `Trial` role.
+`IneligibleRewards` so `RoomMoneyDrop` and `Devotion` are not exposed there.
 
 Fixed-linear route controls render each declared preboss branch as its own
 terminal row instead of rendering one depth with a branch selector. In the UI,

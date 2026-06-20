@@ -83,7 +83,7 @@ layout.combatRooms = {
 layout.specialExtensionRooms = {
     fountain = {
         roomOption("I_Reprieve01", "Fountain", {
-            reward = rewards.roomStore("TartarusRewards"),
+            reward = rewards.roomStore("TartarusRewards", { ineligibleRewardTypes = { "Devotion" } }),
             countsNonGoalReward = true,
             exitCount = 2,
             maxCreationsThisRun = 1,

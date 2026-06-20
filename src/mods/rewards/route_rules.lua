@@ -1,6 +1,52 @@
 return {
     {
         targets = {
+            "Devotion",
+        },
+        countsAs = {
+            {
+                key = "devotion",
+                scope = "biome",
+            },
+        },
+        requirements = {
+            {
+                kind = "maxCount",
+                counter = "devotion",
+                scope = "biome",
+                max = 1,
+                code = "devotion_biome_limit",
+                message = "Trial can only be planned once per biome",
+            },
+            {
+                kind = "priorDistinctGodLoot",
+                minDistinct = 2,
+                countedLootNames = {
+                    "AphroditeUpgrade",
+                    "ApolloUpgrade",
+                    "DemeterUpgrade",
+                    "HephaestusUpgrade",
+                    "HestiaUpgrade",
+                    "HeraUpgrade",
+                    "PoseidonUpgrade",
+                    "ZeusUpgrade",
+                },
+                code = "prior_distinct_god_loot",
+                message = "Trial requires at least two prior planned god rewards",
+            },
+            {
+                kind = "previousRoomExitCount",
+                minCount = 2,
+                exceptBiomes = {
+                    "O",
+                },
+                code = "previous_room_exit_count",
+                message = "Previous planned room must have at least 2 exits",
+            },
+        },
+    },
+    {
+        targets = {
             "SpellDrop",
         },
         countsAs = {

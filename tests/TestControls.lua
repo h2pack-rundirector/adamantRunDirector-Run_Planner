@@ -157,6 +157,15 @@ local function hasValue(values, expected)
     return false
 end
 
+local function optionByKey(options, expected)
+    for _, option in ipairs(options or {}) do
+        if option.key == expected then
+            return option
+        end
+    end
+    return nil
+end
+
 local function fakeRows(rows)
     return {
         count = function()
@@ -572,7 +581,7 @@ function TestRunPlannerControls.testRouteGlobalDrawDisablesNpcToggleWhenRewardsA
         disabledDepth = disabledDepth - 1
     end
     draw.imgui.TextWrapped = function(text)
-        if text == "Disabling rewards invalidates Trial rooms and disables NPC encounter planning." then
+        if text == "Disabling rewards invalidates Trial rewards and disables NPC encounter planning." then
             noteWasRendered = true
         end
     end
@@ -1852,7 +1861,6 @@ function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
         "Story",
         "Fountain",
         "Midshop",
-        "Trial",
         "Miniboss",
     })
     lu.assertEquals(instance.optionValuesByRole.Story, { "F_Story01" })
@@ -2048,7 +2056,6 @@ function TestRunPlannerControls.testClockworkGoalStorageMatchesTartarusRouteRows
         "Vanilla",
         "Goal",
         "ExtensionCombat",
-        "Trial",
         "Story",
         "Fountain",
         "Miniboss",
@@ -2177,7 +2184,7 @@ function TestRunPlannerControls.testClockworkGoalRuntimeBuildsValidatedSnapshot(
     lu.assertTrue(snapshot.rows[14].valid)
 end
 
-function TestRunPlannerControls.testClockworkGoalTrialUsesDevotionRewardSurface()
+function TestRunPlannerControls.testClockworkGoalCombatCanSelectDevotionRewardSurface()
     local catalog = loadCatalog()
     local template = loadClockworkGoalTemplate()
     local instance = template.prepare({
@@ -2187,16 +2194,24 @@ function TestRunPlannerControls.testClockworkGoalTrialUsesDevotionRewardSurface(
     local control = template.createRuntime(routeFields({
         {},
         { RoleKey = "Goal", OptionKey = "I_Combat01" },
-        { RoleKey = "Trial", OptionKey = "I_Combat03", Reward1Key = "ZeusUpgrade", Reward2Key = "ApolloUpgrade" },
+        {
+            RoleKey = "ExtensionCombat",
+            OptionKey = "I_Combat03",
+            Reward1Key = "Devotion",
+            Reward3Key = "ZeusUpgrade",
+            Reward4Key = "ApolloUpgrade",
+        },
     }), instance)
     local snapshot = control:buildSnapshot()
 
-    lu.assertEquals(snapshot.rows[3].roleKey, "Trial")
-    lu.assertEquals(snapshot.rows[3].rewardKind, "devotionPair")
-    lu.assertEquals(snapshot.rows[3].rewardPicks[1].key, "lootAName")
-    lu.assertEquals(snapshot.rows[3].rewardPicks[1].value, "ZeusUpgrade")
-    lu.assertEquals(snapshot.rows[3].rewardPicks[2].key, "lootBName")
-    lu.assertEquals(snapshot.rows[3].rewardPicks[2].value, "ApolloUpgrade")
+    lu.assertEquals(snapshot.rows[3].roleKey, "ExtensionCombat")
+    lu.assertEquals(snapshot.rows[3].rewardKind, "roomStore")
+    lu.assertEquals(snapshot.rows[3].rewardPicks[1].key, "rewardType")
+    lu.assertEquals(snapshot.rows[3].rewardPicks[1].value, "Devotion")
+    lu.assertEquals(snapshot.rows[3].rewardPicks[2].key, "lootAName")
+    lu.assertEquals(snapshot.rows[3].rewardPicks[2].value, "ZeusUpgrade")
+    lu.assertEquals(snapshot.rows[3].rewardPicks[3].key, "lootBName")
+    lu.assertEquals(snapshot.rows[3].rewardPicks[3].value, "ApolloUpgrade")
 end
 
 function TestRunPlannerControls.testClockworkGoalValidationModelsCountersAndSidePaths()
@@ -2546,7 +2561,7 @@ function TestRunPlannerControls.testMultiEncounterStorageMatchesThessalyRouteRow
         "Story",
         "Fountain",
         "Midshop",
-        "Trial",
+        "Devotion",
         "Miniboss",
     })
     lu.assertEquals(instance.optionValuesByRole.Story, { "O_Story01" })
@@ -3640,7 +3655,7 @@ function TestRunPlannerControls.testSingleRoomRolesDefaultToConcreteOption()
     lu.assertEquals(row.option.label, "Arachne")
 end
 
-function TestRunPlannerControls.testCombatRewardSurfaceHidesTrialReward()
+function TestRunPlannerControls.testCombatRewardSurfaceHidesDevotionByDefault()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
     local instance = template.prepare({
@@ -4156,98 +4171,26 @@ function TestRunPlannerControls.testConcreteMinibossOptionUsesLeafDepthCost()
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCost, 0)
 end
 
-function TestRunPlannerControls.testFixedLinearAvailabilityChecksTrialRewardRequirements()
+function TestRunPlannerControls.testFixedLinearCombatRewardSurfaceMarksDevotionCapableMaps()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
     local instance = data.prepare({
         name = "RouteF",
         biome = catalog.lookup.F,
     })
-    local values = {}
 
-    data.fillRoleValues(instance, fakeRows({
-        {
-            RoleKey = "",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat02",
-            Reward1Key = "Major",
-            Reward2Key = "Boon",
-            Reward3Key = "ZeusUpgrade",
-        },
-        {
-            RoleKey = "Vanilla",
-        },
-        {
-            RoleKey = "Vanilla",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat04",
-        },
-    }), 6, values)
-    lu.assertFalse(hasValue(values, "Trial"))
-
-    data.fillRoleValues(instance, fakeRows({
-        {
-            RoleKey = "",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat02",
-            Reward1Key = "Major",
-            Reward2Key = "Boon",
-            Reward3Key = "AresUpgrade",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat03",
-            Reward1Key = "Major",
-            Reward2Key = "Boon",
-            Reward3Key = "ZeusUpgrade",
-        },
-        {
-            RoleKey = "Vanilla",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat04",
-        },
-    }), 6, values)
-    lu.assertFalse(hasValue(values, "Trial"))
-
-    data.fillRoleValues(instance, fakeRows({
-        {
-            RoleKey = "",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat02",
-            Reward1Key = "Major",
-            Reward2Key = "Boon",
-            Reward3Key = "ZeusUpgrade",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat03",
-            Reward1Key = "Major",
-            Reward2Key = "Boon",
-            Reward3Key = "ApolloUpgrade",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat01",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat04",
-        },
-    }), 6, values)
-    lu.assertTrue(hasValue(values, "Trial"))
+    local combatRole = instance.rolesByKey.Combat
+    lu.assertNil(optionByKey(combatRole.mapOptions, "F_Combat02").reward)
+    lu.assertEquals(optionByKey(combatRole.mapOptions, "F_Combat05").reward, {
+        kind = "majorMinor",
+        majorRewardStore = "RunProgress",
+        minorRewardStore = "MetaProgress",
+        allowDevotion = true,
+    })
+    lu.assertFalse(hasValue(instance.roleValues, "Trial"))
 end
 
-function TestRunPlannerControls.testClockworkGoalTrialRequirementsUsePriorUnderworldBiomes()
+function TestRunPlannerControls.testRouteContextDevotionRewardUsesPriorUnderworldBiomes()
     local catalog = loadCatalog()
     local fixedTemplate = loadFixedLinearTemplate()
     local fInstance = fixedTemplate.prepare({
@@ -4273,34 +4216,46 @@ function TestRunPlannerControls.testClockworkGoalTrialRequirementsUsePriorUnderw
             Reward3Key = "ApolloUpgrade",
         },
     }), fInstance)
-    local routeContext = loadRunContext().create({
-        routes = catalog.routes,
-        controlResolver = function(controlName)
-            if controlName == "RouteF" then
-                return fControl
-            end
-            return nil
-        end,
-    })
-
-    local data = loadClockworkGoalData()
-    local iInstance = data.prepare({
+    local template = loadClockworkGoalTemplate()
+    local iInstance = template.prepare({
         name = "RouteI",
         biome = catalog.lookup.I,
     })
-    local rows = fakeRows({
+    local iControl = template.createRuntime(routeFields({
         {},
         {
             RoleKey = "Goal",
             OptionKey = "I_Combat01",
         },
-        {},
+        {
+            RoleKey = "ExtensionCombat",
+            OptionKey = "I_Combat03",
+            Reward1Key = "Devotion",
+            Reward3Key = "ZeusUpgrade",
+            Reward4Key = "ApolloUpgrade",
+        },
+    }), iInstance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F", "I" },
+            },
+        }),
+        controlResolver = function(controlName)
+            if controlName == "RouteF" then
+                return fControl
+            elseif controlName == "RouteI" then
+                return iControl
+            end
+            return nil
+        end,
     })
 
-    lu.assertFalse(hasValue(data.roleValuesForRow(iInstance, rows, 3), "Trial"))
+    local overview = routeContext:overview("Underworld")
 
-    iInstance.routeContext = routeContext
-    lu.assertTrue(hasValue(data.roleValuesForRow(iInstance, rows, 3), "Trial"))
+    lu.assertTrue(overview.valid)
 end
 
 function TestRunPlannerControls.testRouteContextScopesPriorGodLootByRoute()
@@ -4327,6 +4282,25 @@ function TestRunPlannerControls.testRouteContextScopesPriorGodLootByRoute()
             Reward3Key = "ApolloUpgrade",
         },
     }), fInstance)
+    local template = loadClockworkGoalTemplate()
+    local iInstance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local iControl = template.createRuntime(routeFields({
+        {},
+        {
+            RoleKey = "Goal",
+            OptionKey = "I_Combat01",
+        },
+        {
+            RoleKey = "ExtensionCombat",
+            OptionKey = "I_Combat03",
+            Reward1Key = "Devotion",
+            Reward3Key = "ZeusUpgrade",
+            Reward4Key = "ApolloUpgrade",
+        },
+    }), iInstance)
     local routeContext = loadRunContext().create({
         routes = routeDefinitions({
             {
@@ -4343,31 +4317,17 @@ function TestRunPlannerControls.testRouteContextScopesPriorGodLootByRoute()
         controlResolver = function(controlName)
             if controlName == "RouteF" then
                 return fControl
+            elseif controlName == "RouteI" then
+                return iControl
             end
             return nil
         end,
     })
 
-    local data = loadClockworkGoalData()
-    local iInstance = data.prepare({
-        name = "RouteI",
-        biome = catalog.lookup.I,
-    })
-    local rows = fakeRows({
-        {},
-        {
-            RoleKey = "Goal",
-            OptionKey = "I_Combat01",
-        },
-        {},
-    })
-    iInstance.routeContext = routeContext
+    lu.assertFalse(routeContext:overview("TartarusOnly").valid)
+    lu.assertEquals(routeContext:rewardRowValidation("TartarusOnly", "I", 3).code, "prior_distinct_god_loot")
 
-    iInstance.routeKey = "TartarusOnly"
-    lu.assertFalse(hasValue(data.roleValuesForRow(iInstance, rows, 3), "Trial"))
-
-    iInstance.routeKey = "WithErebus"
-    lu.assertTrue(hasValue(data.roleValuesForRow(iInstance, rows, 3), "Trial"))
+    lu.assertTrue(routeContext:overview("WithErebus").valid)
 end
 
 local function routeRewardRow(rowIndex, rewardType, opts)
@@ -4502,6 +4462,90 @@ function TestRunPlannerControls.testRouteContextOnlyAppliesShopTalentBlockerToNe
 
     lu.assertTrue(overview.valid)
     lu.assertEquals(#overview.invalidRows, 0)
+end
+
+function TestRunPlannerControls.testRouteContextDevotionPairSkipsPreviousExitRequirement()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "O" },
+    }, {
+        RouteO = fakeRouteControlSnapshot("RouteO", {
+            routeRewardRow(1, "Boon", {
+                rewards = { "Boon", "ZeusUpgrade" },
+            }),
+            routeRewardRow(2, "Boon", {
+                rewards = { "Boon", "ApolloUpgrade" },
+            }),
+            routeRewardRow(3, "Devotion", {
+                rewardKind = "devotionPair",
+                rewards = { "ZeusUpgrade", "ApolloUpgrade" },
+            }),
+        }),
+    })
+
+    local overview = routeContext:overview("Surface")
+
+    lu.assertTrue(overview.valid)
+    lu.assertNil(routeContext:rewardRowValidation("Surface", "O", 3))
+end
+
+function TestRunPlannerControls.testRouteContextDevotionPairRequiresPriorGodLoot()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "O" },
+    }, {
+        RouteO = fakeRouteControlSnapshot("RouteO", {
+            routeRewardRow(1, "Devotion", {
+                rewardKind = "devotionPair",
+                rewards = { "ZeusUpgrade", "ApolloUpgrade" },
+            }),
+        }),
+    })
+
+    local overview = routeContext:overview("Surface")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 1)
+    lu.assertEquals(overview.invalidRows[1].code, "prior_distinct_god_loot")
+end
+
+function TestRunPlannerControls.testRouteContextSelectableDevotionRequiresPreviousExitCount()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "Boon", {
+                rewards = { "Major", "Boon", "ZeusUpgrade" },
+                rewardKind = "majorMinor",
+                rewardPicks = {
+                    { kind = "boonSource", value = "ZeusUpgrade" },
+                },
+            }),
+            routeRewardRow(2, "Boon", {
+                rewards = { "Major", "Boon", "ApolloUpgrade" },
+                rewardKind = "majorMinor",
+                rewardPicks = {
+                    { kind = "boonSource", value = "ApolloUpgrade" },
+                },
+            }),
+            routeRewardRow(3, "Devotion", {
+                rewards = { "Major", "Devotion", "", "", "ZeusUpgrade", "ApolloUpgrade" },
+                rewardKind = "majorMinor",
+            }),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 3)
+    lu.assertEquals(overview.invalidRows[1].code, "previous_room_exit_count")
 end
 
 function TestRunPlannerControls.testRouteContextInvalidatesHermesBiomeAndRouteLimits()
@@ -5170,8 +5214,17 @@ function TestRunPlannerControls.testRouteOverviewRebuildsOnlyWhenDirty()
     lu.assertEquals(readsByControl.RouteG, 5)
 end
 
-function TestRunPlannerControls.testMultiEncounterTrialRequirementsUsePriorSurfaceBiomes()
+function TestRunPlannerControls.testMultiEncounterDevotionRequirementsUsePriorSurfaceBiomes()
     local catalog = loadCatalog()
+    local globalTemplate = loadRouteGlobalTemplate()
+    local globalInstance = globalTemplate.prepare({
+        name = "RouteGlobalSurface",
+        route = catalog.routes.lookup.Surface,
+        gods = catalog.gods,
+    })
+    local globalFields = routeUiFields(globalTemplate.storage(globalInstance))
+    globalFields.ConfigureRewards:write(false)
+    local globalControl = globalTemplate.createRuntime(globalFields, globalInstance)
     local hubTemplate = loadHubPylonTemplate()
     local nInstance = hubTemplate.prepare({
         name = "RouteN",
@@ -5202,6 +5255,8 @@ function TestRunPlannerControls.testMultiEncounterTrialRequirementsUsePriorSurfa
         controlResolver = function(controlName)
             if controlName == "RouteN" then
                 return nControl
+            elseif controlName == "RouteGlobalSurface" then
+                return globalControl
             end
             return nil
         end,
@@ -5225,10 +5280,15 @@ function TestRunPlannerControls.testMultiEncounterTrialRequirementsUsePriorSurfa
         {},
     })
 
-    lu.assertFalse(hasValue(data.roleValuesForRow(oInstance, rows, 4), "Trial"))
+    lu.assertTrue(hasValue(data.roleValuesForRow(oInstance, rows, 4), "Devotion"))
 
     oInstance.routeContext = routeContext
-    lu.assertTrue(hasValue(data.roleValuesForRow(oInstance, rows, 4), "Trial"))
+    oInstance.routeKey = "Surface"
+    lu.assertFalse(hasValue(data.roleValuesForRow(oInstance, rows, 4), "Devotion"))
+
+    globalFields.ConfigureRewards:write(true)
+    routeContext:beginPass()
+    lu.assertTrue(hasValue(data.roleValuesForRow(oInstance, rows, 4), "Devotion"))
 end
 
 function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesPreviousRoomExitRequirement()
@@ -5263,7 +5323,7 @@ function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesPreviousRoomExi
     lu.assertEquals(snapshot.rows[5].invalidCode, "previous_room_exit_count")
 end
 
-function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesTrialRewardRequirements()
+function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesDevotionRewardRequirements()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
     local instance = template.prepare({
@@ -5293,22 +5353,37 @@ function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesTrialRewardRequ
                 RoleKey = "Combat",
                 OptionKey = "F_Combat04",
             },
-	            {
-	                RoleKey = "Trial",
-	                OptionKey = "F_Combat05",
-	                Reward1Key = "ZeusUpgrade",
-	                Reward2Key = "ApolloUpgrade",
+            {
+                RoleKey = "Combat",
+                OptionKey = "F_Combat05",
+                Reward1Key = "Major",
+                Reward2Key = "Devotion",
+                Reward5Key = "ZeusUpgrade",
+                Reward6Key = "ApolloUpgrade",
             },
 	        }), instance)
-    local snapshot = control:buildSnapshot()
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        controlResolver = function(controlName)
+            if controlName == "RouteF" then
+                return control
+            end
+            return nil
+        end,
+    })
+    control:setRouteContext(routeContext, "Underworld")
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertTrue(snapshot.disabled)
-    lu.assertEquals(#snapshot.invalidRows, 1)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 6)
-    lu.assertEquals(snapshot.invalidRows[1].code, "prior_distinct_god_loot")
-    lu.assertFalse(snapshot.rows[6].valid)
-    lu.assertEquals(snapshot.rows[6].invalidCode, "prior_distinct_god_loot")
+    local validation = control:rowValidation(6)
+
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "prior_distinct_god_loot")
+    lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 6).code, "prior_distinct_god_loot")
 end
 
 function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesOutOfRangeAndDuplicateRows()

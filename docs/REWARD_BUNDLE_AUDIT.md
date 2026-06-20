@@ -22,8 +22,9 @@ This audit compares `src/mods/rewards/definitions.lua` against vanilla data in:
   `HammerLootRequirements`, and first-half/second-half shop requirements.
 - Keep Dream Run / Dream Dive reward replacements out of normal-route bundles
   unless a later Dream Run pass explicitly models them.
-- Keep `Devotion` out of normal reward bundles because Run Planner exposes it
-  as the `Trial` room role.
+- Keep `Devotion` in vanilla-derived broad reward bundles, then expose or
+  filter it at the room/reward-context layer. F/G/I combat maps can opt into it;
+  unrelated room surfaces should filter it out.
 
 ## Findings
 
@@ -35,6 +36,7 @@ Vanilla unique rewards:
 
 - `Boon`
 - `HermesUpgrade`
+- `Devotion`
 - `WeaponUpgrade`
 - `MaxHealthDrop`
 - `MaxManaDrop`
@@ -57,10 +59,12 @@ Planner bundle:
 
 Status: drift.
 
-`Devotion` is intentionally omitted because Trial is modeled as a room role.
-`SpellDrop` is missing and should be added. `TalentDrop` should stay because it
-is part of vanilla `RunProgress`; its `TalentLegal` dependency should be
-handled by route reward validation, not by removing it from the bundle.
+`Devotion` is present in the broad bundle, but normal room contexts filter it
+unless the selected combat map is devotion-capable. `SpellDrop` is missing and
+should be added if normal `RunProgress` surfaces need to expose Selene directly.
+`TalentDrop` should stay because it is part of vanilla `RunProgress`; its
+`TalentLegal` dependency should be handled by route reward validation, not by
+removing it from the bundle.
 
 ### `OpeningRunProgress`
 
@@ -248,6 +252,7 @@ Vanilla unique rewards:
 
 - `Boon`
 - `WeaponUpgrade`
+- `Devotion`
 - `StackUpgradeTriple`
 - `TalentBigDrop`
 - `RoomMoneyTripleDrop`
@@ -263,9 +268,9 @@ Planner bundle:
 
 Status: aligned with planner model.
 
-`Devotion` is intentionally omitted because Trial is a room role.
-`TalentBigDrop` depends on `TalentLegal`; that should be a route reward
-dependency, not a bundle edit.
+`Devotion` is present for Tartarus extension combat, while non-combat Tartarus
+surfaces filter it out. `TalentBigDrop` depends on `TalentLegal`; that should be
+a route reward dependency, not a bundle edit.
 
 ### `ClockworkExtensionRewards`
 
@@ -276,6 +281,7 @@ Vanilla source: I combat rooms use `TartarusRewards` and inherit
 Planner bundle:
 
 - `WeaponUpgrade`
+- `Devotion`
 - `StackUpgradeTriple`
 - `TalentBigDrop`
 - `RoomMoneyTripleDrop`
@@ -284,8 +290,8 @@ Status: aligned with planner model.
 
 This bundle is planner-specific rather than a direct vanilla store name. It
 models Tartarus extension combat, not fountains or the preboss room. `Boon` is
-excluded by `I_BaseCombat`; `Devotion` is excluded because Trial is modeled as a
-room role.
+excluded by `I_BaseCombat`; `Devotion` remains available as the Trial reward
+choice for extension combat.
 
 ### `TyphonBossRewards`
 

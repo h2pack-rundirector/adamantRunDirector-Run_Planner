@@ -19,17 +19,6 @@ local GOD_LOOT_NAMES = {
     "ZeusUpgrade",
 }
 
-local DEVOTION_REQUIREMENT_LOOT_NAMES = {
-    "AphroditeUpgrade",
-    "ApolloUpgrade",
-    "DemeterUpgrade",
-    "HephaestusUpgrade",
-    "HestiaUpgrade",
-    "HeraUpgrade",
-    "PoseidonUpgrade",
-    "ZeusUpgrade",
-}
-
 local function noneReward()
     return { kind = "none" }
 end
@@ -49,12 +38,17 @@ local function roomStoreReward(rewardStore, opts)
     return reward
 end
 
-local function majorMinorReward()
-    return {
+local function majorMinorReward(opts)
+    opts = opts or {}
+    local reward = {
         kind = "majorMinor",
         majorRewardStore = "RunProgress",
         minorRewardStore = "MetaProgress",
     }
+    if opts.allowDevotion == true then
+        reward.allowDevotion = true
+    end
+    return reward
 end
 
 local function forcedReward(rewardType, opts)
@@ -73,14 +67,6 @@ local function boonSourcePick()
     return {
         kind = "boonSource",
         allowedLootNames = GOD_LOOT_NAMES,
-    }
-end
-
-local function devotionRequirement()
-    return {
-        kind = "priorDistinctGodLoot",
-        minDistinct = 2,
-        countedLootNames = DEVOTION_REQUIREMENT_LOOT_NAMES,
     }
 end
 
@@ -122,16 +108,9 @@ local function devotionPick()
     }
 end
 
-local function devotionReward(opts)
-    opts = opts or {}
-    local reward = forcedReward("Devotion", opts)
+local function devotionReward()
+    local reward = forcedReward("Devotion")
     reward.pick = devotionPick()
-    reward.routeRequirements = {
-        devotionRequirement(),
-    }
-    if opts.previousRoomExitCount ~= false then
-        reward.routeRequirements[#reward.routeRequirements + 1] = previousExitCountRequirement()
-    end
     return reward
 end
 
@@ -293,7 +272,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareNaturalChaosFeatures()
     lu.assertEquals(biomes.lookup.F.rolesByKey.Story.roomOptions[1].features, chaos)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Fountain.roomOptions[1].features, chaos)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Midshop.roomOptions[1].features, chaos)
-    lu.assertEquals(biomes.lookup.F.rolesByKey.Trial.mapOptions[1].features, chaosWell)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.mapOptions[5].features, chaosWell)
     lu.assertNil(biomes.lookup.F.rolesByKey.Miniboss.features)
 
     lu.assertEquals(biomes.lookup.G.slotLayout.entry.features, chaos)
@@ -302,7 +281,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareNaturalChaosFeatures()
     lu.assertEquals(biomes.lookup.G.rolesByKey.Story.roomOptions[1].features, chaos)
     lu.assertEquals(biomes.lookup.G.rolesByKey.Fountain.roomOptions[1].features, chaos)
     lu.assertEquals(biomes.lookup.G.rolesByKey.Midshop.roomOptions[1].features, chaos)
-    lu.assertEquals(biomes.lookup.G.rolesByKey.Trial.mapOptions[1].features, chaosWell)
+    lu.assertEquals(biomes.lookup.G.rolesByKey.Combat.mapOptions[2].features, chaosWell)
     lu.assertEquals(biomes.lookup.G.rolesByKey.Miniboss.roomOptions[1].features, chaos)
 
     lu.assertEquals(biomes.lookup.N.slotLayout.fixedBeforeHub[1].features, chaos)
@@ -359,8 +338,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
     lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.mapOptions[1].biomeEncounterDepthCost, 1)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Story.biomeEncounterDepthCost, 0)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Fountain.biomeEncounterDepthCost, 0)
-    lu.assertNil(biomes.lookup.F.rolesByKey.Trial.biomeEncounterDepthCost)
-    lu.assertEquals(biomes.lookup.F.rolesByKey.Trial.mapOptions[1].biomeEncounterDepthCost, 1)
+    lu.assertEquals(optionByKey(biomes.lookup.F.rolesByKey.Combat.mapOptions, "F_Combat05").biomeEncounterDepthCost, 1)
 
     assertMinibossCosts(biomes.lookup.F.rolesByKey.Miniboss, {
         F_MiniBoss01 = 1,
@@ -440,7 +418,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareShopFeatureEligibility()
     lu.assertNil(optionByKey(biomes.lookup.O.rolesByKey.Combat.mapOptions, "O_Combat01").features)
     lu.assertEquals(optionByKey(biomes.lookup.O.rolesByKey.Combat.mapOptions, "O_Combat02").features, surface)
     lu.assertEquals(biomes.lookup.O.rolesByKey.Fountain.roomOptions[1].features, surface)
-    lu.assertEquals(biomes.lookup.O.rolesByKey.Trial.roomOptions[1].features, surface)
+    lu.assertEquals(biomes.lookup.O.rolesByKey.Devotion.roomOptions[1].features, surface)
     lu.assertNil(biomes.lookup.O.rolesByKey.Miniboss.roomOptions[1].features)
     lu.assertEquals(biomes.lookup.O.rolesByKey.Miniboss.roomOptions[2].features, surface)
 
@@ -461,10 +439,7 @@ function TestRunPlannerData.testRewardTypeMetadataSeparatesBoonHermesAndDevotion
     lu.assertEquals(biomes.rewardTypes.lookup.HermesUpgrade.kind, "standaloneLoot")
     lu.assertNil(biomes.rewardTypes.lookup.HermesUpgrade.pick)
     lu.assertEquals(biomes.rewardTypes.lookup.Devotion.pick, devotionPick())
-    lu.assertEquals(biomes.rewardTypes.lookup.Devotion.routeRequirements, {
-        devotionRequirement(),
-        previousExitCountRequirement(),
-    })
+    lu.assertNil(biomes.rewardTypes.lookup.Devotion.routeRequirements)
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
@@ -550,15 +525,17 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     local data = dofile("src/mods/data.lua")
     local biomes = data.loadBiomes(testImport)
 
-    lu.assertNotNil(biomes.lookup.F.rolesByKey.Trial)
+    lu.assertNil(biomes.lookup.F.rolesByKey.Trial)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.mapOptions[1].key, "F_Combat01")
     lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.reward, majorMinorReward())
+    lu.assertEquals(
+        optionByKey(biomes.lookup.F.rolesByKey.Combat.mapOptions, "F_Combat05").reward,
+        majorMinorReward({ allowDevotion = true })
+    )
     lu.assertEquals(biomes.lookup.F.rolesByKey.Fountain.reward, majorMinorReward())
     assertOneShotRole(biomes.lookup.F.rolesByKey.Story)
     assertOneShotRole(biomes.lookup.F.rolesByKey.Fountain)
     assertOneShotRole(biomes.lookup.F.rolesByKey.Midshop)
-    assertOneShotRole(biomes.lookup.F.rolesByKey.Trial)
-    lu.assertEquals(biomes.lookup.F.rolesByKey.Trial.reward, devotionReward({ rewardStore = "RunProgress" }))
     lu.assertEquals(biomes.lookup.F.rolesByKey.Miniboss.roomOptions[1].key, "F_MiniBoss01")
     lu.assertEquals(biomes.lookup.F.rolesByKey.Miniboss.reward, roomStoreReward("RunProgress", {
         eligibleRewardTypes = { "Boon" },
@@ -566,11 +543,15 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     lu.assertEquals(biomes.lookup.F.rolesByKey.Miniboss.routeRules, oneShotRouteRules())
 
     lu.assertEquals(biomes.lookup.G.rolesByKey.Combat.reward, majorMinorReward())
+    lu.assertEquals(
+        optionByKey(biomes.lookup.G.rolesByKey.Combat.mapOptions, "G_Combat02").reward,
+        majorMinorReward({ allowDevotion = true })
+    )
     lu.assertEquals(biomes.lookup.G.rolesByKey.Fountain.reward, majorMinorReward())
     assertOneShotRole(biomes.lookup.G.rolesByKey.Story)
     assertOneShotRole(biomes.lookup.G.rolesByKey.Fountain)
     assertOneShotRole(biomes.lookup.G.rolesByKey.Midshop)
-    assertOneShotRole(biomes.lookup.G.rolesByKey.Trial)
+    lu.assertNil(biomes.lookup.G.rolesByKey.Trial)
 
     lu.assertNil(biomes.lookup.P.rolesByKey.Trial)
     lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.reward, majorMinorReward())
@@ -599,18 +580,19 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     assertOneShotRole(biomes.lookup.O.rolesByKey.Story)
     assertOneShotRole(biomes.lookup.O.rolesByKey.Fountain)
     assertOneShotRole(biomes.lookup.O.rolesByKey.Midshop)
-    assertOneShotRole(biomes.lookup.O.rolesByKey.Trial)
-    lu.assertEquals(biomes.lookup.O.rolesByKey.Trial.roomOptions[1].key, "O_Devotion01")
-    lu.assertEquals(biomes.lookup.O.rolesByKey.Trial.reward, devotionReward({
-        rewardStore = "RunProgress",
-        previousRoomExitCount = false,
-    }))
+    lu.assertNil(biomes.lookup.O.rolesByKey.Trial)
+    assertOneShotRole(biomes.lookup.O.rolesByKey.Devotion)
+    lu.assertEquals(biomes.lookup.O.rolesByKey.Devotion.roomOptions[1].key, "O_Devotion01")
+    lu.assertEquals(biomes.lookup.O.rolesByKey.Devotion.reward, devotionReward())
+    lu.assertEquals(biomes.lookup.O.rolesByKey.Devotion.requiredLayer, "rewards")
     lu.assertEquals(biomes.lookup.O.rolesByKey.Miniboss.roomOptions[2].key, "O_MiniBoss02")
     lu.assertEquals(biomes.lookup.O.rolesByKey.Miniboss.routeRules, oneShotRouteRules())
 
     lu.assertNil(biomes.lookup.H.rolesByKey.Trial)
     lu.assertEquals(biomes.lookup.H.rolesByKey.Combat.mapOptions[1].key, "H_Combat01")
-    lu.assertEquals(biomes.lookup.H.rolesByKey.Combat.reward, fieldsCagesReward("RunProgress"))
+    lu.assertEquals(biomes.lookup.H.rolesByKey.Combat.reward, fieldsCagesReward("RunProgress", {
+        ineligibleRewardTypes = { "Devotion" },
+    }))
     lu.assertEquals(biomes.lookup.H.rolesByKey.Miniboss.roomOptions[1].encounter, "MiniBossVampire")
     lu.assertEquals(biomes.lookup.H.rolesByKey.Miniboss.roomOptions[2].encounter, "MiniBossLamia")
     lu.assertEquals(biomes.lookup.H.rolesByKey.Miniboss.reward, roomStoreReward("RunProgress", {
@@ -622,13 +604,13 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     lu.assertEquals(biomes.lookup.I.rolesByKey.Goal.mapOptions[1].key, "I_Combat01")
     lu.assertEquals(biomes.lookup.I.rolesByKey.Goal.reward, forcedReward("ClockworkGoal"))
     lu.assertEquals(biomes.lookup.I.rolesByKey.ExtensionCombat.reward, roomStoreReward("ClockworkExtensionRewards"))
-    lu.assertEquals(biomes.lookup.I.rolesByKey.Trial.mapOptions[1].key, "I_Combat01")
-    lu.assertEquals(biomes.lookup.I.rolesByKey.Trial.reward, devotionReward({ rewardStore = "RunProgress" }))
-    assertOneShotRole(biomes.lookup.I.rolesByKey.Trial)
+    lu.assertNil(biomes.lookup.I.rolesByKey.Trial)
     lu.assertEquals(biomes.lookup.I.rolesByKey.Story.roomOptions[1].key, "I_Story01")
     assertOneShotRole(biomes.lookup.I.rolesByKey.Story)
     lu.assertEquals(biomes.lookup.I.rolesByKey.Fountain.roomOptions[1].key, "I_Reprieve01")
-    lu.assertEquals(biomes.lookup.I.rolesByKey.Fountain.reward, roomStoreReward("TartarusRewards"))
+    lu.assertEquals(biomes.lookup.I.rolesByKey.Fountain.reward, roomStoreReward("TartarusRewards", {
+        ineligibleRewardTypes = { "Devotion" },
+    }))
     assertOneShotRole(biomes.lookup.I.rolesByKey.Fountain)
     lu.assertNil(biomes.lookup.I.rolesByKey.Midshop)
     lu.assertEquals(biomes.lookup.I.rolesByKey.Miniboss.roomOptions[2].key, "I_MiniBoss02")
@@ -660,9 +642,10 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(erebus.Story.roomOptions[1].exitCount, 2)
     lu.assertEquals(erebus.Midshop.roomOptions[1].availability.biomeDepthCache, { min = 4, max = 6 })
     lu.assertEquals(erebus.Midshop.routeRequirements, midshopRequirements())
-    lu.assertEquals(erebus.Trial.mapOptions[1].key, "F_Combat05")
-    lu.assertEquals(erebus.Trial.mapOptions[1].availability.biomeEncounterDepth, { min = 5 })
-    lu.assertEquals(erebus.Trial.reward.routeRequirements[2], previousExitCountRequirement())
+    lu.assertEquals(optionByKey(erebus.Combat.mapOptions, "F_Combat05").availability.biomeEncounterDepth, { min = 5 })
+    lu.assertEquals(optionByKey(erebus.Combat.mapOptions, "F_Combat05").reward, majorMinorReward({
+        allowDevotion = true,
+    }))
     lu.assertEquals(erebus.Miniboss.roomOptions[3].exitCount, 1)
 
     local oceanus = biomes.lookup.G.rolesByKey
@@ -673,8 +656,10 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(oceanus.Story.roomOptions[1].exitCount, 1)
     lu.assertEquals(oceanus.Midshop.roomOptions[1].availability.biomeDepthCache, { min = 3, max = 5 })
     lu.assertEquals(oceanus.Midshop.routeRequirements, midshopRequirements())
-    lu.assertEquals(oceanus.Trial.mapOptions[2].availability.biomeEncounterDepth, { min = 3 })
-    lu.assertEquals(oceanus.Trial.reward.routeRequirements[2], previousExitCountRequirement())
+    lu.assertEquals(optionByKey(oceanus.Combat.mapOptions, "G_Combat03").availability.biomeEncounterDepth, { min = 3 })
+    lu.assertEquals(optionByKey(oceanus.Combat.mapOptions, "G_Combat03").reward, majorMinorReward({
+        allowDevotion = true,
+    }))
     lu.assertEquals(oceanus.Miniboss.roomOptions[2].exitCount, 1)
 
     local fields = biomes.lookup.H.rolesByKey
@@ -692,7 +677,7 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(thessaly.Combat.mapOptions[13].availability.requiresGeneratedIntroEncounters, 3)
     lu.assertEquals(thessaly.Story.roomOptions[1].availability.biomeEncounterDepth, { minExclusive = 3 })
     lu.assertEquals(thessaly.Fountain.roomOptions[1].availability.biomeDepthCache, { min = 3, max = 5 })
-    lu.assertEquals(thessaly.Trial.roomOptions[1].availability.biomeEncounterDepth, { min = 2 })
+    lu.assertEquals(thessaly.Devotion.roomOptions[1].availability.biomeEncounterDepth, { min = 2 })
     lu.assertEquals(thessaly.Miniboss.routeRules, oneShotRouteRules())
 
     local olympus = biomes.lookup.P.rolesByKey
@@ -757,7 +742,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.fountain[1].key, "I_Reprieve01")
     lu.assertEquals(
         tartarus.clockwork.extensionRoom.specialOptions.fountain[1].reward,
-        roomStoreReward("TartarusRewards")
+        roomStoreReward("TartarusRewards", { ineligibleRewardTypes = { "Devotion" } })
     )
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.fountain[1].countsNonGoalReward, true)
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.fountain[1].exitCount, 2)

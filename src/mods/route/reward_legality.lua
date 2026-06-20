@@ -23,6 +23,15 @@ local function rewardPickValue(item, key)
     return nil
 end
 
+local function rewardPickValueByKind(item, kind)
+    for _, pick in ipairs(item and item.rewardPicks or EMPTY_LIST) do
+        if pick.kind == kind then
+            return pick.value
+        end
+    end
+    return nil
+end
+
 local function concreteRewardType(item)
     if item == nil or item.valid == false then
         return nil
@@ -89,6 +98,14 @@ local function appendRewardItemEvents(events, row, item, address)
     end
 end
 
+local function buildLookup(values)
+    local lookup = {}
+    for _, value in ipairs(values or EMPTY_LIST) do
+        lookup[value] = true
+    end
+    return lookup
+end
+
 local function collectRewardEvents(row, events)
     appendRewardItemEvents(events, row, row, "row")
     for _, sideRoom in ipairs(row and row.sideRooms or EMPTY_LIST) do
@@ -105,6 +122,9 @@ end
 local function compileRules(rules)
     local byTarget = {}
     for _, rule in ipairs(rules or EMPTY_LIST) do
+        if rule.appliesToRewardKinds ~= nil and rule.appliesToRewardKindLookup == nil then
+            rule.appliesToRewardKindLookup = buildLookup(rule.appliesToRewardKinds)
+        end
         for _, target in ipairs(rule.targets or EMPTY_LIST) do
             local targetRules = byTarget[target]
             if targetRules == nil then
@@ -149,6 +169,7 @@ local function addInvalid(result, seenInvalids, ctx, event, code, message)
     seenInvalids[key] = true
 
     local invalid = {
+        valid = false,
         biomeKey = ctx.biomeKey,
         controlName = ctx.controlName,
         rowIndex = row.rowIndex,
@@ -193,6 +214,42 @@ local function incrementCounter(state, counterKey, scope, biomeKey)
     counters[counterKey] = (counters[counterKey] or 0) + 1
 end
 
+local function seenGodLootCount(state, requirement)
+    local count = 0
+    for _, lootName in ipairs(requirement.countedLootNames or EMPTY_LIST) do
+        if state.godLootSeen[lootName] then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function requirementSkipped(requirement, ctx)
+    for _, biomeKey in ipairs(requirement.exceptBiomes or EMPTY_LIST) do
+        if biomeKey == ctx.biomeKey then
+            return true
+        end
+    end
+    return false
+end
+
+local function previousRoomExitCountInvalid(requirement, state, ctx)
+    local previousRow = state.previousRows[ctx.biomeKey]
+    if previousRow == nil
+        or previousRow.valid == false
+        or previousRow.roleKey == "Vanilla"
+        or previousRow.option == nil
+    then
+        return requirement
+    end
+
+    local exitCount = tonumber(previousRow.option.exitCount)
+    if exitCount == nil or exitCount < requirement.minCount then
+        return requirement
+    end
+    return nil
+end
+
 local function inRange(value, range)
     if range == nil or value == nil then
         return true
@@ -223,6 +280,10 @@ local function phaseMatches(phase, count, ctx)
 end
 
 local function requirementInvalid(requirement, state, ctx)
+    if requirementSkipped(requirement, ctx) then
+        return nil
+    end
+
     if requirement.kind == "previousShopExclusion" then
         for _, rewardType in ipairs(requirement.rewards or EMPTY_LIST) do
             if state.previousShopRewards[rewardType] then
@@ -230,6 +291,15 @@ local function requirementInvalid(requirement, state, ctx)
             end
         end
         return nil
+    end
+
+    if requirement.kind == "priorDistinctGodLoot" then
+        if seenGodLootCount(state, requirement) < requirement.minDistinct then
+            return requirement
+        end
+        return nil
+    elseif requirement.kind == "previousRoomExitCount" then
+        return previousRoomExitCountInvalid(requirement, state, ctx)
     end
 
     local count = counterValue(state, requirement.counter, requirement.scope, ctx.biomeKey)
@@ -252,6 +322,14 @@ local function requirementInvalid(requirement, state, ctx)
     return nil
 end
 
+local function ruleApplies(rule, event)
+    local lookup = rule.appliesToRewardKindLookup
+    if lookup == nil then
+        return true
+    end
+    return lookup[event.item and event.item.rewardKind or ""] == true
+end
+
 local function ruleInvalid(rule, state, ctx)
     for _, requirement in ipairs(rule.requirements or EMPTY_LIST) do
         local invalid = requirementInvalid(requirement, state, ctx)
@@ -268,23 +346,59 @@ local function applyCounts(rule, state, ctx)
     end
 end
 
+local function storeGodLootValue(state, lootName)
+    if lootName ~= nil and lootName ~= "" then
+        state.godLootSeen[lootName] = true
+    end
+end
+
+local function storeEventGodLoot(state, event)
+    local item = event and event.item or nil
+    if item == nil then
+        return
+    end
+
+    local rewards = item.rewards or EMPTY_LIST
+    if event.rewardType == "Boon" then
+        storeGodLootValue(state, rewardPickValue(item, "boonSource") or rewardPickValueByKind(item, "boonSource") or rewards[2])
+    elseif event.rewardType == "Devotion" then
+        local fallbackA = rewards[1]
+        local fallbackB = rewards[2]
+        if item.rewardKind == "roomStore" then
+            fallbackA = rewards[3]
+            fallbackB = rewards[4]
+        elseif item.rewardKind == "majorMinor" or item.rewardKind == "shipWheel" then
+            fallbackA = rewards[5]
+            fallbackB = rewards[6]
+        end
+        storeGodLootValue(state, rewardPickValue(item, "lootAName") or fallbackA)
+        storeGodLootValue(state, rewardPickValue(item, "lootBName") or fallbackB)
+    end
+end
+
 local function applyEventRules(result, seenInvalids, state, ctx, event)
     local rules = compiledRulesByTarget[event.rewardType]
     if rules == nil then
+        storeEventGodLoot(state, event)
         return
     end
 
     for _, rule in ipairs(rules) do
-        local invalid = ruleInvalid(rule, state, ctx)
-        if invalid ~= nil then
-            addInvalid(result, seenInvalids, ctx, event, invalid.code, invalid.message)
-            return
+        if ruleApplies(rule, event) then
+            local invalid = ruleInvalid(rule, state, ctx)
+            if invalid ~= nil then
+                addInvalid(result, seenInvalids, ctx, event, invalid.code, invalid.message)
+                return
+            end
         end
     end
 
     for _, rule in ipairs(rules) do
-        applyCounts(rule, state, ctx)
+        if ruleApplies(rule, event) then
+            applyCounts(rule, state, ctx)
+        end
     end
+    storeEventGodLoot(state, event)
 end
 
 local function storePreviousShopRewards(state, events)
@@ -313,7 +427,9 @@ function rewardLegality.evaluate(context, routeKey, opts)
     local state = {
         routeCounters = {},
         biomeCounters = {},
+        godLootSeen = {},
         previousShopRewards = {},
+        previousRows = {},
     }
     local events = {}
     local seenInvalids = {}
@@ -335,8 +451,10 @@ function rewardLegality.evaluate(context, routeKey, opts)
                     applyEventRules(result, seenInvalids, state, ctx, event)
                 end
                 storePreviousShopRewards(state, events)
+                state.previousRows[biomeKey] = row
             else
                 clearMap(state.previousShopRewards)
+                state.previousRows[biomeKey] = nil
             end
         end
     end

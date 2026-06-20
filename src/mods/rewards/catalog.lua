@@ -28,6 +28,15 @@ local function lookupList(values)
     return lookup
 end
 
+local function lookupListWithDefaultBan(values, bannedKey, banEnabled)
+    local lookup = lookupList(values)
+    if banEnabled and bannedKey ~= nil then
+        lookup = lookup or {}
+        lookup[bannedKey] = true
+    end
+    return lookup
+end
+
 local function isOnlyEligible(values, expected)
     if values == nil or values[1] == nil then
         return false
@@ -224,6 +233,16 @@ local function roomStoreSurface(self, context)
                 controlWidth = 170,
                 visibleWhen = { alias = "Reward1Key", value = "Boon" },
             }),
+            dropdown("Reward3Key", "lootAName", "God A", godValues, godLabels, {
+                kind = "boonSource",
+                controlWidth = 170,
+                visibleWhen = { alias = "Reward1Key", value = "Devotion" },
+            }),
+            dropdown("Reward4Key", "lootBName", "God B", godValues, godLabels, {
+                kind = "boonSource",
+                controlWidth = 170,
+                visibleWhen = { alias = "Reward1Key", value = "Devotion" },
+            }),
         },
     }
 end
@@ -231,10 +250,18 @@ end
 local function majorMinorSurface(self, context)
     local majorRewardStore = context.majorRewardStore or "RunProgress"
     local minorRewardStore = context.minorRewardStore or "MetaProgress"
-    local majorValues, majorLabels = uniqueNames(bundleOptions(self.definitions, majorRewardStore), nil, nil, function(name)
+    local majorEligible = lookupList(context.majorEligibleRewardTypes or context.eligibleRewardTypes)
+    local majorIneligible = lookupListWithDefaultBan(
+        context.majorIneligibleRewardTypes or context.ineligibleRewardTypes,
+        "Devotion",
+        context.allowDevotion ~= true
+    )
+    local minorEligible = lookupList(context.minorEligibleRewardTypes)
+    local minorIneligible = lookupList(context.minorIneligibleRewardTypes)
+    local majorValues, majorLabels = uniqueNames(bundleOptions(self.definitions, majorRewardStore), majorEligible, majorIneligible, function(name)
         return rewardOptionLabel(self.definitions, name)
     end)
-    local minorValues, minorLabels = uniqueNames(bundleOptions(self.definitions, minorRewardStore), nil, nil, function(name)
+    local minorValues, minorLabels = uniqueNames(bundleOptions(self.definitions, minorRewardStore), minorEligible, minorIneligible, function(name)
         return rewardOptionLabel(self.definitions, name)
     end)
     local godValues, godLabels = godSourceOptions(self.definitions)
@@ -276,6 +303,26 @@ local function majorMinorSurface(self, context)
                 controlWidth = 170,
                 rewardStore = minorRewardStore,
                 visibleWhen = { alias = "Reward1Key", value = MINOR_VALUE },
+            }),
+            dropdown("Reward5Key", "lootAName", "God A", godValues, godLabels, {
+                kind = "boonSource",
+                controlWidth = 170,
+                visibleWhen = {
+                    all = {
+                        { alias = "Reward1Key", value = MAJOR_VALUE },
+                        { alias = "Reward2Key", value = "Devotion" },
+                    },
+                },
+            }),
+            dropdown("Reward6Key", "lootBName", "God B", godValues, godLabels, {
+                kind = "boonSource",
+                controlWidth = 170,
+                visibleWhen = {
+                    all = {
+                        { alias = "Reward1Key", value = MAJOR_VALUE },
+                        { alias = "Reward2Key", value = "Devotion" },
+                    },
+                },
             }),
         },
     }
@@ -408,6 +455,8 @@ local function surfaceFor(self, context)
             kind = "majorMinor",
             majorRewardStore = context.defaultRewardStore or "RunProgress",
             minorRewardStore = "MetaProgress",
+            eligibleRewardTypes = context.eligibleRewardTypes,
+            ineligibleRewardTypes = context.ineligibleRewardTypes,
         })
     end
     return noSurface(context)

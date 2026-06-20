@@ -197,7 +197,7 @@ Route surface:
 - Story: `F_Story01`
 - Fountain: `F_Reprieve01`
 - Midshop: `F_Shop01`
-- Trial maps: `F_Combat05`, `F_Combat06`, `F_Combat07`, `F_Combat11`,
+- Devotion-capable combat maps: `F_Combat05`, `F_Combat06`, `F_Combat07`, `F_Combat11`,
   `F_Combat12`, `F_Combat13`, `F_Combat14`, `F_Combat15`, `F_Combat16`,
   `F_Combat17`, `F_Combat18`, `F_Combat20`
 - Miniboss: `F_MiniBoss01`, `F_MiniBoss02`, `F_MiniBoss03`
@@ -225,7 +225,7 @@ Route surface:
 - Story: `G_Story01`
 - Fountain: `G_Reprieve01`
 - Midshop: `G_Shop01`
-- Trial maps: `G_Combat02`, `G_Combat03`, `G_Combat09`, `G_Combat10`,
+- Devotion-capable combat maps: `G_Combat02`, `G_Combat03`, `G_Combat09`, `G_Combat10`,
   `G_Combat11`, `G_Combat12`, `G_Combat13`, `G_Combat14`, `G_Combat15`,
   `G_Combat16`, `G_Combat17`
 - Miniboss: `G_MiniBoss01`, `G_MiniBoss02`, `G_MiniBoss03`
@@ -317,7 +317,7 @@ Route surface:
 - Story: `O_Story01`
 - Fountain: `O_Reprieve01`
 - Midshop: `O_Shop01`
-- Trial: `O_Devotion01`
+- Devotion room: `O_Devotion01`
 - Miniboss: `O_MiniBoss01`, `O_MiniBoss02`
 - Preboss: `O_PreBoss01`
 

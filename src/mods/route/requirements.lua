@@ -118,17 +118,26 @@ local function collectRewardGodLoot(route, instance, rows, rowIndex, selections,
     local reward1 = rows:read(rowIndex, "Reward1Key") or ""
     local reward2 = rows:read(rowIndex, "Reward2Key") or ""
     local reward3 = rows:read(rowIndex, "Reward3Key") or ""
+    local reward4 = rows:read(rowIndex, "Reward4Key") or ""
+    local reward5 = rows:read(rowIndex, "Reward5Key") or ""
+    local reward6 = rows:read(rowIndex, "Reward6Key") or ""
     local count = 0
 
     if context.kind == "majorMinor" or context.kind == "shipWheel" then
         if reward1 == "Major" and reward2 == "Boon" then
             count = count + addGodLootSelection(selections, countedLookup, reward3)
+        elseif reward1 == "Major" and reward2 == "Devotion" then
+            count = count + addGodLootSelection(selections, countedLookup, reward5)
+            count = count + addGodLootSelection(selections, countedLookup, reward6)
         end
     elseif context.kind == "roomStore" then
         if common.isOnlyEligible(context.eligibleRewardTypes, "Boon") then
             count = count + addGodLootSelection(selections, countedLookup, reward1)
         elseif reward1 == "Boon" then
             count = count + addGodLootSelection(selections, countedLookup, reward2)
+        elseif reward1 == "Devotion" then
+            count = count + addGodLootSelection(selections, countedLookup, reward3)
+            count = count + addGodLootSelection(selections, countedLookup, reward4)
         end
     elseif context.kind == "forcedReward" then
         if context.rewardType == "Boon" then

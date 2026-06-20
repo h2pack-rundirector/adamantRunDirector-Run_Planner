@@ -12,7 +12,7 @@ local CONFIGURE_REWARDS_KEY = "ConfigureRewards"
 local CONFIGURE_NPCS_KEY = "ConfigureNpcs"
 local CONFIGURE_FEATURES_KEY = "ConfigureFeatures"
 local DISABLED_TEXT_COLOR = { 0.55, 0.55, 0.55, 1 }
-local REWARDS_DISABLED_NOTE = "Disabling rewards invalidates Trial rooms and disables NPC encounter planning."
+local REWARDS_DISABLED_NOTE = "Disabling rewards invalidates Trial rewards and disables NPC encounter planning."
 
 local CONFIG_TOGGLES = {
     {

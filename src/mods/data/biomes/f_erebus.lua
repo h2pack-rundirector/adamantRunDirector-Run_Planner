@@ -1,8 +1,14 @@
 return function(importer)
     local layout = importer("mods/data/biomes/f_erebus_layout.lua")
+    local optionRewards = importer("mods/data/biomes/option_rewards.lua")
     local timeline = importer("mods/data/biomes/timeline.lua")
     local rewards = importer("mods/data/rewards.lua")(importer)
     local routeRules = importer("mods/data/route_rules.lua")
+    local combatRooms = optionRewards.withReward(
+        layout.combatRooms,
+        layout.devotionCombatRooms,
+        rewards.majorMinor({ allowDevotion = true })
+    )
 
     return {
         key = "F",
@@ -65,7 +71,7 @@ return function(importer)
             {
                 key = "Combat",
                 label = "Combat",
-                mapOptions = layout.combatRooms,
+                mapOptions = combatRooms,
                 reward = rewards.majorMinor(),
             },
             {
@@ -94,14 +100,6 @@ return function(importer)
                 biomeEncounterDepthCost = 0,
                 routeRules = routeRules.role("Midshop"),
                 routeRequirements = routeRules.midshopRequirements(),
-                reserve = true,
-            },
-            {
-                key = "Trial",
-                label = "Trial",
-                mapOptions = layout.trialCombatRooms,
-                reward = rewards.devotion({ rewardStore = "RunProgress" }),
-                routeRules = routeRules.role("Trial"),
                 reserve = true,
             },
             {

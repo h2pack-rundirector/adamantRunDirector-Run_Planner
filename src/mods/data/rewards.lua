@@ -41,11 +41,27 @@ end
 
 function rewards.majorMinor(opts)
     opts = opts or {}
-    return {
+    local context = {
         kind = "majorMinor",
         majorRewardStore = opts.majorRewardStore or "RunProgress",
         minorRewardStore = opts.minorRewardStore or "MetaProgress",
     }
+    if opts.allowDevotion == true then
+        context.allowDevotion = true
+    end
+    if opts.majorEligibleRewardTypes ~= nil then
+        context.majorEligibleRewardTypes = copyList(opts.majorEligibleRewardTypes)
+    end
+    if opts.majorIneligibleRewardTypes ~= nil then
+        context.majorIneligibleRewardTypes = copyList(opts.majorIneligibleRewardTypes)
+    end
+    if opts.minorEligibleRewardTypes ~= nil then
+        context.minorEligibleRewardTypes = copyList(opts.minorEligibleRewardTypes)
+    end
+    if opts.minorIneligibleRewardTypes ~= nil then
+        context.minorIneligibleRewardTypes = copyList(opts.minorIneligibleRewardTypes)
+    end
+    return context
 end
 
 function rewards.forcedReward(rewardType, opts)
@@ -60,11 +76,9 @@ function rewards.forcedReward(rewardType, opts)
     return context
 end
 
-function rewards.devotion(opts)
-    opts = opts or {}
-    local context = rewards.forcedReward("Devotion", opts)
+function rewards.devotion()
+    local context = rewards.forcedReward("Devotion")
     context.pick = routeRules.devotionPick()
-    context.routeRequirements = routeRules.devotionRequirements(opts)
     return context
 end
 
@@ -133,7 +147,6 @@ function rewards.rewardTypeMetadata()
             label = "Trial",
             kind = "devotion",
             pick = routeRules.devotionPick(),
-            routeRequirements = routeRules.devotionRequirements(),
         },
     }
 

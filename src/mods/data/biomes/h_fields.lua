@@ -71,6 +71,7 @@ return function(importer)
                 mapOptions = layout.combatRooms,
                 reward = rewards.fieldsCages({
                     rewardStore = "RunProgress",
+                    ineligibleRewardTypes = { "Devotion" },
                 }),
                 cageRewardPolicy = "H_FieldsCageRewards",
             },

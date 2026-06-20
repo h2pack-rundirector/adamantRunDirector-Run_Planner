@@ -109,7 +109,7 @@ layout.combatRooms = {
 
 layout.combatRoomsByKey = indexByKey(layout.combatRooms)
 
-layout.trialCombatRooms = pickByKey(layout.combatRoomsByKey, {
+layout.devotionCombatRooms = pickByKey(layout.combatRoomsByKey, {
     "G_Combat02", "G_Combat03", "G_Combat09",
     "G_Combat10", "G_Combat11", "G_Combat12",
     "G_Combat13", "G_Combat14", "G_Combat15",

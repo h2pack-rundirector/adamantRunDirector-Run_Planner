@@ -100,14 +100,12 @@ return function(importer)
                 reserve = true,
             },
             {
-                key = "Trial",
+                key = "Devotion",
                 label = "Trial",
-                roomOptions = layout.trialRooms,
-                reward = rewards.devotion({
-                    rewardStore = "RunProgress",
-                    previousRoomExitCount = false,
-                }),
-                routeRules = routeRules.role("Trial"),
+                roomOptions = layout.devotionRooms,
+                reward = rewards.devotion(),
+                requiredLayer = "rewards",
+                routeRules = routeRules.role("Devotion"),
                 reserve = true,
             },
             {
