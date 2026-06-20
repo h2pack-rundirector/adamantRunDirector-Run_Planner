@@ -2,10 +2,11 @@ local logic = {}
 
 function logic.bind(data)
     local catalog = data.loadCatalog()
+    local routeTimeline = import("mods/route/timeline.lua")
     local rewardLegality = import("mods/route/reward_legality.lua", nil, {
         routeRules = import("mods/rewards/route_rules.lua"),
+        timeline = routeTimeline,
     })
-    local routeTimeline = import("mods/route/timeline.lua")
     local routePlan = import("mods/logic/route_plan.lua", nil, {
         executionPlan = import("mods/logic/execution_plan.lua"),
         routeContext = import("mods/route/run_context.lua", nil, {

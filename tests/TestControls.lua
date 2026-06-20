@@ -108,6 +108,7 @@ end
 local function loadRewardLegality()
     return testImport("mods/route/reward_legality.lua", nil, {
         routeRules = testImport("mods/rewards/route_rules.lua"),
+        timeline = testImport("mods/route/timeline.lua"),
     })
 end
 
@@ -4216,6 +4217,36 @@ function TestRunPlannerControls.testRouteContextDevotionRewardUsesPriorUnderworl
             Reward2Key = "Boon",
             Reward3Key = "ApolloUpgrade",
         },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat06",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat07",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat13",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat06",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat07",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
     }), fInstance)
     local template = loadClockworkGoalTemplate()
     local iInstance = template.prepare({
@@ -4282,6 +4313,36 @@ function TestRunPlannerControls.testRouteContextScopesPriorGodLootByRoute()
             Reward2Key = "Boon",
             Reward3Key = "ApolloUpgrade",
         },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat06",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat07",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat13",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat06",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat07",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
     }), fInstance)
     local template = loadClockworkGoalTemplate()
     local iInstance = template.prepare({
@@ -4341,11 +4402,14 @@ local function routeRewardRow(rowIndex, rewardType, opts)
         option = {
             key = opts.roomKey or ("Test_Combat" .. tostring(rowIndex)),
             label = opts.roomLabel or "Combat",
+            exitCount = opts.exitCount,
         },
         valid = opts.valid ~= false,
         rewardKind = opts.rewardKind or "roomStore",
         rewards = opts.rewards or { rewardType },
         rewardPicks = opts.rewardPicks or {},
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
+        biomeEncounterDepthCostKnown = opts.biomeEncounterDepthCostKnown ~= false,
     }
 end
 
@@ -4365,13 +4429,61 @@ local function fakeRouteControlSnapshot(controlName, rows)
     }
 end
 
-local function rewardLegalityRouteContext(route, controls)
+local function rewardLegalityRouteContext(route, controls, opts)
+    opts = opts or {}
     return loadRunContext().create({
         routes = routeDefinitions({ route }),
+        biomes = opts.biomes or {},
         controlResolver = function(controlName)
             return controls[controlName]
         end,
     })
+end
+
+local function fakeTimelineBiome()
+    return {
+        timeline = {
+            afterBiome = {
+                { key = "Boss", roomHistoryCost = 1 },
+                { key = "PostBoss", roomHistoryCost = 1 },
+            },
+        },
+    }
+end
+
+local function devotionRewardRow(rowIndex, opts)
+    opts = opts or {}
+    return routeRewardRow(rowIndex, "Devotion", {
+        exitCount = opts.exitCount,
+        rewardKind = "majorMinor",
+        rewards = { "Major", "Devotion", "", "", "ZeusUpgrade", "ApolloUpgrade" },
+    })
+end
+
+local function boonRewardRow(rowIndex, lootName, opts)
+    opts = opts or {}
+    return routeRewardRow(rowIndex, "Boon", {
+        exitCount = opts.exitCount,
+        rewards = { "Major", "Boon", lootName },
+        rewardKind = "majorMinor",
+        rewardPicks = {
+            { kind = "boonSource", value = lootName },
+        },
+    })
+end
+
+local function firstValidDevotionRows()
+    return {
+        boonRewardRow(1, "ZeusUpgrade"),
+        boonRewardRow(2, "ApolloUpgrade"),
+        routeRewardRow(3, "MaxHealthDrop"),
+        routeRewardRow(4, "MaxHealthDrop"),
+        routeRewardRow(5, "MaxHealthDrop"),
+        routeRewardRow(6, "MaxHealthDrop"),
+        routeRewardRow(7, "MaxHealthDrop"),
+        routeRewardRow(8, "MaxHealthDrop", { exitCount = 2 }),
+        devotionRewardRow(9),
+    }
 end
 
 function TestRunPlannerControls.testRouteContextInvalidatesTalentRewardsBeforeSpellDrop()
@@ -4398,6 +4510,121 @@ function TestRunPlannerControls.testRouteContextInvalidatesTalentRewardsBeforeSp
     lu.assertEquals(overview.invalidRows[2].code, "talent_requires_spell")
     lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 1).code, "talent_requires_spell")
     lu.assertNil(routeContext:rewardRowValidation("Underworld", "F", 4))
+end
+
+function TestRunPlannerControls.testRouteContextInvalidatesDevotionBeforeSevenRunEncounters()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            boonRewardRow(1, "ZeusUpgrade"),
+            boonRewardRow(2, "ApolloUpgrade", { exitCount = 2 }),
+            devotionRewardRow(3),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 3)
+    lu.assertEquals(overview.invalidRows[1].code, "devotion_run_encounter_depth")
+end
+
+function TestRunPlannerControls.testRouteContextAllowsDevotionAfterSevenRunEncounters()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            boonRewardRow(1, "ZeusUpgrade"),
+            boonRewardRow(2, "ApolloUpgrade"),
+            routeRewardRow(3, "MaxHealthDrop"),
+            routeRewardRow(4, "MaxHealthDrop"),
+            routeRewardRow(5, "MaxHealthDrop"),
+            routeRewardRow(6, "MaxHealthDrop"),
+            routeRewardRow(7, "MaxHealthDrop", { exitCount = 2 }),
+            devotionRewardRow(8),
+        }),
+    })
+
+    lu.assertTrue(routeContext:overview("Underworld").valid)
+    lu.assertNil(routeContext:rewardRowValidation("Underworld", "F", 8))
+end
+
+function TestRunPlannerControls.testRouteContextInvalidatesDevotionBeforeFifteenRooms()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", firstValidDevotionRows()),
+        RouteG = fakeRouteControlSnapshot("RouteG", {
+            routeRewardRow(1, "MaxHealthDrop"),
+            routeRewardRow(2, "MaxHealthDrop"),
+            routeRewardRow(3, "MaxHealthDrop"),
+            routeRewardRow(4, "MaxHealthDrop"),
+            routeRewardRow(5, "MaxHealthDrop"),
+            routeRewardRow(6, "MaxHealthDrop"),
+            routeRewardRow(7, "MaxHealthDrop"),
+            routeRewardRow(8, "MaxHealthDrop"),
+            routeRewardRow(9, "MaxHealthDrop"),
+            routeRewardRow(10, "MaxHealthDrop"),
+            routeRewardRow(11, "MaxHealthDrop", { exitCount = 2 }),
+            devotionRewardRow(12),
+        }),
+    }, {
+        biomes = {
+            F = fakeTimelineBiome(),
+            G = fakeTimelineBiome(),
+        },
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].biomeKey, "G")
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 12)
+    lu.assertEquals(overview.invalidRows[1].code, "devotion_spacing")
+end
+
+function TestRunPlannerControls.testRouteContextCountsTimelineRoomsForDevotionSpacing()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", firstValidDevotionRows()),
+        RouteG = fakeRouteControlSnapshot("RouteG", {
+            routeRewardRow(1, "MaxHealthDrop"),
+            routeRewardRow(2, "MaxHealthDrop"),
+            routeRewardRow(3, "MaxHealthDrop"),
+            routeRewardRow(4, "MaxHealthDrop"),
+            routeRewardRow(5, "MaxHealthDrop"),
+            routeRewardRow(6, "MaxHealthDrop"),
+            routeRewardRow(7, "MaxHealthDrop"),
+            routeRewardRow(8, "MaxHealthDrop"),
+            routeRewardRow(9, "MaxHealthDrop"),
+            routeRewardRow(10, "MaxHealthDrop"),
+            routeRewardRow(11, "MaxHealthDrop"),
+            routeRewardRow(12, "MaxHealthDrop", { exitCount = 2 }),
+            devotionRewardRow(13),
+        }),
+    }, {
+        biomes = {
+            F = fakeTimelineBiome(),
+            G = fakeTimelineBiome(),
+        },
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertTrue(overview.valid)
+    lu.assertNil(routeContext:rewardRowValidation("Underworld", "G", 13))
 end
 
 function TestRunPlannerControls.testRouteContextInvalidatesDuplicateSpellDrops()
@@ -4478,7 +4705,12 @@ function TestRunPlannerControls.testRouteContextDevotionPairSkipsPreviousExitReq
             routeRewardRow(2, "Boon", {
                 rewards = { "Boon", "ApolloUpgrade" },
             }),
-            routeRewardRow(3, "Devotion", {
+            routeRewardRow(3, "MaxHealthDrop"),
+            routeRewardRow(4, "MaxHealthDrop"),
+            routeRewardRow(5, "MaxHealthDrop"),
+            routeRewardRow(6, "MaxHealthDrop"),
+            routeRewardRow(7, "MaxHealthDrop"),
+            routeRewardRow(8, "Devotion", {
                 rewardKind = "devotionPair",
                 rewards = { "ZeusUpgrade", "ApolloUpgrade" },
             }),
@@ -4488,7 +4720,7 @@ function TestRunPlannerControls.testRouteContextDevotionPairSkipsPreviousExitReq
     local overview = routeContext:overview("Surface")
 
     lu.assertTrue(overview.valid)
-    lu.assertNil(routeContext:rewardRowValidation("Surface", "O", 3))
+    lu.assertNil(routeContext:rewardRowValidation("Surface", "O", 8))
 end
 
 function TestRunPlannerControls.testRouteContextDevotionPairRequiresPriorGodLoot()

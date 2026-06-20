@@ -43,6 +43,18 @@ return {
                 code = "previous_room_exit_count",
                 message = "Previous planned room must have at least 2 exits",
             },
+            {
+                kind = "minRunEncounterDepth",
+                min = 7,
+                code = "devotion_run_encounter_depth",
+                message = "Trial requires at least 7 prior encounters in this route",
+            },
+            {
+                kind = "minRoomHistorySpacing",
+                min = 15,
+                code = "devotion_spacing",
+                message = "Trial requires 15 rooms since the previous Trial",
+            },
         },
     },
     {

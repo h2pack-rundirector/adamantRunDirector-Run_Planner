@@ -71,6 +71,13 @@ function timeline.rowRoomHistoryCost(row)
     return numericCost(row and row.roomHistoryCost, DEFAULT_ROOM_HISTORY_COST)
 end
 
+function timeline.rowBiomeEncounterDepthCost(row)
+    if row == nil or row.biomeEncounterDepthCostKnown == false or row.biomeEncounterDepthCost == nil then
+        return nil
+    end
+    return numericCost(row.biomeEncounterDepthCost, 0)
+end
+
 function timeline.runDepthCache(roomHistoryOrdinal)
     return 1 + (roomHistoryOrdinal or 0)
 end
@@ -132,6 +139,8 @@ local function routeWalkContext(route, routeState, biomeState, routeBiomeIndex, 
         routeOrdinal = routeState.routeOrdinal,
         roomHistoryOrdinal = routeState.roomHistoryOrdinal,
         runDepthCache = timeline.runDepthCache(routeState.roomHistoryOrdinal),
+        runEncounterDepth = routeState.runEncounterDepth,
+        runEncounterDepthKnown = routeState.runEncounterDepthKnown,
         roomHistoryDepth = biomeState.roomHistoryDepth,
         biomeDepthCache = row and row.biomeDepthCache or nil,
         biomeDepthCacheKnown = row and row.biomeDepthCacheKnown or nil,
@@ -151,6 +160,8 @@ local function afterBiomeContext(route, routeState, routeBiomeIndex, biomeKey, e
         entryKey = entry and entry.key or nil,
         roomHistoryOrdinal = routeState.roomHistoryOrdinal,
         runDepthCache = timeline.runDepthCache(routeState.roomHistoryOrdinal),
+        runEncounterDepth = routeState.runEncounterDepth,
+        runEncounterDepthKnown = routeState.runEncounterDepthKnown,
         entryRoomHistoryCost = entryCost,
     }
 end
@@ -177,6 +188,8 @@ function timeline.sideRoomContext(rowContext, sideRoom, cost)
         routeOrdinal = rowContext and rowContext.routeOrdinal or nil,
         roomHistoryOrdinal = roomHistoryOrdinal,
         runDepthCache = timeline.runDepthCache(roomHistoryOrdinal),
+        runEncounterDepth = rowContext and rowContext.runEncounterDepth or nil,
+        runEncounterDepthKnown = rowContext and rowContext.runEncounterDepthKnown or nil,
         roomHistoryDepth = roomHistoryDepth,
         sideRoom = sideRoom,
         sideRoomHistoryCost = sideCost,
@@ -192,6 +205,8 @@ function timeline.walkRoute(route, opts)
     local routeState = {
         routeOrdinal = 0,
         roomHistoryOrdinal = 0,
+        runEncounterDepth = 1,
+        runEncounterDepthKnown = true,
     }
 
     for routeBiomeIndex, biomeKey in ipairs(route and route.biomes or EMPTY_LIST) do
@@ -202,11 +217,18 @@ function timeline.walkRoute(route, opts)
         }
         for _, row in ipairs(snapshot and snapshot.rows or EMPTY_LIST) do
             local rowCost = timeline.rowRoomHistoryCost(row)
+            local rowEncounterDepthCost = timeline.rowBiomeEncounterDepthCost(row)
             routeState.routeOrdinal = routeState.routeOrdinal + 1
             routeState.roomHistoryOrdinal = routeState.roomHistoryOrdinal + rowCost
             advanceBiomeDepth(biomeState, rowCost)
             if onRow ~= nil then
                 onRow(routeWalkContext(route, routeState, biomeState, routeBiomeIndex, biomeKey, row, rowCost))
+            end
+            if routeState.runEncounterDepthKnown and rowEncounterDepthCost ~= nil then
+                routeState.runEncounterDepth = routeState.runEncounterDepth + rowEncounterDepthCost
+            else
+                routeState.runEncounterDepth = nil
+                routeState.runEncounterDepthKnown = false
             end
         end
 

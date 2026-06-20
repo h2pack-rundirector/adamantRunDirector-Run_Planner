@@ -1,5 +1,9 @@
 local deps = ... or {}
 local routeRules = deps.routeRules or deps.rules or {}
+local routeTimeline = deps.timeline
+if routeTimeline == nil then
+    error("reward_legality requires route timeline")
+end
 
 local rewardLegality = {}
 local EMPTY_LIST = {}
@@ -250,6 +254,26 @@ local function previousRoomExitCountInvalid(requirement, state, ctx)
     return nil
 end
 
+local function minRoomHistorySpacingInvalid(requirement, state, ctx, event)
+    local rewardType = requirement.event or event.rewardType
+    local previousOrdinal = state.lastRewardRoomHistoryOrdinal[rewardType]
+    if previousOrdinal == nil then
+        return nil
+    end
+    local currentOrdinal = ctx.roomHistoryOrdinal
+    if currentOrdinal == nil or currentOrdinal - previousOrdinal < requirement.min then
+        return requirement
+    end
+    return nil
+end
+
+local function minRunEncounterDepthInvalid(requirement, ctx)
+    if ctx.runEncounterDepthKnown == false or ctx.runEncounterDepth == nil or ctx.runEncounterDepth < requirement.min then
+        return requirement
+    end
+    return nil
+end
+
 local function inRange(value, range)
     if range == nil or value == nil then
         return true
@@ -279,7 +303,7 @@ local function phaseMatches(phase, count, ctx)
     return inRange(ctx.routeBiomeIndex, phase.routeBiomeIndex)
 end
 
-local function requirementInvalid(requirement, state, ctx)
+local function requirementInvalid(requirement, state, ctx, event)
     if requirementSkipped(requirement, ctx) then
         return nil
     end
@@ -300,6 +324,10 @@ local function requirementInvalid(requirement, state, ctx)
         return nil
     elseif requirement.kind == "previousRoomExitCount" then
         return previousRoomExitCountInvalid(requirement, state, ctx)
+    elseif requirement.kind == "minRoomHistorySpacing" then
+        return minRoomHistorySpacingInvalid(requirement, state, ctx, event)
+    elseif requirement.kind == "minRunEncounterDepth" then
+        return minRunEncounterDepthInvalid(requirement, ctx)
     end
 
     local count = counterValue(state, requirement.counter, requirement.scope, ctx.biomeKey)
@@ -330,9 +358,9 @@ local function ruleApplies(rule, event)
     return lookup[event.item and event.item.rewardKind or ""] == true
 end
 
-local function ruleInvalid(rule, state, ctx)
+local function ruleInvalid(rule, state, ctx, event)
     for _, requirement in ipairs(rule.requirements or EMPTY_LIST) do
-        local invalid = requirementInvalid(requirement, state, ctx)
+        local invalid = requirementInvalid(requirement, state, ctx, event)
         if invalid ~= nil then
             return invalid
         end
@@ -376,16 +404,23 @@ local function storeEventGodLoot(state, event)
     end
 end
 
+local function storeRewardOccurrence(state, ctx, event)
+    if event.rewardType ~= nil and ctx.roomHistoryOrdinal ~= nil then
+        state.lastRewardRoomHistoryOrdinal[event.rewardType] = ctx.roomHistoryOrdinal
+    end
+end
+
 local function applyEventRules(result, seenInvalids, state, ctx, event)
     local rules = compiledRulesByTarget[event.rewardType]
     if rules == nil then
         storeEventGodLoot(state, event)
+        storeRewardOccurrence(state, ctx, event)
         return
     end
 
     for _, rule in ipairs(rules) do
         if ruleApplies(rule, event) then
-            local invalid = ruleInvalid(rule, state, ctx)
+            local invalid = ruleInvalid(rule, state, ctx, event)
             if invalid ~= nil then
                 addInvalid(result, seenInvalids, ctx, event, invalid.code, invalid.message)
                 return
@@ -399,6 +434,7 @@ local function applyEventRules(result, seenInvalids, state, ctx, event)
         end
     end
     storeEventGodLoot(state, event)
+    storeRewardOccurrence(state, ctx, event)
 end
 
 local function storePreviousShopRewards(state, events)
@@ -428,20 +464,33 @@ function rewardLegality.evaluate(context, routeKey, opts)
         routeCounters = {},
         biomeCounters = {},
         godLootSeen = {},
+        lastRewardRoomHistoryOrdinal = {},
         previousShopRewards = {},
         previousRows = {},
     }
     local events = {}
     local seenInvalids = {}
 
-    for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
-        local snapshot = snapshotForBiome and snapshotForBiome(route.key, biomeKey) or nil
-        local ctx = {
-            biomeKey = biomeKey,
-            routeBiomeIndex = routeBiomeIndex,
-            controlName = snapshot and snapshot.controlName or routeControlName(biomeKey),
-        }
-        for _, row in ipairs(snapshot and snapshot.rows or EMPTY_LIST) do
+    routeTimeline.walkRoute(route, {
+        biomeLookup = context.biomeLookup,
+        snapshotForBiome = function(_, biomeKey)
+            return snapshotForBiome and snapshotForBiome(route.key, biomeKey) or nil
+        end,
+        onRow = function(rowContext)
+            local row = rowContext.row
+            local biomeKey = rowContext.biomeKey
+            local ctx = {
+                biomeKey = biomeKey,
+                routeBiomeIndex = rowContext.routeBiomeIndex,
+                controlName = routeControlName(biomeKey),
+                routeOrdinal = rowContext.routeOrdinal,
+                roomHistoryOrdinal = rowContext.roomHistoryOrdinal,
+                runDepthCache = rowContext.runDepthCache,
+                runEncounterDepth = rowContext.runEncounterDepth,
+                runEncounterDepthKnown = rowContext.runEncounterDepthKnown,
+                biomeDepthCache = rowContext.biomeDepthCache,
+                biomeEncounterDepth = rowContext.biomeEncounterDepth,
+            }
             if row ~= nil and row.valid ~= false then
                 for index in pairs(events) do
                     events[index] = nil
@@ -456,8 +505,8 @@ function rewardLegality.evaluate(context, routeKey, opts)
                 clearMap(state.previousShopRewards)
                 state.previousRows[biomeKey] = nil
             end
-        end
-    end
+        end,
+    })
 
     return result
 end

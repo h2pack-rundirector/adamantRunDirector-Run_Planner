@@ -26,6 +26,7 @@ end
 local function loadRewardLegality()
     return testImport("mods/route/reward_legality.lua", nil, {
         routeRules = testImport("mods/rewards/route_rules.lua"),
+        timeline = testImport("mods/route/timeline.lua"),
     })
 end
 

@@ -23,10 +23,11 @@ local function init()
     local data = import("mods/data.lua")
     local catalog = data.loadCatalog()
     local routeControls = data.buildControls(catalog)
+    local routeTimeline = import("mods/route/timeline.lua")
     local rewardLegality = import("mods/route/reward_legality.lua", nil, {
         routeRules = import("mods/rewards/route_rules.lua"),
+        timeline = routeTimeline,
     })
-    local routeTimeline = import("mods/route/timeline.lua")
     local routeContext = import("mods/route/run_context.lua", nil, {
         rewardLegality = rewardLegality,
         timeline = routeTimeline,
