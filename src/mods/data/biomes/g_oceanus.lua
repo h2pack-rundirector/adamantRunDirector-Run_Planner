@@ -19,11 +19,15 @@ return function(importer)
         },
         slotLayout = {
             coordinate = "BiomeDepthCache",
+            biomeDepthCacheStart = 1,
+            defaultFixedBiomeDepthCacheCost = 0,
+            routeBiomeDepthCacheCost = 1,
             depthRange = { min = 1, max = 8 },
             routeStartDepth = 1,
             routeEndDepth = 7,
             entry = {
                 kind = "intro",
+                isBiomeEntry = true,
                 roomKey = layout.introRoom.key,
                 features = layout.chaosFeatures,
                 biomeEncounterDepthCost = 0,

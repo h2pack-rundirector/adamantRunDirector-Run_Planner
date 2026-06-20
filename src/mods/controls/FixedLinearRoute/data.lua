@@ -1,6 +1,5 @@
 local deps = ...
 local common = deps.common
-local availability = deps.availability
 local timeline = deps.timeline
 local rowEngine = deps.rowEngine
 
@@ -13,7 +12,8 @@ local addChoice = common.addChoice
 local buildOptionChoices = common.buildOptionChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
-local slotDepth = availability.slotDepth
+local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
+local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
 local applySlotDepthContext = common.applySlotDepthContext
 
 local data
@@ -38,28 +38,25 @@ local function firstBranchKey(slot)
     return slot and (slot.branchKey or (slot.branchValues and slot.branchValues[1])) or ""
 end
 
-local function forcedRuleForSlot(instance, slot)
-    local depth = slotDepth(slot)
+local function forcedRuleForRow(instance, rows, rowIndex)
+    local context = data.rowContext(instance, rows, rowIndex)
+    local depth = context and context.biomeDepthCache or nil
     if depth == nil then
         return nil
     end
     return instance.forcedDepthOptions and instance.forcedDepthOptions[depth] or nil
 end
 
-local function forcedRuleForRow(instance, rowIndex)
-    return forcedRuleForSlot(instance, slotForRow(instance, rowIndex))
-end
-
-local function isRoleAllowedByForcedRule(instance, rowIndex, roleKey)
-    local rule = forcedRuleForRow(instance, rowIndex)
+local function isRoleAllowedByForcedRule(instance, rows, rowIndex, roleKey)
+    local rule = forcedRuleForRow(instance, rows, rowIndex)
     if rule == nil or roleKey == VANILLA_ROLE_KEY then
         return true
     end
     return roleKey == rule.roleKey
 end
 
-local function isOptionAllowedByForcedRule(instance, rowIndex, roleKey, optionKey)
-    local rule = forcedRuleForRow(instance, rowIndex)
+local function isOptionAllowedByForcedRule(instance, rows, rowIndex, roleKey, optionKey)
+    local rule = forcedRuleForRow(instance, rows, rowIndex)
     if rule == nil then
         return true
     end
@@ -83,6 +80,7 @@ local function buildFixedRoleSlot(instance, depth, special)
         optionsByKey = buildLookup(roomOptions),
         reward = special.reward,
         features = special.features,
+        biomeDepthCacheCost = special.biomeDepthCacheCost,
         biomeEncounterDepthCost = special.biomeEncounterDepthCost,
     }
     buildOptionChoices(role)
@@ -92,12 +90,17 @@ local function buildFixedRoleSlot(instance, depth, special)
         rowIndex = rowIndex,
         coordinate = depth,
         kind = kind,
+        isBiomeEntry = special.isBiomeEntry == true,
         label = special.label or role.label,
         roomKey = special.roomKey,
         roleKey = role.key,
         role = role,
         features = special.features,
-    }, special)
+    }, {
+        biomeDepthCache = special.biomeDepthCache,
+        biomeDepthCacheCost = fixedBiomeDepthCacheCost(instance.biome.slotLayout, special),
+        biomeEncounterDepthCost = special.biomeEncounterDepthCost,
+    })
 end
 
 local function buildEntrySlot(instance, entry)
@@ -113,6 +116,8 @@ local function buildEntrySlot(instance, entry)
         roomOptions = entry.roomOptions,
         reward = entry.reward,
         features = entry.features,
+        isBiomeEntry = entry.isBiomeEntry == true,
+        biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
         locked = entry.locked,
     })
@@ -122,7 +127,6 @@ local function buildRouteSlots(instance)
     local slotLayout = instance.biome.slotLayout or {}
     local startDepth = math.floor(tonumber(slotLayout.routeStartDepth) or 1)
     local endDepth = math.floor(tonumber(slotLayout.routeEndDepth) or startDepth)
-    local selectionBiomeDepthOffset = tonumber(slotLayout.selectionBiomeDepthOffset) or 0
     if endDepth < startDepth then
         endDepth = startDepth
     end
@@ -149,7 +153,7 @@ local function buildRouteSlots(instance)
             kind = "route",
             label = "Depth " .. tostring(depth),
         }, {
-            biomeDepthCache = depth + selectionBiomeDepthOffset,
+            biomeDepthCacheCost = routeBiomeDepthCacheCost(slotLayout),
         })
     end
 
@@ -169,6 +173,7 @@ local function buildRouteSlots(instance)
                 rowIndex = rowIndex,
                 coordinate = depth,
                 kind = "preboss",
+                isBiomeEntry = special.isBiomeEntry == true,
                 label = branch.label or special.label or ("Depth " .. tostring(depth) .. " Preboss"),
                 roomKey = special.roomKey,
                 branchKey = branch.key,
@@ -177,7 +182,11 @@ local function buildRouteSlots(instance)
                 branchesByKey = buildLookup(branches),
                 branchValues = {},
                 branchLabels = {},
-            }, special)
+            }, {
+                biomeDepthCache = special.biomeDepthCache,
+                biomeDepthCacheCost = fixedBiomeDepthCacheCost(slotLayout, special),
+                biomeEncounterDepthCost = special.biomeEncounterDepthCost,
+            })
             addChoice(slot.branchValues, slot.branchLabels, branch.key, branch.label)
             instance.routeSlots[rowIndex] = slot
         end
@@ -255,16 +264,16 @@ local adapter = {
         return nil
     end,
 
-    isRoleAllowed = function(instance, _, rowIndex, roleKey)
-        return isRoleAllowedByForcedRule(instance, rowIndex, roleKey)
+    isRoleAllowed = function(instance, rows, rowIndex, roleKey)
+        return isRoleAllowedByForcedRule(instance, rows, rowIndex, roleKey)
     end,
 
-    isOptionAllowed = function(instance, _, rowIndex, roleKey, optionKey)
-        return isOptionAllowedByForcedRule(instance, rowIndex, roleKey, optionKey)
+    isOptionAllowed = function(instance, rows, rowIndex, roleKey, optionKey)
+        return isOptionAllowedByForcedRule(instance, rows, rowIndex, roleKey, optionKey)
     end,
 
-    roleDisallowedStatus = function(instance, _, rowIndex)
-        local rule = forcedRuleForRow(instance, rowIndex)
+    roleDisallowedStatus = function(instance, rows, rowIndex)
+        local rule = forcedRuleForRow(instance, rows, rowIndex)
         return invalidStatus(
             "forced_depth_role",
             "Depth " .. tostring(instance.routeSlots[rowIndex] and instance.routeSlots[rowIndex].coordinate)

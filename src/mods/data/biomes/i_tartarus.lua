@@ -22,6 +22,9 @@ return function(importer)
         },
         slotLayout = {
             coordinate = "ClockworkGoalRoute",
+            biomeDepthCacheStart = 1,
+            defaultFixedBiomeDepthCacheCost = 0,
+            routeBiomeDepthCacheCost = 1,
             routeStartRow = 1,
             routeEndRow = 12,
             requiredGoalRewards = 5,
@@ -30,6 +33,7 @@ return function(importer)
                 {
                     key = "Intro",
                     label = "Intro",
+                    isBiomeEntry = true,
                     roomKey = "I_Intro",
                     reward = rewards.none(),
                     biomeEncounterDepthCost = 0,

@@ -104,6 +104,10 @@ local function rowSummary(biomeKey, row)
         .. " option=" .. fieldValue(row.optionKey)
         .. " branch=" .. fieldValue(row.branchKey)
         .. " variant=" .. fieldValue(row.variantKey)
+        .. " biomeDepthCache=" .. fieldValue(row.biomeDepthCache)
+        .. " biomeDepthCacheCost=" .. fieldValue(row.biomeDepthCacheCost)
+        .. " biomeEncounterDepth=" .. fieldValue(row.biomeEncounterDepth)
+        .. " biomeEncounterDepthCost=" .. fieldValue(row.biomeEncounterDepthCost)
         .. " features=" .. fieldValue(joinList(sortedKeys(row.features)))
         .. " reward=" .. rewardSummary(row.reward)
 end
@@ -185,8 +189,12 @@ local function currentRoomSetName(currentRun, args)
     return roomSetName
 end
 
+local function currentBiomeDepthCache(currentRun)
+    return math.floor(tonumber(currentRun and currentRun.BiomeDepthCache or 0) or 0)
+end
+
 local function nextCoordinate(currentRun)
-    return math.floor(tonumber(currentRun and currentRun.BiomeDepthCache or 0) or 0) + 1
+    return currentBiomeDepthCache(currentRun) + 1
 end
 
 local function isLinearBiomePlan(biomeKey, biomePlan)
@@ -246,14 +254,14 @@ local function roomAlreadyFilled(bucket, otherDoors, roomKey)
     return offeredRoomCount(otherDoors, roomKey) >= plannedRoomLimit(bucket, roomKey)
 end
 
-local function mergeExcludedNames(args, biomePlan, coordinate, includeCurrent)
+local function mergeExcludedNames(args, biomePlan, biomeDepthCache, includeCurrent)
     local excluded = shallowCopy(args and args.ExcludedNames)
     local changed = false
     for _, row in ipairs(biomePlan and biomePlan.plannedRows or {}) do
         if row.roomKey ~= nil
             and row.roomKey ~= ""
-            and row.coordinate ~= nil
-            and (row.coordinate > coordinate or includeCurrent and row.coordinate == coordinate)
+            and row.biomeDepthCache ~= nil
+            and (row.biomeDepthCache > biomeDepthCache or includeCurrent and row.biomeDepthCache == biomeDepthCache)
         then
             excluded[row.roomKey] = true
             changed = true
@@ -299,12 +307,7 @@ end
 local function plannedStartingRoom(plan, args)
     local biomeKey = startingBiome(args)
     local biomePlan = plan and plan.biomes and plan.biomes[biomeKey] or nil
-    if not isLinearBiomePlan(biomeKey, biomePlan) then
-        return nil
-    end
-
-    local bucket = biomePlan.plannedByCoordinate[0]
-    return bucket and bucket.primary or nil
+    return biomePlan and biomePlan.plannedEntryRoom or nil
 end
 
 local function roomName(roomData)
@@ -356,22 +359,22 @@ function roomRouting.buildArgs(runtime, currentRun, args, otherDoors)
         return nil
     end
 
-    local coordinate = nextCoordinate(currentRun)
-    local bucket = biomePlan.plannedByCoordinate[coordinate]
+    local biomeDepthCache = currentBiomeDepthCache(currentRun)
+    local bucket = biomePlan.plannedRoutableByBiomeDepthCache[biomeDepthCache]
     if bucket == nil or bucket.primary == nil then
-        return argsWithExcludedNames(args, mergeExcludedNames(args, biomePlan, coordinate, false))
+        return argsWithExcludedNames(args, mergeExcludedNames(args, biomePlan, biomeDepthCache, false))
     end
 
     local roomKey = bucket.primary.roomKey
     if roomKey == nil or roomKey == "" then
-        return argsWithExcludedNames(args, mergeExcludedNames(args, biomePlan, coordinate, false))
+        return argsWithExcludedNames(args, mergeExcludedNames(args, biomePlan, biomeDepthCache, false))
     end
 
     if roomAlreadyFilled(bucket, otherDoors, roomKey) or not roomEligible(currentRun, args, roomKey) then
-        return argsWithExcludedNames(args, mergeExcludedNames(args, biomePlan, coordinate, true))
+        return argsWithExcludedNames(args, mergeExcludedNames(args, biomePlan, biomeDepthCache, true))
     end
 
-    return forceArgs(args, roomKey, mergeExcludedNames(args, biomePlan, coordinate, false))
+    return forceArgs(args, roomKey, mergeExcludedNames(args, biomePlan, biomeDepthCache, false))
 end
 
 local function routeDecision(args, nextArgs)
@@ -391,8 +394,8 @@ local function nextDecisionDetail(runtime, currentRun, args, otherDoors, nextArg
     local plan = planFromRuntime(runtime)
     local biomeKey = currentRoomSetName(currentRun, args)
     local biomePlan = plan and plan.biomes and plan.biomes[biomeKey] or nil
-    local coordinate = nextCoordinate(currentRun)
-    local bucket = biomePlan and biomePlan.plannedByCoordinate[coordinate] or nil
+    local biomeDepthCache = currentBiomeDepthCache(currentRun)
+    local bucket = biomePlan and biomePlan.plannedRoutableByBiomeDepthCache[biomeDepthCache] or nil
     local planned = bucket and bucket.primary or nil
     local plannedRoomKey = planned and planned.roomKey or nil
     local eligible = plannedRoomKey ~= nil and plannedRoomKey ~= "" and roomEligible(currentRun, args, plannedRoomKey) or nil
@@ -403,7 +406,12 @@ local function nextDecisionDetail(runtime, currentRun, args, otherDoors, nextArg
         .. " current=" .. fieldValue(roomName(currentRoom))
         .. " runDepth=" .. fieldValue(currentRun and currentRun.RunDepthCache)
         .. " biomeDepthCache=" .. fieldValue(currentRun and currentRun.BiomeDepthCache)
-        .. " coord=" .. fieldValue(coordinate)
+        .. " biomeEncounterDepth=" .. fieldValue(currentRun and currentRun.BiomeEncounterDepth)
+        .. " coord=" .. fieldValue(nextCoordinate(currentRun))
+        .. " plannedBiomeDepthCache=" .. fieldValue(planned and planned.biomeDepthCache)
+        .. " plannedBiomeDepthCacheCost=" .. fieldValue(planned and planned.biomeDepthCacheCost)
+        .. " plannedBiomeEncounterDepth=" .. fieldValue(planned and planned.biomeEncounterDepth)
+        .. " plannedBiomeEncounterDepthCost=" .. fieldValue(planned and planned.biomeEncounterDepthCost)
         .. " planned=" .. fieldValue(plannedRoomKey)
         .. " eligible=" .. fieldValue(eligible)
         .. " filled=" .. fieldValue(filled)

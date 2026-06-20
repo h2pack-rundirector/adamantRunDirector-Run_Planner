@@ -19,12 +19,16 @@ return function(importer)
         },
         slotLayout = {
             coordinate = "FieldsRoutePick",
+            biomeDepthCacheStart = 1,
+            defaultFixedBiomeDepthCacheCost = 0,
+            routeBiomeDepthCacheCost = 1,
             routeStartPick = 1,
             routeEndPick = 4,
             fixedBeforeRoute = {
                 {
                     key = "Intro",
                     label = "Intro",
+                    isBiomeEntry = true,
                     roomKey = layout.introRoom.key,
                     reward = rewards.none(),
                     biomeEncounterDepthCost = 0,

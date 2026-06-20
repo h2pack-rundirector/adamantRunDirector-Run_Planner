@@ -19,13 +19,16 @@ return function(importer)
         },
         slotLayout = {
             coordinate = "BiomeDepthCache",
-            selectionBiomeDepthOffset = -1,
-            depthRange = { min = 0, max = 10 },
+            biomeDepthCacheStart = 0,
+            defaultFixedBiomeDepthCacheCost = 0,
+            routeBiomeDepthCacheCost = 1,
+            depthRange = { min = 0, max = 11 },
             routeStartDepth = 1,
-            routeEndDepth = 9,
+            routeEndDepth = 10,
             special = {
                 [0] = {
                     kind = "opening",
+                    isBiomeEntry = true,
                     key = "Opening",
                     label = "Opening",
                     roomOptions = layout.openingRooms,
@@ -33,9 +36,10 @@ return function(importer)
                     biomeEncounterDepthCost = 1,
                     locked = true,
                 },
-                [10] = {
+                [11] = {
                     kind = "preboss",
                     roomKey = layout.prebossRoom.key,
+                    biomeDepthCache = 10,
                     biomeEncounterDepthCost = 0,
                     branches = {
                         {

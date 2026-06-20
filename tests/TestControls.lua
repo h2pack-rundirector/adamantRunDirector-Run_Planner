@@ -1794,7 +1794,7 @@ function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
     })
     local storage = template.storage(instance)
 
-    lu.assertEquals(instance.routeRowCount, 12)
+    lu.assertEquals(instance.routeRowCount, 13)
     lu.assertEquals(instance.routeSlots[1].coordinate, 0)
     lu.assertEquals(instance.routeSlots[1].kind, "opening")
     lu.assertEquals(instance.routeSlots[1].label, "Opening")
@@ -1802,19 +1802,24 @@ function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(instance.routeSlots[2].coordinate, 1)
     lu.assertEquals(instance.routeSlots[10].coordinate, 9)
     lu.assertEquals(instance.routeSlots[11].coordinate, 10)
-    lu.assertEquals(instance.routeSlots[11].kind, "preboss")
-    lu.assertEquals(instance.routeSlots[11].label, "Preboss Shop")
-    lu.assertEquals(instance.routeSlots[11].branchKey, "Shop")
-    lu.assertEquals(instance.routeSlots[11].roomHistoryCost, 1)
-    lu.assertEquals(instance.routeSlots[11].branchValues, {
+    lu.assertEquals(instance.routeSlots[11].kind, "route")
+    lu.assertEquals(instance.routeSlots[11].biomeDepthCacheCost, 1)
+    lu.assertEquals(instance.routeSlots[12].coordinate, 11)
+    lu.assertEquals(instance.routeSlots[12].biomeDepthCacheCost, 0)
+    lu.assertEquals(instance.routeSlots[12].kind, "preboss")
+    lu.assertEquals(instance.routeSlots[12].label, "Preboss Shop")
+    lu.assertEquals(instance.routeSlots[12].branchKey, "Shop")
+    lu.assertEquals(instance.routeSlots[12].roomHistoryCost, 1)
+    lu.assertEquals(instance.routeSlots[12].branchValues, {
         "Shop",
     })
-    lu.assertEquals(instance.routeSlots[12].coordinate, 10)
-    lu.assertEquals(instance.routeSlots[12].kind, "preboss")
-    lu.assertEquals(instance.routeSlots[12].label, "Preboss Room")
-    lu.assertEquals(instance.routeSlots[12].branchKey, "MajorReward")
-    lu.assertEquals(instance.routeSlots[12].roomHistoryCost, 0)
-    lu.assertEquals(instance.routeSlots[12].branchValues, {
+    lu.assertEquals(instance.routeSlots[13].coordinate, 11)
+    lu.assertEquals(instance.routeSlots[13].biomeDepthCacheCost, 0)
+    lu.assertEquals(instance.routeSlots[13].kind, "preboss")
+    lu.assertEquals(instance.routeSlots[13].label, "Preboss Room")
+    lu.assertEquals(instance.routeSlots[13].branchKey, "MajorReward")
+    lu.assertEquals(instance.routeSlots[13].roomHistoryCost, 0)
+    lu.assertEquals(instance.routeSlots[13].branchValues, {
         "MajorReward",
     })
     lu.assertEquals(instance.roleValues, {
@@ -1834,18 +1839,18 @@ function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(#storage, 2)
     lu.assertEquals(storage[1].key, "Rooms")
     lu.assertEquals(storage[1].type, "table")
-    lu.assertEquals(storage[1].minRows, 12)
-    lu.assertEquals(storage[1].defaultRows, 12)
-    lu.assertEquals(storage[1].maxRows, 12)
+    lu.assertEquals(storage[1].minRows, 13)
+    lu.assertEquals(storage[1].defaultRows, 13)
+    lu.assertEquals(storage[1].maxRows, 13)
     lu.assertEquals(storage[1].row[1].key, "RoleKey")
     lu.assertEquals(storage[1].row[1].default, "")
     lu.assertEquals(storage[1].row[2].key, "OptionKey")
     lu.assertEquals(storage[1].row[3].key, "VariantKey")
     lu.assertEquals(storage[2].key, "Rewards")
     lu.assertEquals(storage[2].type, "table")
-    lu.assertEquals(storage[2].minRows, 12)
-    lu.assertEquals(storage[2].defaultRows, 12)
-    lu.assertEquals(storage[2].maxRows, 12)
+    lu.assertEquals(storage[2].minRows, 13)
+    lu.assertEquals(storage[2].defaultRows, 13)
+    lu.assertEquals(storage[2].maxRows, 13)
     lu.assertEquals(storage[2].row[1].key, "Reward1Key")
     lu.assertEquals(storage[2].row[6].key, "Reward6Key")
     lu.assertEquals(storage[2].row[7].key, "Reward1LootKey")
@@ -2987,28 +2992,28 @@ function TestRunPlannerControls.testFixedLinearPrebossRowsUseBranchChoices()
     local rows = fakeRows({})
     local values = {}
 
-    data.fillRoleValues(instance, rows, 11, values)
+    data.fillRoleValues(instance, rows, 12, values)
     lu.assertEquals(values, {
         "Shop",
     })
 
-    data.fillOptionValues(instance, rows, 11, "Shop", values)
+    data.fillOptionValues(instance, rows, 12, "Shop", values)
     lu.assertEquals(values, {})
 
-    local roleKey, branch = data.resolveRole(instance, rows, 11)
+    local roleKey, branch = data.resolveRole(instance, rows, 12)
     lu.assertEquals(roleKey, "Shop")
     lu.assertEquals(branch.label, "Preboss Shop")
-    lu.assertTrue(data.validateRow(instance, rows, 11).valid)
+    lu.assertTrue(data.validateRow(instance, rows, 12).valid)
 
-    data.fillRoleValues(instance, rows, 12, values)
+    data.fillRoleValues(instance, rows, 13, values)
     lu.assertEquals(values, {
         "MajorReward",
     })
 
-    roleKey, branch = data.resolveRole(instance, rows, 12)
+    roleKey, branch = data.resolveRole(instance, rows, 13)
     lu.assertEquals(roleKey, "MajorReward")
     lu.assertEquals(branch.label, "Preboss Room")
-    lu.assertTrue(data.validateRow(instance, rows, 12).valid)
+    lu.assertTrue(data.validateRow(instance, rows, 13).valid)
 end
 
 function TestRunPlannerControls.testFixedLinearRuntimeBuildsValidatedSnapshot()
@@ -3756,6 +3761,39 @@ function TestRunPlannerControls.testFixedLinearAvailabilityFiltersForcedDepthRol
     lu.assertTrue(hasValue(values, "Miniboss"))
 end
 
+function TestRunPlannerControls.testFixedLinearForcedDepthUsesBiomeDepthCache()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local biome = {}
+    for key, value in pairs(catalog.lookup.Q) do
+        biome[key] = value
+    end
+    biome.slotLayout = {}
+    for key, value in pairs(catalog.lookup.Q.slotLayout) do
+        biome.slotLayout[key] = value
+    end
+    biome.slotLayout.biomeDepthCacheStart = 0
+
+    local instance = data.prepare({
+        name = "RouteQ",
+        biome = biome,
+    })
+    local rows = fakeRows({})
+    local values = {}
+
+    lu.assertEquals(data.rowContext(instance, rows, 4).coordinate, 3)
+    lu.assertEquals(data.rowContext(instance, rows, 4).biomeDepthCache, 2)
+    data.fillRoleValues(instance, rows, 4, values)
+    lu.assertTrue(hasValue(values, "Combat"))
+    lu.assertFalse(hasValue(values, "Miniboss"))
+
+    lu.assertEquals(data.rowContext(instance, rows, 5).coordinate, 4)
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeDepthCache, 3)
+    data.fillRoleValues(instance, rows, 5, values)
+    lu.assertFalse(hasValue(values, "Combat"))
+    lu.assertTrue(hasValue(values, "Miniboss"))
+end
+
 function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesForcedDepthRoles()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
@@ -3934,6 +3972,9 @@ function TestRunPlannerControls.testFixedLinearRowContextUsesSelectionDepthCosts
         rowIndex = 1,
         coordinate = 0,
         biomeDepthCache = 0,
+        biomeDepthCacheKnown = true,
+        biomeDepthCacheCost = 0,
+        biomeDepthCacheCostKnown = true,
         biomeEncounterDepth = 0,
         biomeEncounterDepthKnown = true,
         biomeEncounterDepthCost = 1,

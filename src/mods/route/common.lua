@@ -131,10 +131,6 @@ function common.invalidStatus(code, message)
     }
 end
 
-function common.slotBiomeDepthCache(slot)
-    return slot and (slot.biomeDepthCache or slot.coordinate) or nil
-end
-
 function common.numericCost(value, fallback)
     local cost = math.floor(tonumber(value) or fallback or 0)
     if cost < 0 then
@@ -143,12 +139,30 @@ function common.numericCost(value, fallback)
     return cost
 end
 
+function common.fixedBiomeDepthCacheCost(slotLayout, source)
+    if source ~= nil and source.biomeDepthCacheCost ~= nil then
+        return source.biomeDepthCacheCost
+    end
+    if slotLayout ~= nil and slotLayout.defaultFixedBiomeDepthCacheCost ~= nil then
+        return slotLayout.defaultFixedBiomeDepthCacheCost
+    end
+    return 0
+end
+
+function common.routeBiomeDepthCacheCost(slotLayout)
+    if slotLayout ~= nil and slotLayout.routeBiomeDepthCacheCost ~= nil then
+        return slotLayout.routeBiomeDepthCacheCost
+    end
+    return 1
+end
+
 function common.applySlotDepthContext(slot, source)
     if slot == nil then
         return slot
     end
     source = source or {}
-    slot.biomeDepthCache = source.biomeDepthCache or slot.coordinate
+    slot.biomeDepthCache = source.biomeDepthCache
+    slot.biomeDepthCacheCost = source.biomeDepthCacheCost
     slot.biomeEncounterDepthCost = source.biomeEncounterDepthCost
     return slot
 end

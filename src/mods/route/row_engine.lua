@@ -176,6 +176,28 @@ function rowEngine.create(adapter)
         return common.numericCost(value, 0)
     end
 
+    local function explicitBiomeDepthCacheCost(value)
+        if value == nil then
+            return nil
+        end
+        return common.numericCost(value, 0)
+    end
+
+    local function biomeDepthCacheStart(instance)
+        local slotLayout = instance and instance.biome and instance.biome.slotLayout or nil
+        if slotLayout == nil then
+            return 0
+        end
+        if slotLayout.biomeDepthCacheStart ~= nil then
+            return math.floor(tonumber(slotLayout.biomeDepthCacheStart) or 0)
+        end
+        local depthRange = slotLayout.depthRange
+        if depthRange ~= nil and depthRange.min ~= nil then
+            return math.floor(tonumber(depthRange.min) or 0)
+        end
+        return 0
+    end
+
     local function adapterBiomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
         if adapter.biomeEncounterDepthCost == nil then
             return nil
@@ -216,12 +238,75 @@ function rowEngine.create(adapter)
         return effectiveBiomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
     end
 
+    local function adapterBiomeDepthCacheCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        if adapter.biomeDepthCacheCost == nil then
+            return nil
+        end
+
+        local cost = adapter.biomeDepthCacheCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        if cost ~= nil then
+            return common.numericCost(cost, 0)
+        end
+        return nil
+    end
+
+    local function effectiveBiomeDepthCacheCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        local cost = adapterBiomeDepthCacheCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        if cost ~= nil then
+            return cost
+        end
+        cost = explicitBiomeDepthCacheCost(option and option.biomeDepthCacheCost)
+        if cost ~= nil then
+            return cost
+        end
+        cost = explicitBiomeDepthCacheCost(role and role.biomeDepthCacheCost)
+        if cost ~= nil then
+            return cost
+        end
+        cost = explicitBiomeDepthCacheCost(slot and slot.biomeDepthCacheCost)
+        if cost ~= nil then
+            return cost
+        end
+        return nil
+    end
+
+    local function rowBiomeDepthCacheCost(instance, rows, rowIndex)
+        local slot = slotForRow(instance, rowIndex)
+        if adapter.biomeDepthCacheCost == nil and slot ~= nil and slot.biomeDepthCacheCost ~= nil then
+            return common.numericCost(slot.biomeDepthCacheCost, 0)
+        end
+
+        local roleKey = readRoleKey(instance, rows, rowIndex)
+        local role = roleForRow(instance, rowIndex, roleKey)
+        local optionKey, option = selectedOptionForCost(role, rows, rowIndex)
+        return effectiveBiomeDepthCacheCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+    end
+
     local function rowContextUncached(instance, rows, rowIndex, target)
         local slot = slotForRow(instance, rowIndex)
+        local previous = nil
+        if rowIndex > 1 then
+            previous = data.rowContext(instance, rows, rowIndex - 1)
+        end
+
+        local biomeDepthCache = biomeDepthCacheStart(instance)
+        local biomeDepthCacheKnown = true
+        if rowIndex > 1 then
+            if previous == nil
+                or previous.biomeDepthCacheKnown == false
+                or previous.biomeDepthCache == nil
+                or previous.biomeDepthCacheCost == nil
+            then
+                biomeDepthCache = nil
+                biomeDepthCacheKnown = false
+            else
+                biomeDepthCache = previous.biomeDepthCache + previous.biomeDepthCacheCost
+            end
+        end
+
         local biomeEncounterDepth = 0
         local biomeEncounterDepthKnown = true
         if rowIndex > 1 then
-            local previous = data.rowContext(instance, rows, rowIndex - 1)
             if previous == nil
                 or previous.biomeEncounterDepthKnown == false
                 or previous.biomeEncounterDepth == nil
@@ -233,11 +318,15 @@ function rowEngine.create(adapter)
                 biomeEncounterDepth = previous.biomeEncounterDepth + previous.biomeEncounterDepthCost
             end
         end
+        local biomeDepthCacheCost = rowBiomeDepthCacheCost(instance, rows, rowIndex)
         local biomeEncounterDepthCost = rowBiomeEncounterDepthCost(instance, rows, rowIndex)
         target = target or {}
         target.rowIndex = rowIndex
         target.coordinate = slot and slot.coordinate or nil
-        target.biomeDepthCache = common.slotBiomeDepthCache(slot)
+        target.biomeDepthCache = biomeDepthCache
+        target.biomeDepthCacheKnown = biomeDepthCacheKnown
+        target.biomeDepthCacheCost = biomeDepthCacheCost
+        target.biomeDepthCacheCostKnown = biomeDepthCacheCost ~= nil
         target.biomeEncounterDepth = biomeEncounterDepth
         target.biomeEncounterDepthKnown = biomeEncounterDepthKnown
         target.biomeEncounterDepthCost = biomeEncounterDepthCost

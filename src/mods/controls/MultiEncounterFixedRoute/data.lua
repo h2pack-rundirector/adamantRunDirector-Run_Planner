@@ -10,6 +10,8 @@ local addChoice = common.addChoice
 local buildOptionChoices = common.buildOptionChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
+local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
+local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
 local isInRange = availability.isInRange
 local applySlotDepthContext = common.applySlotDepthContext
 local clearList = common.clearList
@@ -46,6 +48,7 @@ local function buildFixedRoleSlot(instance, depth, special)
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
         reward = special.reward,
+        biomeDepthCacheCost = special.biomeDepthCacheCost,
         biomeEncounterDepthCost = special.biomeEncounterDepthCost,
     }
     buildOptionChoices(role)
@@ -55,11 +58,16 @@ local function buildFixedRoleSlot(instance, depth, special)
         rowIndex = rowIndex,
         coordinate = depth,
         kind = kind,
+        isBiomeEntry = special.isBiomeEntry == true,
         label = special.label or role.label,
         roomKey = special.roomKey,
         roleKey = role.key,
         role = role,
-    }, special)
+    }, {
+        biomeDepthCache = special.biomeDepthCache,
+        biomeDepthCacheCost = fixedBiomeDepthCacheCost(instance.biome.slotLayout, special),
+        biomeEncounterDepthCost = special.biomeEncounterDepthCost,
+    })
 end
 
 local function buildEntrySlot(instance, entry)
@@ -74,6 +82,8 @@ local function buildEntrySlot(instance, entry)
         roomKey = entry.roomKey,
         roomOptions = entry.roomOptions,
         reward = entry.reward,
+        isBiomeEntry = entry.isBiomeEntry == true,
+        biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
         locked = entry.locked,
     })
@@ -108,6 +118,8 @@ local function buildRouteSlots(instance)
             coordinate = depth,
             kind = "route",
             label = "Depth " .. tostring(depth),
+        }, {
+            biomeDepthCacheCost = routeBiomeDepthCacheCost(slotLayout),
         })
     end
 
@@ -127,6 +139,7 @@ local function buildRouteSlots(instance)
                 rowIndex = rowIndex,
                 coordinate = depth,
                 kind = "preboss",
+                isBiomeEntry = special.isBiomeEntry == true,
                 label = branch.label or special.label or ("Depth " .. tostring(depth) .. " Preboss"),
                 roomKey = special.roomKey,
                 branchKey = branch.key,
@@ -135,7 +148,11 @@ local function buildRouteSlots(instance)
                 branchesByKey = buildLookup(branches),
                 branchValues = {},
                 branchLabels = {},
-            }, special)
+            }, {
+                biomeDepthCache = special.biomeDepthCache,
+                biomeDepthCacheCost = fixedBiomeDepthCacheCost(slotLayout, special),
+                biomeEncounterDepthCost = special.biomeEncounterDepthCost,
+            })
             addChoice(slot.branchValues, slot.branchLabels, branch.key, branch.label)
             instance.routeSlots[rowIndex] = slot
         end

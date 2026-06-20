@@ -54,7 +54,7 @@ layout.prebossRoom = option("H_PreBoss01", "Preboss Shop", {
 
 layout.bridgeRoom = option("H_Bridge01", "Echo", {
     availability = {
-        routePick = { exact = 3 },
+        biomeDepthCache = { exact = 3 },
     },
     maxCreationsThisRun = 1,
     maxAppearancesThisBiome = 1,

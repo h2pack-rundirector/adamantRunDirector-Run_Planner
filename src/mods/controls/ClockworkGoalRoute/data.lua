@@ -12,6 +12,8 @@ local buildLookup = common.buildLookup
 local buildOptionChoices = common.buildOptionChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
+local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
+local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
 local applySlotDepthContext = common.applySlotDepthContext
 
 local data
@@ -50,6 +52,7 @@ local function buildFixedSlot(instance, entry, kind, defaultKey)
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
         reward = entry.reward,
+        biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
     }
     if kind == "preboss" then
@@ -64,6 +67,7 @@ local function buildFixedSlot(instance, entry, kind, defaultKey)
         rowIndex = rowIndex,
         coordinate = entry.coordinate or 0,
         kind = kind or entry.kind or "fixed",
+        isBiomeEntry = entry.isBiomeEntry == true,
         label = entry.label or key,
         roomKey = entry.roomKey,
         roomOptions = roomOptions,
@@ -71,7 +75,11 @@ local function buildFixedSlot(instance, entry, kind, defaultKey)
         role = role,
         locked = entry.locked,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
-    }, entry)
+    }, {
+        biomeDepthCache = entry.biomeDepthCache,
+        biomeDepthCacheCost = fixedBiomeDepthCacheCost(instance.biome.slotLayout, entry),
+        biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
+    })
 end
 
 local function buildRouteSlot(instance, row)
@@ -82,6 +90,8 @@ local function buildRouteSlot(instance, row)
         routeRow = row,
         kind = "clockworkRoute",
         label = "Step " .. tostring(row),
+    }, {
+        biomeDepthCacheCost = routeBiomeDepthCacheCost(instance.biome.slotLayout),
     })
 end
 

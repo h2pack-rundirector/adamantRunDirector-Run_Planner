@@ -12,10 +12,6 @@ local function invalidStatus(code, message)
     }
 end
 
-function availability.slotDepth(slot)
-    return slot and slot.coordinate or nil
-end
-
 function availability.isInRange(value, range)
     if range == nil or value == nil then
         return true

@@ -10,6 +10,8 @@ local DISABLED_SIDE_ROOM_MODE = "Disabled"
 local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
 local buildOptionChoices = common.buildOptionChoices
+local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
+local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
 local applySlotDepthContext = common.applySlotDepthContext
 
 local data
@@ -32,6 +34,7 @@ local function buildFixedSlot(instance, entry, section)
         optionsByKey = buildLookup(roomOptions),
         reward = entry.reward,
         features = entry.features,
+        biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
     }
     buildOptionChoices(role)
@@ -41,6 +44,7 @@ local function buildFixedSlot(instance, entry, section)
         rowIndex = rowIndex,
         coordinate = entry.coordinate,
         kind = entry.kind or section or "fixed",
+        isBiomeEntry = entry.isBiomeEntry == true,
         label = entry.label or entry.key,
         roomKey = entry.roomKey,
         roleKey = role.key,
@@ -49,7 +53,11 @@ local function buildFixedSlot(instance, entry, section)
         features = entry.features,
         roomHistoryCost = entry.roomHistoryCost,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
-    }, entry)
+    }, {
+        biomeDepthCache = entry.biomeDepthCache,
+        biomeDepthCacheCost = fixedBiomeDepthCacheCost(instance.biome.slotLayout, entry),
+        biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
+    })
 end
 
 local function buildPylonSlot(instance, pick)
@@ -59,6 +67,8 @@ local function buildPylonSlot(instance, pick)
         coordinate = pick,
         kind = "pylonPick",
         label = "Pylon " .. tostring(pick),
+    }, {
+        biomeDepthCacheCost = routeBiomeDepthCacheCost(instance.biome.slotLayout),
     })
 end
 

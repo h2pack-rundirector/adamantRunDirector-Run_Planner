@@ -212,6 +212,7 @@ function TestRunPlannerLogic.testRoutePlanCompilesRuntimeExecutionPlan()
                     rowIndex = 1,
                     coordinate = 0,
                     slotKind = "intro",
+                    isBiomeEntry = true,
                     roomKey = "F_PreRun",
                     roleKey = "Intro",
                     optionKey = "",
@@ -240,6 +241,8 @@ function TestRunPlannerLogic.testRoutePlanCompilesRuntimeExecutionPlan()
                 {
                     rowIndex = 3,
                     coordinate = 2,
+                    biomeDepthCache = 1,
+                    biomeDepthCacheCost = 1,
                     slotKind = "route",
                     roomKey = "F_Story01",
                     roleKey = "Story",
@@ -265,7 +268,9 @@ function TestRunPlannerLogic.testRoutePlanCompilesRuntimeExecutionPlan()
     local biome = execution.biomes.F
     lu.assertEquals(#biome.plannedRows, 2)
     lu.assertEquals(biome.plannedByRowIndex[1].roomKey, "F_PreRun")
-    lu.assertEquals(biome.plannedByCoordinate[2].primary.roomKey, "F_Story01")
+    lu.assertEquals(biome.plannedEntryRoom.roomKey, "F_PreRun")
+    lu.assertEquals(biome.plannedByBiomeDepthCache[1].primary.roomKey, "F_Story01")
+    lu.assertEquals(biome.plannedRoutableByBiomeDepthCache[1].primary.roomKey, "F_Story01")
     lu.assertEquals(biome.reservedRoomKeys.F_Story01.primary.rowIndex, 3)
     lu.assertEquals(execution.reservedRoomKeys.F_Story01.primary.biomeKey, "F")
     lu.assertEquals(biome.plannedByRowIndex[1].reward.kind, "roomStore")
@@ -286,10 +291,12 @@ function TestRunPlannerLogic.testRoutePlanKeepsPrebossBranchesAtSharedCoordinate
             disabled = false,
             invalidRows = {},
             rows = {
-                {
-                    rowIndex = 10,
-                    coordinate = 10,
-                    slotKind = "preboss",
+            {
+                rowIndex = 12,
+                coordinate = 11,
+                biomeDepthCache = 10,
+                biomeDepthCacheCost = 0,
+                slotKind = "preboss",
                     roomKey = "F_PreBoss01",
                     branchKey = "Shop",
                     roleKey = "Shop",
@@ -298,10 +305,12 @@ function TestRunPlannerLogic.testRoutePlanKeepsPrebossBranchesAtSharedCoordinate
                     rewardKind = "roomStore",
                     rewards = { "Shop" },
                 },
-                {
-                    rowIndex = 11,
-                    coordinate = 10,
-                    slotKind = "preboss",
+            {
+                rowIndex = 13,
+                coordinate = 11,
+                biomeDepthCache = 10,
+                biomeDepthCacheCost = 0,
+                slotKind = "preboss",
                     roomKey = "F_PreBoss01",
                     branchKey = "MajorReward",
                     roleKey = "MajorReward",
@@ -323,15 +332,15 @@ function TestRunPlannerLogic.testRoutePlanKeepsPrebossBranchesAtSharedCoordinate
     })
 
     local biome = plan.executionPlan.biomes.F
-    local coordinate = biome.plannedByCoordinate[10]
-    local room = coordinate.byRoomKey.F_PreBoss01
+    local depthBucket = biome.plannedByBiomeDepthCache[10]
+    local room = depthBucket.byRoomKey.F_PreBoss01
     local reservation = plan.executionPlan.reservedRoomKeys.F_PreBoss01
 
-    lu.assertEquals(#coordinate.rows, 2)
-    lu.assertTrue(coordinate.branchGroup)
-    lu.assertEquals(coordinate.primary.branchKey, "Shop")
-    lu.assertEquals(coordinate.byBranchKey.Shop.rowIndex, 10)
-    lu.assertEquals(coordinate.byBranchKey.MajorReward.rowIndex, 11)
+    lu.assertEquals(#depthBucket.rows, 2)
+    lu.assertTrue(depthBucket.branchGroup)
+    lu.assertEquals(depthBucket.primary.branchKey, "Shop")
+    lu.assertEquals(depthBucket.byBranchKey.Shop.rowIndex, 12)
+    lu.assertEquals(depthBucket.byBranchKey.MajorReward.rowIndex, 13)
     lu.assertEquals(#room.rows, 2)
     lu.assertEquals(room.byBranchKey.MajorReward.reward.rewards[1], "Boon")
     lu.assertEquals(#biome.plannedByRoomKey.F_PreBoss01.rows, 2)
@@ -352,6 +361,8 @@ function TestRunPlannerLogic.testRoomRoutingForcesPlannedLinearRoom()
             {
                 rowIndex = 3,
                 coordinate = 2,
+                biomeDepthCache = 1,
+                biomeDepthCacheCost = 1,
                 slotKind = "route",
                 roomKey = "F_Story01",
                 roleKey = "Story",
@@ -392,6 +403,8 @@ function TestRunPlannerLogic.testRoomRoutingExcludesFutureReservedRooms()
             {
                 rowIndex = 4,
                 coordinate = 3,
+                biomeDepthCache = 2,
+                biomeDepthCacheCost = 1,
                 slotKind = "route",
                 roomKey = "F_Story01",
                 roleKey = "Story",
@@ -433,6 +446,8 @@ function TestRunPlannerLogic.testRoomRoutingDoesNotDuplicateNormalPlannedRoom()
             {
                 rowIndex = 3,
                 coordinate = 2,
+                biomeDepthCache = 1,
+                biomeDepthCacheCost = 1,
                 slotKind = "route",
                 roomKey = "F_Story01",
                 roleKey = "Story",
@@ -477,8 +492,10 @@ function TestRunPlannerLogic.testRoomRoutingAllowsSharedPrebossBranchRoom()
     local runtime = runtimeForCatalog(routePlan, catalog, {
         F = plannedBiomeSnapshot("F", "fixedLinear", {
             {
-                rowIndex = 10,
-                coordinate = 10,
+                rowIndex = 12,
+                coordinate = 11,
+                biomeDepthCache = 10,
+                biomeDepthCacheCost = 0,
                 slotKind = "preboss",
                 roomKey = "F_PreBoss01",
                 branchKey = "Shop",
@@ -486,8 +503,10 @@ function TestRunPlannerLogic.testRoomRoutingAllowsSharedPrebossBranchRoom()
                 valid = true,
             },
             {
-                rowIndex = 11,
-                coordinate = 10,
+                rowIndex = 13,
+                coordinate = 11,
+                biomeDepthCache = 10,
+                biomeDepthCacheCost = 0,
                 slotKind = "preboss",
                 roomKey = "F_PreBoss01",
                 branchKey = "MajorReward",
@@ -508,7 +527,7 @@ function TestRunPlannerLogic.testRoomRoutingAllowsSharedPrebossBranchRoom()
         CurrentRoom = {
             RoomSetName = "F",
         },
-        BiomeDepthCache = 9,
+        BiomeDepthCache = 10,
     }, {}, {
         {
             Room = {
@@ -533,6 +552,8 @@ function TestRunPlannerLogic.testRoomRoutingSupportsSummitLinearAdapter()
             {
                 rowIndex = 3,
                 coordinate = 3,
+                biomeDepthCache = 2,
+                biomeDepthCacheCost = 1,
                 slotKind = "route",
                 roomKey = "Q_MiniBoss01",
                 roleKey = "Miniboss",
@@ -590,6 +611,7 @@ function TestRunPlannerLogic.testRoomRoutingForcesPlannedStartingRoom()
                 rowIndex = 1,
                 coordinate = 0,
                 slotKind = "opening",
+                isBiomeEntry = true,
                 roomKey = "F_Opening02",
                 roleKey = "Opening",
                 optionKey = "F_Opening02",
@@ -651,6 +673,7 @@ function TestRunPlannerLogic.testRoomRoutingFallsBackWhenPlannedStartingRoomIsIn
                 rowIndex = 1,
                 coordinate = 0,
                 slotKind = "opening",
+                isBiomeEntry = true,
                 roomKey = "F_Opening02",
                 roleKey = "Opening",
                 optionKey = "F_Opening02",

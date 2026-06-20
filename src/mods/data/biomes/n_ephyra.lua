@@ -22,6 +22,9 @@ return function(importer)
         },
         slotLayout = {
             coordinate = "SoulPylon",
+            biomeDepthCacheStart = 1,
+            defaultFixedBiomeDepthCacheCost = 0,
+            routeBiomeDepthCacheCost = 1,
             routeStartPick = 1,
             routeEndPick = 6,
             requiredPylons = 6,
@@ -29,6 +32,7 @@ return function(importer)
                 {
                     key = "Opening",
                     label = "Opening",
+                    isBiomeEntry = true,
                     roomKey = "N_Opening01",
                     reward = rewards.roomStore("OpeningRunProgress"),
                     features = { chaos = true },

@@ -57,12 +57,23 @@ local function hasConfiguredRoom(row)
         and row.roomKey ~= ""
 end
 
+local function isRoutableRoom(row)
+    local kind = row and row.slotKind
+    return kind == "route"
+        or kind == "preboss"
+        or kind == "clockworkRoute"
+        or kind == "fieldsPick"
+        or kind == "pylonPick"
+end
+
 local function compactRewardEntry(entry)
     return {
         rowIndex = entry.rowIndex,
         coordinate = entry.coordinate,
         biomeDepthCache = entry.biomeDepthCache,
+        biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepth = entry.biomeEncounterDepth,
+        biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
         legIndex = entry.legIndex,
         cageIndex = entry.cageIndex,
         sideIndex = entry.sideIndex,
@@ -89,8 +100,11 @@ local function compactRoomRow(row)
         rowIndex = row.rowIndex,
         coordinate = row.coordinate,
         biomeDepthCache = row.biomeDepthCache,
+        biomeDepthCacheCost = row.biomeDepthCacheCost,
         biomeEncounterDepth = row.biomeEncounterDepth,
+        biomeEncounterDepthCost = row.biomeEncounterDepthCost,
         slotKind = row.slotKind,
+        isBiomeEntry = row.isBiomeEntry == true,
         roomKey = row.roomKey,
         branchKey = row.branchKey,
         roleKey = row.roleKey,
@@ -110,11 +124,11 @@ local function compactRoomRow(row)
     }
 end
 
-local function coordinateBucket(biome, coordinate)
-    local bucket = biome.plannedByCoordinate[coordinate]
+local function biomeDepthCacheBucket(biome, biomeDepthCache)
+    local bucket = biome.plannedByBiomeDepthCache[biomeDepthCache]
     if bucket == nil then
         bucket = {
-            coordinate = coordinate,
+            biomeDepthCache = biomeDepthCache,
             rows = {},
             byRowIndex = {},
             byRoomKey = {},
@@ -123,7 +137,25 @@ local function coordinateBucket(biome, coordinate)
             primary = nil,
             branchGroup = false,
         }
-        biome.plannedByCoordinate[coordinate] = bucket
+        biome.plannedByBiomeDepthCache[biomeDepthCache] = bucket
+    end
+    return bucket
+end
+
+local function routableBiomeDepthCacheBucket(biome, biomeDepthCache)
+    local bucket = biome.plannedRoutableByBiomeDepthCache[biomeDepthCache]
+    if bucket == nil then
+        bucket = {
+            biomeDepthCache = biomeDepthCache,
+            rows = {},
+            byRowIndex = {},
+            byRoomKey = {},
+            byBranchKey = {},
+            branchKeys = {},
+            primary = nil,
+            branchGroup = false,
+        }
+        biome.plannedRoutableByBiomeDepthCache[biomeDepthCache] = bucket
     end
     return bucket
 end
@@ -203,6 +235,7 @@ local function addGlobalReservation(globalReservations, biomeKey, planned)
         biomeKey = biomeKey,
         rowIndex = planned.rowIndex,
         coordinate = planned.coordinate,
+        biomeDepthCache = planned.biomeDepthCache,
         roomKey = planned.roomKey,
         slotKind = planned.slotKind,
         branchKey = planned.branchKey,
@@ -219,10 +252,18 @@ local function addPlannedRoom(biome, globalReservations, row)
     local planned = compactRoomRow(row)
     biome.plannedRows[#biome.plannedRows + 1] = planned
     biome.plannedByRowIndex[planned.rowIndex] = planned
-    if planned.coordinate ~= nil then
-        local bucket = coordinateBucket(biome, planned.coordinate)
+    if planned.biomeDepthCache ~= nil then
+        local bucket = biomeDepthCacheBucket(biome, planned.biomeDepthCache)
         addPlannedToBucket(bucket, planned)
         addPlannedToBucket(coordinateRoomBucket(bucket, planned.roomKey), planned)
+        if isRoutableRoom(planned) then
+            local routeBucket = routableBiomeDepthCacheBucket(biome, planned.biomeDepthCache)
+            addPlannedToBucket(routeBucket, planned)
+            addPlannedToBucket(coordinateRoomBucket(routeBucket, planned.roomKey), planned)
+        end
+    end
+    if planned.isBiomeEntry and biome.plannedEntryRoom == nil then
+        biome.plannedEntryRoom = planned
     end
 
     addPlannedToBucket(roomBucket(biome, planned.roomKey), planned)
@@ -235,7 +276,9 @@ local function compileBiome(snapshot, globalReservations)
         adapter = snapshot.adapter,
         plannedRows = {},
         plannedByRowIndex = {},
-        plannedByCoordinate = {},
+        plannedByBiomeDepthCache = {},
+        plannedRoutableByBiomeDepthCache = {},
+        plannedEntryRoom = nil,
         plannedByRoomKey = {},
         reservedRoomKeys = {},
     }

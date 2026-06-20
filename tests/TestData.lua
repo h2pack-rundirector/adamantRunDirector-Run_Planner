@@ -200,9 +200,9 @@ function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
     })
 
     lu.assertEquals(biomes.lookup.F.slotLayout.coordinate, "BiomeDepthCache")
-    lu.assertEquals(biomes.lookup.F.slotLayout.depthRange, { min = 0, max = 10 })
+    lu.assertEquals(biomes.lookup.F.slotLayout.depthRange, { min = 0, max = 11 })
     lu.assertEquals(biomes.lookup.F.slotLayout.routeStartDepth, 1)
-    lu.assertEquals(biomes.lookup.F.slotLayout.routeEndDepth, 9)
+    lu.assertEquals(biomes.lookup.F.slotLayout.routeEndDepth, 10)
 
     lu.assertEquals(biomes.lookup.G.slotLayout.depthRange, { min = 1, max = 8 })
     lu.assertEquals(biomes.lookup.G.slotLayout.routeStartDepth, 1)
@@ -396,8 +396,8 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
         Q_MiniBoss05 = 1,
     })
 
-    lu.assertNil(biomes.lookup.F.slotLayout.special[10].branches[1].biomeEncounterDepthCost)
-    lu.assertEquals(biomes.lookup.F.slotLayout.special[10].biomeEncounterDepthCost, 0)
+    lu.assertNil(biomes.lookup.F.slotLayout.special[11].branches[1].biomeEncounterDepthCost)
+    lu.assertEquals(biomes.lookup.F.slotLayout.special[11].biomeEncounterDepthCost, 0)
 
     local thessalyPolicy = biomes.lookup.O.combatEncounterPolicy.countControl.options
     lu.assertNil(thessalyPolicy[1].biomeEncounterDepthCost)
@@ -475,8 +475,9 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
     lu.assertEquals(fOpening.reward, roomStoreReward("OpeningRunProgress"))
     lu.assertTrue(fOpening.locked)
 
-    local fPreboss = biomes.lookup.F.slotLayout.special[10]
+    local fPreboss = biomes.lookup.F.slotLayout.special[11]
     lu.assertEquals(fPreboss.roomKey, "F_PreBoss01")
+    lu.assertEquals(fPreboss.biomeDepthCache, 10)
     lu.assertEquals(fPreboss.branches[1].key, "Shop")
     lu.assertEquals(fPreboss.branches[1].label, "Preboss Shop")
     lu.assertEquals(fPreboss.branches[1].reward, shopReward("WorldShop"))
@@ -681,7 +682,7 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(fields.Combat.mapOptions[15].availability.biomeDepthCache, { max = 3 })
     lu.assertEquals(fields.Miniboss.roomOptions[1].availability.biomeDepthCache, { min = 2, max = 4 })
     lu.assertEquals(fields.Miniboss.routeRules, oneShotRouteRules())
-    lu.assertEquals(fields.Bridge.roomOptions[1].availability.routePick, { exact = 3 })
+    lu.assertEquals(fields.Bridge.roomOptions[1].availability.biomeDepthCache, { exact = 3 })
 
     local thessaly = biomes.lookup.O.rolesByKey
     lu.assertEquals(thessaly.Combat.mapOptions[13].availability.biomeDepthCache, { min = 6 })
@@ -841,7 +842,7 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
     lu.assertEquals(fields.fields.minibossRoomsByKey.H_MiniBoss02.encounter, "MiniBossLamia")
 
     lu.assertEquals(fields.fields.bridge.roomKey, "H_Bridge01")
-    lu.assertEquals(fields.fields.bridge.roomOptions[1].availability.routePick, { exact = 3 })
+    lu.assertEquals(fields.fields.bridge.roomOptions[1].availability.biomeDepthCache, { exact = 3 })
     lu.assertEquals(fields.fields.bridge.rewardModes[2].key, "Shop")
     lu.assertEquals(fields.fields.bridge.rewardModes[3].key, "Story")
     lu.assertEquals(fields.fields.bridge.rewardModes[4].key, "Nemesis")
