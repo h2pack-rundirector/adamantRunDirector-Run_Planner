@@ -23,10 +23,18 @@ local function loadCatalog()
     return data.loadCatalog(testImport), data
 end
 
+local function loadRewardLegality()
+    return testImport("mods/route/reward_legality.lua", nil, {
+        routeRules = testImport("mods/rewards/route_rules.lua"),
+    })
+end
+
 local function loadRoutePlan()
     return testImport("mods/logic/route_plan.lua", nil, {
         executionPlan = testImport("mods/logic/execution_plan.lua"),
-        routeContext = testImport("mods/route/run_context.lua"),
+        routeContext = testImport("mods/route/run_context.lua", nil, {
+            rewardLegality = loadRewardLegality(),
+        }),
     })
 end
 

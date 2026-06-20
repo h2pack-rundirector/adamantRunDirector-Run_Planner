@@ -23,11 +23,17 @@ local function init()
     local data = import("mods/data.lua")
     local catalog = data.loadCatalog()
     local routeControls = data.buildControls(catalog)
+    local rewardLegality = import("mods/route/reward_legality.lua", nil, {
+        routeRules = import("mods/rewards/route_rules.lua"),
+    })
+    local routeContext = import("mods/route/run_context.lua", nil, {
+        rewardLegality = rewardLegality,
+    })
     local logic = import("mods/logic.lua").bind(data)
     local ui = import("mods/ui.lua").bind({
         catalog = catalog,
         data = data,
-        routeContext = import("mods/route/run_context.lua"),
+        routeContext = routeContext,
         routeControlTabs = data.routeControlTabs(catalog),
         routeStatusUi = import("mods/controls/route_status_ui.lua"),
     })

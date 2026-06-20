@@ -70,6 +70,13 @@ local function rewardValidation(surface, rewardRows, rowIndex)
     return rewardRuntime.validate(surface, rewardFields(rewardRows, rowIndex))
 end
 
+local function routeRewardValidation(instance, rowIndex)
+    if instance.routeContext ~= nil and instance.routeContext.rewardRowValidation ~= nil then
+        return instance.routeContext:rewardRowValidation(instance.routeKey, instance.biomeKey, rowIndex)
+    end
+    return nil
+end
+
 local function prewarmRewardSurface(role, option)
     rewardSurface(role, option)
 end
@@ -177,6 +184,10 @@ function runtime.create(fields, instance)
 
         local surface = rewardSurface(role, option)
         local rewardInvalid = rewardValidation(surface, fields.Rewards, rowIndex)
+        if rewardInvalid ~= nil and not rewardInvalid.valid then
+            return rewardInvalid
+        end
+        rewardInvalid = routeRewardValidation(instance, rowIndex)
         if rewardInvalid ~= nil and not rewardInvalid.valid then
             return rewardInvalid
         end

@@ -1,5 +1,7 @@
-local runContext = {}
+local deps = ... or {}
+local defaultRewardLegality = deps.rewardLegality
 
+local runContext = {}
 local EMPTY_LIST = {}
 
 local function routeControlName(biomeKey)
@@ -188,6 +190,18 @@ local function routeFeatureTargetsState(context, routeKey)
             targets = nil,
         }
         context.featureTargetsByRoute[routeKey] = state
+    end
+    return state
+end
+
+local function routeRewardLegalityState(context, routeKey)
+    local state = context.rewardLegalityByRoute[routeKey]
+    if state == nil then
+        state = {
+            dirty = true,
+            result = nil,
+        }
+        context.rewardLegalityByRoute[routeKey] = state
     end
     return state
 end
@@ -776,6 +790,13 @@ local function buildFeatureTargets(context, routeKey)
     return targets
 end
 
+local function newRewardLegalityResult()
+    return {
+        invalidRows = {},
+        byBiomeRow = {},
+    }
+end
+
 function runContext.create(opts)
     opts = opts or {}
     local routeInfoByRoute, routeInfoByBiome = buildRouteInfo(opts.routes)
@@ -786,6 +807,7 @@ function runContext.create(opts)
         biomeLookup = opts.biomes or {},
         npcs = opts.npcs or {},
         features = opts.features or {},
+        rewardLegalityEngine = opts.rewardLegality or defaultRewardLegality,
         controlResolver = opts.controlResolver,
         controls = opts.controls,
         routeFeatureKeysByRoute = buildRouteFeatureKeysByRoute(opts.routes, opts.features),
@@ -793,6 +815,7 @@ function runContext.create(opts)
         overviewByRoute = {},
         npcTargetsByRoute = {},
         featureTargetsByRoute = {},
+        rewardLegalityByRoute = {},
         godSourceByRoute = {},
     }
 
@@ -827,6 +850,7 @@ function runContext.create(opts)
         clearMap(self.snapshotByRoute)
         clearMap(self.npcTargetsByRoute)
         clearMap(self.featureTargetsByRoute)
+        clearMap(self.rewardLegalityByRoute)
     end
 
     function context:markRoutesForBiome(biomeKey)
@@ -837,6 +861,7 @@ function runContext.create(opts)
                 self.snapshotByRoute[routeKey] = nil
                 self.npcTargetsByRoute[routeKey] = nil
                 self.featureTargetsByRoute[routeKey] = nil
+                self.rewardLegalityByRoute[routeKey] = nil
                 marked = true
             end
         end
@@ -851,6 +876,7 @@ function runContext.create(opts)
             self.snapshotByRoute[routeKey] = nil
             self.npcTargetsByRoute[routeKey] = nil
             self.featureTargetsByRoute[routeKey] = nil
+            self.rewardLegalityByRoute[routeKey] = nil
             return
         end
         if biomeKey ~= nil then
@@ -996,6 +1022,37 @@ function runContext.create(opts)
         return targets.byFeature[featureKey]
     end
 
+    function context:rewardLegality(routeKey)
+        local state = routeRewardLegalityState(self, routeKey)
+        if state.dirty or state.result == nil then
+            if self:isLayerConfigured(routeKey, "rewards") and self.rewardLegalityEngine ~= nil then
+                local previousRewardLegalityBuilding = self.rewardLegalityBuilding
+                self.rewardLegalityBuilding = true
+                state.result = self.rewardLegalityEngine.evaluate(self, routeKey, {
+                    routeControlName = routeControlName,
+                    snapshotForBiome = function(resolvedRouteKey, biomeKey)
+                        return controlSnapshot(self, resolvedRouteKey, biomeKey)
+                    end,
+                })
+                self.rewardLegalityBuilding = previousRewardLegalityBuilding
+            else
+                state.result = newRewardLegalityResult()
+            end
+            state.dirty = false
+        end
+        return state.result
+    end
+
+    function context:rewardRowValidation(routeKey, biomeKey, rowIndex)
+        if self.snapshotBuilding or self.rewardLegalityBuilding then
+            return nil
+        end
+
+        local result = self:rewardLegality(routeKey)
+        local byRow = result.byBiomeRow[biomeKey]
+        return byRow and byRow[rowIndex] or nil
+    end
+
     function context:snapshot(routeKey)
         local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
         local snapshots = {}
@@ -1014,6 +1071,8 @@ function runContext.create(opts)
             }
         end
 
+        local previousSnapshotBuilding = self.snapshotBuilding
+        self.snapshotBuilding = true
         for _, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
             local snapshot = controlSnapshot(self, route.key, biomeKey)
             snapshots[#snapshots + 1] = snapshot
@@ -1035,6 +1094,13 @@ function runContext.create(opts)
                         message = invalidRow.message,
                     }
                 end
+            end
+        end
+        self.snapshotBuilding = previousSnapshotBuilding
+
+        if self:isLayerConfigured(route.key, "rewards") then
+            for _, invalidRow in ipairs(self:rewardLegality(route.key).invalidRows or EMPTY_LIST) do
+                invalidRows[#invalidRows + 1] = invalidRow
             end
         end
 

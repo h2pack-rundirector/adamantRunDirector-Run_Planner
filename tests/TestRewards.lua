@@ -21,6 +21,10 @@ local function loadRuntime()
     })
 end
 
+local function loadRouteRules()
+    return dofile("src/mods/rewards/route_rules.lua")
+end
+
 local function loadUi(routeStatusUi)
     local chunk = assert(loadfile("src/mods/rewards/ui.lua"))
     return chunk({
@@ -46,6 +50,28 @@ local function controlByKey(surface, key)
     return nil
 end
 
+local function ruleByTarget(rules, target)
+    for _, rule in ipairs(rules or {}) do
+        for _, value in ipairs(rule.targets or {}) do
+            if value == target then
+                return rule
+            end
+        end
+    end
+    return nil
+end
+
+local function ruleByRequirementCode(rules, code)
+    for _, rule in ipairs(rules or {}) do
+        for _, requirement in ipairs(rule.requirements or {}) do
+            if requirement.code == code then
+                return rule
+            end
+        end
+    end
+    return nil
+end
+
 local function fakeDrawFields(values)
     return {
         read = function(_, alias)
@@ -60,6 +86,64 @@ local function fakeDrawFields(values)
             }
         end,
     }
+end
+
+function TestRunPlannerRewards.testRouteRulesGroupTalentVariantsBehindSpellRequirement()
+    local rules = loadRouteRules()
+    local talentRule = ruleByRequirementCode(rules, "talent_requires_spell")
+
+    lu.assertNotNil(talentRule)
+    lu.assertEquals(talentRule.targets, {
+        "TalentDrop",
+        "MinorTalentDrop",
+        "TalentBigDrop",
+    })
+    lu.assertEquals(talentRule.requirements[1], {
+        kind = "minPriorCount",
+        counter = "spell",
+        scope = "route",
+        min = 1,
+        code = "talent_requires_spell",
+        message = "Path of Stars rewards require an earlier Selene's Gift",
+    })
+end
+
+function TestRunPlannerRewards.testRouteRulesBlockTalentAfterShopTalent()
+    local rules = loadRouteRules()
+    local blockerRule = ruleByRequirementCode(rules, "talent_shop_conflict")
+
+    lu.assertNotNil(blockerRule)
+    lu.assertEquals(blockerRule.targets, {
+        "TalentDrop",
+        "MinorTalentDrop",
+        "TalentBigDrop",
+    })
+    lu.assertEquals(blockerRule.requirements[1], {
+        kind = "previousShopExclusion",
+        rewards = {
+            "TalentDrop",
+        },
+        code = "talent_shop_conflict",
+        message = "Path of Stars cannot be planned after a shop Path of Stars offer",
+    })
+end
+
+function TestRunPlannerRewards.testRouteRulesBlockRoomHammerAfterShopHammer()
+    local rules = loadRouteRules()
+    local hammerRule = ruleByTarget(rules, "WeaponUpgrade")
+    local blockerRule = ruleByRequirementCode(rules, "weapon_upgrade_shop_conflict")
+
+    lu.assertNotNil(hammerRule)
+    lu.assertNotNil(blockerRule)
+    lu.assertEquals(blockerRule.targets, { "WeaponUpgrade" })
+    lu.assertEquals(blockerRule.requirements[1], {
+        kind = "previousShopExclusion",
+        rewards = {
+            "WeaponUpgradeDrop",
+        },
+        code = "weapon_upgrade_shop_conflict",
+        message = "Hammer cannot be planned after a shop Hammer offer",
+    })
 end
 
 function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()

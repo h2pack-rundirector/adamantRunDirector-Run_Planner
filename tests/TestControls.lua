@@ -105,6 +105,12 @@ local function loadRouteFeaturesTemplate()
     return template
 end
 
+local function loadRewardLegality()
+    return testImport("mods/route/reward_legality.lua", nil, {
+        routeRules = testImport("mods/rewards/route_rules.lua"),
+    })
+end
+
 local function loadFixedLinearData()
     return testImport("mods/controls/FixedLinearRoute/data.lua", nil, loadRouteDeps())
 end
@@ -126,7 +132,9 @@ local function loadFieldsCageData()
 end
 
 local function loadRunContext()
-    return testImport("mods/route/run_context.lua")
+    return testImport("mods/route/run_context.lua", nil, {
+        rewardLegality = loadRewardLegality(),
+    })
 end
 
 local function routeDefinitions(routes)
@@ -4360,6 +4368,326 @@ function TestRunPlannerControls.testRouteContextScopesPriorGodLootByRoute()
 
     iInstance.routeKey = "WithErebus"
     lu.assertTrue(hasValue(data.roleValuesForRow(iInstance, rows, 3), "Trial"))
+end
+
+local function routeRewardRow(rowIndex, rewardType, opts)
+    opts = opts or {}
+    return {
+        rowIndex = rowIndex,
+        routeOrdinal = opts.routeOrdinal or rowIndex,
+        slotLabel = opts.slotLabel or ("Depth " .. tostring(rowIndex)),
+        roleKey = "Combat",
+        option = {
+            key = opts.roomKey or ("Test_Combat" .. tostring(rowIndex)),
+            label = opts.roomLabel or "Combat",
+        },
+        valid = opts.valid ~= false,
+        rewardKind = opts.rewardKind or "roomStore",
+        rewards = opts.rewards or { rewardType },
+        rewardPicks = opts.rewardPicks or {},
+    }
+end
+
+local function fakeRouteControlSnapshot(controlName, rows)
+    return {
+        read = function(_, path)
+            if path == "snapshot" then
+                return {
+                    controlName = controlName,
+                    valid = true,
+                    invalidRows = {},
+                    rows = rows or {},
+                }
+            end
+            return nil
+        end,
+    }
+end
+
+local function rewardLegalityRouteContext(route, controls)
+    return loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        controlResolver = function(controlName)
+            return controls[controlName]
+        end,
+    })
+end
+
+function TestRunPlannerControls.testRouteContextInvalidatesTalentRewardsBeforeSpellDrop()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "TalentDrop"),
+            routeRewardRow(2, "MinorTalentDrop"),
+            routeRewardRow(3, "SpellDrop"),
+            routeRewardRow(4, "TalentBigDrop"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 2)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 1)
+    lu.assertEquals(overview.invalidRows[1].code, "talent_requires_spell")
+    lu.assertEquals(overview.invalidRows[2].rowIndex, 2)
+    lu.assertEquals(overview.invalidRows[2].code, "talent_requires_spell")
+    lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 1).code, "talent_requires_spell")
+    lu.assertNil(routeContext:rewardRowValidation("Underworld", "F", 4))
+end
+
+function TestRunPlannerControls.testRouteContextInvalidatesDuplicateSpellDrops()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "SpellDrop"),
+            routeRewardRow(2, "SpellDrop"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(overview.invalidRows[1].code, "spell_drop_limit")
+end
+
+function TestRunPlannerControls.testRouteContextInvalidatesTalentAfterPreviousShopTalent()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "SpellDrop"),
+            routeRewardRow(2, "TalentDrop", {
+                rewardKind = "shop",
+            }),
+            routeRewardRow(3, "TalentBigDrop"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 3)
+    lu.assertEquals(overview.invalidRows[1].code, "talent_shop_conflict")
+end
+
+function TestRunPlannerControls.testRouteContextOnlyAppliesShopTalentBlockerToNextRow()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "SpellDrop"),
+            routeRewardRow(2, "TalentDrop", {
+                rewardKind = "shop",
+            }),
+            routeRewardRow(3, "MaxHealthDrop"),
+            routeRewardRow(4, "TalentBigDrop"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertTrue(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 0)
+end
+
+function TestRunPlannerControls.testRouteContextInvalidatesHermesBiomeAndRouteLimits()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G", "H" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "HermesUpgrade"),
+            routeRewardRow(2, "ShopHermesUpgrade"),
+        }),
+        RouteG = fakeRouteControlSnapshot("RouteG", {
+            routeRewardRow(1, "HermesUpgrade"),
+        }),
+        RouteH = fakeRouteControlSnapshot("RouteH", {
+            routeRewardRow(1, "HermesUpgrade"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 2)
+    lu.assertEquals(overview.invalidRows[1].biomeKey, "F")
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(overview.invalidRows[1].code, "hermes_biome_limit")
+    lu.assertEquals(overview.invalidRows[2].biomeKey, "H")
+    lu.assertEquals(overview.invalidRows[2].code, "hermes_run_limit")
+end
+
+function TestRunPlannerControls.testRouteContextInvalidatesEarlySecondWeaponUpgrade()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G", "H" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "WeaponUpgrade"),
+        }),
+        RouteG = fakeRouteControlSnapshot("RouteG", {
+            routeRewardRow(1, "WeaponUpgrade"),
+        }),
+        RouteH = fakeRouteControlSnapshot("RouteH", {
+            routeRewardRow(1, "WeaponUpgradeDrop"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].biomeKey, "G")
+    lu.assertEquals(overview.invalidRows[1].code, "weapon_upgrade_late_requirement")
+end
+
+function TestRunPlannerControls.testRouteContextAllowsSecondWeaponUpgradeFromThirdBiome()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G", "H" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "WeaponUpgrade"),
+        }),
+        RouteG = fakeRouteControlSnapshot("RouteG", {}),
+        RouteH = fakeRouteControlSnapshot("RouteH", {
+            routeRewardRow(1, "WeaponUpgradeDrop"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertTrue(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 0)
+end
+
+function TestRunPlannerControls.testRouteContextInvalidatesWeaponUpgradeAfterPreviousShopHammer()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G", "H" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {}),
+        RouteG = fakeRouteControlSnapshot("RouteG", {}),
+        RouteH = fakeRouteControlSnapshot("RouteH", {
+            routeRewardRow(1, "WeaponUpgradeDrop", {
+                rewardKind = "shop",
+            }),
+            routeRewardRow(2, "WeaponUpgrade"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].biomeKey, "H")
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(overview.invalidRows[1].code, "weapon_upgrade_shop_conflict")
+end
+
+function TestRunPlannerControls.testRouteContextOnlyAppliesShopHammerBlockerToNextRow()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G", "H" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {}),
+        RouteG = fakeRouteControlSnapshot("RouteG", {}),
+        RouteH = fakeRouteControlSnapshot("RouteH", {
+            routeRewardRow(1, "WeaponUpgradeDrop", {
+                rewardKind = "shop",
+            }),
+            routeRewardRow(2, "MaxHealthDrop"),
+            routeRewardRow(3, "WeaponUpgrade"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertTrue(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 0)
+end
+
+function TestRunPlannerControls.testFixedLinearRuntimeUsesRouteRewardValidation()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(routeFields({
+        {
+            RoleKey = "",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat02",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+    }), instance)
+    control:setRouteContext({
+        rewardRowValidation = function(_, routeKey, biomeKey, rowIndex)
+            if routeKey == "Underworld" and biomeKey == "F" and rowIndex == 2 then
+                return {
+                    valid = false,
+                    code = "route_reward",
+                    message = "Route reward invalid",
+                }
+            end
+            return nil
+        end,
+    }, "Underworld")
+
+    local validation = control:rowValidation(2)
+
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "route_reward")
+end
+
+function TestRunPlannerControls.testRouteContextInvalidatesThirdWeaponUpgrade()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G", "H", "I" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "WeaponUpgrade"),
+        }),
+        RouteG = fakeRouteControlSnapshot("RouteG", {}),
+        RouteH = fakeRouteControlSnapshot("RouteH", {
+            routeRewardRow(1, "WeaponUpgradeDrop"),
+        }),
+        RouteI = fakeRouteControlSnapshot("RouteI", {
+            routeRewardRow(1, "WeaponUpgrade"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].biomeKey, "I")
+    lu.assertEquals(overview.invalidRows[1].code, "weapon_upgrade_run_limit")
 end
 
 function TestRunPlannerControls.testRouteContextBuildsNpcTargetsFromValidCombatRows()
