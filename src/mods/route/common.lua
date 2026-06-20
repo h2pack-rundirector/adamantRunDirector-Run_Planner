@@ -175,10 +175,6 @@ function common.routeRowLabel(slotLayout, ordinal, fallbackPrefix)
     return tostring(prefix) .. " " .. tostring(ordinal)
 end
 
-function common.routeRowRoomHistoryCost(slotLayout)
-    return slotLayout and slotLayout.routeRowRoomHistoryCost or nil
-end
-
 function common.applySlotDepthContext(slot, source)
     if slot == nil then
         return slot

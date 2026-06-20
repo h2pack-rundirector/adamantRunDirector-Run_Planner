@@ -218,14 +218,12 @@ function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
     lu.assertEquals(biomes.lookup.I.slotLayout.routeRowLabelPrefix, "Step")
     lu.assertEquals(biomes.lookup.I.slotLayout.routeStartOrdinal, 1)
     lu.assertEquals(biomes.lookup.I.slotLayout.routeEndOrdinal, 12)
-    lu.assertEquals(biomes.lookup.I.slotLayout.requiredGoalRewards, 5)
 
     lu.assertEquals(biomes.lookup.N.adapter, "hubPylon")
     lu.assertEquals(biomes.lookup.N.slotLayout.routeRowLabelPrefix, "Pylon")
-    lu.assertEquals(biomes.lookup.N.slotLayout.routeRowRoomHistoryCost, 2)
+    lu.assertEquals(biomes.lookup.N.hub.pylonRoomHistoryCost, 2)
     lu.assertEquals(biomes.lookup.N.slotLayout.routeStartOrdinal, 1)
     lu.assertEquals(biomes.lookup.N.slotLayout.routeEndOrdinal, 6)
-    lu.assertEquals(biomes.lookup.N.slotLayout.requiredPylons, 6)
 
     lu.assertEquals(biomes.lookup.O.slotLayout.depthRange, { min = 1, max = 7 })
     lu.assertEquals(biomes.lookup.O.slotLayout.routeRowLabelPrefix, "Depth")
@@ -266,7 +264,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoomHistoryTimeline()
     lu.assertEquals(biomes.lookup.F.timeline.afterBiome[2].roomHistoryCost, 1)
     lu.assertEquals(biomes.lookup.F.timeline.afterBiome[2].features, { wellShop = true })
 
-    lu.assertEquals(biomes.lookup.N.slotLayout.routeRowRoomHistoryCost, 2)
+    lu.assertEquals(biomes.lookup.N.hub.pylonRoomHistoryCost, 2)
     lu.assertEquals(biomes.lookup.N.timeline.afterBiome[1].roomOptions[1].key, "N_Boss01")
     lu.assertEquals(biomes.lookup.N.timeline.afterBiome[2].roomKey, "N_PostBoss01")
     lu.assertEquals(biomes.lookup.N.timeline.afterBiome[2].features, { surfaceShop = true })
@@ -725,10 +723,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.slotLayout.fixedAfterGoals[1].reward, shopReward("I_WorldShop"))
 
     lu.assertEquals(tartarus.clockwork.requiredGoalRewards, 5)
-    lu.assertEquals(tartarus.clockwork.maxRouteRows, 12)
     lu.assertEquals(tartarus.clockwork.forcedFirstRouteRole, "Goal")
-    lu.assertEquals(tartarus.clockwork.goalReward, "ClockworkGoal")
-    lu.assertEquals(tartarus.clockwork.remainingGoalCounter, "RemainingClockworkGoals")
     lu.assertEquals(tartarus.clockwork.extensionRewardBudget, {
         mode = "Vanilla",
         min = 3,

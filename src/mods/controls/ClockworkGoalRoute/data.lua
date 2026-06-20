@@ -17,7 +17,6 @@ local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
 local routeStartOrdinal = common.routeStartOrdinal
 local routeEndOrdinal = common.routeEndOrdinal
 local routeRowLabel = common.routeRowLabel
-local routeRowRoomHistoryCost = common.routeRowRoomHistoryCost
 local applySlotDepthContext = common.applySlotDepthContext
 
 local data
@@ -94,7 +93,6 @@ local function buildRouteSlot(instance, ordinal)
         routeOrdinal = ordinal,
         kind = "biomeRow",
         label = routeRowLabel(slotLayout, ordinal, "Step"),
-        roomHistoryCost = routeRowRoomHistoryCost(slotLayout),
     }, {
         biomeDepthCacheCost = routeBiomeDepthCacheCost(slotLayout),
     })

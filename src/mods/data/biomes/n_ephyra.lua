@@ -19,13 +19,11 @@ return function(importer)
         },
         slotLayout = {
             routeRowLabelPrefix = "Pylon",
-            routeRowRoomHistoryCost = 2,
             biomeDepthCacheStart = 1,
             defaultFixedBiomeDepthCacheCost = 0,
             routeBiomeDepthCacheCost = 1,
             routeStartOrdinal = 1,
             routeEndOrdinal = 6,
-            requiredPylons = 6,
             fixedBeforeHub = {
                 {
                     key = "Opening",
@@ -67,6 +65,7 @@ return function(importer)
         },
         hub = {
             roomKey = "N_Hub",
+            pylonRoomHistoryCost = 2,
             doorSelectionFunction = "ChooseAvailableN_HubDoors",
             doorTypes = { "EphyraExitDoor" },
             availableDoorCount = { min = 9, max = 10 },

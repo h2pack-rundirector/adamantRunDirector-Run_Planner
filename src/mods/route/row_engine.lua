@@ -183,6 +183,13 @@ function rowEngine.create(adapter)
         return common.numericCost(value, 0)
     end
 
+    local function explicitRoomHistoryCost(value)
+        if value == nil then
+            return nil
+        end
+        return common.numericCost(value, 0)
+    end
+
     local function biomeDepthCacheStart(instance)
         local slotLayout = instance and instance.biome and instance.biome.slotLayout or nil
         if slotLayout == nil then
@@ -230,14 +237,6 @@ function rowEngine.create(adapter)
         return nil
     end
 
-    local function rowBiomeEncounterDepthCost(instance, rows, rowIndex)
-        local slot = slotForRow(instance, rowIndex)
-        local roleKey = readRoleKey(instance, rows, rowIndex)
-        local role = roleForRow(instance, rowIndex, roleKey)
-        local optionKey, option = selectedOptionForCost(role, rows, rowIndex)
-        return effectiveBiomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
-    end
-
     local function adapterBiomeDepthCacheCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
         if adapter.biomeDepthCacheCost == nil then
             return nil
@@ -270,16 +269,36 @@ function rowEngine.create(adapter)
         return nil
     end
 
-    local function rowBiomeDepthCacheCost(instance, rows, rowIndex)
-        local slot = slotForRow(instance, rowIndex)
-        if adapter.biomeDepthCacheCost == nil and slot ~= nil and slot.biomeDepthCacheCost ~= nil then
-            return common.numericCost(slot.biomeDepthCacheCost, 0)
+    local function adapterRoomHistoryCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        if adapter.roomHistoryCost == nil then
+            return nil
         end
 
-        local roleKey = readRoleKey(instance, rows, rowIndex)
-        local role = roleForRow(instance, rowIndex, roleKey)
-        local optionKey, option = selectedOptionForCost(role, rows, rowIndex)
-        return effectiveBiomeDepthCacheCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        local cost = adapter.roomHistoryCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        if cost ~= nil then
+            return common.numericCost(cost, 0)
+        end
+        return nil
+    end
+
+    local function effectiveRoomHistoryCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        local cost = adapterRoomHistoryCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        if cost ~= nil then
+            return cost
+        end
+        cost = explicitRoomHistoryCost(option and option.roomHistoryCost)
+        if cost ~= nil then
+            return cost
+        end
+        cost = explicitRoomHistoryCost(role and role.roomHistoryCost)
+        if cost ~= nil then
+            return cost
+        end
+        cost = explicitRoomHistoryCost(slot and slot.roomHistoryCost)
+        if cost ~= nil then
+            return cost
+        end
+        return nil
     end
 
     local function rowContextUncached(instance, rows, rowIndex, target)
@@ -318,8 +337,39 @@ function rowEngine.create(adapter)
                 biomeEncounterDepth = previous.biomeEncounterDepth + previous.biomeEncounterDepthCost
             end
         end
-        local biomeDepthCacheCost = rowBiomeDepthCacheCost(instance, rows, rowIndex)
-        local biomeEncounterDepthCost = rowBiomeEncounterDepthCost(instance, rows, rowIndex)
+        local roleKey = readRoleKey(instance, rows, rowIndex)
+        local role = roleForRow(instance, rowIndex, roleKey)
+        local optionKey, option = selectedOptionForCost(role, rows, rowIndex)
+        local biomeDepthCacheCost = effectiveBiomeDepthCacheCost(
+            instance,
+            rows,
+            rowIndex,
+            roleKey,
+            role,
+            optionKey,
+            option,
+            slot
+        )
+        local biomeEncounterDepthCost = effectiveBiomeEncounterDepthCost(
+            instance,
+            rows,
+            rowIndex,
+            roleKey,
+            role,
+            optionKey,
+            option,
+            slot
+        )
+        local roomHistoryCost = effectiveRoomHistoryCost(
+            instance,
+            rows,
+            rowIndex,
+            roleKey,
+            role,
+            optionKey,
+            option,
+            slot
+        )
         target = target or {}
         target.rowIndex = rowIndex
         target.routeOrdinal = slot and slot.routeOrdinal or nil
@@ -331,7 +381,7 @@ function rowEngine.create(adapter)
         target.biomeEncounterDepthKnown = biomeEncounterDepthKnown
         target.biomeEncounterDepthCost = biomeEncounterDepthCost
         target.biomeEncounterDepthCostKnown = biomeEncounterDepthCost ~= nil
-        target.roomHistoryCost = slot and slot.roomHistoryCost or nil
+        target.roomHistoryCost = roomHistoryCost
         return target
     end
 

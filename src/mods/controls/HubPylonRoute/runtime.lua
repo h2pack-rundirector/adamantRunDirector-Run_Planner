@@ -330,7 +330,7 @@ function runtime.create(fields, instance)
             slotKind = slot.kind or "biomeRow",
             isBiomeEntry = slot.isBiomeEntry == true,
             slotLabel = slot.label,
-            roomHistoryCost = slot.roomHistoryCost,
+            roomHistoryCost = context.roomHistoryCost,
             roomHistoryIdentity = slot.roomHistoryIdentity,
             roleKey = roleKey,
             role = role,

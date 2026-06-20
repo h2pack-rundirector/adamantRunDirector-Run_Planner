@@ -27,8 +27,6 @@ return function(importer)
             routeBiomeDepthCacheCost = 1,
             routeStartOrdinal = 1,
             routeEndOrdinal = 12,
-            requiredGoalRewards = 5,
-            maxRouteRows = 12,
             fixedBeforeRoute = {
                 {
                     key = "Intro",
@@ -55,10 +53,7 @@ return function(importer)
         },
         clockwork = {
             requiredGoalRewards = 5,
-            maxRouteRows = 12,
             forcedFirstRouteRole = "Goal",
-            goalReward = "ClockworkGoal",
-            remainingGoalCounter = "RemainingClockworkGoals",
             extensionRewardBudget = {
                 mode = "Vanilla",
                 min = 3,

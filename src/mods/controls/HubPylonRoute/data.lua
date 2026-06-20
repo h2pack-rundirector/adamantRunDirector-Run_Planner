@@ -15,7 +15,6 @@ local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
 local routeStartOrdinal = common.routeStartOrdinal
 local routeEndOrdinal = common.routeEndOrdinal
 local routeRowLabel = common.routeRowLabel
-local routeRowRoomHistoryCost = common.routeRowRoomHistoryCost
 local applySlotDepthContext = common.applySlotDepthContext
 
 local data
@@ -72,7 +71,6 @@ local function buildPylonSlot(instance, ordinal)
         routeOrdinal = ordinal,
         kind = "biomeRow",
         label = routeRowLabel(slotLayout, ordinal, "Pylon"),
-        roomHistoryCost = routeRowRoomHistoryCost(slotLayout),
     }, {
         biomeDepthCacheCost = routeBiomeDepthCacheCost(slotLayout),
     })
@@ -193,6 +191,13 @@ local adapter = {
             return true
         end
         return false
+    end,
+
+    roomHistoryCost = function(instance, _, _, _, _, _, _, slot)
+        if slot == nil or slot.kind ~= "biomeRow" then
+            return nil
+        end
+        return instance.biome and instance.biome.hub and instance.biome.hub.pylonRoomHistoryCost or nil
     end,
 }
 
