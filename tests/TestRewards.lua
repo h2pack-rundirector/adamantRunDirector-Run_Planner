@@ -191,6 +191,7 @@ function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()
         "MaxManaDrop",
         "RoomMoneyDrop",
         "StackUpgrade",
+        "SpellDrop",
         "TalentDrop",
     })
     lu.assertEquals(surface.controls[1].displayValues.WeaponUpgrade, "Hammer")
@@ -240,6 +241,7 @@ function TestRunPlannerRewards.testCatalogNormalizesSpecializedRewardBundles()
         "MaxHealthDrop",
         "MaxManaDrop",
         "StackUpgrade",
+        "SpellDrop",
         "TalentDrop",
     })
 
@@ -316,6 +318,7 @@ function TestRunPlannerRewards.testCatalogNormalizesMajorMinorSurface()
         "MaxManaDrop",
         "RoomMoneyDrop",
         "StackUpgrade",
+        "SpellDrop",
         "TalentDrop",
     })
     lu.assertEquals(surface.controls[3].key, "boonSource")
@@ -369,6 +372,7 @@ function TestRunPlannerRewards.testCatalogOptInDevotionForMajorMinorSurface()
         "MaxManaDrop",
         "RoomMoneyDrop",
         "StackUpgrade",
+        "SpellDrop",
         "TalentDrop",
     })
     lu.assertEquals(surface.controls[5].key, "lootAName")
@@ -707,6 +711,7 @@ function TestRunPlannerRewards.testCatalogAppliesIneligibleRewardTypes()
         "MaxHealthDrop",
         "MaxManaDrop",
         "StackUpgrade",
+        "SpellDrop",
         "TalentDrop",
     })
 end

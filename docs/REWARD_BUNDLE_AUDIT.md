@@ -50,21 +50,21 @@ Planner bundle:
 
 - `Boon`
 - `HermesUpgrade`
+- `Devotion`
 - `WeaponUpgrade`
 - `MaxHealthDrop`
 - `MaxManaDrop`
 - `RoomMoneyDrop`
 - `StackUpgrade`
+- `SpellDrop`
 - `TalentDrop`
 
-Status: drift.
+Status: aligned.
 
 `Devotion` is present in the broad bundle, but normal room contexts filter it
-unless the selected combat map is devotion-capable. `SpellDrop` is missing and
-should be added if normal `RunProgress` surfaces need to expose Selene directly.
-`TalentDrop` should stay because it is part of vanilla `RunProgress`; its
-`TalentLegal` dependency should be handled by route reward validation, not by
-removing it from the bundle.
+unless the selected combat map is devotion-capable. `TalentDrop` should stay
+because it is part of vanilla `RunProgress`; its `TalentLegal` dependency should
+be handled by route reward validation, not by removing it from the bundle.
 
 ### `OpeningRunProgress`
 
@@ -123,12 +123,12 @@ Planner bundle:
 - `MaxHealthDrop`
 - `MaxManaDrop`
 - `StackUpgrade`
+- `SpellDrop`
 - `TalentDrop`
 
-Status: drift.
+Status: aligned.
 
-`SpellDrop` is missing and should be added. `TalentDrop` should stay, with
-`TalentLegal` handled by the dependency layer.
+`TalentDrop` should stay, with `TalentLegal` handled by the dependency layer.
 
 ### `MetaProgress`
 
@@ -389,6 +389,4 @@ should not add `SpellDrop` to bundles that vanilla cannot offer, such as
 
 1. Keep the current `OpeningRunProgress` correction: use `SpellDrop`, not
    `TalentDrop`.
-2. Add `SpellDrop` to `RunProgress`.
-3. Add `SpellDrop` to `PreBossRunProgress`.
-4. Implement reward dependency validation separately from bundle definitions.
+2. Implement reward dependency validation separately from bundle definitions.
