@@ -64,8 +64,8 @@ local function boonSource(item)
     return nil
 end
 
-local function itemCoordinate(item)
-    return item and item.coordinate or nil
+local function itemRouteOrdinal(item)
+    return item and item.routeOrdinal or nil
 end
 
 local function itemRowIndex(item)
@@ -76,7 +76,7 @@ local function invalid(code, message, item)
     return {
         valid = false,
         rowIndex = itemRowIndex(item),
-        coordinate = itemCoordinate(item),
+        routeOrdinal = itemRouteOrdinal(item),
         code = code,
         message = message,
     }
@@ -85,7 +85,7 @@ end
 local function fillInvalid(target, code, message, item)
     target.valid = false
     target.rowIndex = itemRowIndex(item)
-    target.coordinate = itemCoordinate(item)
+    target.routeOrdinal = itemRouteOrdinal(item)
     target.code = code
     target.message = message
     return target

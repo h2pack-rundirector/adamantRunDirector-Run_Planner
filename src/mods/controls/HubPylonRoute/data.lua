@@ -12,6 +12,10 @@ local buildLookup = common.buildLookup
 local buildOptionChoices = common.buildOptionChoices
 local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
 local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
+local routeStartOrdinal = common.routeStartOrdinal
+local routeEndOrdinal = common.routeEndOrdinal
+local routeRowLabel = common.routeRowLabel
+local routeRowRoomHistoryCost = common.routeRowRoomHistoryCost
 local applySlotDepthContext = common.applySlotDepthContext
 
 local data
@@ -42,7 +46,7 @@ local function buildFixedSlot(instance, entry, section)
     local rowIndex = #instance.routeSlots + 1
     instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
-        coordinate = entry.coordinate,
+        routeOrdinal = entry.routeOrdinal,
         kind = entry.kind or section or "fixed",
         isBiomeEntry = entry.isBiomeEntry == true,
         label = entry.label or entry.key,
@@ -60,32 +64,31 @@ local function buildFixedSlot(instance, entry, section)
     })
 end
 
-local function buildPylonSlot(instance, pick)
+local function buildPylonSlot(instance, ordinal)
+    local slotLayout = instance.biome.slotLayout or {}
     local rowIndex = #instance.routeSlots + 1
     instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
-        coordinate = pick,
-        kind = "pylonPick",
-        label = "Pylon " .. tostring(pick),
+        routeOrdinal = ordinal,
+        kind = "biomeRow",
+        label = routeRowLabel(slotLayout, ordinal, "Pylon"),
+        roomHistoryCost = routeRowRoomHistoryCost(slotLayout),
     }, {
-        biomeDepthCacheCost = routeBiomeDepthCacheCost(instance.biome.slotLayout),
+        biomeDepthCacheCost = routeBiomeDepthCacheCost(slotLayout),
     })
 end
 
 local function buildRouteSlots(instance)
     local slotLayout = instance.biome.slotLayout or {}
-    local startPick = math.floor(tonumber(slotLayout.routeStartPick) or 1)
-    local endPick = math.floor(tonumber(slotLayout.routeEndPick) or startPick)
-    if endPick < startPick then
-        endPick = startPick
-    end
+    local startOrdinal = routeStartOrdinal(slotLayout)
+    local endOrdinal = routeEndOrdinal(slotLayout, startOrdinal)
 
     instance.routeSlots = {}
     for _, entry in ipairs(slotLayout.fixedBeforeHub or {}) do
         buildFixedSlot(instance, entry, "fixedBeforeHub")
     end
-    for pick = startPick, endPick do
-        buildPylonSlot(instance, pick)
+    for ordinal = startOrdinal, endOrdinal do
+        buildPylonSlot(instance, ordinal)
     end
     for _, entry in ipairs(slotLayout.fixedAfterHub or {}) do
         buildFixedSlot(instance, entry, "fixedAfterHub")
@@ -148,7 +151,7 @@ local function prepareSideRoomRows(instance)
     instance.sideRoomRowOffsetByRouteRow = {}
     local rowCount = 0
     for _, slot in ipairs(instance.routeSlots or {}) do
-        if slot.kind == "pylonPick" then
+        if slot.kind == "biomeRow" then
             instance.sideRoomRowOffsetByRouteRow[slot.rowIndex] = rowCount
             rowCount = rowCount + (instance.maxSideDoorCount or 0)
         end

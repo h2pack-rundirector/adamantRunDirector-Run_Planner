@@ -201,13 +201,13 @@ local function fillPylonOfferItems(items, control, instance)
     local count = 0
     for rowIndex = 1, control:rowCount() do
         local slot = control:slot(rowIndex)
-        if slot ~= nil and (slot.kind or "pylonPick") == "pylonPick" then
+        if slot ~= nil and (slot.kind or "biomeRow") == "biomeRow" then
             local validation = data.validateRow(instance, routeRows, rowIndex)
             if validation.valid then
                 count = count + 1
                 local item = items[count] or {}
                 item.rowIndex = rowIndex
-                item.coordinate = slot.coordinate
+                item.routeOrdinal = slot.routeOrdinal
                 item.rewardType = fields.Rewards:read(rowIndex, "Reward1Key") or ""
                 item.boonSource = item.rewardType == "Boon"
                     and (fields.Rewards:read(rowIndex, "Reward2Key") or "")

@@ -200,7 +200,7 @@ local function fillCageRewardOfferItems(items, fields, instance, routeRows, rowI
             count = count + 1
             local item = items[count] or {}
             item.rowIndex = rowIndex
-            item.coordinate = slot and slot.coordinate or nil
+            item.routeOrdinal = slot and slot.routeOrdinal or nil
             item.rewardType = fields.CageRewards:read(cageRewardRowIndex, "Reward1Key") or ""
             item.boonSource = item.rewardType == "Boon"
                 and (fields.CageRewards:read(cageRewardRowIndex, "Reward2Key") or "")

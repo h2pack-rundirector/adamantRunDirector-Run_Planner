@@ -97,7 +97,7 @@ end
 local function rowSummary(biomeKey, row)
     return "plan row biome=" .. tostring(biomeKey)
         .. " row=" .. fieldValue(row.rowIndex)
-        .. " coord=" .. fieldValue(row.coordinate)
+        .. " routeOrdinal=" .. fieldValue(row.routeOrdinal)
         .. " kind=" .. fieldValue(row.slotKind)
         .. " room=" .. fieldValue(row.roomKey)
         .. " role=" .. fieldValue(row.roleKey)
@@ -193,7 +193,7 @@ local function currentBiomeDepthCache(currentRun)
     return math.floor(tonumber(currentRun and currentRun.BiomeDepthCache or 0) or 0)
 end
 
-local function nextCoordinate(currentRun)
+local function nextRouteOrdinal(currentRun)
     return currentBiomeDepthCache(currentRun) + 1
 end
 
@@ -407,7 +407,7 @@ local function nextDecisionDetail(runtime, currentRun, args, otherDoors, nextArg
         .. " runDepth=" .. fieldValue(currentRun and currentRun.RunDepthCache)
         .. " biomeDepthCache=" .. fieldValue(currentRun and currentRun.BiomeDepthCache)
         .. " biomeEncounterDepth=" .. fieldValue(currentRun and currentRun.BiomeEncounterDepth)
-        .. " coord=" .. fieldValue(nextCoordinate(currentRun))
+        .. " routeOrdinal=" .. fieldValue(nextRouteOrdinal(currentRun))
         .. " plannedBiomeDepthCache=" .. fieldValue(planned and planned.biomeDepthCache)
         .. " plannedBiomeDepthCacheCost=" .. fieldValue(planned and planned.biomeDepthCacheCost)
         .. " plannedBiomeEncounterDepth=" .. fieldValue(planned and planned.biomeEncounterDepth)
@@ -453,13 +453,13 @@ function roomRouting.registerHooks(moduleRef, catalog)
         local roomData = base(currentRun, nextArgs or args, otherDoors)
         debugLog(nextDecisionDetail(runtime, currentRun, args, otherDoors, nextArgs, roomData))
         debugLog("next " .. tostring(currentRoomSetName(currentRun, args)) .. "["
-            .. tostring(nextCoordinate(currentRun)) .. "] "
+            .. tostring(nextRouteOrdinal(currentRun)) .. "] "
             .. routeDecision(args, nextArgs) .. " -> " .. tostring(roomName(roomData)))
         return roomData
     end)
 end
 
-roomRouting.nextCoordinate = nextCoordinate
+roomRouting.nextRouteOrdinal = nextRouteOrdinal
 roomRouting.currentRoomSetName = currentRoomSetName
 
 return roomRouting

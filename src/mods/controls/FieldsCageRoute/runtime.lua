@@ -113,7 +113,7 @@ local function cageRewardPicks(surface, cageRewardRows, cageRewardRowIndex)
     return picks
 end
 
-local function cageRewardSnapshot(fields, instance, rowIndex, coordinate, cageIndex, leg, rewardsConfigured)
+local function cageRewardSnapshot(fields, instance, rowIndex, routeOrdinal, cageIndex, leg, rewardsConfigured)
     local cageRewardRowIndex = data.cageRewardRowIndex(instance, rowIndex, cageIndex)
     if leg == nil or cageRewardRowIndex == nil then
         return nil
@@ -122,7 +122,7 @@ local function cageRewardSnapshot(fields, instance, rowIndex, coordinate, cageIn
     local surface = rewardsConfigured and rewardSurfaceForContext(leg.reward) or nil
     return {
         rowIndex = rowIndex,
-        coordinate = coordinate,
+        routeOrdinal = routeOrdinal,
         cageIndex = cageIndex,
         key = leg.key,
         label = leg.label,
@@ -146,7 +146,7 @@ local function cageRewardSnapshots(fields, instance, routeRows, rowIndex, reward
             fields,
             instance,
             rowIndex,
-            slot and slot.coordinate or nil,
+            slot and slot.routeOrdinal or nil,
             cageIndex,
             leg,
             rewardsConfigured
@@ -308,12 +308,12 @@ function runtime.create(fields, instance)
         local context = data.rowContext(instance, routeRows, rowIndex)
         return {
             rowIndex = rowIndex,
-            coordinate = slot.coordinate,
+            routeOrdinal = slot.routeOrdinal,
             biomeDepthCache = context.biomeDepthCache,
             biomeDepthCacheCost = context.biomeDepthCacheCost,
             biomeEncounterDepth = context.biomeEncounterDepth,
             biomeEncounterDepthCost = context.biomeEncounterDepthCost,
-            slotKind = slot.kind or "fieldsPick",
+            slotKind = slot.kind or "biomeRow",
             isBiomeEntry = slot.isBiomeEntry == true,
             slotLabel = slot.label,
             roomHistoryCost = slot.roomHistoryCost,
@@ -353,7 +353,7 @@ function runtime.create(fields, instance)
             if row ~= nil and not row.valid then
                 appendInvalidRow(invalidRows, seenInvalids, {
                     rowIndex = row.rowIndex,
-                    coordinate = row.coordinate,
+                    routeOrdinal = row.routeOrdinal,
                     code = row.invalidCode,
                     message = row.invalidReason,
                 })

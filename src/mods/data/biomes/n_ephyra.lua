@@ -10,9 +10,6 @@ return function(importer)
         region = "Surface",
         adapter = "hubPylon",
         timeline = timeline.standard("N", {
-            roomHistoryCostBySlotKind = {
-                pylonPick = 2,
-            },
             postBossFeatures = { surfaceShop = true },
         }),
         featurePolicies = {
@@ -21,12 +18,13 @@ return function(importer)
             },
         },
         slotLayout = {
-            coordinate = "SoulPylon",
+            routeRowLabelPrefix = "Pylon",
+            routeRowRoomHistoryCost = 2,
             biomeDepthCacheStart = 1,
             defaultFixedBiomeDepthCacheCost = 0,
             routeBiomeDepthCacheCost = 1,
-            routeStartPick = 1,
-            routeEndPick = 6,
+            routeStartOrdinal = 1,
+            routeEndOrdinal = 6,
             requiredPylons = 6,
             fixedBeforeHub = {
                 {

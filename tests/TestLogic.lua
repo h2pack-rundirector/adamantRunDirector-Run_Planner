@@ -210,7 +210,7 @@ function TestRunPlannerLogic.testRoutePlanCompilesRuntimeExecutionPlan()
             rows = {
                 {
                     rowIndex = 1,
-                    coordinate = 0,
+                    routeOrdinal = 0,
                     slotKind = "intro",
                     isBiomeEntry = true,
                     roomKey = "F_PreRun",
@@ -231,8 +231,8 @@ function TestRunPlannerLogic.testRoutePlanCompilesRuntimeExecutionPlan()
                 },
                 {
                     rowIndex = 2,
-                    coordinate = 1,
-                    slotKind = "route",
+                    routeOrdinal = 1,
+                    slotKind = "biomeRow",
                     roomKey = "",
                     roleKey = "Vanilla",
                     optionKey = "",
@@ -240,10 +240,10 @@ function TestRunPlannerLogic.testRoutePlanCompilesRuntimeExecutionPlan()
                 },
                 {
                     rowIndex = 3,
-                    coordinate = 2,
+                    routeOrdinal = 2,
                     biomeDepthCache = 1,
                     biomeDepthCacheCost = 1,
-                    slotKind = "route",
+                    slotKind = "biomeRow",
                     roomKey = "F_Story01",
                     roleKey = "Story",
                     optionKey = "Arachne",
@@ -279,7 +279,7 @@ function TestRunPlannerLogic.testRoutePlanCompilesRuntimeExecutionPlan()
     lu.assertEquals(biome.plannedByRowIndex[3].features.chaos, true)
 end
 
-function TestRunPlannerLogic.testRoutePlanKeepsPrebossBranchesAtSharedCoordinate()
+function TestRunPlannerLogic.testRoutePlanKeepsPrebossBranchesAtSharedRouteOrdinal()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local runtime = runtimeForCatalog(routePlan, catalog, {
@@ -293,7 +293,7 @@ function TestRunPlannerLogic.testRoutePlanKeepsPrebossBranchesAtSharedCoordinate
             rows = {
             {
                 rowIndex = 12,
-                coordinate = 11,
+                routeOrdinal = 11,
                 biomeDepthCache = 10,
                 biomeDepthCacheCost = 0,
                 slotKind = "preboss",
@@ -307,7 +307,7 @@ function TestRunPlannerLogic.testRoutePlanKeepsPrebossBranchesAtSharedCoordinate
                 },
             {
                 rowIndex = 13,
-                coordinate = 11,
+                routeOrdinal = 11,
                 biomeDepthCache = 10,
                 biomeDepthCacheCost = 0,
                 slotKind = "preboss",
@@ -360,10 +360,10 @@ function TestRunPlannerLogic.testRoomRoutingForcesPlannedLinearRoom()
         F = plannedBiomeSnapshot("F", "fixedLinear", {
             {
                 rowIndex = 3,
-                coordinate = 2,
+                routeOrdinal = 2,
                 biomeDepthCache = 1,
                 biomeDepthCacheCost = 1,
-                slotKind = "route",
+                slotKind = "biomeRow",
                 roomKey = "F_Story01",
                 roleKey = "Story",
                 optionKey = "Arachne",
@@ -402,10 +402,10 @@ function TestRunPlannerLogic.testRoomRoutingExcludesFutureReservedRooms()
         F = plannedBiomeSnapshot("F", "fixedLinear", {
             {
                 rowIndex = 4,
-                coordinate = 3,
+                routeOrdinal = 3,
                 biomeDepthCache = 2,
                 biomeDepthCacheCost = 1,
-                slotKind = "route",
+                slotKind = "biomeRow",
                 roomKey = "F_Story01",
                 roleKey = "Story",
                 optionKey = "Arachne",
@@ -445,10 +445,10 @@ function TestRunPlannerLogic.testRoomRoutingDoesNotDuplicateNormalPlannedRoom()
         F = plannedBiomeSnapshot("F", "fixedLinear", {
             {
                 rowIndex = 3,
-                coordinate = 2,
+                routeOrdinal = 2,
                 biomeDepthCache = 1,
                 biomeDepthCacheCost = 1,
-                slotKind = "route",
+                slotKind = "biomeRow",
                 roomKey = "F_Story01",
                 roleKey = "Story",
                 optionKey = "Arachne",
@@ -493,7 +493,7 @@ function TestRunPlannerLogic.testRoomRoutingAllowsSharedPrebossBranchRoom()
         F = plannedBiomeSnapshot("F", "fixedLinear", {
             {
                 rowIndex = 12,
-                coordinate = 11,
+                routeOrdinal = 11,
                 biomeDepthCache = 10,
                 biomeDepthCacheCost = 0,
                 slotKind = "preboss",
@@ -504,7 +504,7 @@ function TestRunPlannerLogic.testRoomRoutingAllowsSharedPrebossBranchRoom()
             },
             {
                 rowIndex = 13,
-                coordinate = 11,
+                routeOrdinal = 11,
                 biomeDepthCache = 10,
                 biomeDepthCacheCost = 0,
                 slotKind = "preboss",
@@ -551,10 +551,10 @@ function TestRunPlannerLogic.testRoomRoutingSupportsSummitLinearAdapter()
         Q = plannedBiomeSnapshot("Q", "scriptedFixedLinear", {
             {
                 rowIndex = 3,
-                coordinate = 3,
+                routeOrdinal = 3,
                 biomeDepthCache = 2,
                 biomeDepthCacheCost = 1,
-                slotKind = "route",
+                slotKind = "biomeRow",
                 roomKey = "Q_MiniBoss01",
                 roleKey = "Miniboss",
                 optionKey = "Q_MiniBoss01",
@@ -609,7 +609,7 @@ function TestRunPlannerLogic.testRoomRoutingForcesPlannedStartingRoom()
         F = plannedBiomeSnapshot("F", "fixedLinear", {
             {
                 rowIndex = 1,
-                coordinate = 0,
+                routeOrdinal = 0,
                 slotKind = "opening",
                 isBiomeEntry = true,
                 roomKey = "F_Opening02",
@@ -648,7 +648,7 @@ function TestRunPlannerLogic.testRoomRoutingForcesPlannedStartingRoom()
     lu.assertEquals(createdArgs.StartingBiome, "F")
     lu.assertEquals(routePlan.get(runtime).routeKey, "Underworld")
     lu.assertTrue(logsContain(logs, "plan begin route=Underworld active=true valid=true"))
-    lu.assertTrue(logsContain(logs, "plan row biome=F row=1 coord=0 kind=opening room=F_Opening02"))
+    lu.assertTrue(logsContain(logs, "plan row biome=F row=1 routeOrdinal=0 kind=opening room=F_Opening02"))
 end
 
 function TestRunPlannerLogic.testRoomRoutingFallsBackWhenPlannedStartingRoomIsIneligible()
@@ -671,7 +671,7 @@ function TestRunPlannerLogic.testRoomRoutingFallsBackWhenPlannedStartingRoomIsIn
         F = plannedBiomeSnapshot("F", "fixedLinear", {
             {
                 rowIndex = 1,
-                coordinate = 0,
+                routeOrdinal = 0,
                 slotKind = "opening",
                 isBiomeEntry = true,
                 roomKey = "F_Opening02",

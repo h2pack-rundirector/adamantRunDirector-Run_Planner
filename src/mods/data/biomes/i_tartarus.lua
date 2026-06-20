@@ -21,12 +21,12 @@ return function(importer)
             },
         },
         slotLayout = {
-            coordinate = "ClockworkGoalRoute",
+            routeRowLabelPrefix = "Step",
             biomeDepthCacheStart = 1,
             defaultFixedBiomeDepthCacheCost = 0,
             routeBiomeDepthCacheCost = 1,
-            routeStartRow = 1,
-            routeEndRow = 12,
+            routeStartOrdinal = 1,
+            routeEndOrdinal = 12,
             requiredGoalRewards = 5,
             maxRouteRows = 12,
             fixedBeforeRoute = {

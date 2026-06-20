@@ -18,12 +18,12 @@ return function(importer)
             },
         },
         slotLayout = {
-            coordinate = "FieldsRoutePick",
+            routeRowLabelPrefix = "Pick",
             biomeDepthCacheStart = 1,
             defaultFixedBiomeDepthCacheCost = 0,
             routeBiomeDepthCacheCost = 1,
-            routeStartPick = 1,
-            routeEndPick = 4,
+            routeStartOrdinal = 1,
+            routeEndOrdinal = 4,
             fixedBeforeRoute = {
                 {
                     key = "Intro",
@@ -46,7 +46,6 @@ return function(importer)
             },
         },
         fields = {
-            routePicks = 4,
             routeCount = {
                 counter = "RoomsEntered",
                 requiredBeforePreboss = 4,

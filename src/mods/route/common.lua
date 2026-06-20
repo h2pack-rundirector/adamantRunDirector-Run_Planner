@@ -156,6 +156,29 @@ function common.routeBiomeDepthCacheCost(slotLayout)
     return 1
 end
 
+function common.routeStartOrdinal(slotLayout, fallback)
+    fallback = fallback or 1
+    return math.floor(tonumber(slotLayout and slotLayout.routeStartOrdinal or fallback) or fallback)
+end
+
+function common.routeEndOrdinal(slotLayout, startOrdinal)
+    startOrdinal = startOrdinal or 1
+    local ordinal = math.floor(tonumber(slotLayout and slotLayout.routeEndOrdinal or startOrdinal) or startOrdinal)
+    if ordinal < startOrdinal then
+        return startOrdinal
+    end
+    return ordinal
+end
+
+function common.routeRowLabel(slotLayout, ordinal, fallbackPrefix)
+    local prefix = slotLayout and slotLayout.routeRowLabelPrefix or fallbackPrefix or "Depth"
+    return tostring(prefix) .. " " .. tostring(ordinal)
+end
+
+function common.routeRowRoomHistoryCost(slotLayout)
+    return slotLayout and slotLayout.routeRowRoomHistoryCost or nil
+end
+
 function common.applySlotDepthContext(slot, source)
     if slot == nil then
         return slot

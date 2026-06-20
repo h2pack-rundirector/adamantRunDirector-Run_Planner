@@ -59,17 +59,14 @@ end
 
 local function isRoutableRoom(row)
     local kind = row and row.slotKind
-    return kind == "route"
+    return kind == "biomeRow"
         or kind == "preboss"
-        or kind == "clockworkRoute"
-        or kind == "fieldsPick"
-        or kind == "pylonPick"
 end
 
 local function compactRewardEntry(entry)
     return {
         rowIndex = entry.rowIndex,
-        coordinate = entry.coordinate,
+        routeOrdinal = entry.routeOrdinal,
         biomeDepthCache = entry.biomeDepthCache,
         biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepth = entry.biomeEncounterDepth,
@@ -98,7 +95,7 @@ end
 local function compactRoomRow(row)
     return {
         rowIndex = row.rowIndex,
-        coordinate = row.coordinate,
+        routeOrdinal = row.routeOrdinal,
         biomeDepthCache = row.biomeDepthCache,
         biomeDepthCacheCost = row.biomeDepthCacheCost,
         biomeEncounterDepth = row.biomeEncounterDepth,
@@ -177,7 +174,7 @@ local function roomBucket(biome, roomKey)
     return bucket
 end
 
-local function coordinateRoomBucket(bucket, roomKey)
+local function routeOrdinalRoomBucket(bucket, roomKey)
     local room = bucket.byRoomKey[roomKey]
     if room == nil then
         room = {
@@ -234,7 +231,7 @@ local function addGlobalReservation(globalReservations, biomeKey, planned)
     local entry = {
         biomeKey = biomeKey,
         rowIndex = planned.rowIndex,
-        coordinate = planned.coordinate,
+        routeOrdinal = planned.routeOrdinal,
         biomeDepthCache = planned.biomeDepthCache,
         roomKey = planned.roomKey,
         slotKind = planned.slotKind,
@@ -255,11 +252,11 @@ local function addPlannedRoom(biome, globalReservations, row)
     if planned.biomeDepthCache ~= nil then
         local bucket = biomeDepthCacheBucket(biome, planned.biomeDepthCache)
         addPlannedToBucket(bucket, planned)
-        addPlannedToBucket(coordinateRoomBucket(bucket, planned.roomKey), planned)
+        addPlannedToBucket(routeOrdinalRoomBucket(bucket, planned.roomKey), planned)
         if isRoutableRoom(planned) then
             local routeBucket = routableBiomeDepthCacheBucket(biome, planned.biomeDepthCache)
             addPlannedToBucket(routeBucket, planned)
-            addPlannedToBucket(coordinateRoomBucket(routeBucket, planned.roomKey), planned)
+            addPlannedToBucket(routeOrdinalRoomBucket(routeBucket, planned.roomKey), planned)
         end
     end
     if planned.isBiomeEntry and biome.plannedEntryRoom == nil then

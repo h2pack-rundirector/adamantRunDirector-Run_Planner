@@ -12,6 +12,10 @@ local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
 local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
 local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
+local routeStartOrdinal = common.routeStartOrdinal
+local routeEndOrdinal = common.routeEndOrdinal
+local routeRowLabel = common.routeRowLabel
+local routeRowRoomHistoryCost = common.routeRowRoomHistoryCost
 local isInRange = availability.isInRange
 local applySlotDepthContext = common.applySlotDepthContext
 local clearList = common.clearList
@@ -38,7 +42,7 @@ local function firstBranchKey(slot)
     return slot and (slot.branchKey or (slot.branchValues and slot.branchValues[1])) or ""
 end
 
-local function buildFixedRoleSlot(instance, depth, special)
+local function buildFixedRoleSlot(instance, ordinal, special)
     local kind = special.kind
     local roomOptions = shallowCopyList(special.roomOptions)
     local role = {
@@ -56,7 +60,7 @@ local function buildFixedRoleSlot(instance, depth, special)
     local rowIndex = #instance.routeSlots + 1
     instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
-        coordinate = depth,
+        routeOrdinal = ordinal,
         kind = kind,
         isBiomeEntry = special.isBiomeEntry == true,
         label = special.label or role.label,
@@ -75,7 +79,7 @@ local function buildEntrySlot(instance, entry)
         return
     end
 
-    buildFixedRoleSlot(instance, entry.coordinate or 0, {
+    buildFixedRoleSlot(instance, entry.routeOrdinal or 0, {
         kind = entry.kind or "intro",
         key = entry.key or "Intro",
         label = entry.label or "Intro",
@@ -91,56 +95,54 @@ end
 
 local function buildRouteSlots(instance)
     local slotLayout = instance.biome.slotLayout or {}
-    local startDepth = math.floor(tonumber(slotLayout.routeStartDepth) or 1)
-    local endDepth = math.floor(tonumber(slotLayout.routeEndDepth) or startDepth)
-    if endDepth < startDepth then
-        endDepth = startDepth
-    end
+    local startOrdinal = routeStartOrdinal(slotLayout)
+    local endOrdinal = routeEndOrdinal(slotLayout, startOrdinal)
 
     instance.routeSlots = {}
     buildEntrySlot(instance, slotLayout.entry)
 
-    local fixedDepths = {}
-    for depth, slot in pairs(slotLayout.special or {}) do
+    local fixedOrdinals = {}
+    for ordinal, slot in pairs(slotLayout.special or {}) do
         if slot.kind == "opening" then
-            fixedDepths[#fixedDepths + 1] = math.floor(tonumber(depth) or 0)
+            fixedOrdinals[#fixedOrdinals + 1] = math.floor(tonumber(ordinal) or 0)
         end
     end
-    table.sort(fixedDepths)
-    for _, depth in ipairs(fixedDepths) do
-        buildFixedRoleSlot(instance, depth, slotLayout.special[depth])
+    table.sort(fixedOrdinals)
+    for _, ordinal in ipairs(fixedOrdinals) do
+        buildFixedRoleSlot(instance, ordinal, slotLayout.special[ordinal])
     end
 
-    for depth = startDepth, endDepth do
+    for ordinal = startOrdinal, endOrdinal do
         local rowIndex = #instance.routeSlots + 1
         instance.routeSlots[rowIndex] = applySlotDepthContext({
             rowIndex = rowIndex,
-            coordinate = depth,
-            kind = "route",
-            label = "Depth " .. tostring(depth),
+            routeOrdinal = ordinal,
+            kind = "biomeRow",
+            label = routeRowLabel(slotLayout, ordinal, "Depth"),
+            roomHistoryCost = routeRowRoomHistoryCost(slotLayout),
         }, {
             biomeDepthCacheCost = routeBiomeDepthCacheCost(slotLayout),
         })
     end
 
-    local specialDepths = {}
-    for depth, slot in pairs(slotLayout.special or {}) do
+    local specialOrdinals = {}
+    for ordinal, slot in pairs(slotLayout.special or {}) do
         if slot.kind == "preboss" then
-            specialDepths[#specialDepths + 1] = math.floor(tonumber(depth) or 0)
+            specialOrdinals[#specialOrdinals + 1] = math.floor(tonumber(ordinal) or 0)
         end
     end
-    table.sort(specialDepths)
-    for _, depth in ipairs(specialDepths) do
-        local special = slotLayout.special[depth]
+    table.sort(specialOrdinals)
+    for _, ordinal in ipairs(specialOrdinals) do
+        local special = slotLayout.special[ordinal]
         for _, branch in ipairs(special.branches or {}) do
             local branches = { branch }
             local rowIndex = #instance.routeSlots + 1
             local slot = applySlotDepthContext({
                 rowIndex = rowIndex,
-                coordinate = depth,
+                routeOrdinal = ordinal,
                 kind = "preboss",
                 isBiomeEntry = special.isBiomeEntry == true,
-                label = branch.label or special.label or ("Depth " .. tostring(depth) .. " Preboss"),
+                label = branch.label or special.label or (routeRowLabel(slotLayout, ordinal, "Depth") .. " Preboss"),
                 roomKey = special.roomKey,
                 branchKey = branch.key,
                 branch = branch,
@@ -297,7 +299,7 @@ local function prepareEncounterRewardRows(instance)
 
     local rowCount = 0
     for _, slot in ipairs(instance.routeSlots or {}) do
-        if slot.kind == "route" then
+        if slot.kind == "biomeRow" then
             instance.encounterRewardRowOffsetByRouteRow[slot.rowIndex] = rowCount
             rowCount = rowCount + instance.maxEncounterRewardLegCount
         end

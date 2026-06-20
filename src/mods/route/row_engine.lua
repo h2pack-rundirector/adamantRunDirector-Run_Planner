@@ -322,7 +322,7 @@ function rowEngine.create(adapter)
         local biomeEncounterDepthCost = rowBiomeEncounterDepthCost(instance, rows, rowIndex)
         target = target or {}
         target.rowIndex = rowIndex
-        target.coordinate = slot and slot.coordinate or nil
+        target.routeOrdinal = slot and slot.routeOrdinal or nil
         target.biomeDepthCache = biomeDepthCache
         target.biomeDepthCacheKnown = biomeDepthCacheKnown
         target.biomeDepthCacheCost = biomeDepthCacheCost

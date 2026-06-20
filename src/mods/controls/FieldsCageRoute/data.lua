@@ -10,6 +10,10 @@ local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
 local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
 local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
+local routeStartOrdinal = common.routeStartOrdinal
+local routeEndOrdinal = common.routeEndOrdinal
+local routeRowLabel = common.routeRowLabel
+local routeRowRoomHistoryCost = common.routeRowRoomHistoryCost
 local applySlotDepthContext = common.applySlotDepthContext
 
 local data
@@ -24,7 +28,7 @@ local function isFixedSlot(slot)
 end
 
 local function isPickSlot(slot)
-    return slot ~= nil and slot.kind == "fieldsPick"
+    return slot ~= nil and slot.kind == "biomeRow"
 end
 
 local function buildFixedSlot(instance, entry, section)
@@ -44,7 +48,7 @@ local function buildFixedSlot(instance, entry, section)
     local rowIndex = #instance.routeSlots + 1
     instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
-        coordinate = entry.coordinate,
+        routeOrdinal = entry.routeOrdinal,
         kind = entry.kind or section or "fixed",
         isBiomeEntry = entry.isBiomeEntry == true,
         label = entry.label or entry.key,
@@ -60,32 +64,31 @@ local function buildFixedSlot(instance, entry, section)
     })
 end
 
-local function buildPickSlot(instance, pick)
+local function buildPickSlot(instance, ordinal)
+    local slotLayout = instance.biome.slotLayout or {}
     local rowIndex = #instance.routeSlots + 1
     instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
-        coordinate = pick,
-        kind = "fieldsPick",
-        label = "Pick " .. tostring(pick),
+        routeOrdinal = ordinal,
+        kind = "biomeRow",
+        label = routeRowLabel(slotLayout, ordinal, "Pick"),
+        roomHistoryCost = routeRowRoomHistoryCost(slotLayout),
     }, {
-        biomeDepthCacheCost = routeBiomeDepthCacheCost(instance.biome.slotLayout),
+        biomeDepthCacheCost = routeBiomeDepthCacheCost(slotLayout),
     })
 end
 
 local function buildRouteSlots(instance)
     local slotLayout = instance.biome.slotLayout or {}
-    local startPick = math.floor(tonumber(slotLayout.routeStartPick) or 1)
-    local endPick = math.floor(tonumber(slotLayout.routeEndPick) or startPick)
-    if endPick < startPick then
-        endPick = startPick
-    end
+    local startOrdinal = routeStartOrdinal(slotLayout)
+    local endOrdinal = routeEndOrdinal(slotLayout, startOrdinal)
 
     instance.routeSlots = {}
     for _, entry in ipairs(slotLayout.fixedBeforeRoute or {}) do
         buildFixedSlot(instance, entry, "fixedBeforeRoute")
     end
-    for pick = startPick, endPick do
-        buildPickSlot(instance, pick)
+    for ordinal = startOrdinal, endOrdinal do
+        buildPickSlot(instance, ordinal)
     end
     for _, entry in ipairs(slotLayout.fixedAfterRoute or {}) do
         buildFixedSlot(instance, entry, "fixedAfterRoute")

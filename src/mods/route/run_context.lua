@@ -1030,7 +1030,7 @@ function runContext.create(opts)
                         biomeKey = biomeKey,
                         controlName = snapshot.controlName,
                         rowIndex = invalidRow.rowIndex,
-                        coordinate = invalidRow.coordinate,
+                        routeOrdinal = invalidRow.routeOrdinal,
                         code = invalidRow.code,
                         message = invalidRow.message,
                     }

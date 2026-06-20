@@ -199,35 +199,38 @@ function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
         biomes = { "N", "O", "P", "Q" },
     })
 
-    lu.assertEquals(biomes.lookup.F.slotLayout.coordinate, "BiomeDepthCache")
+    lu.assertEquals(biomes.lookup.F.slotLayout.routeRowLabelPrefix, "Depth")
     lu.assertEquals(biomes.lookup.F.slotLayout.depthRange, { min = 0, max = 11 })
-    lu.assertEquals(biomes.lookup.F.slotLayout.routeStartDepth, 1)
-    lu.assertEquals(biomes.lookup.F.slotLayout.routeEndDepth, 10)
+    lu.assertEquals(biomes.lookup.F.slotLayout.routeStartOrdinal, 1)
+    lu.assertEquals(biomes.lookup.F.slotLayout.routeEndOrdinal, 10)
 
     lu.assertEquals(biomes.lookup.G.slotLayout.depthRange, { min = 1, max = 8 })
-    lu.assertEquals(biomes.lookup.G.slotLayout.routeStartDepth, 1)
-    lu.assertEquals(biomes.lookup.G.slotLayout.routeEndDepth, 7)
+    lu.assertEquals(biomes.lookup.G.slotLayout.routeRowLabelPrefix, "Depth")
+    lu.assertEquals(biomes.lookup.G.slotLayout.routeStartOrdinal, 1)
+    lu.assertEquals(biomes.lookup.G.slotLayout.routeEndOrdinal, 7)
 
     lu.assertEquals(biomes.lookup.H.adapter, "fieldsCageRoute")
-    lu.assertEquals(biomes.lookup.H.slotLayout.coordinate, "FieldsRoutePick")
-    lu.assertEquals(biomes.lookup.H.slotLayout.routeStartPick, 1)
-    lu.assertEquals(biomes.lookup.H.slotLayout.routeEndPick, 4)
+    lu.assertEquals(biomes.lookup.H.slotLayout.routeRowLabelPrefix, "Pick")
+    lu.assertEquals(biomes.lookup.H.slotLayout.routeStartOrdinal, 1)
+    lu.assertEquals(biomes.lookup.H.slotLayout.routeEndOrdinal, 4)
 
     lu.assertEquals(biomes.lookup.I.adapter, "clockworkGoal")
-    lu.assertEquals(biomes.lookup.I.slotLayout.coordinate, "ClockworkGoalRoute")
-    lu.assertEquals(biomes.lookup.I.slotLayout.routeStartRow, 1)
-    lu.assertEquals(biomes.lookup.I.slotLayout.routeEndRow, 12)
+    lu.assertEquals(biomes.lookup.I.slotLayout.routeRowLabelPrefix, "Step")
+    lu.assertEquals(biomes.lookup.I.slotLayout.routeStartOrdinal, 1)
+    lu.assertEquals(biomes.lookup.I.slotLayout.routeEndOrdinal, 12)
     lu.assertEquals(biomes.lookup.I.slotLayout.requiredGoalRewards, 5)
 
     lu.assertEquals(biomes.lookup.N.adapter, "hubPylon")
-    lu.assertEquals(biomes.lookup.N.slotLayout.coordinate, "SoulPylon")
-    lu.assertEquals(biomes.lookup.N.slotLayout.routeStartPick, 1)
-    lu.assertEquals(biomes.lookup.N.slotLayout.routeEndPick, 6)
+    lu.assertEquals(biomes.lookup.N.slotLayout.routeRowLabelPrefix, "Pylon")
+    lu.assertEquals(biomes.lookup.N.slotLayout.routeRowRoomHistoryCost, 2)
+    lu.assertEquals(biomes.lookup.N.slotLayout.routeStartOrdinal, 1)
+    lu.assertEquals(biomes.lookup.N.slotLayout.routeEndOrdinal, 6)
     lu.assertEquals(biomes.lookup.N.slotLayout.requiredPylons, 6)
 
     lu.assertEquals(biomes.lookup.O.slotLayout.depthRange, { min = 1, max = 7 })
-    lu.assertEquals(biomes.lookup.O.slotLayout.routeStartDepth, 1)
-    lu.assertEquals(biomes.lookup.O.slotLayout.routeEndDepth, 6)
+    lu.assertEquals(biomes.lookup.O.slotLayout.routeRowLabelPrefix, "Depth")
+    lu.assertEquals(biomes.lookup.O.slotLayout.routeStartOrdinal, 1)
+    lu.assertEquals(biomes.lookup.O.slotLayout.routeEndOrdinal, 6)
     lu.assertEquals(biomes.lookup.O.biomeRules[1], {
         key = "story_or_shop_deadline",
         type = "requireAnyRoomByCounter",
@@ -239,12 +242,14 @@ function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
     })
 
     lu.assertEquals(biomes.lookup.P.slotLayout.depthRange, { min = 1, max = 9 })
-    lu.assertEquals(biomes.lookup.P.slotLayout.routeStartDepth, 1)
-    lu.assertEquals(biomes.lookup.P.slotLayout.routeEndDepth, 8)
+    lu.assertEquals(biomes.lookup.P.slotLayout.routeRowLabelPrefix, "Depth")
+    lu.assertEquals(biomes.lookup.P.slotLayout.routeStartOrdinal, 1)
+    lu.assertEquals(biomes.lookup.P.slotLayout.routeEndOrdinal, 8)
 
     lu.assertEquals(biomes.lookup.Q.slotLayout.depthRange, { min = 1, max = 7 })
-    lu.assertEquals(biomes.lookup.Q.slotLayout.routeStartDepth, 1)
-    lu.assertEquals(biomes.lookup.Q.slotLayout.routeEndDepth, 6)
+    lu.assertEquals(biomes.lookup.Q.slotLayout.routeRowLabelPrefix, "Depth")
+    lu.assertEquals(biomes.lookup.Q.slotLayout.routeStartOrdinal, 1)
+    lu.assertEquals(biomes.lookup.Q.slotLayout.routeEndOrdinal, 6)
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareRoomHistoryTimeline()
@@ -261,7 +266,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoomHistoryTimeline()
     lu.assertEquals(biomes.lookup.F.timeline.afterBiome[2].roomHistoryCost, 1)
     lu.assertEquals(biomes.lookup.F.timeline.afterBiome[2].features, { wellShop = true })
 
-    lu.assertEquals(biomes.lookup.N.timeline.roomHistoryCostBySlotKind.pylonPick, 2)
+    lu.assertEquals(biomes.lookup.N.slotLayout.routeRowRoomHistoryCost, 2)
     lu.assertEquals(biomes.lookup.N.timeline.afterBiome[1].roomOptions[1].key, "N_Boss01")
     lu.assertEquals(biomes.lookup.N.timeline.afterBiome[2].roomKey, "N_PostBoss01")
     lu.assertEquals(biomes.lookup.N.timeline.afterBiome[2].features, { surfaceShop = true })
@@ -827,7 +832,6 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
     local biomes = data.loadBiomes(testImport)
     local fields = biomes.lookup.H
 
-    lu.assertEquals(fields.fields.routePicks, 4)
     lu.assertEquals(fields.fields.routeCount.requiredBeforePreboss, 4)
     lu.assertEquals(fields.fields.routeCount.countedRooms, "CombatMinibossBridge")
 

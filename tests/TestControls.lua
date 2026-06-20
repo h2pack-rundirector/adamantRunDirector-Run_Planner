@@ -783,7 +783,7 @@ function TestRunPlannerControls.testRouteNpcsUsesBiomeRoomTypeSelection()
                                 rows = {
                                     {
                                         rowIndex = 3,
-                                        coordinate = 5,
+                                        routeOrdinal = 5,
                                         slotLabel = "Depth 5",
                                         roleKey = "Combat",
                                         option = { key = "F_Combat04", label = "Combat 04" },
@@ -793,7 +793,7 @@ function TestRunPlannerControls.testRouteNpcsUsesBiomeRoomTypeSelection()
                                     },
                                     {
                                         rowIndex = 4,
-                                        coordinate = 6,
+                                        routeOrdinal = 6,
                                         slotLabel = "Depth 6",
                                         roleKey = "Combat",
                                         valid = true,
@@ -802,7 +802,7 @@ function TestRunPlannerControls.testRouteNpcsUsesBiomeRoomTypeSelection()
                                     },
                                     {
                                         rowIndex = 5,
-                                        coordinate = 7,
+                                        routeOrdinal = 7,
                                         slotLabel = "Depth 7",
                                         roleKey = "Combat",
                                         option = { key = "F_Combat05", label = "Combat 05" },
@@ -942,7 +942,7 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
                                 rows = {
                                     {
                                         rowIndex = 1,
-                                        coordinate = 0,
+                                        routeOrdinal = 0,
                                         slotLabel = "Intro",
                                         roomKey = "P_Intro",
                                         valid = true,
@@ -950,28 +950,28 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
                                     },
                                     {
                                         rowIndex = 2,
-                                        coordinate = 1,
+                                        routeOrdinal = 1,
                                         slotLabel = "Depth 1",
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
                                     {
                                         rowIndex = 3,
-                                        coordinate = 2,
+                                        routeOrdinal = 2,
                                         slotLabel = "Depth 2",
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
                                     {
                                         rowIndex = 4,
-                                        coordinate = 3,
+                                        routeOrdinal = 3,
                                         slotLabel = "Depth 3",
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
                                     {
                                         rowIndex = 5,
-                                        coordinate = 4,
+                                        routeOrdinal = 4,
                                         slotLabel = "Depth 4",
                                         features = { chaos = true },
                                         valid = true,
@@ -979,7 +979,7 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
                                     },
                                     {
                                         rowIndex = 6,
-                                        coordinate = 5,
+                                        routeOrdinal = 5,
                                         slotLabel = "Depth 5",
                                         option = { key = "P_Combat01", label = "Combat 01" },
                                         features = { chaos = true },
@@ -988,7 +988,7 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
                                     },
                                     {
                                         rowIndex = 7,
-                                        coordinate = 6,
+                                        routeOrdinal = 6,
                                         slotLabel = "Depth 6",
                                         option = { key = "P_Combat02", label = "Combat 02" },
                                         features = { chaos = true },
@@ -1067,7 +1067,7 @@ function TestRunPlannerControls.testRouteContextDisablesFeatureTargetsWhenFeatur
                                 rows = {
                                     {
                                         rowIndex = 1,
-                                        coordinate = 4,
+                                        routeOrdinal = 4,
                                         slotLabel = "Depth 4",
                                         option = { key = "P_Combat01", label = "Combat 01" },
                                         features = { chaos = true },
@@ -1175,7 +1175,7 @@ function TestRunPlannerControls.testRouteFeaturesUsesShopDepthPolicy()
                                 rows = {
                                     {
                                         rowIndex = 1,
-                                        coordinate = 0,
+                                        routeOrdinal = 0,
                                         slotLabel = "Intro",
                                         roomKey = "O_Intro",
                                         valid = true,
@@ -1183,14 +1183,14 @@ function TestRunPlannerControls.testRouteFeaturesUsesShopDepthPolicy()
                                     },
                                     {
                                         rowIndex = 2,
-                                        coordinate = 1,
+                                        routeOrdinal = 1,
                                         slotLabel = "Depth 1",
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
                                     {
                                         rowIndex = 3,
-                                        coordinate = 2,
+                                        routeOrdinal = 2,
                                         slotLabel = "Depth 2",
                                         option = { key = "O_Combat01", label = "Combat 01" },
                                         features = { surfaceShop = true },
@@ -1199,7 +1199,7 @@ function TestRunPlannerControls.testRouteFeaturesUsesShopDepthPolicy()
                                     },
                                     {
                                         rowIndex = 4,
-                                        coordinate = 3,
+                                        routeOrdinal = 3,
                                         slotLabel = "Depth 3",
                                         option = { key = "O_Combat02", label = "Combat 02" },
                                         features = { surfaceShop = true },
@@ -1255,7 +1255,7 @@ function TestRunPlannerControls.testRouteFeaturesRejectsRepeatedTargetsInsideSpa
                                 rows = {
                                     {
                                         rowIndex = 1,
-                                        coordinate = 0,
+                                        routeOrdinal = 0,
                                         slotLabel = "Opening",
                                         roomKey = "F_Opening01",
                                         valid = true,
@@ -1263,21 +1263,21 @@ function TestRunPlannerControls.testRouteFeaturesRejectsRepeatedTargetsInsideSpa
                                     },
                                     {
                                         rowIndex = 2,
-                                        coordinate = 1,
+                                        routeOrdinal = 1,
                                         slotLabel = "Depth 1",
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
                                     {
                                         rowIndex = 3,
-                                        coordinate = 2,
+                                        routeOrdinal = 2,
                                         slotLabel = "Depth 2",
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
                                     {
                                         rowIndex = 4,
-                                        coordinate = 3,
+                                        routeOrdinal = 3,
                                         slotLabel = "Depth 3",
                                         option = { key = "F_Combat01", label = "Combat 01" },
                                         features = { wellShop = true },
@@ -1286,7 +1286,7 @@ function TestRunPlannerControls.testRouteFeaturesRejectsRepeatedTargetsInsideSpa
                                     },
                                     {
                                         rowIndex = 5,
-                                        coordinate = 4,
+                                        routeOrdinal = 4,
                                         slotLabel = "Depth 4",
                                         option = { key = "F_Combat02", label = "Combat 02" },
                                         features = { wellShop = true },
@@ -1374,7 +1374,7 @@ function TestRunPlannerControls.testRouteFeaturesUsesTimelineBlockersForPostBoss
                                 rows = {
                                     {
                                         rowIndex = 1,
-                                        coordinate = 3,
+                                        routeOrdinal = 3,
                                         slotLabel = "Depth 3",
                                         option = { key = "G_Combat01", label = "Combat 01" },
                                         features = { wellShop = true },
@@ -1431,7 +1431,7 @@ function TestRunPlannerControls.testRouteFeaturesCanTargetEnabledSideRooms()
                                 rows = {
                                     {
                                         rowIndex = 1,
-                                        coordinate = 0,
+                                        routeOrdinal = 0,
                                         slotLabel = "Opening",
                                         roomKey = "N_Opening01",
                                         valid = true,
@@ -1439,7 +1439,7 @@ function TestRunPlannerControls.testRouteFeaturesCanTargetEnabledSideRooms()
                                     },
                                     {
                                         rowIndex = 2,
-                                        coordinate = 1,
+                                        routeOrdinal = 1,
                                         slotLabel = "Pre-Hub",
                                         roomKey = "N_PreHub01",
                                         valid = true,
@@ -1447,7 +1447,7 @@ function TestRunPlannerControls.testRouteFeaturesCanTargetEnabledSideRooms()
                                     },
                                     {
                                         rowIndex = 3,
-                                        coordinate = 1,
+                                        routeOrdinal = 1,
                                         slotLabel = "Hub",
                                         roomKey = "N_Hub",
                                         valid = true,
@@ -1455,7 +1455,7 @@ function TestRunPlannerControls.testRouteFeaturesCanTargetEnabledSideRooms()
                                     },
                                     {
                                         rowIndex = 4,
-                                        coordinate = 1,
+                                        routeOrdinal = 1,
                                         slotLabel = "Pylon 1",
                                         option = { key = "N_Combat01", label = "Combat 01" },
                                         valid = true,
@@ -1471,7 +1471,7 @@ function TestRunPlannerControls.testRouteFeaturesCanTargetEnabledSideRooms()
                                     },
                                     {
                                         rowIndex = 5,
-                                        coordinate = 2,
+                                        routeOrdinal = 2,
                                         slotLabel = "Pylon 2",
                                         option = { key = "N_Combat02", label = "Combat 02" },
                                         valid = true,
@@ -1795,16 +1795,16 @@ function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
     local storage = template.storage(instance)
 
     lu.assertEquals(instance.routeRowCount, 13)
-    lu.assertEquals(instance.routeSlots[1].coordinate, 0)
+    lu.assertEquals(instance.routeSlots[1].routeOrdinal, 0)
     lu.assertEquals(instance.routeSlots[1].kind, "opening")
     lu.assertEquals(instance.routeSlots[1].label, "Opening")
     lu.assertEquals(instance.routeSlots[1].roleKey, "Opening")
-    lu.assertEquals(instance.routeSlots[2].coordinate, 1)
-    lu.assertEquals(instance.routeSlots[10].coordinate, 9)
-    lu.assertEquals(instance.routeSlots[11].coordinate, 10)
-    lu.assertEquals(instance.routeSlots[11].kind, "route")
+    lu.assertEquals(instance.routeSlots[2].routeOrdinal, 1)
+    lu.assertEquals(instance.routeSlots[10].routeOrdinal, 9)
+    lu.assertEquals(instance.routeSlots[11].routeOrdinal, 10)
+    lu.assertEquals(instance.routeSlots[11].kind, "biomeRow")
     lu.assertEquals(instance.routeSlots[11].biomeDepthCacheCost, 1)
-    lu.assertEquals(instance.routeSlots[12].coordinate, 11)
+    lu.assertEquals(instance.routeSlots[12].routeOrdinal, 11)
     lu.assertEquals(instance.routeSlots[12].biomeDepthCacheCost, 0)
     lu.assertEquals(instance.routeSlots[12].kind, "preboss")
     lu.assertEquals(instance.routeSlots[12].label, "Preboss Shop")
@@ -1813,7 +1813,7 @@ function TestRunPlannerControls.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(instance.routeSlots[12].branchValues, {
         "Shop",
     })
-    lu.assertEquals(instance.routeSlots[13].coordinate, 11)
+    lu.assertEquals(instance.routeSlots[13].routeOrdinal, 11)
     lu.assertEquals(instance.routeSlots[13].biomeDepthCacheCost, 0)
     lu.assertEquals(instance.routeSlots[13].kind, "preboss")
     lu.assertEquals(instance.routeSlots[13].label, "Preboss Room")
@@ -1866,13 +1866,13 @@ function TestRunPlannerControls.testErebusSpecialRoomsUseSelectionDepthWindow()
     })
     local rows = fakeRows({})
 
-    lu.assertEquals(instance.routeSlots[4].coordinate, 3)
+    lu.assertEquals(instance.routeSlots[4].routeOrdinal, 3)
     lu.assertFalse(hasValue(data.optionValuesForRow(instance, rows, 4, "Story"), "F_Story01"))
 
-    lu.assertEquals(instance.routeSlots[5].coordinate, 4)
+    lu.assertEquals(instance.routeSlots[5].routeOrdinal, 4)
     lu.assertFalse(hasValue(data.optionValuesForRow(instance, rows, 5, "Story"), "F_Story01"))
 
-    lu.assertEquals(instance.routeSlots[6].coordinate, 5)
+    lu.assertEquals(instance.routeSlots[6].routeOrdinal, 5)
     lu.assertTrue(hasValue(data.optionValuesForRow(instance, rows, 6, "Story"), "F_Story01"))
 end
 
@@ -1891,7 +1891,7 @@ function TestRunPlannerControls.testFixedLinearEntryMetadataRendersIntroRows()
             biome = catalog.lookup[case.key],
         })
         lu.assertEquals(instance.routeRowCount, case.rowCount)
-        lu.assertEquals(instance.routeSlots[1].coordinate, 0)
+        lu.assertEquals(instance.routeSlots[1].routeOrdinal, 0)
         lu.assertEquals(instance.routeSlots[1].kind, "intro")
         lu.assertEquals(instance.routeSlots[1].label, "Intro")
         lu.assertEquals(instance.routeSlots[1].roomKey, case.introRoom)
@@ -1956,7 +1956,7 @@ function TestRunPlannerControls.testThessalyRequiresStoryOrShopByDepthFive()
     lu.assertTrue(snapshot.disabled)
     lu.assertTrue(snapshot.rows[5].valid)
     lu.assertFalse(snapshot.rows[6].valid)
-    lu.assertEquals(snapshot.rows[6].coordinate, 5)
+    lu.assertEquals(snapshot.rows[6].routeOrdinal, 5)
     lu.assertEquals(snapshot.rows[6].invalidCode, "thessaly_story_or_shop_deadline")
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 6)
     lu.assertEquals(snapshot.invalidRows[1].code, "thessaly_story_or_shop_deadline")
@@ -2005,15 +2005,15 @@ function TestRunPlannerControls.testClockworkGoalStorageMatchesTartarusRouteRows
     local storage = template.storage(instance)
 
     lu.assertEquals(instance.routeRowCount, 14)
-    lu.assertEquals(instance.routeSlots[1].coordinate, 0)
+    lu.assertEquals(instance.routeSlots[1].routeOrdinal, 0)
     lu.assertEquals(instance.routeSlots[1].kind, "intro")
     lu.assertEquals(instance.routeSlots[1].label, "Intro")
     lu.assertEquals(instance.routeSlots[1].roomKey, "I_Intro")
     lu.assertEquals(instance.routeSlots[1].roleKey, "Intro")
-    lu.assertEquals(instance.routeSlots[2].coordinate, 1)
-    lu.assertEquals(instance.routeSlots[2].kind, "clockworkRoute")
+    lu.assertEquals(instance.routeSlots[2].routeOrdinal, 1)
+    lu.assertEquals(instance.routeSlots[2].kind, "biomeRow")
     lu.assertEquals(instance.routeSlots[2].label, "Step 1")
-    lu.assertEquals(instance.routeSlots[13].coordinate, 12)
+    lu.assertEquals(instance.routeSlots[13].routeOrdinal, 12)
     lu.assertEquals(instance.routeSlots[13].label, "Step 12")
     lu.assertEquals(instance.routeSlots[14].kind, "preboss")
     lu.assertEquals(instance.routeSlots[14].label, "Preboss Shop")
@@ -2121,8 +2121,8 @@ function TestRunPlannerControls.testClockworkGoalRuntimeBuildsValidatedSnapshot(
     lu.assertEquals(snapshot.rows[1].rewardKind, "none")
     lu.assertTrue(snapshot.rows[1].valid)
 
-    lu.assertEquals(snapshot.rows[2].slotKind, "clockworkRoute")
-    lu.assertEquals(snapshot.rows[2].routeRow, 1)
+    lu.assertEquals(snapshot.rows[2].slotKind, "biomeRow")
+    lu.assertEquals(snapshot.rows[2].routeOrdinal, 1)
     lu.assertEquals(snapshot.rows[2].roleKey, "Goal")
     lu.assertEquals(snapshot.rows[2].optionKey, "I_Combat01")
     lu.assertEquals(snapshot.rows[2].roomKey, "I_Combat01")
@@ -2428,10 +2428,10 @@ function TestRunPlannerControls.testHubPylonStorageMatchesEphyraRouteRows()
     lu.assertEquals(instance.routeSlots[3].label, "Hub")
     lu.assertEquals(instance.routeSlots[3].roomKey, "N_Hub")
     lu.assertEquals(instance.routeSlots[3].roomHistoryCost, 0)
-    lu.assertEquals(instance.routeSlots[4].kind, "pylonPick")
-    lu.assertEquals(instance.routeSlots[4].coordinate, 1)
+    lu.assertEquals(instance.routeSlots[4].kind, "biomeRow")
+    lu.assertEquals(instance.routeSlots[4].routeOrdinal, 1)
     lu.assertEquals(instance.routeSlots[4].label, "Pylon 1")
-    lu.assertEquals(instance.routeSlots[9].coordinate, 6)
+    lu.assertEquals(instance.routeSlots[9].routeOrdinal, 6)
     lu.assertEquals(instance.routeSlots[9].label, "Pylon 6")
     lu.assertEquals(instance.routeSlots[10].kind, "fixedAfterHub")
     lu.assertEquals(instance.routeSlots[10].label, "Preboss Shop")
@@ -2503,16 +2503,16 @@ function TestRunPlannerControls.testMultiEncounterStorageMatchesThessalyRouteRow
     local storage = template.storage(instance)
 
     lu.assertEquals(instance.routeRowCount, 8)
-    lu.assertEquals(instance.routeSlots[1].coordinate, 0)
+    lu.assertEquals(instance.routeSlots[1].routeOrdinal, 0)
     lu.assertEquals(instance.routeSlots[1].kind, "intro")
     lu.assertEquals(instance.routeSlots[1].label, "Intro")
     lu.assertEquals(instance.routeSlots[1].roomKey, "O_Intro")
     lu.assertEquals(instance.routeSlots[1].roleKey, "Intro")
-    lu.assertEquals(instance.routeSlots[2].coordinate, 1)
-    lu.assertEquals(instance.routeSlots[2].kind, "route")
+    lu.assertEquals(instance.routeSlots[2].routeOrdinal, 1)
+    lu.assertEquals(instance.routeSlots[2].kind, "biomeRow")
     lu.assertEquals(instance.routeSlots[2].label, "Depth 1")
-    lu.assertEquals(instance.routeSlots[7].coordinate, 6)
-    lu.assertEquals(instance.routeSlots[8].coordinate, 7)
+    lu.assertEquals(instance.routeSlots[7].routeOrdinal, 6)
+    lu.assertEquals(instance.routeSlots[8].routeOrdinal, 7)
     lu.assertEquals(instance.routeSlots[8].kind, "preboss")
     lu.assertEquals(instance.routeSlots[8].label, "Preboss Shop")
     lu.assertEquals(instance.routeSlots[8].branchKey, "Shop")
@@ -2643,10 +2643,10 @@ function TestRunPlannerControls.testFieldsCageStorageMatchesFieldsRouteRows()
     lu.assertEquals(instance.routeSlots[1].label, "Intro")
     lu.assertEquals(instance.routeSlots[1].roomKey, "H_Intro")
     lu.assertEquals(instance.routeSlots[1].roleKey, "Intro")
-    lu.assertEquals(instance.routeSlots[2].kind, "fieldsPick")
-    lu.assertEquals(instance.routeSlots[2].coordinate, 1)
+    lu.assertEquals(instance.routeSlots[2].kind, "biomeRow")
+    lu.assertEquals(instance.routeSlots[2].routeOrdinal, 1)
     lu.assertEquals(instance.routeSlots[2].label, "Pick 1")
-    lu.assertEquals(instance.routeSlots[5].coordinate, 4)
+    lu.assertEquals(instance.routeSlots[5].routeOrdinal, 4)
     lu.assertEquals(instance.routeSlots[5].label, "Pick 4")
     lu.assertEquals(instance.routeSlots[6].kind, "fixedAfterRoute")
     lu.assertEquals(instance.routeSlots[6].label, "Preboss Shop")
@@ -2843,8 +2843,8 @@ function TestRunPlannerControls.testHubPylonRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[3].slotLabel, "Hub")
     lu.assertEquals(snapshot.rows[3].roomHistoryCost, 0)
 
-    lu.assertEquals(snapshot.rows[4].slotKind, "pylonPick")
-    lu.assertEquals(snapshot.rows[4].coordinate, 1)
+    lu.assertEquals(snapshot.rows[4].slotKind, "biomeRow")
+    lu.assertEquals(snapshot.rows[4].routeOrdinal, 1)
     lu.assertEquals(snapshot.rows[4].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[4].optionKey, "N_Combat12")
     lu.assertEquals(snapshot.rows[4].roomKey, "N_Combat12")
@@ -3053,18 +3053,18 @@ function TestRunPlannerControls.testFixedLinearRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(#snapshot.invalidRows, 1)
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
     lu.assertEquals(snapshot.invalidRows[1].code, "unknown_role")
-    lu.assertEquals(snapshot.rows[1].coordinate, 0)
+    lu.assertEquals(snapshot.rows[1].routeOrdinal, 0)
     lu.assertEquals(snapshot.rows[1].slotKind, "intro")
     lu.assertEquals(snapshot.rows[1].roomKey, "Q_Intro")
     lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
     lu.assertTrue(snapshot.rows[1].valid)
-    lu.assertEquals(snapshot.rows[2].coordinate, 1)
+    lu.assertEquals(snapshot.rows[2].routeOrdinal, 1)
     lu.assertEquals(snapshot.rows[2].roleKey, "Vanilla")
     lu.assertTrue(snapshot.rows[2].valid)
-    lu.assertEquals(snapshot.rows[3].coordinate, 2)
+    lu.assertEquals(snapshot.rows[3].routeOrdinal, 2)
     lu.assertEquals(snapshot.rows[3].roleKey, "Combat")
     lu.assertTrue(snapshot.rows[3].valid)
-    lu.assertEquals(snapshot.rows[4].coordinate, 3)
+    lu.assertEquals(snapshot.rows[4].routeOrdinal, 3)
     lu.assertEquals(snapshot.rows[4].roleKey, "Miniboss")
     lu.assertEquals(snapshot.rows[4].role.key, "Miniboss")
     lu.assertEquals(snapshot.rows[4].optionKey, "Q_MiniBoss02")
@@ -3179,14 +3179,14 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
     lu.assertFalse(snapshot.disabled)
     lu.assertEquals(#snapshot.rows, 8)
 
-    lu.assertEquals(snapshot.rows[1].coordinate, 0)
+    lu.assertEquals(snapshot.rows[1].routeOrdinal, 0)
     lu.assertEquals(snapshot.rows[1].slotKind, "intro")
     lu.assertEquals(snapshot.rows[1].roomKey, "O_Intro")
     lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
     lu.assertEquals(snapshot.rows[1].rewardKind, "none")
     lu.assertTrue(snapshot.rows[1].valid)
 
-    lu.assertEquals(snapshot.rows[2].coordinate, 1)
+    lu.assertEquals(snapshot.rows[2].routeOrdinal, 1)
     lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[2].optionKey, "O_Combat01")
     lu.assertEquals(snapshot.rows[2].variantKey, "")
@@ -3196,7 +3196,7 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
     lu.assertEquals(snapshot.rows[2].rewardPicks, {})
     lu.assertEquals(snapshot.rows[2].encounterRewardLegs, {})
 
-    lu.assertEquals(snapshot.rows[3].coordinate, 2)
+    lu.assertEquals(snapshot.rows[3].routeOrdinal, 2)
     lu.assertEquals(snapshot.rows[3].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[3].optionKey, "O_Combat02")
     lu.assertEquals(snapshot.rows[3].variantKey, "TwoCombats")
@@ -3214,7 +3214,7 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
     lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].rewardPicks[2].value, "Boon")
     lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].rewardPicks[3].value, "ZeusUpgrade")
 
-    lu.assertEquals(snapshot.rows[4].coordinate, 3)
+    lu.assertEquals(snapshot.rows[4].routeOrdinal, 3)
     lu.assertEquals(snapshot.rows[4].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[4].optionKey, "O_Combat03")
     lu.assertEquals(snapshot.rows[4].variantKey, "ThreeCombats")
@@ -3348,8 +3348,8 @@ function TestRunPlannerControls.testFieldsCageRuntimeBuildsValidatedSnapshot()
     lu.assertTrue(snapshot.rows[1].valid)
     lu.assertEquals(snapshot.rows[1].rewardKind, "none")
 
-    lu.assertEquals(snapshot.rows[2].slotKind, "fieldsPick")
-    lu.assertEquals(snapshot.rows[2].coordinate, 1)
+    lu.assertEquals(snapshot.rows[2].slotKind, "biomeRow")
+    lu.assertEquals(snapshot.rows[2].routeOrdinal, 1)
     lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[2].optionKey, "H_Combat04")
     lu.assertEquals(snapshot.rows[2].roomKey, "H_Combat04")
@@ -3570,7 +3570,7 @@ function TestRunPlannerControls.testFixedLinearRuntimeSnapshotsPrebossBranchRows
     lu.assertEquals(#snapshot.rows, 8)
     lu.assertEquals(snapshot.rows[1].slotKind, "intro")
     lu.assertEquals(snapshot.rows[1].roomKey, "Q_Intro")
-    lu.assertEquals(snapshot.rows[8].coordinate, 7)
+    lu.assertEquals(snapshot.rows[8].routeOrdinal, 7)
     lu.assertEquals(snapshot.rows[8].slotKind, "preboss")
     lu.assertEquals(snapshot.rows[8].roomKey, "Q_PreBoss01")
     lu.assertEquals(snapshot.rows[8].branchKey, "Shop")
@@ -3781,13 +3781,13 @@ function TestRunPlannerControls.testFixedLinearForcedDepthUsesBiomeDepthCache()
     local rows = fakeRows({})
     local values = {}
 
-    lu.assertEquals(data.rowContext(instance, rows, 4).coordinate, 3)
+    lu.assertEquals(data.rowContext(instance, rows, 4).routeOrdinal, 3)
     lu.assertEquals(data.rowContext(instance, rows, 4).biomeDepthCache, 2)
     data.fillRoleValues(instance, rows, 4, values)
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertFalse(hasValue(values, "Miniboss"))
 
-    lu.assertEquals(data.rowContext(instance, rows, 5).coordinate, 4)
+    lu.assertEquals(data.rowContext(instance, rows, 5).routeOrdinal, 4)
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeDepthCache, 3)
     data.fillRoleValues(instance, rows, 5, values)
     lu.assertFalse(hasValue(values, "Combat"))
@@ -3823,7 +3823,7 @@ function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesForcedDepthRole
     lu.assertEquals(#snapshot.invalidRows, 1)
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 4)
     lu.assertEquals(snapshot.invalidRows[1].code, "forced_depth_role")
-    lu.assertEquals(snapshot.rows[4].coordinate, 3)
+    lu.assertEquals(snapshot.rows[4].routeOrdinal, 3)
     lu.assertEquals(snapshot.rows[4].roleKey, "Combat")
     lu.assertFalse(snapshot.rows[4].valid)
     lu.assertEquals(snapshot.rows[4].invalidCode, "forced_depth_role")
@@ -3970,7 +3970,7 @@ function TestRunPlannerControls.testFixedLinearRowContextUsesSelectionDepthCosts
 
     lu.assertEquals(data.rowContext(instance, rows, 1), {
         rowIndex = 1,
-        coordinate = 0,
+        routeOrdinal = 0,
         biomeDepthCache = 0,
         biomeDepthCacheKnown = true,
         biomeDepthCacheCost = 0,
@@ -4370,7 +4370,7 @@ function TestRunPlannerControls.testRouteContextBuildsNpcTargetsFromValidCombatR
                                 rows = {
                                     {
                                         rowIndex = 1,
-                                        coordinate = 3,
+                                        routeOrdinal = 3,
                                         slotLabel = "Depth 3",
                                         roleKey = "Combat",
                                         option = { key = "F_Combat02", label = "Combat 02" },
@@ -4378,7 +4378,7 @@ function TestRunPlannerControls.testRouteContextBuildsNpcTargetsFromValidCombatR
                                     },
                                     {
                                         rowIndex = 2,
-                                        coordinate = 4,
+                                        routeOrdinal = 4,
                                         slotLabel = "Depth 4",
                                         roleKey = "Combat",
                                         option = { key = "F_Combat03", label = "Combat 03" },
@@ -4388,7 +4388,7 @@ function TestRunPlannerControls.testRouteContextBuildsNpcTargetsFromValidCombatR
                                     },
                                     {
                                         rowIndex = 3,
-                                        coordinate = 5,
+                                        routeOrdinal = 5,
                                         slotLabel = "Depth 5",
                                         roleKey = "Combat",
                                         option = { key = "F_Combat04", label = "Combat 04" },
@@ -4456,7 +4456,7 @@ function TestRunPlannerControls.testRouteContextDisablesNpcTargetsWhenRewardsAre
                                 rows = {
                                     {
                                         rowIndex = 1,
-                                        coordinate = 5,
+                                        routeOrdinal = 5,
                                         slotLabel = "Depth 5",
                                         roleKey = "Combat",
                                         option = { key = "F_Combat04", label = "Combat 04" },
@@ -4551,7 +4551,7 @@ function TestRunPlannerControls.testRouteContextAddsPostBiomeTimelineForNpcSpaci
                                 rows = {
                                     {
                                         rowIndex = 1,
-	                                        coordinate = 4,
+	                                        routeOrdinal = 4,
 	                                        slotLabel = "Depth 4",
 	                                        roleKey = "Combat",
 	                                        option = { key = "F_Combat03", label = "Combat F" },
@@ -4576,7 +4576,7 @@ function TestRunPlannerControls.testRouteContextAddsPostBiomeTimelineForNpcSpaci
                                 rows = {
                                     {
                                         rowIndex = 1,
-	                                        coordinate = 4,
+	                                        routeOrdinal = 4,
 	                                        slotLabel = "Depth 4",
 	                                        roleKey = "Combat",
 	                                        option = { key = "G_Combat03", label = "Combat G" },
@@ -4706,7 +4706,7 @@ function TestRunPlannerControls.testRouteNpcsSnapshotValidatesTargetsAndSpacing(
                                 rows = {
                                     {
                                         rowIndex = 2,
-	                                        coordinate = 4,
+	                                        routeOrdinal = 4,
 	                                        slotLabel = "Depth 4",
 	                                        roleKey = "Combat",
 	                                        option = { key = "F_Combat03", label = "Combat 03" },
@@ -4716,7 +4716,7 @@ function TestRunPlannerControls.testRouteNpcsSnapshotValidatesTargetsAndSpacing(
                                     },
                                     {
                                         rowIndex = 3,
-	                                        coordinate = 5,
+	                                        routeOrdinal = 5,
 	                                        slotLabel = "Depth 5",
 	                                        roleKey = "Combat",
 	                                        option = { key = "F_Combat04", label = "Combat 04" },
@@ -4726,7 +4726,7 @@ function TestRunPlannerControls.testRouteNpcsSnapshotValidatesTargetsAndSpacing(
                                     },
                                     {
                                         rowIndex = 4,
-	                                        coordinate = 6,
+	                                        routeOrdinal = 6,
 	                                        slotLabel = "Depth 6",
 	                                        roleKey = "Combat",
 	                                        option = { key = "F_Combat05", label = "Combat 05" },

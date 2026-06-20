@@ -18,13 +18,13 @@ return function(importer)
             },
         },
         slotLayout = {
-            coordinate = "BiomeDepthCache",
+            routeRowLabelPrefix = "Depth",
             biomeDepthCacheStart = 1,
             defaultFixedBiomeDepthCacheCost = 0,
             routeBiomeDepthCacheCost = 1,
             depthRange = { min = 1, max = 7 },
-            routeStartDepth = 1,
-            routeEndDepth = 6,
+            routeStartOrdinal = 1,
+            routeEndOrdinal = 6,
             entry = {
                 kind = "intro",
                 isBiomeEntry = true,

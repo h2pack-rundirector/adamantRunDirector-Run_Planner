@@ -14,6 +14,10 @@ local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
 local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
 local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
+local routeStartOrdinal = common.routeStartOrdinal
+local routeEndOrdinal = common.routeEndOrdinal
+local routeRowLabel = common.routeRowLabel
+local routeRowRoomHistoryCost = common.routeRowRoomHistoryCost
 local applySlotDepthContext = common.applySlotDepthContext
 
 local data
@@ -28,11 +32,11 @@ local function isFixedSlot(slot)
 end
 
 local function isRouteSlot(slot)
-    return slot ~= nil and slot.kind == "clockworkRoute"
+    return slot ~= nil and slot.kind == "biomeRow"
 end
 
 local function forcedRouteRoleKey(instance, slot)
-    if not isRouteSlot(slot) or slot.routeRow ~= 1 then
+    if not isRouteSlot(slot) or slot.routeOrdinal ~= 1 then
         return nil
     end
     return instance.clockwork.forcedFirstRouteRole
@@ -65,7 +69,7 @@ local function buildFixedSlot(instance, entry, kind, defaultKey)
     local rowIndex = #instance.routeSlots + 1
     instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
-        coordinate = entry.coordinate or 0,
+        routeOrdinal = entry.routeOrdinal or 0,
         kind = kind or entry.kind or "fixed",
         isBiomeEntry = entry.isBiomeEntry == true,
         label = entry.label or key,
@@ -82,33 +86,31 @@ local function buildFixedSlot(instance, entry, kind, defaultKey)
     })
 end
 
-local function buildRouteSlot(instance, row)
+local function buildRouteSlot(instance, ordinal)
+    local slotLayout = instance.biome.slotLayout or {}
     local rowIndex = #instance.routeSlots + 1
     instance.routeSlots[rowIndex] = applySlotDepthContext({
         rowIndex = rowIndex,
-        coordinate = row,
-        routeRow = row,
-        kind = "clockworkRoute",
-        label = "Step " .. tostring(row),
+        routeOrdinal = ordinal,
+        kind = "biomeRow",
+        label = routeRowLabel(slotLayout, ordinal, "Step"),
+        roomHistoryCost = routeRowRoomHistoryCost(slotLayout),
     }, {
-        biomeDepthCacheCost = routeBiomeDepthCacheCost(instance.biome.slotLayout),
+        biomeDepthCacheCost = routeBiomeDepthCacheCost(slotLayout),
     })
 end
 
 local function buildRouteSlots(instance)
     local slotLayout = instance.biome.slotLayout or {}
-    local startRow = math.floor(tonumber(slotLayout.routeStartRow) or 1)
-    local endRow = math.floor(tonumber(slotLayout.routeEndRow) or startRow)
-    if endRow < startRow then
-        endRow = startRow
-    end
+    local startOrdinal = routeStartOrdinal(slotLayout)
+    local endOrdinal = routeEndOrdinal(slotLayout, startOrdinal)
 
     instance.routeSlots = {}
     for _, entry in ipairs(slotLayout.fixedBeforeRoute or {}) do
         buildFixedSlot(instance, entry, entry.kind or "intro", entry.key or "Intro")
     end
-    for row = startRow, endRow do
-        buildRouteSlot(instance, row)
+    for ordinal = startOrdinal, endOrdinal do
+        buildRouteSlot(instance, ordinal)
     end
     for _, entry in ipairs(slotLayout.fixedAfterGoals or {}) do
         buildFixedSlot(instance, entry, "preboss", PREBOSS_ROLE_KEY)

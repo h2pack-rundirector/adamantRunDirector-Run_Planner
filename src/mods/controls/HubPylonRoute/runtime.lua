@@ -182,7 +182,7 @@ end
 local function collectPylonRows(rows)
     local items = {}
     for _, row in ipairs(rows or {}) do
-        if row ~= nil and row.valid and row.slotKind == "pylonPick" then
+        if row ~= nil and row.valid and row.slotKind == "biomeRow" then
             items[#items + 1] = row
         end
     end
@@ -322,12 +322,12 @@ function runtime.create(fields, instance)
         local context = data.rowContext(instance, routeRows, rowIndex)
         return {
             rowIndex = rowIndex,
-            coordinate = slot.coordinate,
+            routeOrdinal = slot.routeOrdinal,
             biomeDepthCache = context.biomeDepthCache,
             biomeDepthCacheCost = context.biomeDepthCacheCost,
             biomeEncounterDepth = context.biomeEncounterDepth,
             biomeEncounterDepthCost = context.biomeEncounterDepthCost,
-            slotKind = slot.kind or "pylonPick",
+            slotKind = slot.kind or "biomeRow",
             isBiomeEntry = slot.isBiomeEntry == true,
             slotLabel = slot.label,
             roomHistoryCost = slot.roomHistoryCost,
@@ -366,7 +366,7 @@ function runtime.create(fields, instance)
             if row ~= nil and not row.valid then
                 appendInvalidRow(invalidRows, seenInvalids, {
                     rowIndex = row.rowIndex,
-                    coordinate = row.coordinate,
+                    routeOrdinal = row.routeOrdinal,
                     code = row.invalidCode,
                     message = row.invalidReason,
                 })
