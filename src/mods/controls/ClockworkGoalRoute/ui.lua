@@ -69,7 +69,9 @@ local function getRoleOpts(control, instance, rowIndex)
         opts.displayValues = instance.roleLabels
         control._roleOptsByRow[rowIndex] = opts
     end
-    opts.values = data.roleValuesForRow(instance, control:routeRows(), rowIndex)
+    local rows = control:routeRows()
+    opts.values = data.roleValuesForRow(instance, rows, rowIndex)
+    opts.valueColors = data.roleValueColorsForRow(instance, rows, rowIndex)
     return opts
 end
 
@@ -92,7 +94,9 @@ local function getOptionOpts(control, instance, rowIndex, roleKey)
         opts.displayValues = data.optionLabelsForRow(instance, rowIndex, roleKey)
         optsByRole[roleKey] = opts
     end
-    opts.values = data.optionValuesForRow(instance, control:routeRows(), rowIndex, roleKey)
+    local rows = control:routeRows()
+    opts.values = data.optionValuesForRow(instance, rows, rowIndex, roleKey)
+    opts.valueColors = data.optionValueColorsForRow(instance, rows, rowIndex, roleKey)
     return opts
 end
 

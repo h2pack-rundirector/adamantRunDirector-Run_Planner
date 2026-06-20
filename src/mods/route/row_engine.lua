@@ -13,6 +13,7 @@ local rowEngine = {}
 
 local REWARD_SLOT_COUNT = common.REWARD_SLOT_COUNT
 local VANILLA_ROLE_KEY = common.VANILLA_ROLE_KEY
+local INVALID_VALUE_COLOR = { 1.0, 0.24, 0.16, 1.0 }
 
 local shallowCopyList = common.shallowCopyList
 local optionListForRole = common.optionListForRole
@@ -28,6 +29,12 @@ local optionCap = availability.optionCap
 local activeReadCache = readCache.active
 local rowRecord = readCache.rowRecord
 local nestedRecord = readCache.nestedRecord
+
+local function clearMap(map)
+    for key in pairs(map) do
+        map[key] = nil
+    end
+end
 
 local function defaultSlotForRow(instance, rowIndex)
     return instance.routeSlots[math.floor(tonumber(rowIndex) or 0)]
@@ -798,9 +805,7 @@ function rowEngine.create(adapter)
         end
 
         for _, role in ipairs(instance.roles or {}) do
-            if data.isRoleAvailable(instance, rows, rowIndex, role.key) then
-                values[#values + 1] = role.key
-            end
+            values[#values + 1] = role.key
         end
         return values
     end
@@ -848,9 +853,7 @@ function rowEngine.create(adapter)
         end
 
         for _, optionKey in ipairs(optionValuesForRole(instance, role)) do
-            if data.isOptionAvailable(instance, rows, rowIndex, roleKey, optionKey) then
-                values[#values + 1] = optionKey
-            end
+            values[#values + 1] = optionKey
         end
         return values
     end
@@ -881,6 +884,58 @@ function rowEngine.create(adapter)
             values[#values + 1] = value
         end
         return values
+    end
+
+    local function fillRoleValueColorsUncached(instance, rows, rowIndex, colors)
+        clearMap(colors)
+        for _, roleKey in ipairs(data.roleValuesForRow(instance, rows, rowIndex)) do
+            if not data.isRoleAvailable(instance, rows, rowIndex, roleKey) then
+                colors[roleKey] = INVALID_VALUE_COLOR
+            end
+        end
+        return colors
+    end
+
+    function data.roleValueColorsForRow(instance, rows, rowIndex)
+        local cache = activeReadCache(instance)
+        if cache == nil then
+            local colors = {}
+            return fillRoleValueColorsUncached(instance, rows, rowIndex, colors)
+        end
+
+        local record = rowRecord(cache.roleValueColors, rowIndex)
+        if record.pass ~= cache.pass then
+            record.pass = cache.pass
+            record.colors = record.colors or {}
+            fillRoleValueColorsUncached(instance, rows, rowIndex, record.colors)
+        end
+        return record.colors
+    end
+
+    local function fillOptionValueColorsUncached(instance, rows, rowIndex, roleKey, colors)
+        clearMap(colors)
+        for _, optionKey in ipairs(data.optionValuesForRow(instance, rows, rowIndex, roleKey)) do
+            if not data.isOptionAvailable(instance, rows, rowIndex, roleKey, optionKey) then
+                colors[optionKey] = INVALID_VALUE_COLOR
+            end
+        end
+        return colors
+    end
+
+    function data.optionValueColorsForRow(instance, rows, rowIndex, roleKey)
+        local cache = activeReadCache(instance)
+        if cache == nil then
+            local colors = {}
+            return fillOptionValueColorsUncached(instance, rows, rowIndex, roleKey, colors)
+        end
+
+        local record = nestedRecord(cache.optionValueColors, rowIndex, roleKey or "")
+        if record.pass ~= cache.pass then
+            record.pass = cache.pass
+            record.colors = record.colors or {}
+            fillOptionValueColorsUncached(instance, rows, rowIndex, roleKey, record.colors)
+        end
+        return record.colors
     end
 
     function data.beginReadPass(instance)
