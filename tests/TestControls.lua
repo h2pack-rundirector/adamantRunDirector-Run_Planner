@@ -45,28 +45,27 @@ local function loadCatalog()
 end
 
 local function loadRouteDeps()
-    local common = testImport("mods/route/rows/common.lua")
-    local rewards
+    local route
     withTestImport(function()
-        rewards = testImport("mods/rewards/rewards.lua").create({
+        local rewards = testImport("mods/rewards/rewards.lua").create({
             definitions = testImport("mods/rewards/declarations/definitions.lua"),
         })
-    end)
-    local route = {
-        common = common,
-        availability = testImport("mods/route/rows/availability.lua"),
-        readCache = testImport("mods/route/rows/read_cache.lua"),
-        timeline = testImport("mods/route/timeline.lua"),
-        rewards = rewards,
-        requirements = testImport("mods/route/rows/requirements.lua", nil, {
-            common = common,
+        local timeline = testImport("mods/route/timeline.lua")
+        local rows = testImport("mods/route/rows.lua", nil, {
             rewards = rewards,
-        }),
-        biomeRules = testImport("mods/route/rows/biome_rules.lua", nil, {
-            common = common,
-        }),
-    }
-    route.rowEngine = testImport("mods/route/rows/engine.lua", nil, route)
+            timeline = timeline,
+        })
+        route = {
+            common = rows.common,
+            availability = rows.availability,
+            readCache = rows.readCache,
+            requirements = rows.requirements,
+            biomeRules = rows.biomeRules,
+            rowEngine = rows.engine,
+            timeline = timeline,
+            rewards = rewards,
+        }
+    end)
     return route
 end
 
