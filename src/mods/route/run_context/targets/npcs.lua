@@ -103,10 +103,6 @@ local function rowHasConcreteNpcReward(context, row, banned)
     end
 
     local items = rowRewardItems(context, row)
-    local cageState = rewardItemsConcreteStateForSource(items, "cage")
-    if cageState ~= nil then
-        return cageState
-    end
     local encounterState = rewardItemsConcreteStateForSource(items, "encounter")
     if encounterState ~= nil then
         return encounterState

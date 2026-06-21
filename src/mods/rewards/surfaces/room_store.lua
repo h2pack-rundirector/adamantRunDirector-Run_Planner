@@ -35,6 +35,17 @@ function roomStore.create(definitions, context)
         kind = "roomStore",
         context = context,
         rewardStore = rewardStore,
+        uniqueValueGroups = {
+            {
+                aliases = {
+                    storage.rewardAlias(3),
+                    storage.rewardAlias(4),
+                },
+                visibleWhen = { alias = storage.rewardAlias(1), value = "Devotion" },
+                code = "duplicate_devotion_god",
+                message = "Trial gods must be different",
+            },
+        },
         controls = {
             common.dropdown(storage.rewardAlias(1), "rewardType", "Reward", rewardValues, rewardLabels, {
                 kind = "rewardType",

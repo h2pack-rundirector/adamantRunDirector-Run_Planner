@@ -10,8 +10,18 @@ local function conditionMatches(condition, fields)
     return fields:read(condition.alias) == condition.value
 end
 
-local function isControlVisible(control, fields)
-    local condition = control and control.visibleWhen
+local function sourceActive(sourceIndex, opts)
+    if sourceIndex == nil then
+        return true
+    end
+    local sourceCount = opts and opts.sourceCount or nil
+    if sourceCount == nil then
+        return true
+    end
+    return sourceIndex <= sourceCount
+end
+
+local function conditionActive(condition, fields)
     if condition == nil then
         return true
     end
@@ -34,6 +44,11 @@ local function isControlVisible(control, fields)
     return conditionMatches(condition, fields)
 end
 
+local function isControlVisible(control, fields, opts)
+    return sourceActive(control and control.sourceIndex or nil, opts)
+        and conditionActive(control and control.visibleWhen or nil, fields)
+end
+
 local function drawRowHeader(imgui, header)
     imgui.AlignTextToFramePadding()
     imgui.Text(tostring(header or ""))
@@ -51,7 +66,104 @@ local function drawGroupedRowStart(imgui, startX, header, reserveHeaderColumn)
     end
 end
 
-local function drawControl(draw, fields, control, opts)
+local function clearMap(map)
+    for key in pairs(map) do
+        map[key] = nil
+    end
+end
+
+local function cachedColoredDrawOpts(control, drawOpts, valueColors)
+    local coloredOpts = control._coloredDrawOpts
+    if coloredOpts == nil then
+        coloredOpts = {}
+        control._coloredDrawOpts = coloredOpts
+    else
+        clearMap(coloredOpts)
+    end
+    for key, value in pairs(drawOpts or {}) do
+        coloredOpts[key] = value
+    end
+    coloredOpts.valueColors = valueColors
+    return coloredOpts
+end
+
+local function memberAlias(member)
+    if type(member) == "table" then
+        return member.alias
+    end
+    return member
+end
+
+local function groupMembers(group)
+    if group.members ~= nil then
+        return group.members
+    end
+    return group.aliases or {}
+end
+
+local function localValueColors(surface, fields, control, opts)
+    if runtime == nil or runtime.valueColors == nil then
+        return nil
+    end
+    local uniqueValueGroups = surface and surface.uniqueValueGroups
+    if uniqueValueGroups == nil or uniqueValueGroups[1] == nil then
+        return nil
+    end
+    local controlAlias = control.alias
+    local participates = false
+    for _, group in ipairs(uniqueValueGroups) do
+        for _, member in ipairs(groupMembers(group)) do
+            if memberAlias(member) == controlAlias then
+                participates = true
+                break
+            end
+        end
+        if participates then
+            break
+        end
+    end
+    if not participates then
+        return nil
+    end
+    local colors = control._localValueColors
+    if colors == nil then
+        colors = {}
+        control._localValueColors = colors
+    end
+    return runtime.valueColors(surface, fields, control, colors, opts)
+end
+
+local function externalValueColors(fields, control, opts)
+    if opts == nil or opts.valueColorsForControl == nil then
+        return nil
+    end
+    return opts.valueColorsForControl(control, fields)
+end
+
+local function combineValueColors(control, first, second)
+    if first == nil then
+        return second
+    elseif second == nil then
+        return first
+    end
+
+    local colors = control._combinedValueColors
+    if colors == nil then
+        colors = {}
+        control._combinedValueColors = colors
+    else
+        clearMap(colors)
+    end
+    for key, value in pairs(first) do
+        colors[key] = value
+    end
+    for key, value in pairs(second) do
+        colors[key] = value
+    end
+    return colors
+end
+
+local function drawControl(draw, surface, fields, control, opts)
     local field = fields:get(control.alias)
     local drawOpts = control.drawOpts
     if opts ~= nil
@@ -66,6 +178,14 @@ local function drawControl(draw, fields, control, opts)
         and opts.godSource.godSourceDrawOpts ~= nil
     then
         drawOpts = opts.godSource:godSourceDrawOpts(drawOpts, field:read())
+    end
+    local valueColors = combineValueColors(
+        control,
+        externalValueColors(fields, control, opts),
+        localValueColors(surface, fields, control, opts)
+    )
+    if valueColors ~= nil then
+        drawOpts = cachedColoredDrawOpts(control, drawOpts, valueColors)
     end
     return draw.widgets.dropdown(field, drawOpts)
 end
@@ -95,14 +215,14 @@ local function drawGroupedControls(draw, surface, fields, opts)
     local reserveHeaderColumn = rowHeader ~= nil
 
     for _, control in ipairs(surface.controls or {}) do
-        if isControlVisible(control, fields) then
+        if isControlVisible(control, fields, opts) then
             if rowIndex ~= control.rowIndex then
                 rowIndex = control.rowIndex
                 drawGroupedRowStart(imgui, startX, not drew and rowHeader or nil, reserveHeaderColumn)
             else
                 imgui.SameLine()
             end
-            changed = drawControl(draw, fields, control, opts) or changed
+            changed = drawControl(draw, surface, fields, control, opts) or changed
             drew = true
         end
     end
@@ -125,11 +245,11 @@ function ui.draw(draw, surface, fields, opts)
     end
 
     for _, control in ipairs(surface.controls or {}) do
-        if isControlVisible(control, fields) then
+        if isControlVisible(control, fields, opts) then
             if drew then
                 imgui.SameLine()
             end
-            changed = drawControl(draw, fields, control, opts) or changed
+            changed = drawControl(draw, surface, fields, control, opts) or changed
             drew = true
         end
     end

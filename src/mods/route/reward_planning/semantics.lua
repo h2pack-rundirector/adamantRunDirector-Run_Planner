@@ -68,6 +68,29 @@ local function sourceForShopReward(item, index, rewardType)
     return item and item.rewardLoot and item.rewardLoot[index] or nil
 end
 
+local function sourceCount(item)
+    return math.floor(tonumber(item and item.rewardSourceCount or 0) or 0)
+end
+
+local function fieldsCageAddress(address, index)
+    local cageSuffix = "cage:" .. tostring(index)
+    if address == nil or address == "" or address == "row" then
+        return cageSuffix
+    end
+    return tostring(address) .. "/" .. cageSuffix
+end
+
+local function fieldsCageAddressLabel(_, index)
+    return "Cage " .. tostring(index) .. " Reward"
+end
+
+local function sourceForFieldsCageReward(item, index, rewardType)
+    if rewardType ~= "Boon" then
+        return nil
+    end
+    return item and item.rewardLoot and item.rewardLoot[index] or nil
+end
+
 function semantics.rewardType(item)
     if item == nil or item.valid == false then
         return nil
@@ -148,6 +171,11 @@ function semantics.godLootSources(item, out)
             appendValue(sources, sourceForShopReward(item, index, rewardType))
         end
         return sources
+    elseif item.rewardKind == "fieldsCages" then
+        for index = 1, sourceCount(item) do
+            appendValue(sources, sourceForFieldsCageReward(item, index, item.rewards and item.rewards[index] or nil))
+        end
+        return sources
     end
 
     local rewardType = semantics.rewardType(item)
@@ -179,6 +207,13 @@ function semantics.isConcrete(item)
         return false
     elseif kind == "shop" then
         return rewardValue(item, 1) ~= nil
+    elseif kind == "fieldsCages" then
+        for index = 1, sourceCount(item) do
+            if rewardValue(item, index) == nil then
+                return false
+            end
+        end
+        return sourceCount(item) > 0
     end
     return false
 end
@@ -247,6 +282,20 @@ function semantics.eventsForItem(item, row, out)
                 shopAddress(item.address, index),
                 shopAddressLabel(item, index),
                 sourceForShopReward(item, index, rewardType)
+            )
+        end
+        return events
+    elseif item.rewardKind == "fieldsCages" then
+        for index = 1, sourceCount(item) do
+            local rewardType = item.rewards and item.rewards[index] or nil
+            appendEvent(
+                events,
+                row,
+                item,
+                rewardType,
+                fieldsCageAddress(item.address, index),
+                fieldsCageAddressLabel(item, index),
+                sourceForFieldsCageReward(item, index, rewardType)
             )
         end
         return events

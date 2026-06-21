@@ -1,20 +1,33 @@
 -- luacheck: no unused args
 
 local deps = ...
-local data = deps.data
 local rewardSystem = deps.rewards
 
 local rewards = {}
 
 local REWARD_COLUMN_X = 130
-local CAGE_REWARD_COLUMN_X = 260
 local REWARD_DRAW_OPTS = {
     hideGenericRewardLabel = true,
 }
 
-local function rewardDrawOpts(control)
+local function rewardDrawOpts(control, rowIndex)
+    local sourceCount = control:rewardSourceCount(rowIndex)
     if control.rewardDrawOpts ~= nil then
-        return control:rewardDrawOpts(REWARD_DRAW_OPTS)
+        local opts = control:rewardDrawOpts(REWARD_DRAW_OPTS)
+        opts.sourceCount = sourceCount
+        return opts
+    end
+    if sourceCount ~= nil then
+        control._rewardDrawOptsBySourceCount = control._rewardDrawOptsBySourceCount or {}
+        local opts = control._rewardDrawOptsBySourceCount[sourceCount]
+        if opts == nil then
+            opts = {
+                hideGenericRewardLabel = true,
+                sourceCount = sourceCount,
+            }
+            control._rewardDrawOptsBySourceCount[sourceCount] = opts
+        end
+        return opts
     end
     return REWARD_DRAW_OPTS
 end
@@ -36,23 +49,6 @@ local function rewardFields(control, rowIndex)
     return fields
 end
 
-local function cageRewardFields(control, cageRewardRowIndex)
-    control._cageRewardFieldsByRow = control._cageRewardFieldsByRow or {}
-    local fields = control._cageRewardFieldsByRow[cageRewardRowIndex]
-    if fields == nil then
-        fields = {
-            get = function(_, alias)
-                return control:cageRewardField(cageRewardRowIndex, alias)
-            end,
-            read = function(_, alias)
-                return control:fields().CageRewards:read(cageRewardRowIndex, alias)
-            end,
-        }
-        control._cageRewardFieldsByRow[cageRewardRowIndex] = fields
-    end
-    return fields
-end
-
 local function rewardRowLabel(control, rowIndex, slot)
     local role = control:role(rowIndex)
     if role ~= nil then
@@ -66,33 +62,6 @@ local function drawRewardRowHeader(imgui, control, rowIndex, slot)
     imgui.Text(rewardRowLabel(control, rowIndex, slot))
 end
 
-local function drawCageRewardRows(draw, control, instance, rowIndex)
-    for cageIndex = 1, data.cageRewardCountForRow(instance, control:routeRows(), rowIndex) do
-        local leg = data.cageRewardLegForRow(instance, control:routeRows(), rowIndex, cageIndex)
-        local cageRewardRowIndex = data.cageRewardRowIndex(instance, rowIndex, cageIndex)
-        local legSurface = leg ~= nil and rewardSystem and rewardSystem.surfaceFor(leg.reward) or nil
-        if cageRewardRowIndex ~= nil
-            and rewardSystem ~= nil
-            and rewardSystem ~= nil
-            and rewardSystem.hasControls(legSurface)
-        then
-            if cageIndex == 1 then
-                draw.imgui.SameLine()
-            else
-                draw.imgui.Spacing()
-            end
-            draw.imgui.SetCursorPosX(REWARD_COLUMN_X)
-            draw.imgui.AlignTextToFramePadding()
-            draw.imgui.Text(tostring(leg.label or leg.key or "Cage"))
-            draw.imgui.SameLine()
-            draw.imgui.SetCursorPosX(CAGE_REWARD_COLUMN_X)
-            if rewardSystem.draw(draw, legSurface, cageRewardFields(control, cageRewardRowIndex), rewardDrawOpts(control)) then
-                control:invalidateReadPass()
-            end
-        end
-    end
-end
-
 local function drawRewardRow(draw, control, instance, rowIndex)
     local slot = control:slot(rowIndex)
     if slot == nil then
@@ -103,15 +72,15 @@ local function drawRewardRow(draw, control, instance, rowIndex)
     local surface = control:rewardSurface(rowIndex)
 
     drawRewardRowHeader(imgui, control, rowIndex, slot)
-    drawCageRewardRows(draw, control, instance, rowIndex)
 
     if rewardSystem ~= nil
         and rewardSystem ~= nil
         and rewardSystem.hasControls(surface)
+        and (control:rewardSourceCount(rowIndex) or 1) > 0
     then
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)
-        if rewardSystem.draw(draw, surface, rewardFields(control, rowIndex), rewardDrawOpts(control)) then
+        if rewardSystem.draw(draw, surface, rewardFields(control, rowIndex), rewardDrawOpts(control, rowIndex)) then
             control:invalidateReadPass()
         end
     end

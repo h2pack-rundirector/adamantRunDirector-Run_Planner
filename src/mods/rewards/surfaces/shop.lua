@@ -9,7 +9,7 @@ local SHOP_BOON_SOURCE_VALUES = {
     BoostedRandomLoot = true,
 }
 
-local function uniqueOfferGroups(shop, aliasBySlotKey)
+local function uniqueValueGroups(shop, aliasBySlotKey)
     local groups = {}
     for _, group in ipairs(shop.uniqueOfferGroups or {}) do
         local aliases = {}
@@ -88,7 +88,7 @@ function shopSurface.create(definitions, context)
         context = context,
         shopProfile = context.shopProfile,
         rowHeader = "Reward",
-        uniqueOfferGroups = uniqueOfferGroups(shop, aliasBySlotKey),
+        uniqueValueGroups = uniqueValueGroups(shop, aliasBySlotKey),
         controls = controls,
     }
 end

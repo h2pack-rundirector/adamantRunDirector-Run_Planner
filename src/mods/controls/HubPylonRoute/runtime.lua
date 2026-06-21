@@ -52,6 +52,26 @@ local function rewardSurface(role, option)
     return rewardSystem.surfaceFor(rewardContext(role, option))
 end
 
+local function rewardValidation(surface, rewardRows, rowIndex)
+    if rewardSystem == nil or rewardSystem.validate == nil then
+        return nil
+    end
+    if surface == nil
+        or surface.uniqueValueGroups == nil
+        or surface.uniqueValueGroups[1] == nil
+    then
+        return nil
+    end
+    return rewardSystem.validate(surface, rewardSystem.fields(rewardRows, rowIndex))
+end
+
+local function routeRewardValidation(instance, rowIndex)
+    if instance.routeContext ~= nil and instance.routeContext.rewardRowValidation ~= nil then
+        return instance.routeContext:rewardRowValidation(instance.routeKey, instance.biomeKey, rowIndex)
+    end
+    return nil
+end
+
 local function prewarmRewardSurface(role, option)
     rewardSurface(role, option)
 end
@@ -269,6 +289,29 @@ function runtime.create(fields, instance)
         return common == nil or common.rewardsConfigured(instance)
     end
 
+    function control:rowValidation(rowIndex)
+        local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
+        local _, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
+        local validation = data.validateRow(instance, routeRows, rowIndex)
+        if not validation.valid then
+            return validation
+        end
+        if not self:rewardsConfigured() then
+            return validation
+        end
+
+        local surface = rewardSurface(role, option)
+        local rewardInvalid = rewardValidation(surface, fields.Rewards, rowIndex)
+        if rewardInvalid ~= nil and not rewardInvalid.valid then
+            return rewardInvalid
+        end
+        rewardInvalid = routeRewardValidation(instance, rowIndex)
+        if rewardInvalid ~= nil and not rewardInvalid.valid then
+            return rewardInvalid
+        end
+        return validation
+    end
+
     function control:beginReadPass()
         data.beginReadPass(instance)
     end
@@ -292,7 +335,7 @@ function runtime.create(fields, instance)
 
         local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
         local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
-        local validation = data.validateRow(instance, routeRows, rowIndex)
+        local validation = self:rowValidation(rowIndex)
         local rewardsConfigured = self:rewardsConfigured()
         local surface = rewardsConfigured and rewardSurface(role, option) or nil
         local context = data.rowContext(instance, routeRows, rowIndex)

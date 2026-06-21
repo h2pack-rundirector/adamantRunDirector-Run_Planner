@@ -40,8 +40,8 @@ local function rewardValidation(surface, rewardRows, rowIndex)
         return nil
     end
     if surface == nil
-        or surface.uniqueOfferGroups == nil
-        or surface.uniqueOfferGroups[1] == nil
+        or surface.uniqueValueGroups == nil
+        or surface.uniqueValueGroups[1] == nil
     then
         return nil
     end

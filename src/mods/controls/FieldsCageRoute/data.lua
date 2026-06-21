@@ -18,16 +18,20 @@ local applySlotDepthContext = common.applySlotDepthContext
 local data
 local EMPTY_VALUES = {}
 
+local function shallowCopyMap(source)
+    local copy = {}
+    for key, value in pairs(source or {}) do
+        copy[key] = value
+    end
+    return copy
+end
+
 local function slotForRow(instance, rowIndex)
     return instance.routeSlots[math.floor(tonumber(rowIndex) or 0)]
 end
 
 local function isFixedSlot(slot)
     return slot ~= nil and slot.role ~= nil
-end
-
-local function isPickSlot(slot)
-    return slot ~= nil and slot.kind == "biomeRow"
 end
 
 local function buildFixedSlot(instance, entry, section)
@@ -129,7 +133,6 @@ local function prepareCagePolicy(policy)
             kind = "fieldsCages",
             rewardStore = policy.rewardStore or "RunProgress",
         },
-        rewardLegs = {},
         maxCageRewardCount = math.floor(tonumber(countControl.max) or 0),
     }
 
@@ -150,13 +153,7 @@ local function prepareCagePolicy(policy)
         end
     end
 
-    for index = 1, prepared.maxCageRewardCount do
-        prepared.rewardLegs[index] = {
-            key = "Cage" .. tostring(index),
-            label = "Cage " .. tostring(index),
-            reward = prepared.rewardContext,
-        }
-    end
+    prepared.rewardContext.sourceCount = prepared.maxCageRewardCount
 
     return prepared
 end
@@ -201,6 +198,16 @@ local function cagePolicyForRole(instance, role)
     return instance.cagePoliciesByKey and instance.cagePoliciesByKey[role.cageRewardPolicy] or nil
 end
 
+local function prepareCageRewardContexts(instance)
+    for _, role in ipairs(instance.roles or {}) do
+        local policy = cagePolicyForRole(instance, role)
+        if policy ~= nil and role.reward ~= nil then
+            role.reward = shallowCopyMap(role.reward)
+            role.reward.sourceCount = policy.maxCageRewardCount
+        end
+    end
+end
+
 local function maxCageRewardCount(instance)
     local count = 0
     for _, policy in pairs(instance.cagePoliciesByKey or {}) do
@@ -209,20 +216,6 @@ local function maxCageRewardCount(instance)
         end
     end
     return count
-end
-
-local function prepareCageRewardRows(instance)
-    instance.maxCageRewardCount = maxCageRewardCount(instance)
-    instance.cageRewardRowOffsetByRouteRow = {}
-
-    local rowCount = 0
-    for _, slot in ipairs(instance.routeSlots or {}) do
-        if isPickSlot(slot) then
-            instance.cageRewardRowOffsetByRouteRow[slot.rowIndex] = rowCount
-            rowCount = rowCount + instance.maxCageRewardCount
-        end
-    end
-    instance.cageRewardRowCount = rowCount
 end
 
 local function selectedCombatOption(instance, rows, rowIndex, roleKey)
@@ -324,10 +317,11 @@ function data.prepare(instance)
     instance.label = instance.label or instance.biome.label or instance.biomeKey
     data.prepareRoles(instance)
     prepareCagePolicies(instance)
+    prepareCageRewardContexts(instance)
 
     buildRouteSlots(instance)
     timeline.applyRouteSlots(instance)
-    prepareCageRewardRows(instance)
+    instance.maxCageRewardCount = maxCageRewardCount(instance)
     data.buildRoleChoices(instance)
     addFixedRoleLabels(instance)
     data.prepareSlots(instance)
@@ -372,17 +366,6 @@ function data.maxCageRewardCount(instance)
     return instance.maxCageRewardCount or 0
 end
 
-function data.cageRewardRowIndex(instance, rowIndex, cageIndex)
-    local offset = instance.cageRewardRowOffsetByRouteRow
-        and instance.cageRewardRowOffsetByRouteRow[math.floor(tonumber(rowIndex) or 0)]
-        or nil
-    cageIndex = math.floor(tonumber(cageIndex) or 0)
-    if offset == nil or cageIndex < 1 or cageIndex > data.maxCageRewardCount(instance) then
-        return nil
-    end
-    return offset + cageIndex
-end
-
 function data.cageRewardCountForRow(instance, rows, rowIndex)
     local roleKey = data.resolveRole(instance, rows, rowIndex)
     local _, choice = data.resolveCageCount(instance, rows, rowIndex, roleKey)
@@ -393,20 +376,6 @@ function data.cageRewardCountForRow(instance, rows, rowIndex)
         return 0
     end
     return math.floor(tonumber(choice.cageRewardCount) or 0)
-end
-
-function data.cageRewardLegForRow(instance, rows, rowIndex, cageIndex)
-    local roleKey = data.resolveRole(instance, rows, rowIndex)
-    local policy = data.cagePolicyForRole(instance, roleKey)
-    if policy == nil then
-        return nil
-    end
-
-    cageIndex = math.floor(tonumber(cageIndex) or 0)
-    if cageIndex < 1 or cageIndex > data.cageRewardCountForRow(instance, rows, rowIndex) then
-        return nil
-    end
-    return policy.rewardLegs and policy.rewardLegs[cageIndex] or nil
 end
 
 function data.storage(instance)
@@ -425,14 +394,6 @@ function data.storage(instance)
             minRows = instance.routeRowCount,
             defaultRows = instance.routeRowCount,
             maxRows = instance.routeRowCount,
-            row = data.buildRewardRows(),
-        },
-        {
-            key = "CageRewards",
-            type = "table",
-            minRows = instance.cageRewardRowCount,
-            defaultRows = instance.cageRewardRowCount,
-            maxRows = instance.cageRewardRowCount,
             row = data.buildRewardRows(),
         },
     }

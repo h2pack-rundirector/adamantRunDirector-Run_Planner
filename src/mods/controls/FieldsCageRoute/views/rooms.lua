@@ -2,7 +2,6 @@
 
 local deps = ...
 local data = deps.data
-local resetCageRewardDetails = deps.resetCageRewardDetails
 local resetRewardDetails = deps.resetRewardDetails
 local resetRowDetails = deps.resetRowDetails
 
@@ -173,7 +172,6 @@ local function drawRoomRow(draw, control, instance, rowIndex)
     if data.isFixedIdentityRow(instance, rowIndex) then
         if drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey, ROLE_COLUMN_X) then
             resetRewardDetails(control:fields(), rowIndex)
-            resetCageRewardDetails(control:fields(), instance, rowIndex)
             control:invalidateReadPass()
         end
     else
@@ -187,7 +185,6 @@ local function drawRoomRow(draw, control, instance, rowIndex)
         end
         if drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey) then
             resetRewardDetails(control:fields(), rowIndex)
-            resetCageRewardDetails(control:fields(), instance, rowIndex)
             control:invalidateReadPass()
         end
         if drawCageCountDropdown(draw, control, instance, rowIndex, currentRoleKey) then

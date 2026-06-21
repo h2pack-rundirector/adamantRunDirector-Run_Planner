@@ -217,14 +217,13 @@ local function fakeRows(rows)
     }
 end
 
-local function routeFields(rows, sideRows, sideRewardRows, encounterRewardRows, cageRewardRows)
+local function routeFields(rows, sideRows, sideRewardRows, encounterRewardRows)
     return {
         Rooms = fakeRows(rows or {}),
         Rewards = fakeRows(rows or {}),
         SideRooms = fakeRows(sideRows or {}),
         SideRewards = fakeRows(sideRewardRows or {}),
         EncounterRewards = fakeRows(encounterRewardRows or {}),
-        CageRewards = fakeRows(cageRewardRows or {}),
     }
 end
 
@@ -493,13 +492,6 @@ function TestRunPlannerControls.testRewardItemsNormalizeRowRewardMetadata()
                 rewards = { "MaxHealthDrop" },
             },
         },
-        cageRewards = {
-            {
-                cageIndex = 2,
-                rewardKind = "fixedReward",
-                rewards = { "Boon" },
-            },
-        },
         encounterRewardLegs = {
             {
                 legIndex = 3,
@@ -511,7 +503,7 @@ function TestRunPlannerControls.testRewardItemsNormalizeRowRewardMetadata()
 
     rewardItems.attach(row)
 
-    lu.assertEquals(#row.rewardItems, 4)
+    lu.assertEquals(#row.rewardItems, 3)
     lu.assertEquals(row.rewardItems[1].address, "row")
     lu.assertEquals(row.rewardItems[1].rowLabel, "Depth 2")
     lu.assertEquals(row.rewardItems[1].sourceLabel, "Rewards")
@@ -520,17 +512,14 @@ function TestRunPlannerControls.testRewardItemsNormalizeRowRewardMetadata()
     lu.assertEquals(row.rewardItems[2].address, "side:1")
     lu.assertEquals(row.rewardItems[2].sourceLabel, "Side Room 1 Reward")
     lu.assertEquals(row.rewardItems[2].sourceKind, "side")
-    lu.assertEquals(row.rewardItems[3].address, "cage:2")
-    lu.assertEquals(row.rewardItems[3].sourceLabel, "Cage 2 Reward")
-    lu.assertEquals(row.rewardItems[3].sourceKind, "cage")
-    lu.assertEquals(row.rewardItems[4].address, "encounter:3")
-    lu.assertEquals(row.rewardItems[4].sourceLabel, "Combat 3 Reward")
-    lu.assertEquals(row.rewardItems[4].sourceKind, "encounter")
+    lu.assertEquals(row.rewardItems[3].address, "encounter:3")
+    lu.assertEquals(row.rewardItems[3].sourceLabel, "Combat 3 Reward")
+    lu.assertEquals(row.rewardItems[3].sourceKind, "encounter")
 
     local scratch = {}
     lu.assertIs(rewardItems.collect(row, scratch), scratch)
-    lu.assertEquals(#scratch, 4)
-    lu.assertEquals(scratch[3].address, "cage:2")
+    lu.assertEquals(#scratch, 3)
+    lu.assertEquals(scratch[3].address, "encounter:3")
 end
 
 function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
@@ -845,7 +834,7 @@ function TestRunPlannerControls.testRouteGlobalProvidesStableGodSourceDropdownOp
         "ZeusUpgrade",
     })
     lu.assertEquals(opts.displayValues.AphroditeUpgrade, "Aphrodite")
-    lu.assertEquals(opts.valueColors.AphroditeUpgrade, catalog.gods[1].color)
+    lu.assertNil(opts.valueColors)
 
     control:godPoolField():writeAlias("AphroditeUpgrade", false)
     control:invalidateGodSource()
@@ -2361,6 +2350,33 @@ function TestRunPlannerControls.testClockworkGoalCombatCanSelectDevotionRewardSu
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[3].value, "ApolloUpgrade")
 end
 
+function TestRunPlannerControls.testClockworkGoalInvalidatesDuplicateTrialRewardGods()
+    local catalog = loadCatalog()
+    local template = loadClockworkGoalTemplate()
+    local instance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        { RoleKey = "Goal", OptionKey = "I_Combat01" },
+        {
+            RoleKey = "ExtensionCombat",
+            OptionKey = "I_Combat03",
+            Reward1Key = "Devotion",
+            Reward3Key = "ZeusUpgrade",
+            Reward4Key = "ZeusUpgrade",
+        },
+    }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertFalse(snapshot.rows[3].valid)
+    lu.assertEquals(snapshot.rows[3].invalidCode, "duplicate_devotion_god")
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 3)
+    lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_devotion_god")
+end
+
 function TestRunPlannerControls.testClockworkGoalValidationModelsCountersAndSidePaths()
     local catalog = loadCatalog()
     local data = loadClockworkGoalData()
@@ -2891,25 +2907,12 @@ function TestRunPlannerControls.testFieldsCageStorageMatchesFieldsRouteRows()
         "H_Bridge01",
     })
     lu.assertEquals(instance.maxCageRewardCount, 3)
-    lu.assertEquals(instance.cageRewardRowCount, 12)
 
-    lu.assertEquals(#storage, 3)
+    lu.assertEquals(#storage, 2)
     lu.assertEquals(storage[1].key, "Rooms")
     lu.assertEquals(storage[1].minRows, 6)
     lu.assertEquals(storage[2].key, "Rewards")
     lu.assertEquals(storage[2].minRows, 6)
-    lu.assertEquals(storage[3].key, "CageRewards")
-    lu.assertEquals(storage[3].minRows, 12)
-    lu.assertEquals(storage[3].defaultRows, 12)
-    lu.assertEquals(storage[3].maxRows, 12)
-    lu.assertEquals(storage[3].row[1].key, "Reward1Key")
-    lu.assertEquals(storage[3].row[12].key, "Reward6LootKey")
-    lu.assertEquals(routeData.cageRewardRowIndex(instance, 2, 1), 1)
-    lu.assertEquals(routeData.cageRewardRowIndex(instance, 2, 3), 3)
-    lu.assertEquals(routeData.cageRewardRowIndex(instance, 5, 1), 10)
-    lu.assertEquals(routeData.cageRewardRowIndex(instance, 5, 3), 12)
-    lu.assertNil(routeData.cageRewardRowIndex(instance, 1, 1))
-    lu.assertNil(routeData.cageRewardRowIndex(instance, 6, 1))
 
     lu.assertEquals(routeData.cageCountLabelsForRole(instance, "Combat"), {
         [""] = "Vanilla",
@@ -3488,6 +3491,39 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
     lu.assertEquals(primaryRewardItem(snapshot.rows[8]).rewardKind, "shop")
 end
 
+function TestRunPlannerControls.testMultiEncounterInvalidatesDuplicateTrialRewardGods()
+    local catalog = loadCatalog()
+    local template = loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat01",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat02",
+        },
+        {
+            RoleKey = "Devotion",
+            OptionKey = "O_Devotion01",
+            Reward1Key = "ZeusUpgrade",
+            Reward2Key = "ZeusUpgrade",
+        },
+    }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertFalse(snapshot.rows[4].valid)
+    lu.assertEquals(snapshot.rows[4].invalidCode, "duplicate_devotion_god")
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 4)
+    lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_devotion_god")
+end
+
 function TestRunPlannerControls.testMultiEncounterRuntimeInvalidatesUnavailableCombatCount()
     local catalog = loadCatalog()
     local template = loadMultiEncounterTemplate()
@@ -3526,11 +3562,18 @@ function TestRunPlannerControls.testFieldsCageRuntimeBuildsValidatedSnapshot()
                 RoleKey = "Combat",
                 OptionKey = "H_Combat04",
                 VariantKey = "ThreeRewards",
+                Reward1Key = "Boon",
+                Reward1LootKey = "PoseidonUpgrade",
+                Reward2Key = "HermesUpgrade",
+                Reward3Key = "StackUpgrade",
             },
             {
                 RoleKey = "Combat",
                 OptionKey = "H_Combat09",
                 VariantKey = "TwoRewards",
+                Reward1Key = "Boon",
+                Reward1LootKey = "HestiaUpgrade",
+                Reward2Key = "WeaponUpgrade",
             },
             {
                 RoleKey = "Bridge",
@@ -3542,24 +3585,6 @@ function TestRunPlannerControls.testFieldsCageRuntimeBuildsValidatedSnapshot()
                 Reward1Key = "ZeusUpgrade",
             },
             {},
-        }, nil, nil, nil, {
-            {
-                Reward1Key = "Boon",
-                Reward2Key = "PoseidonUpgrade",
-            },
-            {
-                Reward1Key = "HermesUpgrade",
-            },
-            {
-                Reward1Key = "StackUpgrade",
-            },
-            {
-                Reward1Key = "Boon",
-                Reward2Key = "HestiaUpgrade",
-            },
-            {
-                Reward1Key = "WeaponUpgrade",
-            },
         }), instance)
     local snapshot = control:buildSnapshot()
 
@@ -3584,24 +3609,21 @@ function TestRunPlannerControls.testFieldsCageRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[2].variantKey, "ThreeRewards")
     lu.assertEquals(snapshot.rows[2].cagePolicyKey, "H_FieldsCageRewards")
     lu.assertEquals(snapshot.rows[2].cageRewardCount, 3)
-    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardKind, "none")
-    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardPicks, {})
-    lu.assertEquals(#snapshot.rows[2].cageRewards, 3)
-    lu.assertEquals(snapshot.rows[2].cageRewards[1].key, "Cage1")
-    lu.assertEquals(snapshot.rows[2].cageRewards[1].label, "Cage 1")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[2], "cage", 1).rewardKind, "roomStore")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[2], "cage", 1).rewardPicks[1].value, "Boon")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[2], "cage", 1).rewardPicks[2].value, "PoseidonUpgrade")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[2], "cage", 1).rewardPicks[2].storageAlias, "Reward2Key")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[2], "cage", 2).rewardPicks[1].value, "HermesUpgrade")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[2], "cage", 3).rewardPicks[1].value, "StackUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardKind, "fieldsCages")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardSourceCount, 3)
+    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardPicks[1].value, "Boon")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardPicks[2].value, "PoseidonUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardPicks[2].alias, "Reward1LootKey")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardPicks[3].value, "HermesUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardPicks[4].value, "StackUpgrade")
 
     lu.assertEquals(snapshot.rows[3].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[3].optionKey, "H_Combat09")
     lu.assertEquals(snapshot.rows[3].cageRewardCount, 2)
-    lu.assertEquals(#snapshot.rows[3].cageRewards, 2)
-    lu.assertEquals(rewardItemBySource(snapshot.rows[3], "cage", 1).rewardPicks[2].value, "HestiaUpgrade")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[3], "cage", 2).rewardPicks[1].value, "WeaponUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardKind, "fieldsCages")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardSourceCount, 2)
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[2].value, "HestiaUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[3].value, "WeaponUpgrade")
 
     lu.assertEquals(snapshot.rows[4].roleKey, "Bridge")
     lu.assertEquals(snapshot.rows[4].role.label, "Echo")
@@ -3686,18 +3708,11 @@ function TestRunPlannerControls.testFieldsCagePolicyRejectsDuplicateBoonSourcesI
                 RoleKey = "Combat",
                 OptionKey = "H_Combat04",
                 VariantKey = "ThreeRewards",
-            },
-        }, nil, nil, nil, {
-            {
                 Reward1Key = "Boon",
-                Reward2Key = "PoseidonUpgrade",
-            },
-            {
-                Reward1Key = "Boon",
-                Reward2Key = "PoseidonUpgrade",
-            },
-            {
-                Reward1Key = "HermesUpgrade",
+                Reward1LootKey = "PoseidonUpgrade",
+                Reward2Key = "Boon",
+                Reward2LootKey = "PoseidonUpgrade",
+                Reward3Key = "HermesUpgrade",
             },
         }), instance)
     local snapshot = control:buildSnapshot()
@@ -3723,19 +3738,15 @@ function TestRunPlannerControls.testFieldsCageRuntimePolicyRejectsDuplicateNonBo
                 RoleKey = "Combat",
                 OptionKey = "H_Combat04",
                 VariantKey = "TwoRewards",
-            },
-        }, nil, nil, nil, {
-            {
                 Reward1Key = "MaxHealthDrop",
-            },
-            {
-                Reward1Key = "MaxHealthDrop",
+                Reward2Key = "MaxHealthDrop",
             },
         })
     local runtimeControl = template.createRuntime(fields, instance)
 
     local row = runtimeControl:rowSnapshot(2)
-    lu.assertTrue(row.valid)
+    lu.assertFalse(row.valid)
+    lu.assertEquals(row.invalidCode, "duplicate_reward_type")
 
     local snapshot = runtimeControl:buildSnapshot()
     lu.assertFalse(snapshot.valid)
@@ -5879,6 +5890,66 @@ function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesDevotionRewardR
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "prior_distinct_god_loot")
     lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 6).code, "prior_distinct_god_loot")
+end
+
+function TestRunPlannerControls.testRouteOverviewInvalidatesDuplicateTrialRewardGods()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(routeFields({
+        {
+            RoleKey = "",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat02",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat03",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat04",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat04",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat05",
+            Reward1Key = "Major",
+            Reward2Key = "Devotion",
+            Reward5Key = "ZeusUpgrade",
+            Reward6Key = "ZeusUpgrade",
+        },
+    }), instance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        controlResolver = function(controlName)
+            if controlName == "RouteF" then
+                return control
+            end
+            return nil
+        end,
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 6)
+    lu.assertEquals(overview.invalidRows[1].code, "duplicate_devotion_god")
+    lu.assertEquals(overview.invalidRows[1].message, "Trial gods must be different")
 end
 
 function TestRunPlannerControls.testFixedLinearRuntimeInvalidatesOutOfRangeAndDuplicateRows()

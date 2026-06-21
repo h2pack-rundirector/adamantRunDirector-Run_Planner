@@ -37,6 +37,14 @@ local function loadRuntime()
     })
 end
 
+local function loadUi()
+    local runtime = loadRuntime()
+    local chunk = assert(loadfile("src/mods/rewards/ui.lua"))
+    return chunk({
+        runtime = runtime,
+    }), runtime
+end
+
 local function loadConditions()
     return dofile("src/mods/rewards/declarations/conditions.lua")
 end
@@ -49,6 +57,22 @@ local function fakeFields(values)
     return {
         read = function(_, alias)
             return values[alias]
+        end,
+    }
+end
+
+local function drawableFields(values)
+    return {
+        read = function(_, alias)
+            return values[alias]
+        end,
+        get = function(_, alias)
+            return {
+                alias = alias,
+                read = function()
+                    return values[alias]
+                end,
+            }
         end,
     }
 end
@@ -176,6 +200,39 @@ function TestRunPlannerRewards.testSemanticsExposeRewardEvents()
     lu.assertEquals(events[1].boonSource, "DemeterUpgrade")
     lu.assertEquals(events[2].rewardType, "WeaponUpgradeDrop")
     lu.assertEquals(events[2].address, "shop:2")
+end
+
+function TestRunPlannerRewards.testSemanticsExposeFieldsCageRewardEvents()
+    local semantics = loadSemantics()
+    local row = {
+        rowIndex = 2,
+        rewardItems = {
+            {
+                address = "row",
+                rewardKind = "fieldsCages",
+                rewardSourceCount = 3,
+                rewards = { "Boon", "HermesUpgrade", "StackUpgrade" },
+                rewardLoot = { "ZeusUpgrade", "", "" },
+            },
+        },
+    }
+    local rewardItems = {
+        collect = function()
+            return row.rewardItems
+        end,
+    }
+
+    local events = semantics.eventsForRow(row, rewardItems, {})
+
+    lu.assertEquals(#events, 3)
+    lu.assertEquals(events[1].rewardType, "Boon")
+    lu.assertEquals(events[1].address, "cage:1")
+    lu.assertEquals(events[1].addressLabel, "Cage 1 Reward")
+    lu.assertEquals(events[1].boonSource, "ZeusUpgrade")
+    lu.assertEquals(events[2].rewardType, "HermesUpgrade")
+    lu.assertEquals(events[2].address, "cage:2")
+    lu.assertEquals(events[3].rewardType, "StackUpgrade")
+    lu.assertEquals(events[3].address, "cage:3")
 end
 
 function TestRunPlannerRewards.testSemanticsConcreteAndBannedChecks()
@@ -389,6 +446,26 @@ function TestRunPlannerRewards.testCatalogNormalizesFieldsCageSurface()
     lu.assertEquals(surface.controls[1].key, "rewardType")
     lu.assertEquals(surface.controls[1].values[2], "Boon")
     lu.assertEquals(surface.controls[2].key, "boonSource")
+
+    local composite = catalog:surfaceFor({
+        kind = "fieldsCages",
+        rewardStore = "RunProgress",
+        sourceCount = 3,
+    })
+    lu.assertEquals(composite.kind, "fieldsCages")
+    lu.assertEquals(composite.sourceCount, 3)
+    lu.assertEquals(#composite.controls, 6)
+    lu.assertEquals(composite.controls[1].key, "Cage1")
+    lu.assertEquals(composite.controls[1].alias, "Reward1Key")
+    lu.assertEquals(composite.controls[1].sourceIndex, 1)
+    lu.assertEquals(composite.controls[2].key, "Cage1Loot")
+    lu.assertEquals(composite.controls[2].alias, "Reward1LootKey")
+    lu.assertEquals(composite.controls[3].key, "Cage2")
+    lu.assertEquals(composite.controls[5].key, "Cage3")
+    lu.assertEquals(composite.uniqueValueGroups[1].allowDuplicateValues, {
+        Boon = true,
+    })
+    lu.assertEquals(composite.uniqueValueGroups[2].code, "duplicate_boon_source")
 end
 
 function TestRunPlannerRewards.testCatalogNormalizesMajorMinorSurface()
@@ -489,6 +566,20 @@ function TestRunPlannerRewards.testCatalogOptInDevotionForMajorMinorSurface()
         },
     })
     lu.assertEquals(surface.controls[6].key, "lootBName")
+    lu.assertEquals(surface.uniqueValueGroups[1], {
+        aliases = {
+            "Reward5Key",
+            "Reward6Key",
+        },
+        visibleWhen = {
+            all = {
+                { alias = "Reward1Key", value = "Major" },
+                { alias = "Reward2Key", value = "Devotion" },
+            },
+        },
+        code = "duplicate_devotion_god",
+        message = "Trial gods must be different",
+    })
 end
 
 function TestRunPlannerRewards.testCatalogUsesBundleLabelsForMajorMinorCategories()
@@ -532,6 +623,14 @@ function TestRunPlannerRewards.testCatalogSplitsDevotionPairAcrossRows()
     lu.assertEquals(surface.controls[2].key, "lootBName")
     lu.assertEquals(surface.controls[2].label, "God B")
     lu.assertEquals(surface.controls[2].rowIndex, 2)
+    lu.assertEquals(surface.uniqueValueGroups[1], {
+        aliases = {
+            "Reward1Key",
+            "Reward2Key",
+        },
+        code = "duplicate_devotion_god",
+        message = "Trial gods must be different",
+    })
 end
 
 function TestRunPlannerRewards.testCatalogNormalizesBoonOnlySurface()
@@ -724,7 +823,7 @@ function TestRunPlannerRewards.testRuntimeInvalidatesLinkedShopOfferDuplicates()
         shopProfile = "Q_WorldShop",
     })
 
-    lu.assertEquals(surface.uniqueOfferGroups[1].aliases, {
+    lu.assertEquals(surface.uniqueValueGroups[1].aliases, {
         "Reward1Key",
         "Reward2Key",
     })
@@ -748,6 +847,163 @@ function TestRunPlannerRewards.testRuntimeInvalidatesLinkedShopOfferDuplicates()
         "Reward1Key",
         "Reward2Key",
     })
+end
+
+function TestRunPlannerRewards.testRuntimeInvalidatesDuplicateDevotionGods()
+    local runtime = loadRuntime()
+    local surface = runtime.surfaceFor({
+        kind = "forcedReward",
+        rewardType = "Devotion",
+    })
+
+    lu.assertTrue(runtime.validate(surface, fakeFields({
+        Reward1Key = "ZeusUpgrade",
+        Reward2Key = "HeraUpgrade",
+    })).valid)
+
+    local validation = runtime.validate(surface, fakeFields({
+        Reward1Key = "ZeusUpgrade",
+        Reward2Key = "ZeusUpgrade",
+    }))
+
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "duplicate_devotion_god")
+    lu.assertEquals(validation.message, "Trial gods must be different")
+    lu.assertEquals(validation.aliases, {
+        "Reward1Key",
+        "Reward2Key",
+    })
+end
+
+function TestRunPlannerRewards.testRuntimeIgnoresHiddenDevotionGodDuplicates()
+    local runtime = loadRuntime()
+    local surface = runtime.surfaceFor({
+        kind = "roomStore",
+        rewardStore = "RunProgress",
+    })
+
+    lu.assertTrue(runtime.validate(surface, fakeFields({
+        Reward1Key = "Boon",
+        Reward3Key = "ZeusUpgrade",
+        Reward4Key = "ZeusUpgrade",
+    })).valid)
+    lu.assertFalse(runtime.validate(surface, fakeFields({
+        Reward1Key = "Devotion",
+        Reward3Key = "ZeusUpgrade",
+        Reward4Key = "ZeusUpgrade",
+    })).valid)
+end
+
+function TestRunPlannerRewards.testRuntimeColorsOnlyLaterLinkedShopDuplicateCandidates()
+    local runtime = loadRuntime()
+    local surface = runtime.surfaceFor({
+        kind = "shop",
+        shopProfile = "Q_WorldShop",
+    })
+    local fields = fakeFields({
+        Reward1Key = "RandomLoot",
+        Reward2Key = "RandomLoot",
+    })
+    local scratch = {}
+
+    lu.assertNil(runtime.valueColors(surface, fields, controlByKey(surface, "Group1Offer1"), scratch))
+    lu.assertEquals(scratch, {})
+
+    local colors = runtime.valueColors(surface, fields, controlByKey(surface, "Group1Offer2"), scratch)
+
+    lu.assertIs(colors, scratch)
+    lu.assertEquals(colors.RandomLoot, { 1.0, 0.22, 0.16, 1.0 })
+    lu.assertNil(colors.BoostedRandomLoot)
+end
+
+function TestRunPlannerRewards.testRuntimeColorsOnlySecondDevotionGodDuplicateCandidates()
+    local runtime = loadRuntime()
+    local surface = runtime.surfaceFor({
+        kind = "forcedReward",
+        rewardType = "Devotion",
+    })
+    local fields = fakeFields({
+        Reward1Key = "ZeusUpgrade",
+        Reward2Key = "ZeusUpgrade",
+    })
+    local scratch = {}
+
+    lu.assertNil(runtime.valueColors(surface, fields, controlByKey(surface, "lootAName"), scratch))
+    lu.assertEquals(scratch, {})
+
+    local colors = runtime.valueColors(surface, fields, controlByKey(surface, "lootBName"), scratch)
+
+    lu.assertIs(colors, scratch)
+    lu.assertEquals(colors.ZeusUpgrade, { 1.0, 0.22, 0.16, 1.0 })
+    lu.assertNil(colors.HeraUpgrade)
+end
+
+function TestRunPlannerRewards.testRuntimeColorsFieldsCageDuplicateCandidates()
+    local runtime = loadRuntime()
+    local surface = runtime.surfaceFor({
+        kind = "fieldsCages",
+        rewardStore = "RunProgress",
+        sourceCount = 3,
+    })
+    local scratch = {}
+
+    local rewardColors = runtime.valueColors(surface, fakeFields({
+        Reward1Key = "MaxHealthDrop",
+        Reward2Key = "MaxHealthDrop",
+    }), controlByKey(surface, "Cage2"), scratch, { sourceCount = 2 })
+
+    lu.assertIs(rewardColors, scratch)
+    lu.assertEquals(rewardColors.MaxHealthDrop, { 1.0, 0.22, 0.16, 1.0 })
+
+    lu.assertNil(runtime.valueColors(surface, fakeFields({
+        Reward1Key = "Boon",
+        Reward2Key = "Boon",
+    }), controlByKey(surface, "Cage2"), scratch, { sourceCount = 2 }))
+    lu.assertEquals(scratch, {})
+
+    local boonSourceColors = runtime.valueColors(surface, fakeFields({
+        Reward1Key = "Boon",
+        Reward1LootKey = "ZeusUpgrade",
+        Reward2Key = "Boon",
+        Reward2LootKey = "ZeusUpgrade",
+    }), controlByKey(surface, "Cage2Loot"), scratch, { sourceCount = 2 })
+
+    lu.assertIs(boonSourceColors, scratch)
+    lu.assertEquals(boonSourceColors.ZeusUpgrade, { 1.0, 0.22, 0.16, 1.0 })
+end
+
+function TestRunPlannerRewards.testUiAppliesLinkedShopDuplicateValueColors()
+    local ui, runtime = loadUi()
+    local surface = runtime.surfaceFor({
+        kind = "shop",
+        shopProfile = "Q_WorldShop",
+    })
+    local captured = {}
+    local draw = {
+        imgui = {
+            GetCursorPosX = function()
+                return 0
+            end,
+            AlignTextToFramePadding = function() end,
+            Text = function() end,
+            SameLine = function() end,
+            SetCursorPosX = function() end,
+        },
+        widgets = {
+            dropdown = function(field, opts)
+                captured[field.alias] = opts
+                return false
+            end,
+        },
+    }
+
+    ui.draw(draw, surface, drawableFields({
+        Reward1Key = "RandomLoot",
+        Reward2Key = "RandomLoot",
+    }), {})
+
+    lu.assertNil(captured.Reward1Key.valueColors)
+    lu.assertEquals(captured.Reward2Key.valueColors.RandomLoot, { 1.0, 0.22, 0.16, 1.0 })
 end
 
 function TestRunPlannerRewards.testCatalogAppliesIneligibleRewardTypes()

@@ -6,6 +6,7 @@ local REWARD_SOURCE_FIELDS = {
     "rewardPicks",
     "rewardKind",
     "fixedRewardType",
+    "rewardSourceCount",
 }
 
 local function clearList(list)
@@ -51,8 +52,6 @@ local function defaultSourceLabel(source, sourceKind, sourceIndex)
 
     if sourceKind == "side" then
         return indexedLabel("Side Room", sourceIndex, " Reward")
-    elseif sourceKind == "cage" then
-        return indexedLabel("Cage", sourceIndex, " Reward")
     elseif sourceKind == "encounter" then
         return indexedLabel("Combat", sourceIndex, " Reward")
     end
@@ -78,6 +77,7 @@ local function appendItem(items, row, source, address, sourceKind, sourceIndex)
         rewardPicks = source.rewardPicks or EMPTY_LIST,
         fixedRewardType = source.fixedRewardType,
         rewardStore = source.rewardStore,
+        rewardSourceCount = source.rewardSourceCount,
         valid = source.valid,
     }
 end
@@ -87,9 +87,6 @@ local function collectFromRow(row, items)
 
     for _, sideRoom in ipairs(row and row.sideRooms or EMPTY_LIST) do
         appendItem(items, row, sideRoom, "side:" .. tostring(sideRoom.sideIndex or ""), "side", sideRoom.sideIndex)
-    end
-    for _, cageReward in ipairs(row and row.cageRewards or EMPTY_LIST) do
-        appendItem(items, row, cageReward, "cage:" .. tostring(cageReward.cageIndex or ""), "cage", cageReward.cageIndex)
     end
     for _, encounterRewardLeg in ipairs(row and row.encounterRewardLegs or EMPTY_LIST) do
         appendItem(
@@ -122,9 +119,6 @@ function rewardItems.attach(row)
     clearRewardSource(row)
     for _, sideRoom in ipairs(row.sideRooms or EMPTY_LIST) do
         clearRewardSource(sideRoom)
-    end
-    for _, cageReward in ipairs(row.cageRewards or EMPTY_LIST) do
-        clearRewardSource(cageReward)
     end
     for _, encounterRewardLeg in ipairs(row.encounterRewardLegs or EMPTY_LIST) do
         clearRewardSource(encounterRewardLeg)

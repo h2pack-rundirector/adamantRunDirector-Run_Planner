@@ -11,15 +11,6 @@ local function resetRewardDetails(fields, rowIndex)
     rewardSystem.resetRows(fields.Rewards, rowIndex)
 end
 
-local function resetCageRewardDetails(fields, instance, rowIndex)
-    for cageIndex = 1, data.maxCageRewardCount(instance) do
-        local cageRewardRowIndex = data.cageRewardRowIndex(instance, rowIndex, cageIndex)
-        if cageRewardRowIndex ~= nil then
-            rewardSystem.resetRows(fields.CageRewards, cageRewardRowIndex)
-        end
-    end
-end
-
 local function resetRoomDetails(fields, rowIndex)
     fields.Rooms:reset(rowIndex, "OptionKey")
     fields.Rooms:reset(rowIndex, "VariantKey")
@@ -28,12 +19,10 @@ end
 local function resetRowDetails(fields, instance, rowIndex)
     resetRoomDetails(fields, rowIndex)
     resetRewardDetails(fields, rowIndex)
-    resetCageRewardDetails(fields, instance, rowIndex)
 end
 
 local rooms = import("mods/controls/FieldsCageRoute/views/rooms.lua", nil, {
     data = data,
-    resetCageRewardDetails = resetCageRewardDetails,
     resetRewardDetails = resetRewardDetails,
     resetRowDetails = resetRowDetails,
 })
@@ -59,10 +48,6 @@ function ui.create(fields, instance)
 
     function control:rewardField(rowIndex, rowAlias)
         return fields.Rewards:get(rowIndex, rowAlias)
-    end
-
-    function control:cageRewardField(cageRewardRowIndex, rowAlias)
-        return fields.CageRewards:get(cageRewardRowIndex, rowAlias)
     end
 
     function control:resetRow(rowIndex)

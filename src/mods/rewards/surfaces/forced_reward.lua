@@ -11,6 +11,16 @@ function forcedReward.create(definitions, context)
             kind = "devotionPair",
             context = context,
             fixedRewardType = "Devotion",
+            uniqueValueGroups = {
+                {
+                    aliases = {
+                        storage.rewardAlias(1),
+                        storage.rewardAlias(2),
+                    },
+                    code = "duplicate_devotion_god",
+                    message = "Trial gods must be different",
+                },
+            },
             controls = {
                 common.dropdown(storage.rewardAlias(1), "lootAName", "God A", values, labels, {
                     kind = "boonSource",

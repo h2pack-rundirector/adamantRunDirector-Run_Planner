@@ -97,7 +97,6 @@ local function buildGodSourceOptions(instance)
     instance.godSourceLabels = {
         [VANILLA_VALUE] = "Vanilla",
     }
-    instance.godSourceColors = {}
     instance.godSourceLookup = {
         [VANILLA_VALUE] = true,
     }
@@ -106,7 +105,6 @@ local function buildGodSourceOptions(instance)
     }
     for _, god in ipairs(instance.gods or {}) do
         instance.godSourceLabels[god.key] = god.label
-        instance.godSourceColors[god.key] = god.color
         instance.godSourceLookup[god.key] = true
         instance.godSourceValuesByCurrent[god.key] = {}
     end
@@ -281,7 +279,6 @@ function RouteGlobal.createRuntime(fields, instance)
         drawOpts.default = baseOpts.default
         drawOpts.values = self:godSourceValues(currentValue)
         drawOpts.displayValues = instance.godSourceLabels
-        drawOpts.valueColors = instance.godSourceColors
         return drawOpts
     end
 

@@ -57,7 +57,6 @@ return function(importer, deps)
             minibossRoomsByKey = layout.minibossRoomsByKey,
             bridge = layout.bridge,
             cageRewardPolicy = layout.cageRewardPolicy,
-            offerGroup = "H_FieldsCage",
         },
         roles = {
             {
