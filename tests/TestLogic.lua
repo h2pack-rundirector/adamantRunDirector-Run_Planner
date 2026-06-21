@@ -45,14 +45,36 @@ local function loadRewardLegality()
     })
 end
 
+local function loadRouteTargets(timeline, rewardItems, semantics)
+    local targetCommon = testImport("mods/route/run_context/targets/common.lua")
+    return testImport("mods/route/run_context/targets.lua", nil, {
+        npcs = testImport("mods/route/run_context/targets/npcs.lua", nil, {
+            timeline = timeline,
+            rewardItems = rewardItems,
+            semantics = semantics,
+            common = targetCommon,
+        }),
+        features = testImport("mods/route/run_context/targets/features.lua", nil, {
+            timeline = timeline,
+            common = targetCommon,
+        }),
+    })
+end
+
 local function loadRoutePlan()
+    local timeline = testImport("mods/route/timeline.lua")
+    local rewardItems = testImport("mods/route/reward_planning/items.lua")
+    local semantics = testImport("mods/route/reward_planning/semantics.lua")
     return testImport("mods/logic/route_plan.lua", nil, {
         executionPlan = testImport("mods/logic/execution_plan.lua"),
         routeContext = testImport("mods/route/run_context.lua", nil, {
-            rewardLegality = loadRewardLegality(),
-            timeline = testImport("mods/route/timeline.lua"),
-            rewardItems = testImport("mods/route/reward_planning/items.lua"),
-            semantics = testImport("mods/route/reward_planning/semantics.lua"),
+            controls = testImport("mods/route/run_context/controls.lua"),
+            targets = loadRouteTargets(timeline, rewardItems, semantics),
+            rewards = testImport("mods/route/run_context/rewards.lua", nil, {
+                rewardLegality = loadRewardLegality(),
+                rewardItems = rewardItems,
+                semantics = semantics,
+            }),
         }),
     })
 end

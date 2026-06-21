@@ -21,6 +21,22 @@ local function createRewardPlanning(routeTimeline, invalidLocations)
     }
 end
 
+local function createRouteTargets(routeTimeline, planning)
+    local targetCommon = import("mods/route/run_context/targets/common.lua")
+    return import("mods/route/run_context/targets.lua", nil, {
+        npcs = import("mods/route/run_context/targets/npcs.lua", nil, {
+            timeline = routeTimeline,
+            rewardItems = planning.rewardItems,
+            semantics = planning.rewardSemantics,
+            common = targetCommon,
+        }),
+        features = import("mods/route/run_context/targets/features.lua", nil, {
+            timeline = routeTimeline,
+            common = targetCommon,
+        }),
+    })
+end
+
 function routeFactory.create(opts)
     opts = opts or {}
 
@@ -29,22 +45,22 @@ function routeFactory.create(opts)
         error("route.create requires rewards")
     end
 
-    local routeCommon = import("mods/route/common.lua")
+    local routeCommon = import("mods/route/rows/common.lua")
     local routeTimeline = import("mods/route/timeline.lua")
     local invalidLocations = import("mods/route/invalid_locations.lua")
     local planning = createRewardPlanning(routeTimeline, invalidLocations)
-    local routeRequirements = import("mods/route/requirements.lua", nil, {
+    local routeRequirements = import("mods/route/rows/requirements.lua", nil, {
         common = routeCommon,
         rewards = rewards,
     })
-    local routeBiomeRules = import("mods/route/biome_rules.lua", nil, {
+    local routeBiomeRules = import("mods/route/rows/biome_rules.lua", nil, {
         common = routeCommon,
     })
 
     local route = {
         common = routeCommon,
-        availability = import("mods/route/availability.lua"),
-        readCache = import("mods/route/read_cache.lua"),
+        availability = import("mods/route/rows/availability.lua"),
+        readCache = import("mods/route/rows/read_cache.lua"),
         requirements = routeRequirements,
         biomeRules = routeBiomeRules,
         timeline = routeTimeline,
@@ -56,12 +72,15 @@ function routeFactory.create(opts)
         rewardOfferRules = planning.rewardOfferRules,
         rewardLegality = planning.rewardLegality,
     }
-    route.rowEngine = import("mods/route/row_engine.lua", nil, route)
+    route.rowEngine = import("mods/route/rows/engine.lua", nil, route)
     route.runContext = import("mods/route/run_context.lua", nil, {
-        rewardLegality = planning.rewardLegality,
-        timeline = routeTimeline,
-        rewardItems = planning.rewardItems,
-        semantics = planning.rewardSemantics,
+        controls = import("mods/route/run_context/controls.lua"),
+        targets = createRouteTargets(routeTimeline, planning),
+        rewards = import("mods/route/run_context/rewards.lua", nil, {
+            rewardLegality = planning.rewardLegality,
+            rewardItems = planning.rewardItems,
+            semantics = planning.rewardSemantics,
+        }),
     })
     return route
 end

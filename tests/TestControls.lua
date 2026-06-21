@@ -45,7 +45,7 @@ local function loadCatalog()
 end
 
 local function loadRouteDeps()
-    local common = testImport("mods/route/common.lua")
+    local common = testImport("mods/route/rows/common.lua")
     local rewards
     withTestImport(function()
         rewards = testImport("mods/rewards/rewards.lua").create({
@@ -54,19 +54,19 @@ local function loadRouteDeps()
     end)
     local route = {
         common = common,
-        availability = testImport("mods/route/availability.lua"),
-        readCache = testImport("mods/route/read_cache.lua"),
+        availability = testImport("mods/route/rows/availability.lua"),
+        readCache = testImport("mods/route/rows/read_cache.lua"),
         timeline = testImport("mods/route/timeline.lua"),
         rewards = rewards,
-        requirements = testImport("mods/route/requirements.lua", nil, {
+        requirements = testImport("mods/route/rows/requirements.lua", nil, {
             common = common,
             rewards = rewards,
         }),
-        biomeRules = testImport("mods/route/biome_rules.lua", nil, {
+        biomeRules = testImport("mods/route/rows/biome_rules.lua", nil, {
             common = common,
         }),
     }
-    route.rowEngine = testImport("mods/route/row_engine.lua", nil, route)
+    route.rowEngine = testImport("mods/route/rows/engine.lua", nil, route)
     return route
 end
 
@@ -127,6 +127,22 @@ local function loadRewardLegality()
     })
 end
 
+local function loadRouteTargets(timeline, rewardItems, semantics)
+    local targetCommon = testImport("mods/route/run_context/targets/common.lua")
+    return testImport("mods/route/run_context/targets.lua", nil, {
+        npcs = testImport("mods/route/run_context/targets/npcs.lua", nil, {
+            timeline = timeline,
+            rewardItems = rewardItems,
+            semantics = semantics,
+            common = targetCommon,
+        }),
+        features = testImport("mods/route/run_context/targets/features.lua", nil, {
+            timeline = timeline,
+            common = targetCommon,
+        }),
+    })
+end
+
 local function loadFixedLinearData()
     return testImport("mods/controls/FixedLinearRoute/data.lua", nil, loadRouteDeps())
 end
@@ -148,11 +164,17 @@ local function loadFieldsCageData()
 end
 
 local function loadRunContext()
+    local timeline = testImport("mods/route/timeline.lua")
+    local rewardItems = testImport("mods/route/reward_planning/items.lua")
+    local semantics = testImport("mods/route/reward_planning/semantics.lua")
     return testImport("mods/route/run_context.lua", nil, {
-        rewardLegality = loadRewardLegality(),
-        timeline = testImport("mods/route/timeline.lua"),
-        rewardItems = testImport("mods/route/reward_planning/items.lua"),
-        semantics = testImport("mods/route/reward_planning/semantics.lua"),
+        controls = testImport("mods/route/run_context/controls.lua"),
+        targets = loadRouteTargets(timeline, rewardItems, semantics),
+        rewards = testImport("mods/route/run_context/rewards.lua", nil, {
+            rewardLegality = loadRewardLegality(),
+            rewardItems = rewardItems,
+            semantics = semantics,
+        }),
     })
 end
 
