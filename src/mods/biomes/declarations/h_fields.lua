@@ -1,15 +1,15 @@
-return function(importer)
-    local layout = importer("mods/data/biomes/h_fields_layout.lua")()
-    local timeline = importer("mods/data/biomes/timeline.lua")
-    local rewards = importer("mods/data/rewards.lua")(importer)
-    local routeRules = importer("mods/data/route_rules.lua")
+return function(importer, deps)
+    local layout = importer("mods/biomes/declarations/h_fields_layout.lua")()
+    local parser = deps.parser
+    local rewards = deps.rewards
+    local routeRules = deps.routeRules
 
     return {
         key = "H",
         label = "Fields",
         region = "Underworld",
         adapter = "fieldsCageRoute",
-        timeline = timeline.standard("H", {
+        timeline = parser.standardTimeline("H", {
             postBossFeatures = { wellShop = true },
         }),
         featurePolicies = {

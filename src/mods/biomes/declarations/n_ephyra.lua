@@ -1,15 +1,15 @@
-return function(importer)
-    local layout = importer("mods/data/biomes/n_ephyra_layout.lua")(importer)
-    local timeline = importer("mods/data/biomes/timeline.lua")
-    local rewards = importer("mods/data/rewards.lua")(importer)
-    local routeRules = importer("mods/data/route_rules.lua")
+return function(importer, deps)
+    local layout = importer("mods/biomes/declarations/n_ephyra_layout.lua")(importer, deps)
+    local parser = deps.parser
+    local rewards = deps.rewards
+    local routeRules = deps.routeRules
 
     return {
         key = "N",
         label = "Ephyra",
         region = "Surface",
         adapter = "hubPylon",
-        timeline = timeline.standard("N", {
+        timeline = parser.standardTimeline("N", {
             postBossFeatures = { surfaceShop = true },
         }),
         featurePolicies = {

@@ -1,37 +1,23 @@
 local biomes = {}
 
 local BIOME_IMPORTS = {
-    "mods/data/biomes/f_erebus.lua",
-    "mods/data/biomes/g_oceanus.lua",
-    "mods/data/biomes/h_fields.lua",
-    "mods/data/biomes/i_tartarus.lua",
-    "mods/data/biomes/n_ephyra.lua",
-    "mods/data/biomes/o_thessaly.lua",
-    "mods/data/biomes/p_olympus.lua",
-    "mods/data/biomes/q_summit.lua",
+    "mods/biomes/declarations/f_erebus.lua",
+    "mods/biomes/declarations/g_oceanus.lua",
+    "mods/biomes/declarations/h_fields.lua",
+    "mods/biomes/declarations/i_tartarus.lua",
+    "mods/biomes/declarations/n_ephyra.lua",
+    "mods/biomes/declarations/o_thessaly.lua",
+    "mods/biomes/declarations/p_olympus.lua",
+    "mods/biomes/declarations/q_summit.lua",
 }
 
 local function defaultImporter(path)
     return import(path)
 end
 
-local function indexByKey(items)
-    local lookup = {}
-    for _, item in ipairs(items or {}) do
-        lookup[item.key] = item
-    end
-    return lookup
-end
-
-local function normalize(definition)
-    definition.rolesByKey = indexByKey(definition.roles)
-    definition.slotLayout.special = definition.slotLayout.special or {}
-    return definition
-end
-
-local function resolveDefinition(imported, importer)
+local function resolveDefinition(imported, importer, deps)
     if type(imported) == "function" then
-        return imported(importer)
+        return imported(importer, deps)
     end
     return imported
 end
@@ -44,11 +30,16 @@ function biomes.load(importer)
     local npcs = importer("mods/npcs/definitions.lua")
     local features = importer("mods/features/definitions.lua")
     local routes = importer("mods/data/routes.lua").load()
+    local biomeParser = importer("mods/biomes/parser.lua").create({
+        rewards = rewards,
+        routeRules = importer("mods/data/route_rules.lua"),
+    })
+    local declarationDeps = biomeParser.declarationDeps()
     local ordered = {}
     local lookup = {}
 
     for _, importPath in ipairs(BIOME_IMPORTS) do
-        local definition = normalize(resolveDefinition(importer(importPath), importer))
+        local definition = biomeParser.normalize(resolveDefinition(importer(importPath), importer, declarationDeps))
         ordered[#ordered + 1] = definition
         lookup[definition.key] = definition
     end

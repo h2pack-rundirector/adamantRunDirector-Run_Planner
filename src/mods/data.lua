@@ -7,7 +7,7 @@ end
 
 function data.loadBiomes(importer)
     importer = importer or import
-    return importer("mods/data/biomes.lua").load(importer)
+    return importer("mods/biomes/catalog.lua").load(importer)
 end
 
 function data.loadRoutes(importer)

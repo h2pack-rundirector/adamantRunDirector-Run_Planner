@@ -2,8 +2,9 @@
 
 Date: 2026-06-20
 
-This audit covers Run Planner declaration metadata in `src/mods/data/biomes/*.lua`
-and the directly exported layout metadata in `src/mods/data/biomes/*_layout.lua`.
+This audit covers Run Planner declaration metadata in
+`src/mods/biomes/declarations/*.lua` and the directly exported layout metadata
+in `src/mods/biomes/declarations/*_layout.lua`.
 It does not remove anything. It only records which fields are production
 consumed, which are tests/docs-only, and which look like stale or future-facing
 game provenance.

@@ -1,15 +1,15 @@
-return function(importer)
-    local layout = importer("mods/data/biomes/q_summit_layout.lua")
-    local timeline = importer("mods/data/biomes/timeline.lua")
-    local rewards = importer("mods/data/rewards.lua")(importer)
-    local routeRules = importer("mods/data/route_rules.lua")
+return function(importer, deps)
+    local layout = importer("mods/biomes/declarations/q_summit_layout.lua")
+    local parser = deps.parser
+    local rewards = deps.rewards
+    local routeRules = deps.routeRules
 
     return {
         key = "Q",
         label = "Summit",
         region = "Surface",
         adapter = "scriptedFixedLinear",
-        timeline = timeline.standard("Q", {
+        timeline = parser.standardTimeline("Q", {
             postBossFeatures = { surfaceShop = true },
         }),
         featurePolicies = {

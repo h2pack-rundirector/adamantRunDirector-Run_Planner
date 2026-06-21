@@ -1,26 +1,31 @@
-return function(importer)
-    local layout = importer("mods/data/biomes/p_olympus_layout.lua")
-    local timeline = importer("mods/data/biomes/timeline.lua")
-    local rewards = importer("mods/data/rewards.lua")(importer)
-    local routeRules = importer("mods/data/route_rules.lua")
+return function(importer, deps)
+    local layout = importer("mods/biomes/declarations/o_thessaly_layout.lua")(importer, deps)
+    local parser = deps.parser
+    local rewards = deps.rewards
+    local routeRules = deps.routeRules
 
     return {
-        key = "P",
-        label = "Olympus",
+        key = "O",
+        label = "Thessaly",
         region = "Surface",
-        adapter = "fixedLinear",
-        timeline = timeline.standard("P", {
-            bossRooms = {
-                { key = "P_Boss01", label = "Boss" },
-            },
+        adapter = "multiEncounterFixed",
+        timeline = parser.standardTimeline("O", {
             postBossFeatures = { surfaceShop = true },
         }),
         featurePolicies = {
-            chaos = {
-                roomHistoryDepth = { max = 5 },
-            },
             surfaceShop = {
                 roomHistoryDepth = { min = 3 },
+            },
+        },
+        biomeRules = {
+            {
+                key = "story_or_shop_deadline",
+                type = "requireAnyRoomByCounter",
+                counter = "biomeDepthCache",
+                deadline = 5,
+                roomKeys = { "O_Story01", "O_Shop01" },
+                code = "thessaly_story_or_shop_deadline",
+                message = "Thessaly requires Circe or Shop by depth 5",
             },
         },
         slotLayout = {
@@ -28,23 +33,20 @@ return function(importer)
             biomeDepthCacheStart = 1,
             defaultFixedBiomeDepthCacheCost = 0,
             routeBiomeDepthCacheCost = 1,
-            depthRange = { min = 1, max = 9 },
+            depthRange = { min = 1, max = 7 },
             routeStartOrdinal = 1,
-            routeEndOrdinal = 8,
+            routeEndOrdinal = 6,
             entry = {
                 kind = "intro",
                 isBiomeEntry = true,
                 roomKey = layout.introRoom.key,
-                tags = layout.introRoom.tags,
-                features = layout.chaosFeatures,
                 biomeEncounterDepthCost = 0,
                 locked = true,
             },
             special = {
-                [9] = {
+                [7] = {
                     kind = "preboss",
                     roomKey = layout.prebossRoom.key,
-                    tags = layout.prebossRoom.tags,
                     biomeEncounterDepthCost = 0,
                     branches = {
                         {
@@ -52,15 +54,11 @@ return function(importer)
                             label = "Preboss Shop",
                             reward = rewards.shop("WorldShop"),
                         },
-                        {
-                            key = "MajorReward",
-                            label = "Preboss Room",
-                            reward = rewards.roomStore("PreBossRunProgress"),
-                        },
                     },
                 },
             },
         },
+        combatEncounterPolicy = layout.combatEncounterPolicy,
         roles = {
             {
                 key = "Vanilla",
@@ -71,7 +69,8 @@ return function(importer)
                 key = "Combat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,
-                reward = rewards.majorMinor(),
+                reward = rewards.shipWheel(),
+                encounterPolicy = "O_CombatData",
             },
             {
                 key = "Story",
@@ -98,6 +97,15 @@ return function(importer)
                 reward = rewards.shop("WorldShop"),
                 biomeEncounterDepthCost = 0,
                 routeRules = routeRules.role("Midshop"),
+                reserve = true,
+            },
+            {
+                key = "Devotion",
+                label = "Trial",
+                roomOptions = layout.devotionRooms,
+                reward = rewards.devotion(),
+                requiredLayer = "rewards",
+                routeRules = routeRules.role("Devotion"),
                 reserve = true,
             },
             {

@@ -1,51 +1,50 @@
-return function(importer)
-    local layout = importer("mods/data/biomes/f_erebus_layout.lua")
-    local optionRewards = importer("mods/data/biomes/option_rewards.lua")
-    local timeline = importer("mods/data/biomes/timeline.lua")
-    local rewards = importer("mods/data/rewards.lua")(importer)
-    local routeRules = importer("mods/data/route_rules.lua")
-    local combatRooms = optionRewards.withReward(
-        layout.combatRooms,
-        layout.devotionCombatRooms,
-        rewards.majorMinor({ allowDevotion = true })
-    )
+return function(importer, deps)
+    local layout = importer("mods/biomes/declarations/p_olympus_layout.lua")
+    local parser = deps.parser
+    local rewards = deps.rewards
+    local routeRules = deps.routeRules
 
     return {
-        key = "F",
-        label = "Erebus",
-        region = "Underworld",
+        key = "P",
+        label = "Olympus",
+        region = "Surface",
         adapter = "fixedLinear",
-        timeline = timeline.standard("F", {
-            postBossFeatures = { wellShop = true },
+        timeline = parser.standardTimeline("P", {
+            bossRooms = {
+                { key = "P_Boss01", label = "Boss" },
+            },
+            postBossFeatures = { surfaceShop = true },
         }),
         featurePolicies = {
-            wellShop = {
+            chaos = {
+                roomHistoryDepth = { max = 5 },
+            },
+            surfaceShop = {
                 roomHistoryDepth = { min = 3 },
             },
         },
         slotLayout = {
             routeRowLabelPrefix = "Depth",
-            biomeDepthCacheStart = 0,
+            biomeDepthCacheStart = 1,
             defaultFixedBiomeDepthCacheCost = 0,
             routeBiomeDepthCacheCost = 1,
-            depthRange = { min = 0, max = 11 },
+            depthRange = { min = 1, max = 9 },
             routeStartOrdinal = 1,
-            routeEndOrdinal = 10,
+            routeEndOrdinal = 8,
+            entry = {
+                kind = "intro",
+                isBiomeEntry = true,
+                roomKey = layout.introRoom.key,
+                tags = layout.introRoom.tags,
+                features = layout.chaosFeatures,
+                biomeEncounterDepthCost = 0,
+                locked = true,
+            },
             special = {
-                [0] = {
-                    kind = "opening",
-                    isBiomeEntry = true,
-                    key = "Opening",
-                    label = "Opening",
-                    roomOptions = layout.openingRooms,
-                    reward = rewards.roomStore("OpeningRunProgress"),
-                    biomeEncounterDepthCost = 1,
-                    locked = true,
-                },
-                [11] = {
+                [9] = {
                     kind = "preboss",
                     roomKey = layout.prebossRoom.key,
-                    biomeDepthCache = 10,
+                    tags = layout.prebossRoom.tags,
                     biomeEncounterDepthCost = 0,
                     branches = {
                         {
@@ -71,7 +70,7 @@ return function(importer)
             {
                 key = "Combat",
                 label = "Combat",
-                mapOptions = combatRooms,
+                mapOptions = layout.combatRooms,
                 reward = rewards.majorMinor(),
             },
             {
@@ -99,7 +98,6 @@ return function(importer)
                 reward = rewards.shop("WorldShop"),
                 biomeEncounterDepthCost = 0,
                 routeRules = routeRules.role("Midshop"),
-                routeRequirements = routeRules.midshopRequirements(),
                 reserve = true,
             },
             {

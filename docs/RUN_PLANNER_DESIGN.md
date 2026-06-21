@@ -670,7 +670,7 @@ N = {
 }
 ```
 
-Implemented definition files live under `src/mods/data/biomes/`. Each biome
+Implemented definition files live under `src/mods/biomes/declarations/`. Each biome
 has a main declaration file, and most biomes also have a layout file.
 
 The main declaration file is the source of truth for route and role semantics:
@@ -738,7 +738,7 @@ The initial files are:
 - `q_summit.lua`
 - `q_summit_layout.lua`
 
-These definitions are loaded and indexed by `mods/data/biomes.lua`. Storage,
+These definitions are loaded and indexed by `mods/biomes/catalog.lua`. Storage,
 UI, snapshots, and route hooks should derive from this loader instead of
 duplicating biome facts.
 

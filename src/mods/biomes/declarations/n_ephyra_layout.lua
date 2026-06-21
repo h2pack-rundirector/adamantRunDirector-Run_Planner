@@ -1,5 +1,5 @@
-return function(importer)
-local rewards = importer("mods/data/rewards.lua")(importer)
+return function(_, deps)
+local rewards = deps.rewards
 local layout = {}
 
 local HARD_SUBROOMS = {

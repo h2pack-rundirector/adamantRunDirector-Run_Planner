@@ -1,10 +1,9 @@
-return function(importer)
-    local layout = importer("mods/data/biomes/g_oceanus_layout.lua")
-    local optionRewards = importer("mods/data/biomes/option_rewards.lua")
-    local timeline = importer("mods/data/biomes/timeline.lua")
-    local rewards = importer("mods/data/rewards.lua")(importer)
-    local routeRules = importer("mods/data/route_rules.lua")
-    local combatRooms = optionRewards.withReward(
+return function(importer, deps)
+    local layout = importer("mods/biomes/declarations/g_oceanus_layout.lua")
+    local parser = deps.parser
+    local rewards = deps.rewards
+    local routeRules = deps.routeRules
+    local combatRooms = parser.withReward(
         layout.combatRooms,
         layout.devotionCombatRooms,
         rewards.majorMinor({ allowDevotion = true })
@@ -15,7 +14,7 @@ return function(importer)
         label = "Oceanus",
         region = "Underworld",
         adapter = "fixedLinear",
-        timeline = timeline.standard("G", {
+        timeline = parser.standardTimeline("G", {
             postBossFeatures = { wellShop = true },
         }),
         featurePolicies = {
