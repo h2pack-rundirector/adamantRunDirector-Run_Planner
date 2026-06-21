@@ -21,6 +21,21 @@ end
 local function normalizeRewardRows(rows)
     local rewardItems = testImport("mods/route/reward_planning/items.lua")
     for _, row in ipairs(rows or {}) do
+        if row.biomeEncounterDepthCost == nil
+            and row.biomeEncounterDepthCostMin == nil
+            and row.biomeEncounterDepthCostMax == nil
+        then
+            row.biomeEncounterDepthCost = 1
+        end
+        if row.biomeEncounterDepthCostMin == nil or row.biomeEncounterDepthCostMax == nil then
+            if type(row.biomeEncounterDepthCost) == "table" then
+                row.biomeEncounterDepthCostMin = row.biomeEncounterDepthCost.min
+                row.biomeEncounterDepthCostMax = row.biomeEncounterDepthCost.max
+            else
+                row.biomeEncounterDepthCostMin = row.biomeEncounterDepthCost
+                row.biomeEncounterDepthCostMax = row.biomeEncounterDepthCost
+            end
+        end
         rewardItems.attach(row)
     end
     return rows
@@ -4243,24 +4258,32 @@ function TestRunPlannerControls.testFixedLinearRowContextUsesSelectionDepthCosts
         rowIndex = 1,
         routeOrdinal = 0,
         biomeDepthCache = 0,
-        biomeDepthCacheKnown = true,
         biomeDepthCacheCost = 0,
-        biomeDepthCacheCostKnown = true,
         biomeEncounterDepth = 0,
-        biomeEncounterDepthKnown = true,
+        biomeEncounterDepthMin = 0,
+        biomeEncounterDepthMax = 0,
         biomeEncounterDepthCost = 1,
-        biomeEncounterDepthCostKnown = true,
+        biomeEncounterDepthCostMin = 1,
+        biomeEncounterDepthCostMax = 1,
         roomHistoryCost = 1,
     })
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeDepthCache, 3)
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepth, 4)
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthMin, 4)
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthMax, 4)
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCost, 0)
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCostMin, 0)
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCostMax, 0)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeDepthCache, 4)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepth, 4)
+    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthMin, 4)
+    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthMax, 4)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthCost, 1)
+    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthCostMin, 1)
+    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthCostMax, 1)
 end
 
-function TestRunPlannerControls.testFixedLinearUnknownEncounterDepthBlocksDepthGatedOptions()
+function TestRunPlannerControls.testFixedLinearAmbiguousEncounterDepthBlocksUnprovenDepthGatedOptions()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
     local instance = data.prepare({
@@ -4282,12 +4305,13 @@ function TestRunPlannerControls.testFixedLinearUnknownEncounterDepthBlocksDepthG
 
     local context = data.rowContext(instance, rows, 3)
     lu.assertNil(context.biomeEncounterDepth)
-    lu.assertFalse(context.biomeEncounterDepthKnown)
+    lu.assertEquals(context.biomeEncounterDepthMin, 1)
+    lu.assertEquals(context.biomeEncounterDepthMax, 2)
     lu.assertFalse(data.isOptionAvailable(instance, rows, 3, "Combat", "F_Combat05"))
 
     local validation = data.validateRow(instance, rows, 3)
     lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "encounter_depth_unknown")
+    lu.assertEquals(validation.code, "encounter_depth_unavailable")
 end
 
 function TestRunPlannerControls.testFixedLinearRowContextUsesOptionDepthCostOverrides()
@@ -4639,7 +4663,8 @@ local function routeRewardRow(rowIndex, rewardType, opts)
         rewards = opts.rewards or { rewardType },
         rewardPicks = opts.rewardPicks or {},
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
-        biomeEncounterDepthCostKnown = opts.biomeEncounterDepthCostKnown ~= false,
+        biomeEncounterDepthCostMin = opts.biomeEncounterDepthCostMin or opts.biomeEncounterDepthCost or 1,
+        biomeEncounterDepthCostMax = opts.biomeEncounterDepthCostMax or opts.biomeEncounterDepthCost or 1,
     }
 end
 

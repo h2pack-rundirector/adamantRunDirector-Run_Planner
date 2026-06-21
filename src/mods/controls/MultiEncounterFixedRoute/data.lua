@@ -15,7 +15,6 @@ local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
 local routeStartOrdinal = common.routeStartOrdinal
 local routeEndOrdinal = common.routeEndOrdinal
 local routeRowLabel = common.routeRowLabel
-local isInRange = availability.isInRange
 local applySlotDepthContext = common.applySlotDepthContext
 local clearList = common.clearList
 
@@ -238,12 +237,17 @@ local function isVariantAvailableAtContext(variant, context)
     if variant == nil then
         return false
     end
-    if variant.availableAtBiomeEncounterDepth ~= nil
-        and (context == nil or context.biomeEncounterDepthKnown == false or context.biomeEncounterDepth == nil)
-    then
+    if variant.availableAtBiomeEncounterDepth == nil then
+        return true
+    end
+    if context == nil or context.biomeEncounterDepthMin == nil or context.biomeEncounterDepthMax == nil then
         return false
     end
-    return isInRange(context and context.biomeEncounterDepth, variant.availableAtBiomeEncounterDepth)
+    return availability.boundsInRange(
+        context.biomeEncounterDepthMin,
+        context.biomeEncounterDepthMax,
+        variant.availableAtBiomeEncounterDepth
+    )
 end
 
 local function prepareVariantChoiceCache(instance)

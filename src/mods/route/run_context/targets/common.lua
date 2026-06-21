@@ -91,6 +91,31 @@ function common.valueInRange(range, value)
     return true
 end
 
+function common.boundsInRange(range, minValue, maxValue)
+    if range == nil then
+        return true
+    end
+    if minValue == nil or maxValue == nil then
+        return false
+    end
+    if range.exact ~= nil and (minValue ~= range.exact or maxValue ~= range.exact) then
+        return false
+    end
+    if range.min ~= nil and minValue < range.min then
+        return false
+    end
+    if range.minExclusive ~= nil and minValue <= range.minExclusive then
+        return false
+    end
+    if range.max ~= nil and maxValue > range.max then
+        return false
+    end
+    if range.maxExclusive ~= nil and maxValue >= range.maxExclusive then
+        return false
+    end
+    return true
+end
+
 local function nonEmpty(value)
     if value == nil or value == "" then
         return nil

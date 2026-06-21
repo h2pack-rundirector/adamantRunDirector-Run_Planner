@@ -172,11 +172,20 @@ function rowEngine.create(adapter)
         return "", nil
     end
 
-    local function explicitBiomeEncounterDepthCost(value)
+    local function biomeEncounterDepthCostBounds(value)
         if value == nil then
-            return nil
+            return nil, nil
         end
-        return common.numericCost(value, 0)
+        if type(value) == "table" then
+            local minCost = common.numericCost(value.min, 0)
+            local maxCost = common.numericCost(value.max, minCost)
+            if maxCost < minCost then
+                maxCost = minCost
+            end
+            return minCost, maxCost
+        end
+        local cost = common.numericCost(value, 0)
+        return cost, cost
     end
 
     local function explicitBiomeDepthCacheCost(value)
@@ -198,31 +207,37 @@ function rowEngine.create(adapter)
             return nil
         end
 
-        local cost = adapter.biomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
-        if cost ~= nil then
-            return common.numericCost(cost, 0)
+        return adapter.biomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+    end
+
+    local function effectiveBiomeEncounterDepthCostValue(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        local value = adapterBiomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        if value ~= nil then
+            return value
+        end
+        if option ~= nil and option.biomeEncounterDepthCost ~= nil then
+            return option.biomeEncounterDepthCost
+        end
+        if role ~= nil and role.biomeEncounterDepthCost ~= nil then
+            return role.biomeEncounterDepthCost
+        end
+        if slot ~= nil and slot.biomeEncounterDepthCost ~= nil then
+            return slot.biomeEncounterDepthCost
         end
         return nil
     end
 
-    local function effectiveBiomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
-        local cost = adapterBiomeEncounterDepthCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
-        if cost ~= nil then
-            return cost
+    local function effectiveBiomeEncounterDepthCostBounds(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        local minCost, maxCost = biomeEncounterDepthCostBounds(
+            effectiveBiomeEncounterDepthCostValue(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
+        )
+        if minCost ~= nil and maxCost ~= nil then
+            return minCost, maxCost
         end
-        cost = explicitBiomeEncounterDepthCost(option and option.biomeEncounterDepthCost)
-        if cost ~= nil then
-            return cost
+        if role == nil or (role.requiresConcreteOption and (optionKey == nil or optionKey == "")) then
+            return 0, 0
         end
-        cost = explicitBiomeEncounterDepthCost(role and role.biomeEncounterDepthCost)
-        if cost ~= nil then
-            return cost
-        end
-        cost = explicitBiomeEncounterDepthCost(slot and slot.biomeEncounterDepthCost)
-        if cost ~= nil then
-            return cost
-        end
-        return nil
+        return 0, 1
     end
 
     local function adapterBiomeDepthCacheCost(instance, rows, rowIndex, roleKey, role, optionKey, option, slot)
@@ -301,6 +316,16 @@ function rowEngine.create(adapter)
         local roleKey = readRoleKey(instance, rows, rowIndex)
         local role = roleForRow(instance, rowIndex, roleKey)
         local optionKey, option = selectedOptionForCost(role, rows, rowIndex)
+        local biomeEncounterDepthCostMin, biomeEncounterDepthCostMax = effectiveBiomeEncounterDepthCostBounds(
+            instance,
+            rows,
+            rowIndex,
+            roleKey,
+            role,
+            optionKey,
+            option,
+            slot
+        )
         local biomeDepthCacheCost = effectiveBiomeDepthCacheCost(
             instance,
             rows,
@@ -311,16 +336,10 @@ function rowEngine.create(adapter)
             option,
             slot
         )
-        local biomeEncounterDepthCost = effectiveBiomeEncounterDepthCost(
-            instance,
-            rows,
-            rowIndex,
-            roleKey,
-            role,
-            optionKey,
-            option,
-            slot
-        )
+        local biomeEncounterDepthCost
+        if biomeEncounterDepthCostMin == biomeEncounterDepthCostMax then
+            biomeEncounterDepthCost = biomeEncounterDepthCostMin
+        end
         local roomHistoryCost = effectiveRoomHistoryCost(
             instance,
             rows,
@@ -334,9 +353,9 @@ function rowEngine.create(adapter)
         target.rowIndex = rowIndex
         target.routeOrdinal = slot and slot.routeOrdinal or nil
         target.biomeDepthCacheCost = biomeDepthCacheCost
-        target.biomeDepthCacheCostKnown = biomeDepthCacheCost ~= nil
         target.biomeEncounterDepthCost = biomeEncounterDepthCost
-        target.biomeEncounterDepthCostKnown = biomeEncounterDepthCost ~= nil
+        target.biomeEncounterDepthCostMin = biomeEncounterDepthCostMin
+        target.biomeEncounterDepthCostMax = biomeEncounterDepthCostMax
         target.roomHistoryCost = roomHistoryCost
         return target
     end

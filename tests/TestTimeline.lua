@@ -75,30 +75,38 @@ function TestRunPlannerTimeline.testWalkRouteCountsRowsAndAfterBiomeTimeline()
     lu.assertEquals(rows[1].roomHistoryOrdinal, 1)
     lu.assertEquals(rows[1].runDepthCache, 2)
     lu.assertEquals(rows[1].runEncounterDepth, 1)
-    lu.assertTrue(rows[1].runEncounterDepthKnown)
+    lu.assertEquals(rows[1].runEncounterDepthMin, 1)
+    lu.assertEquals(rows[1].runEncounterDepthMax, 1)
     lu.assertEquals(rows[1].roomHistoryDepth, 0)
     lu.assertEquals(rows[1].biomeDepthCache, 0)
     lu.assertEquals(rows[2].roomHistoryOrdinal, 3)
     lu.assertEquals(rows[2].runDepthCache, 4)
     lu.assertEquals(rows[2].runEncounterDepth, 2)
-    lu.assertTrue(rows[2].runEncounterDepthKnown)
+    lu.assertEquals(rows[2].runEncounterDepthMin, 2)
+    lu.assertEquals(rows[2].runEncounterDepthMax, 2)
     lu.assertEquals(rows[2].roomHistoryDepth, 2)
     lu.assertEquals(entries[1].entryKey, "Boss")
     lu.assertEquals(entries[1].roomHistoryOrdinal, 4)
     lu.assertEquals(entries[1].runDepthCache, 5)
     lu.assertEquals(entries[1].runEncounterDepth, 4)
+    lu.assertEquals(entries[1].runEncounterDepthMin, 4)
+    lu.assertEquals(entries[1].runEncounterDepthMax, 4)
     lu.assertEquals(entries[2].entryKey, "PostBoss")
     lu.assertEquals(entries[2].roomHistoryOrdinal, 5)
     lu.assertEquals(entries[2].runDepthCache, 6)
     lu.assertEquals(entries[2].runEncounterDepth, 4)
+    lu.assertEquals(entries[2].runEncounterDepthMin, 4)
+    lu.assertEquals(entries[2].runEncounterDepthMax, 4)
     lu.assertEquals(rows[3].biomeKey, "B")
     lu.assertEquals(rows[3].roomHistoryOrdinal, 6)
     lu.assertEquals(rows[3].runDepthCache, 7)
     lu.assertEquals(rows[3].runEncounterDepth, 4)
+    lu.assertEquals(rows[3].runEncounterDepthMin, 4)
+    lu.assertEquals(rows[3].runEncounterDepthMax, 4)
     lu.assertEquals(rows[3].roomHistoryDepth, 0)
 end
 
-function TestRunPlannerTimeline.testWalkRouteMarksRunEncounterDepthUnknownAfterUnknownRowCost()
+function TestRunPlannerTimeline.testWalkRouteBoundsRunEncounterDepthAfterAmbiguousRowCost()
     local timeline = testImport("mods/route/timeline.lua")
     local route = {
         key = "TestRoute",
@@ -118,6 +126,7 @@ function TestRunPlannerTimeline.testWalkRouteMarksRunEncounterDepthUnknownAfterU
                     {
                         rowIndex = 2,
                         roomHistoryCost = 1,
+                        biomeEncounterDepthCost = { min = 0, max = 1 },
                     },
                     {
                         rowIndex = 3,
@@ -133,11 +142,14 @@ function TestRunPlannerTimeline.testWalkRouteMarksRunEncounterDepthUnknownAfterU
     })
 
     lu.assertEquals(rows[1].runEncounterDepth, 1)
-    lu.assertTrue(rows[1].runEncounterDepthKnown)
+    lu.assertEquals(rows[1].runEncounterDepthMin, 1)
+    lu.assertEquals(rows[1].runEncounterDepthMax, 1)
     lu.assertEquals(rows[2].runEncounterDepth, 2)
-    lu.assertTrue(rows[2].runEncounterDepthKnown)
+    lu.assertEquals(rows[2].runEncounterDepthMin, 2)
+    lu.assertEquals(rows[2].runEncounterDepthMax, 2)
     lu.assertNil(rows[3].runEncounterDepth)
-    lu.assertFalse(rows[3].runEncounterDepthKnown)
+    lu.assertEquals(rows[3].runEncounterDepthMin, 2)
+    lu.assertEquals(rows[3].runEncounterDepthMax, 3)
 end
 
 function TestRunPlannerTimeline.testSideRoomContextUsesParentTimelinePosition()
@@ -150,7 +162,8 @@ function TestRunPlannerTimeline.testSideRoomContextUsesParentTimelinePosition()
         roomHistoryOrdinal = 5,
         roomHistoryDepth = 3,
         runEncounterDepth = 2,
-        runEncounterDepthKnown = true,
+        runEncounterDepthMin = 2,
+        runEncounterDepthMax = 2,
     }, { sideIndex = 1 })
 
     lu.assertEquals(side.routeKey, "Surface")
@@ -160,7 +173,8 @@ function TestRunPlannerTimeline.testSideRoomContextUsesParentTimelinePosition()
     lu.assertEquals(side.roomHistoryOrdinal, 6)
     lu.assertEquals(side.runDepthCache, 7)
     lu.assertEquals(side.runEncounterDepth, 2)
-    lu.assertTrue(side.runEncounterDepthKnown)
+    lu.assertEquals(side.runEncounterDepthMin, 2)
+    lu.assertEquals(side.runEncounterDepthMax, 2)
     lu.assertEquals(side.roomHistoryDepth, 4)
 end
 
@@ -176,37 +190,74 @@ function TestRunPlannerTimeline.testNextBiomeRowCountersUseStartAndPreviousCosts
 
     local first = timeline.nextBiomeRowCounters(instance)
     lu.assertEquals(first.biomeDepthCache, 3)
-    lu.assertTrue(first.biomeDepthCacheKnown)
     lu.assertEquals(first.biomeEncounterDepth, 0)
-    lu.assertTrue(first.biomeEncounterDepthKnown)
+    lu.assertEquals(first.biomeEncounterDepthMin, 0)
+    lu.assertEquals(first.biomeEncounterDepthMax, 0)
 
     local second = timeline.nextBiomeRowCounters(instance, {
         biomeDepthCache = first.biomeDepthCache,
-        biomeDepthCacheKnown = true,
         biomeDepthCacheCost = 2,
         biomeEncounterDepth = first.biomeEncounterDepth,
-        biomeEncounterDepthKnown = true,
+        biomeEncounterDepthMin = first.biomeEncounterDepthMin,
+        biomeEncounterDepthMax = first.biomeEncounterDepthMax,
         biomeEncounterDepthCost = 1,
     })
     lu.assertEquals(second.biomeDepthCache, 5)
-    lu.assertTrue(second.biomeDepthCacheKnown)
     lu.assertEquals(second.biomeEncounterDepth, 1)
-    lu.assertTrue(second.biomeEncounterDepthKnown)
+    lu.assertEquals(second.biomeEncounterDepthMin, 1)
+    lu.assertEquals(second.biomeEncounterDepthMax, 1)
 end
 
-function TestRunPlannerTimeline.testNextBiomeRowCountersPropagateUnknownPreviousCosts()
+function TestRunPlannerTimeline.testNextBiomeRowCountersPropagateEncounterDepthBounds()
     local timeline = testImport("mods/route/timeline.lua")
     local counters = timeline.nextBiomeRowCounters({}, {
         biomeDepthCache = 1,
-        biomeDepthCacheKnown = true,
         biomeDepthCacheCost = nil,
         biomeEncounterDepth = nil,
-        biomeEncounterDepthKnown = false,
-        biomeEncounterDepthCost = 1,
+        biomeEncounterDepthMin = 2,
+        biomeEncounterDepthMax = 3,
+        biomeEncounterDepthCostMin = 0,
+        biomeEncounterDepthCostMax = 1,
     })
 
     lu.assertNil(counters.biomeDepthCache)
-    lu.assertFalse(counters.biomeDepthCacheKnown)
     lu.assertNil(counters.biomeEncounterDepth)
-    lu.assertFalse(counters.biomeEncounterDepthKnown)
+    lu.assertEquals(counters.biomeEncounterDepthMin, 2)
+    lu.assertEquals(counters.biomeEncounterDepthMax, 4)
+end
+
+function TestRunPlannerTimeline.testNextBiomeRowCountersTreatsMissingEncounterDepthBoundsAsUnknown()
+    local timeline = testImport("mods/route/timeline.lua")
+
+    local missingDepthBounds = timeline.nextBiomeRowCounters({}, {
+        biomeDepthCache = 1,
+        biomeDepthCacheCost = 1,
+        biomeEncounterDepthCost = 1,
+    })
+    lu.assertEquals(missingDepthBounds.biomeDepthCache, 2)
+    lu.assertNil(missingDepthBounds.biomeEncounterDepth)
+    lu.assertNil(missingDepthBounds.biomeEncounterDepthMin)
+    lu.assertNil(missingDepthBounds.biomeEncounterDepthMax)
+
+    local missingCostBounds = timeline.nextBiomeRowCounters({}, {
+        biomeDepthCache = 1,
+        biomeDepthCacheCost = 1,
+        biomeEncounterDepthMin = 0,
+        biomeEncounterDepthMax = 1,
+    })
+    lu.assertEquals(missingCostBounds.biomeDepthCache, 2)
+    lu.assertNil(missingCostBounds.biomeEncounterDepth)
+    lu.assertNil(missingCostBounds.biomeEncounterDepthMin)
+    lu.assertNil(missingCostBounds.biomeEncounterDepthMax)
+end
+
+function TestRunPlannerTimeline.testRowBiomeEncounterDepthCostBoundsTreatsMissingCostAsUnknown()
+    local timeline = testImport("mods/route/timeline.lua")
+
+    local bounds = timeline.rowBiomeEncounterDepthCostBounds({
+        rowIndex = 9,
+    })
+
+    lu.assertNil(bounds.min)
+    lu.assertNil(bounds.max)
 end

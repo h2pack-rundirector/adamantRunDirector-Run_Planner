@@ -69,6 +69,7 @@ layout.combatEncounterPolicy = {
             {
                 key = "Vanilla",
                 label = "Vanilla",
+                biomeEncounterDepthCost = { min = 1, max = 2 },
             },
             {
                 key = "TwoCombats",

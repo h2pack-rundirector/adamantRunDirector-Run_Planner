@@ -190,7 +190,8 @@ local function minRoomHistorySpacingInvalid(requirement, state, ctx, event)
 end
 
 local function minRunEncounterDepthInvalid(requirement, ctx)
-    if ctx.runEncounterDepthKnown == false or ctx.runEncounterDepth == nil or ctx.runEncounterDepth < requirement.min then
+    local runEncounterDepthMin = ctx.runEncounterDepthMin or ctx.runEncounterDepth
+    if runEncounterDepthMin == nil or runEncounterDepthMin < requirement.min then
         return requirement
     end
     return nil
@@ -401,9 +402,12 @@ function rewardLegality.evaluate(context, routeKey, opts)
                 roomHistoryOrdinal = rowContext.roomHistoryOrdinal,
                 runDepthCache = rowContext.runDepthCache,
                 runEncounterDepth = rowContext.runEncounterDepth,
-                runEncounterDepthKnown = rowContext.runEncounterDepthKnown,
+                runEncounterDepthMin = rowContext.runEncounterDepthMin,
+                runEncounterDepthMax = rowContext.runEncounterDepthMax,
                 biomeDepthCache = rowContext.biomeDepthCache,
                 biomeEncounterDepth = rowContext.biomeEncounterDepth,
+                biomeEncounterDepthMin = rowContext.biomeEncounterDepthMin,
+                biomeEncounterDepthMax = rowContext.biomeEncounterDepthMax,
             }
             if row ~= nil and row.valid ~= false then
                 for index in pairs(events) do

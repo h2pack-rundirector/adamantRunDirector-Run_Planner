@@ -327,18 +327,73 @@ local function assertMinibossCosts(role, expectedCosts)
     end
 end
 
+local function assertEncounterDepthCostRange(value, minCost, maxCost)
+    lu.assertEquals(value, {
+        min = minCost,
+        max = maxCost,
+    })
+end
+
+local function assertEncounterDepthCost(value, context)
+    if type(value) == "table" then
+        lu.assertNotNil(value.min, context .. " missing min encounter-depth cost")
+        lu.assertNotNil(value.max, context .. " missing max encounter-depth cost")
+        return
+    end
+    lu.assertEquals(type(value), "number", context .. " missing encounter-depth cost")
+end
+
+local function roleOptions(role)
+    return role.roomOptions or role.mapOptions or {}
+end
+
+local function assertSlotEncounterDepthCost(slot, context)
+    if slot == nil then
+        return
+    end
+    assertEncounterDepthCost(slot.biomeEncounterDepthCost, context)
+end
+
+local function assertSlotListEncounterDepthCosts(slots, context)
+    for index, slot in ipairs(slots or {}) do
+        assertSlotEncounterDepthCost(slot, context .. "[" .. tostring(index) .. "]")
+    end
+end
+
+local function assertSpecialSlotEncounterDepthCosts(slots, context)
+    for ordinal, slot in pairs(slots or {}) do
+        assertSlotEncounterDepthCost(slot, context .. "[" .. tostring(ordinal) .. "]")
+    end
+end
+
 function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
     local data = dofile("src/mods/data.lua")
     local biomes = data.loadBiomes(testImport)
 
     lu.assertEquals(biomes.lookup.F.slotLayout.special[0].biomeEncounterDepthCost, 1)
     lu.assertNil(biomes.lookup.F.slotLayout.default)
-    lu.assertNil(biomes.lookup.F.rolesByKey.Vanilla.biomeEncounterDepthCost)
-    lu.assertNil(biomes.lookup.F.rolesByKey.Combat.biomeEncounterDepthCost)
+    assertEncounterDepthCostRange(biomes.lookup.F.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
+    lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.biomeEncounterDepthCost, 1)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.mapOptions[1].biomeEncounterDepthCost, 1)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Story.biomeEncounterDepthCost, 0)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Fountain.biomeEncounterDepthCost, 0)
     lu.assertEquals(optionByKey(biomes.lookup.F.rolesByKey.Combat.mapOptions, "F_Combat05").biomeEncounterDepthCost, 1)
+    assertEncounterDepthCostRange(biomes.lookup.G.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
+    lu.assertEquals(biomes.lookup.G.rolesByKey.Combat.biomeEncounterDepthCost, 1)
+    assertEncounterDepthCostRange(biomes.lookup.H.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
+    lu.assertEquals(biomes.lookup.H.rolesByKey.Combat.biomeEncounterDepthCost, 1)
+    assertEncounterDepthCostRange(biomes.lookup.I.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
+    lu.assertEquals(biomes.lookup.I.rolesByKey.Goal.biomeEncounterDepthCost, 1)
+    lu.assertEquals(biomes.lookup.I.rolesByKey.ExtensionCombat.biomeEncounterDepthCost, 1)
+    assertEncounterDepthCostRange(biomes.lookup.N.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
+    lu.assertEquals(biomes.lookup.N.rolesByKey.Combat.biomeEncounterDepthCost, 1)
+    assertEncounterDepthCostRange(biomes.lookup.O.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 2)
+    assertEncounterDepthCostRange(biomes.lookup.O.rolesByKey.Combat.biomeEncounterDepthCost, 1, 2)
+    lu.assertEquals(biomes.lookup.O.rolesByKey.Devotion.biomeEncounterDepthCost, 1)
+    assertEncounterDepthCostRange(biomes.lookup.P.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
+    lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.biomeEncounterDepthCost, 1)
+    assertEncounterDepthCostRange(biomes.lookup.Q.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
+    lu.assertEquals(biomes.lookup.Q.rolesByKey.Combat.biomeEncounterDepthCost, 1)
 
     assertMinibossCosts(biomes.lookup.F.rolesByKey.Miniboss, {
         F_MiniBoss01 = 1,
@@ -381,9 +436,47 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
     lu.assertEquals(biomes.lookup.F.slotLayout.special[11].biomeEncounterDepthCost, 0)
 
     local thessalyPolicy = biomes.lookup.O.combatEncounterPolicy.countControl.options
-    lu.assertNil(thessalyPolicy[1].biomeEncounterDepthCost)
+    assertEncounterDepthCostRange(thessalyPolicy[1].biomeEncounterDepthCost, 1, 2)
     lu.assertEquals(thessalyPolicy[2].biomeEncounterDepthCost, 1)
     lu.assertEquals(thessalyPolicy[3].biomeEncounterDepthCost, 2)
+end
+
+function TestRunPlannerData.testBiomeDefinitionsResolveRouteEncounterDepthCosts()
+    local data = dofile("src/mods/data.lua")
+    local biomes = data.loadBiomes(testImport)
+
+    for _, biome in ipairs(biomes.ordered) do
+        local slotLayout = biome.slotLayout or {}
+        assertSlotEncounterDepthCost(slotLayout.entry, biome.key .. ".entry")
+        assertSlotListEncounterDepthCosts(slotLayout.fixedBeforeRoute, biome.key .. ".fixedBeforeRoute")
+        assertSlotListEncounterDepthCosts(slotLayout.fixedAfterRoute, biome.key .. ".fixedAfterRoute")
+        assertSlotListEncounterDepthCosts(slotLayout.fixedBeforeHub, biome.key .. ".fixedBeforeHub")
+        assertSlotListEncounterDepthCosts(slotLayout.fixedAfterHub, biome.key .. ".fixedAfterHub")
+        assertSlotListEncounterDepthCosts(slotLayout.fixedAfterGoals, biome.key .. ".fixedAfterGoals")
+        assertSpecialSlotEncounterDepthCosts(slotLayout.special, biome.key .. ".special")
+
+        for _, role in ipairs(biome.roles or {}) do
+            local context = biome.key .. "." .. tostring(role.key)
+            if role.requiresConcreteOption then
+                for _, option in ipairs(roleOptions(role)) do
+                    assertEncounterDepthCost(option.biomeEncounterDepthCost, context .. "." .. tostring(option.key))
+                end
+            else
+                assertEncounterDepthCost(role.biomeEncounterDepthCost, context)
+            end
+        end
+
+        local countOptions = biome.combatEncounterPolicy
+            and biome.combatEncounterPolicy.countControl
+            and biome.combatEncounterPolicy.countControl.options
+            or nil
+        for _, option in ipairs(countOptions or {}) do
+            assertEncounterDepthCost(
+                option.biomeEncounterDepthCost,
+                biome.key .. ".combatEncounterPolicy." .. tostring(option.key)
+            )
+        end
+    end
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareShopFeatureEligibility()

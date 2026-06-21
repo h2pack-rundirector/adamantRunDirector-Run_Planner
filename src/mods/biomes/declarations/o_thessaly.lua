@@ -64,6 +64,7 @@ return function(importer, deps)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
+                biomeEncounterDepthCost = routeRules.encounterDepthCost(0, 2),
             },
             {
                 key = "Combat",
@@ -71,6 +72,7 @@ return function(importer, deps)
                 mapOptions = layout.combatRooms,
                 reward = rewards.shipWheel(),
                 encounterPolicy = "O_CombatData",
+                biomeEncounterDepthCost = routeRules.encounterDepthCost(1, 2),
             },
             {
                 key = "Story",
@@ -105,6 +107,7 @@ return function(importer, deps)
                 roomOptions = layout.devotionRooms,
                 reward = rewards.devotion(),
                 requiredLayer = "rewards",
+                biomeEncounterDepthCost = 1,
                 routeRules = routeRules.role("Devotion"),
                 reserve = true,
             },

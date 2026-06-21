@@ -66,12 +66,14 @@ return function(importer, deps)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
+                biomeEncounterDepthCost = routeRules.encounterDepthCost(0, 1),
             },
             {
                 key = "Combat",
                 label = "Combat",
                 mapOptions = combatRooms,
                 reward = rewards.majorMinor(),
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Story",

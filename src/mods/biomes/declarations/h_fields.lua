@@ -63,6 +63,7 @@ return function(importer, deps)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
+                biomeEncounterDepthCost = routeRules.encounterDepthCost(0, 1),
             },
             {
                 key = "Combat",
@@ -73,6 +74,7 @@ return function(importer, deps)
                     ineligibleRewardTypes = { "Devotion" },
                 }),
                 cageRewardPolicy = "H_FieldsCageRewards",
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Miniboss",

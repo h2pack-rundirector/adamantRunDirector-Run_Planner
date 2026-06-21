@@ -2,6 +2,7 @@ return function(importer, deps)
     local layout = importer("mods/biomes/declarations/i_tartarus_layout.lua")(importer, deps)
     local parser = deps.parser
     local rewards = deps.rewards
+    local routeRules = deps.routeRules
 
     return {
         key = "I",
@@ -75,6 +76,7 @@ return function(importer, deps)
                 key = "Vanilla",
                 label = "Vanilla",
                 reward = rewards.none(),
+                biomeEncounterDepthCost = routeRules.encounterDepthCost(0, 1),
             },
             {
                 key = "Goal",
@@ -82,6 +84,7 @@ return function(importer, deps)
                 mapOptions = layout.combatRooms,
                 reward = rewards.forcedReward("ClockworkGoal"),
                 increments = { clockworkGoal = 1 },
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "ExtensionCombat",
@@ -90,6 +93,7 @@ return function(importer, deps)
                 reward = rewards.roomStore("ClockworkExtensionRewards"),
                 increments = { clockworkNonGoalReward = 1 },
                 requiresPrevious = { supportsExtensionChoice = true },
+                biomeEncounterDepthCost = 1,
             },
             {
                 key = "Story",
