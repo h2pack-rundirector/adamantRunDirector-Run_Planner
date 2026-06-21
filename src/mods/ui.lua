@@ -176,9 +176,6 @@ local function drawRouteOverview(draw, routeContext)
 
     local drewStatus = false
     for _, route in ipairs(routeDefinitions.ordered or EMPTY_LIST) do
-        if drewStatus then
-            draw.imgui.SameLine()
-        end
         routeStatusUi.drawRouteStatus(draw, routeContext:overview(route.key))
         drewStatus = true
     end

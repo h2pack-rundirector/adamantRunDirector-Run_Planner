@@ -1,8 +1,16 @@
 local deps = ... or {}
 local routeRules = deps.routeRules or deps.rules or {}
 local routeTimeline = deps.timeline
+local rowRewardItems = deps.rewardItems
+local semantics = deps.semantics
 if routeTimeline == nil then
     error("reward_legality requires route timeline")
+end
+if rowRewardItems == nil then
+    error("reward_legality requires route reward items")
+end
+if semantics == nil then
+    error("reward_legality requires reward semantics")
 end
 
 local rewardLegality = {}
@@ -18,90 +26,6 @@ local function clearMap(map)
     end
 end
 
-local function rewardPickValue(item, key)
-    for _, pick in ipairs(item and item.rewardPicks or EMPTY_LIST) do
-        if pick.key == key then
-            return pick.value
-        end
-    end
-    return nil
-end
-
-local function rewardPickValueByKind(item, kind)
-    for _, pick in ipairs(item and item.rewardPicks or EMPTY_LIST) do
-        if pick.kind == kind then
-            return pick.value
-        end
-    end
-    return nil
-end
-
-local function concreteRewardType(item)
-    if item == nil or item.valid == false then
-        return nil
-    end
-
-    local kind = item.rewardKind
-    local rewards = item.rewards or EMPTY_LIST
-    if kind == "boonSource" then
-        return "Boon"
-    elseif kind == "devotionPair" then
-        return "Devotion"
-    elseif kind == "fixedReward" then
-        return item.fixedRewardType or rewards[1]
-    elseif kind == "roomStore" then
-        return rewardPickValue(item, "rewardType") or rewards[1]
-    elseif kind == "majorMinor" or kind == "shipWheel" then
-        local branch = rewards[1]
-        if branch == "Major" then
-            return rewardPickValue(item, "rewardType") or rewards[2]
-        elseif branch == "Minor" then
-            return rewardPickValue(item, "rewardType") or rewards[4]
-        end
-    end
-    return nil
-end
-
-local function appendRewardEvent(events, row, item, address)
-    local rewardType = concreteRewardType(item)
-    if rewardType == nil or rewardType == "" then
-        return
-    end
-    events[#events + 1] = {
-        row = row,
-        item = item,
-        rewardType = rewardType,
-        address = address,
-    }
-end
-
-local function appendShopRewardEvents(events, row, item)
-    local rewards = item and item.rewards or EMPTY_LIST
-    if item == nil or item.valid == false or item.rewardKind ~= "shop" then
-        return false
-    end
-
-    local appended = false
-    for index, rewardType in ipairs(rewards) do
-        if rewardType ~= nil and rewardType ~= "" then
-            appended = true
-            events[#events + 1] = {
-                row = row,
-                item = item,
-                rewardType = rewardType,
-                address = "shop:" .. tostring(index),
-            }
-        end
-    end
-    return appended
-end
-
-local function appendRewardItemEvents(events, row, item, address)
-    if not appendShopRewardEvents(events, row, item) then
-        appendRewardEvent(events, row, item, address)
-    end
-end
-
 local function buildLookup(values)
     local lookup = {}
     for _, value in ipairs(values or EMPTY_LIST) do
@@ -110,17 +34,8 @@ local function buildLookup(values)
     return lookup
 end
 
-local function collectRewardEvents(row, events)
-    appendRewardItemEvents(events, row, row, "row")
-    for _, sideRoom in ipairs(row and row.sideRooms or EMPTY_LIST) do
-        appendRewardItemEvents(events, row, sideRoom, "side:" .. tostring(sideRoom.sideIndex or ""))
-    end
-    for _, cageReward in ipairs(row and row.cageRewards or EMPTY_LIST) do
-        appendRewardItemEvents(events, row, cageReward, "cage:" .. tostring(cageReward.cageIndex or ""))
-    end
-    for _, encounterRewardLeg in ipairs(row and row.encounterRewardLegs or EMPTY_LIST) do
-        appendRewardItemEvents(events, row, encounterRewardLeg, "encounter:" .. tostring(encounterRewardLeg.legIndex or ""))
-    end
+local function collectRewardEvents(row, events, items)
+    semantics.eventsForRow(row, rowRewardItems, events, items)
 end
 
 local function compileRules(rules)
@@ -178,6 +93,8 @@ local function addInvalid(result, seenInvalids, ctx, event, code, message)
         controlName = ctx.controlName,
         rowIndex = row.rowIndex,
         routeOrdinal = row.routeOrdinal,
+        address = event.address,
+        rewardType = event.rewardType,
         code = code,
         message = message,
     }
@@ -381,26 +298,17 @@ local function storeGodLootValue(state, lootName)
 end
 
 local function storeEventGodLoot(state, event)
-    local item = event and event.item or nil
-    if item == nil then
+    if event == nil then
         return
     end
 
-    local rewards = item.rewards or EMPTY_LIST
     if event.rewardType == "Boon" then
-        storeGodLootValue(state, rewardPickValue(item, "boonSource") or rewardPickValueByKind(item, "boonSource") or rewards[2])
+        storeGodLootValue(state, event.boonSource)
     elseif event.rewardType == "Devotion" then
-        local fallbackA = rewards[1]
-        local fallbackB = rewards[2]
-        if item.rewardKind == "roomStore" then
-            fallbackA = rewards[3]
-            fallbackB = rewards[4]
-        elseif item.rewardKind == "majorMinor" or item.rewardKind == "shipWheel" then
-            fallbackA = rewards[5]
-            fallbackB = rewards[6]
-        end
-        storeGodLootValue(state, rewardPickValue(item, "lootAName") or fallbackA)
-        storeGodLootValue(state, rewardPickValue(item, "lootBName") or fallbackB)
+        storeGodLootValue(state, event.devotionSourceA)
+        storeGodLootValue(state, event.devotionSourceB)
+    else
+        storeGodLootValue(state, event.boonSource)
     end
 end
 
@@ -469,6 +377,7 @@ function rewardLegality.evaluate(context, routeKey, opts)
         previousRows = {},
     }
     local events = {}
+    local rewardItemScratch = {}
     local seenInvalids = {}
 
     routeTimeline.walkRoute(route, {
@@ -495,7 +404,7 @@ function rewardLegality.evaluate(context, routeKey, opts)
                 for index in pairs(events) do
                     events[index] = nil
                 end
-                collectRewardEvents(row, events)
+                collectRewardEvents(row, events, rewardItemScratch)
                 for _, event in ipairs(events) do
                     applyEventRules(result, seenInvalids, state, ctx, event)
                 end

@@ -67,24 +67,20 @@ local function debugLog(message)
     end
 end
 
-local function rewardSummary(reward)
-    if reward == nil then
-        return "none"
-    end
-
-    local kind = reward.kind or "vanilla"
-    local rewards = joinList(reward.rewards)
+local function rewardItemSummary(item)
+    local kind = item.kind or "vanilla"
+    local rewards = joinList(item.rewards)
     if rewards ~= "" then
         return kind .. ":" .. rewards
     end
 
-    local loot = joinList(reward.loot)
+    local loot = joinList(item.loot)
     if loot ~= "" then
         return kind .. ":loot=" .. loot
     end
 
     local picks = {}
-    for index, pick in ipairs(reward.picks or {}) do
+    for index, pick in ipairs(item.picks or {}) do
         picks[index] = tostring(pick.alias or pick.key or index) .. "=" .. tostring(pick.value)
     end
     if picks[1] ~= nil then
@@ -92,6 +88,18 @@ local function rewardSummary(reward)
     end
 
     return kind
+end
+
+local function rewardSummary(rewardItems)
+    if rewardItems == nil or rewardItems[1] == nil then
+        return "none"
+    end
+
+    local parts = {}
+    for index, item in ipairs(rewardItems) do
+        parts[index] = tostring(item.address or index) .. "=" .. rewardItemSummary(item)
+    end
+    return table.concat(parts, ";")
 end
 
 local function rowSummary(biomeKey, row)
@@ -109,7 +117,7 @@ local function rowSummary(biomeKey, row)
         .. " biomeEncounterDepth=" .. fieldValue(row.biomeEncounterDepth)
         .. " biomeEncounterDepthCost=" .. fieldValue(row.biomeEncounterDepthCost)
         .. " features=" .. fieldValue(joinList(sortedKeys(row.features)))
-        .. " reward=" .. rewardSummary(row.reward)
+        .. " rewards=" .. rewardSummary(row.rewardItems)
 end
 
 local function dumpPlan(state, args)

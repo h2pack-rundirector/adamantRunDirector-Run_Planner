@@ -4,6 +4,7 @@ local deps = ...
 local data = deps.data
 local common = deps.common
 local rewardRuntime = deps.rewardRuntime
+local rewardItems = deps.rewardItems
 local rewardOfferPolicies = deps.rewardOfferPolicies
 local rewardOfferRules = deps.rewardOfferRules
 
@@ -179,11 +180,14 @@ local function appendInvalidRow(invalidRows, seenInvalids, invalid)
     invalidRows[#invalidRows + 1] = invalid
 end
 
-local function collectPylonRows(rows)
+local function collectPylonRewardItems(rows)
     local items = {}
+    local rowItems = {}
     for _, row in ipairs(rows or {}) do
         if row ~= nil and row.valid and row.slotKind == "biomeRow" then
-            items[#items + 1] = row
+            for _, item in ipairs(rewardItems.collectBySource(row, "row", rowItems)) do
+                items[#items + 1] = item
+            end
         end
     end
     return items
@@ -202,7 +206,7 @@ local function applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
         return
     end
 
-    for _, invalid in ipairs(rewardOfferRules.validateOffer(policy, collectPylonRows(rows))) do
+    for _, invalid in ipairs(rewardOfferRules.validateOffer(policy, collectPylonRewardItems(rows))) do
         local row = rows[invalid.rowIndex]
         if row ~= nil and row.valid then
             row.valid = false
@@ -320,7 +324,7 @@ function runtime.create(fields, instance)
         local rewardsConfigured = self:rewardsConfigured()
         local surface = rewardsConfigured and rewardSurface(role, option) or nil
         local context = data.rowContext(instance, routeRows, rowIndex)
-        return {
+        local row = {
             rowIndex = rowIndex,
             routeOrdinal = slot.routeOrdinal,
             biomeDepthCache = context.biomeDepthCache,
@@ -353,6 +357,7 @@ function runtime.create(fields, instance)
                 and rewardRuntime.snapshot(surface, rewardFields(fields.Rewards, rowIndex))
                 or EMPTY_LIST,
         }
+        return rewardItems.attach(row)
     end
 
     function control:buildSnapshot()

@@ -18,6 +18,18 @@ local function withTestImport(callback)
     end
 end
 
+local function normalizeRewardRows(rows)
+    local rewardItems = testImport("mods/route/reward_items.lua")
+    for _, row in ipairs(rows or {}) do
+        rewardItems.attach(row)
+    end
+    return rows
+end
+
+local function primaryRewardItem(row)
+    return row and row.rewardItems and row.rewardItems[1] or nil
+end
+
 local function loadCatalog()
     local data = dofile("src/mods/data.lua")
     return data.loadCatalog(testImport), data
@@ -27,6 +39,8 @@ local function loadRewardLegality()
     return testImport("mods/route/reward_legality.lua", nil, {
         routeRules = testImport("mods/rewards/route_rules.lua"),
         timeline = testImport("mods/route/timeline.lua"),
+        rewardItems = testImport("mods/route/reward_items.lua"),
+        semantics = testImport("mods/rewards/semantics.lua"),
     })
 end
 
@@ -36,6 +50,8 @@ local function loadRoutePlan()
         routeContext = testImport("mods/route/run_context.lua", nil, {
             rewardLegality = loadRewardLegality(),
             timeline = testImport("mods/route/timeline.lua"),
+            rewardItems = testImport("mods/route/reward_items.lua"),
+            semantics = testImport("mods/rewards/semantics.lua"),
         }),
     })
 end
@@ -75,7 +91,7 @@ local function plannedBiomeSnapshot(biomeKey, adapter, rows)
         valid = true,
         disabled = false,
         invalidRows = {},
-        rows = rows,
+        rows = normalizeRewardRows(rows),
     }
 end
 
@@ -126,7 +142,9 @@ local function buildControls(catalog, snapshots)
     }
 
     for _, biome in ipairs(catalog.ordered or {}) do
-        controlsByName["Route" .. biome.key] = biomeControl(snapshots[biome.key] or validBiomeSnapshot(biome.key))
+        local snapshot = snapshots[biome.key] or validBiomeSnapshot(biome.key)
+        normalizeRewardRows(snapshot.rows)
+        controlsByName["Route" .. biome.key] = biomeControl(snapshot)
     end
 
     return {
@@ -283,9 +301,9 @@ function TestRunPlannerLogic.testRoutePlanCompilesRuntimeExecutionPlan()
     lu.assertEquals(biome.plannedRoutableByBiomeDepthCache[1].primary.roomKey, "F_Story01")
     lu.assertEquals(biome.reservedRoomKeys.F_Story01.primary.rowIndex, 3)
     lu.assertEquals(execution.reservedRoomKeys.F_Story01.primary.biomeKey, "F")
-    lu.assertEquals(biome.plannedByRowIndex[1].reward.kind, "roomStore")
-    lu.assertEquals(biome.plannedByRowIndex[1].reward.rewards[2], "ZeusUpgrade")
-    lu.assertEquals(biome.plannedByRowIndex[1].reward.picks[1].value, "ZeusUpgrade")
+    lu.assertEquals(primaryRewardItem(biome.plannedByRowIndex[1]).kind, "roomStore")
+    lu.assertEquals(primaryRewardItem(biome.plannedByRowIndex[1]).rewards[2], "ZeusUpgrade")
+    lu.assertEquals(primaryRewardItem(biome.plannedByRowIndex[1]).picks[1].value, "ZeusUpgrade")
     lu.assertEquals(biome.plannedByRowIndex[3].features.chaos, true)
 end
 
@@ -394,7 +412,7 @@ function TestRunPlannerLogic.testRoutePlanKeepsPrebossBranchesAtSharedRouteOrdin
     lu.assertEquals(depthBucket.byBranchKey.Shop.rowIndex, 12)
     lu.assertEquals(depthBucket.byBranchKey.MajorReward.rowIndex, 13)
     lu.assertEquals(#room.rows, 2)
-    lu.assertEquals(room.byBranchKey.MajorReward.reward.rewards[1], "Boon")
+    lu.assertEquals(primaryRewardItem(room.byBranchKey.MajorReward).rewards[1], "Boon")
     lu.assertEquals(#biome.plannedByRoomKey.F_PreBoss01.rows, 2)
     lu.assertEquals(#reservation.entries, 2)
     lu.assertEquals(reservation.entries[2].branchKey, "MajorReward")

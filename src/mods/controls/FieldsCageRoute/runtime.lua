@@ -4,6 +4,7 @@ local deps = ...
 local data = deps.data
 local common = deps.common
 local rewardRuntime = deps.rewardRuntime
+local rewardItems = deps.rewardItems
 local rewardOfferPolicies = deps.rewardOfferPolicies
 local rewardOfferRules = deps.rewardOfferRules
 
@@ -192,9 +193,13 @@ local function applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
         return
     end
 
+    local cageRewardItems = {}
     for _, row in ipairs(rows) do
         if row ~= nil and row.valid then
-            for _, invalid in ipairs(rewardOfferRules.validateOffer(policy, row.cageRewards)) do
+            for _, invalid in ipairs(rewardOfferRules.validateOffer(
+                policy,
+                rewardItems.collectBySource(row, "cage", cageRewardItems)
+            )) do
                 if row.valid then
                     row.valid = false
                     row.invalidCode = invalid.code
@@ -306,7 +311,7 @@ function runtime.create(fields, instance)
         local rewardsConfigured = self:rewardsConfigured()
         local surface = rewardsConfigured and role ~= nil and role.cageRewardPolicy == nil and rewardSurface(role, option) or nil
         local context = data.rowContext(instance, routeRows, rowIndex)
-        return {
+        local row = {
             rowIndex = rowIndex,
             routeOrdinal = slot.routeOrdinal,
             biomeDepthCache = context.biomeDepthCache,
@@ -340,6 +345,7 @@ function runtime.create(fields, instance)
                 and rewardRuntime.snapshot(surface, rewardFields(fields.Rewards, rowIndex))
                 or EMPTY_LIST,
         }
+        return rewardItems.attach(row)
     end
 
     function control:buildSnapshot()

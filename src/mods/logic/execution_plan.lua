@@ -38,12 +38,20 @@ local function compactRewardPicks(source)
     return picks
 end
 
-local function compactReward(row)
+local function compactRewardItem(item)
     return {
-        kind = row.rewardKind or "vanilla",
-        rewards = copyList(row.rewards),
-        loot = copyList(row.rewardLoot),
-        picks = compactRewardPicks(row.rewardPicks),
+        address = item.address,
+        sourceKind = item.sourceKind,
+        sourceIndex = item.sourceIndex,
+        rowIndex = item.rowIndex,
+        routeOrdinal = item.routeOrdinal,
+        kind = item.rewardKind or "vanilla",
+        rewards = copyList(item.rewards),
+        loot = copyList(item.rewardLoot),
+        picks = compactRewardPicks(item.rewardPicks),
+        fixedRewardType = item.fixedRewardType,
+        rewardStore = item.rewardStore,
+        valid = item.valid,
     }
 end
 
@@ -63,7 +71,15 @@ local function isRoutableRoom(row)
         or kind == "preboss"
 end
 
-local function compactRewardEntry(entry)
+local function compactRewardItems(source)
+    local items = {}
+    for index, item in ipairs(source or EMPTY_LIST) do
+        items[index] = compactRewardItem(item)
+    end
+    return items
+end
+
+local function compactSideRoom(entry)
     return {
         rowIndex = entry.rowIndex,
         routeOrdinal = entry.routeOrdinal,
@@ -80,14 +96,13 @@ local function compactRewardEntry(entry)
         enabled = entry.enabled,
         rewardStore = entry.rewardStore,
         features = copyMap(entry.features),
-        reward = compactReward(entry),
     }
 end
 
-local function compactRewardEntries(source)
+local function compactSideRooms(source)
     local entries = {}
     for index, entry in ipairs(source or EMPTY_LIST) do
-        entries[index] = compactRewardEntry(entry)
+        entries[index] = compactSideRoom(entry)
     end
     return entries
 end
@@ -114,10 +129,8 @@ local function compactRoomRow(row)
         countsGoalReward = row.countsGoalReward,
         countsNonGoalReward = row.countsNonGoalReward,
         features = copyMap(row.features),
-        reward = compactReward(row),
-        sideRooms = compactRewardEntries(row.sideRooms),
-        cageRewards = compactRewardEntries(row.cageRewards),
-        encounterRewardLegs = compactRewardEntries(row.encounterRewardLegs),
+        rewardItems = compactRewardItems(row.rewardItems),
+        sideRooms = compactSideRooms(row.sideRooms),
     }
 end
 

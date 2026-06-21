@@ -1,6 +1,7 @@
 local routeStatusUi = {}
 
 local STATUS_COLUMN_X = 590
+local ROUTE_MESSAGE_COLUMN_X = 165
 local INVALID_COLOR = { 1.0, 0.24, 0.16, 1.0 }
 local VALID_COLOR = { 0.35, 0.9, 0.45, 1.0 }
 local textColoredMode
@@ -71,12 +72,16 @@ end
 function routeStatusUi.drawRouteStatus(draw, routeSnapshot)
     local label = tostring((routeSnapshot and routeSnapshot.label) or (routeSnapshot and routeSnapshot.routeKey) or "Route")
     local valid = routeSnapshot ~= nil and routeSnapshot.valid
-    local text = label .. ": " .. (valid and "Valid" or "Invalid")
-    drawColoredText(draw.imgui, valid and VALID_COLOR or INVALID_COLOR, text)
-
     local message = not valid and firstInvalidMessage(routeSnapshot) or nil
+    local status = valid and "Valid" or "Invalid"
+    local text = label .. " " .. status .. (message ~= nil and ":" or "")
+    local imgui = draw.imgui
+    drawColoredText(imgui, valid and VALID_COLOR or INVALID_COLOR, text)
+
     if message ~= nil then
-        drawColoredText(draw.imgui, INVALID_COLOR, message)
+        imgui.SameLine()
+        imgui.SetCursorPosX(ROUTE_MESSAGE_COLUMN_X)
+        drawColoredText(imgui, INVALID_COLOR, message)
     end
 end
 

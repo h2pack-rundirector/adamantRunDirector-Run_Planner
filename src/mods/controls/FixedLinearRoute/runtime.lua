@@ -4,6 +4,7 @@ local deps = ...
 local data = deps.data
 local common = deps.common
 local rewardRuntime = deps.rewardRuntime
+local rewardItems = deps.rewardItems
 
 local runtime = {}
 local EMPTY_LIST = {}
@@ -221,7 +222,7 @@ function runtime.create(fields, instance)
         local surface = rewardsConfigured and rewardSurface(role, option) or nil
         local validation = self:rowValidation(rowIndex)
         local context = data.rowContext(instance, routeRows, rowIndex)
-        return {
+        local row = {
             rowIndex = rowIndex,
             routeOrdinal = slot.routeOrdinal,
             biomeDepthCache = context.biomeDepthCache,
@@ -252,6 +253,7 @@ function runtime.create(fields, instance)
                 and rewardRuntime.snapshot(surface, rewardFields(fields.Rewards, rowIndex))
                 or EMPTY_LIST,
         }
+        return rewardItems.attach(row)
     end
 
     function control:buildSnapshot()

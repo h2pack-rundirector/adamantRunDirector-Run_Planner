@@ -25,6 +25,10 @@ local function loadRouteRules()
     return dofile("src/mods/rewards/route_rules.lua")
 end
 
+local function loadSemantics()
+    return dofile("src/mods/rewards/semantics.lua")
+end
+
 local function loadUi(routeStatusUi)
     local chunk = assert(loadfile("src/mods/rewards/ui.lua"))
     return chunk({
@@ -79,6 +83,116 @@ local function ruleByRequirementCode(rules, code)
         end
     end
     return nil
+end
+
+function TestRunPlannerRewards.testSemanticsDecodeRewardTypesAndSources()
+    local semantics = loadSemantics()
+
+    lu.assertEquals(semantics.rewardType({
+        rewardKind = "boonSource",
+        rewards = { "ZeusUpgrade" },
+    }), "Boon")
+    lu.assertEquals(semantics.boonSource({
+        rewardKind = "boonSource",
+        rewards = { "ZeusUpgrade" },
+    }), "ZeusUpgrade")
+
+    lu.assertEquals(semantics.rewardType({
+        rewardKind = "majorMinor",
+        rewards = { "Major", "Boon", "HeraUpgrade" },
+        rewardPicks = {
+            { key = "rewardType", value = "Boon" },
+            { key = "boonSource", value = "AphroditeUpgrade" },
+        },
+    }), "Boon")
+    lu.assertEquals(semantics.boonSource({
+        rewardKind = "majorMinor",
+        rewards = { "Major", "Boon", "HeraUpgrade" },
+        rewardPicks = {
+            { key = "boonSource", value = "AphroditeUpgrade" },
+        },
+    }), "AphroditeUpgrade")
+
+    lu.assertEquals(semantics.rewardType({
+        rewardKind = "shipWheel",
+        rewards = { "Minor", "", "", "GiftDrop" },
+    }), "GiftDrop")
+end
+
+function TestRunPlannerRewards.testSemanticsCollectGodLootSources()
+    local semantics = loadSemantics()
+    local sources = {}
+
+    lu.assertEquals(semantics.godLootSources({
+        rewardKind = "devotionPair",
+        rewards = { "ApolloUpgrade", "HestiaUpgrade" },
+    }, sources), {
+        "ApolloUpgrade",
+        "HestiaUpgrade",
+    })
+
+    lu.assertEquals(semantics.godLootSources({
+        rewardKind = "shop",
+        rewards = { "RandomLoot", "BlindBoxLoot", "BoostedRandomLoot" },
+        rewardLoot = { "ZeusUpgrade", "HeraUpgrade", "PoseidonUpgrade" },
+    }, sources), {
+        "ZeusUpgrade",
+        "PoseidonUpgrade",
+    })
+end
+
+function TestRunPlannerRewards.testSemanticsExposeRewardEvents()
+    local semantics = loadSemantics()
+    local row = {
+        rowIndex = 3,
+        rewardItems = {
+            {
+                address = "row",
+                rewardKind = "shop",
+                rewards = { "RandomLoot", "WeaponUpgradeDrop" },
+                rewardLoot = { "DemeterUpgrade", "" },
+            },
+        },
+    }
+    local rewardItems = {
+        collect = function()
+            return row.rewardItems
+        end,
+    }
+
+    local events = semantics.eventsForRow(row, rewardItems, {})
+
+    lu.assertEquals(#events, 2)
+    lu.assertEquals(events[1].rewardType, "RandomLoot")
+    lu.assertEquals(events[1].address, "shop:1")
+    lu.assertEquals(events[1].boonSource, "DemeterUpgrade")
+    lu.assertEquals(events[2].rewardType, "WeaponUpgradeDrop")
+    lu.assertEquals(events[2].address, "shop:2")
+end
+
+function TestRunPlannerRewards.testSemanticsConcreteAndBannedChecks()
+    local semantics = loadSemantics()
+
+    lu.assertFalse(semantics.isConcrete({
+        rewardKind = "majorMinor",
+        rewards = { "Major", "" },
+    }))
+    lu.assertTrue(semantics.isConcrete({
+        rewardKind = "majorMinor",
+        rewards = { "Major", "Boon", "ZeusUpgrade" },
+    }))
+    lu.assertTrue(semantics.hasBannedValue({
+        rewardKind = "boonSource",
+        rewards = { "ZeusUpgrade" },
+    }, {
+        Boon = true,
+    }))
+    lu.assertTrue(semantics.hasBannedValue({
+        rewardKind = "roomStore",
+        rewards = { "SpellDrop" },
+    }, {
+        SpellDrop = true,
+    }))
 end
 
 local function fakeDrawFields(values)

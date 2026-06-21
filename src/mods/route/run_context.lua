@@ -1,12 +1,21 @@
 local deps = ... or {}
 local defaultRewardLegality = deps.rewardLegality
 local routeTimeline = deps.timeline
+local rewardItems = deps.rewardItems
+local semantics = deps.semantics
 if routeTimeline == nil then
     error("run_context requires route timeline")
+end
+if rewardItems == nil then
+    error("run_context requires route reward items")
+end
+if semantics == nil then
+    error("run_context requires reward semantics")
 end
 
 local runContext = {}
 local EMPTY_LIST = {}
+local GOD_LOOT_SOURCE_SCRATCH = {}
 
 local function routeControlName(biomeKey)
     return "Route" .. tostring(biomeKey or "")
@@ -98,79 +107,18 @@ local function selectionCount(selections)
     return count
 end
 
-local function pickValueByKey(item, key)
-    for _, pick in ipairs(item and item.rewardPicks or EMPTY_LIST) do
-        if pick.key == key then
-            return pick.value
-        end
-    end
-    return nil
-end
-
-local function collectRewardGodLoot(item, countedLookup, selections)
-    if item == nil or item.valid == false then
-        return 0
-    end
-
-    local rewards = item.rewards or EMPTY_LIST
+local function collectRewardGodLoot(item, countedLookup, selections, sourceScratch)
     local count = 0
-    if item.rewardKind == "boonSource" then
-        count = count + addGodLootSelection(selections, countedLookup, pickValueByKey(item, "boonSource") or rewards[1])
-    elseif item.rewardKind == "devotionPair" then
-        count = count + addGodLootSelection(selections, countedLookup, pickValueByKey(item, "lootAName") or rewards[1])
-        count = count + addGodLootSelection(selections, countedLookup, pickValueByKey(item, "lootBName") or rewards[2])
-    elseif item.rewardKind == "roomStore" then
-        if rewards[1] == "Boon" then
-            count = count + addGodLootSelection(
-                selections,
-                countedLookup,
-                pickValueByKey(item, "boonSource") or rewards[2]
-            )
-        elseif rewards[1] == "Devotion" then
-            count = count + addGodLootSelection(
-                selections,
-                countedLookup,
-                pickValueByKey(item, "lootAName") or rewards[3]
-            )
-            count = count + addGodLootSelection(
-                selections,
-                countedLookup,
-                pickValueByKey(item, "lootBName") or rewards[4]
-            )
-        end
-    elseif item.rewardKind == "majorMinor" or item.rewardKind == "shipWheel" then
-        if rewards[1] == "Major" and rewards[2] == "Boon" then
-            count = count + addGodLootSelection(
-                selections,
-                countedLookup,
-                pickValueByKey(item, "boonSource") or rewards[3]
-            )
-        elseif rewards[1] == "Major" and rewards[2] == "Devotion" then
-            count = count + addGodLootSelection(
-                selections,
-                countedLookup,
-                pickValueByKey(item, "lootAName") or rewards[5]
-            )
-            count = count + addGodLootSelection(
-                selections,
-                countedLookup,
-                pickValueByKey(item, "lootBName") or rewards[6]
-            )
-        end
+    for _, source in ipairs(semantics.godLootSources(item, sourceScratch or GOD_LOOT_SOURCE_SCRATCH)) do
+        count = count + addGodLootSelection(selections, countedLookup, source)
     end
     return count
 end
 
-local function collectRowGodLoot(row, countedLookup, selections)
-    local count = collectRewardGodLoot(row, countedLookup, selections)
-    for _, sideRoom in ipairs(row and row.sideRooms or EMPTY_LIST) do
-        count = count + collectRewardGodLoot(sideRoom, countedLookup, selections)
-    end
-    for _, cageReward in ipairs(row and row.cageRewards or EMPTY_LIST) do
-        count = count + collectRewardGodLoot(cageReward, countedLookup, selections)
-    end
-    for _, encounterRewardLeg in ipairs(row and row.encounterRewardLegs or EMPTY_LIST) do
-        count = count + collectRewardGodLoot(encounterRewardLeg, countedLookup, selections)
+local function collectRowGodLoot(row, countedLookup, selections, itemScratch, sourceScratch)
+    local count = 0
+    for _, item in ipairs(rewardItems.collect(row, itemScratch)) do
+        count = count + collectRewardGodLoot(item, countedLookup, selections, sourceScratch)
     end
     return count
 end
@@ -463,107 +411,60 @@ local function roleMatches(context, npc, row)
     return lookup[row and row.roleKey or ""] == true
 end
 
-local function rewardValue(item, index)
-    local value = item and item.rewards and item.rewards[index] or nil
-    if value == nil or value == "" then
-        return nil
+local function rewardItemsConcreteStateForSource(items, sourceKind)
+    local sawSource = false
+    for _, item in ipairs(items or EMPTY_LIST) do
+        if item.sourceKind == sourceKind then
+            sawSource = true
+            if not semantics.isConcrete(item) then
+                return false
+            end
+        end
     end
-    return value
-end
-
-local function rewardItemIsConcrete(item)
-    if item == nil or item.valid == false then
-        return false
-    end
-
-    local kind = item.rewardKind
-    if kind == "none" or kind == "fixedReward" or kind == "boonSource" or kind == "devotionPair" then
+    if sawSource then
         return true
     end
-    if kind == "roomStore" then
-        return rewardValue(item, 1) ~= nil
-    end
-    if kind == "majorMinor" or kind == "shipWheel" then
-        local branch = rewardValue(item, 1)
-        if branch == "Major" then
-            return rewardValue(item, 2) ~= nil
-        elseif branch == "Minor" then
-            return rewardValue(item, 4) ~= nil
-        end
-        return false
-    end
-    if kind == "shop" then
-        return rewardValue(item, 1) ~= nil
-    end
-    return false
+    return nil
 end
 
-local function rewardItemsAreConcrete(items)
-    if items == nil or items[1] == nil then
-        return false
-    end
-    for _, item in ipairs(items) do
-        if not rewardItemIsConcrete(item) then
-            return false
-        end
-    end
-    return true
+local function rowRewardItems(context, row)
+    context.rewardItemScratch = context.rewardItemScratch or {}
+    return rewardItems.collect(row, context.rewardItemScratch)
 end
 
-local function rowHasConcreteNpcReward(row, banned)
+local function rowPrimaryRewardItem(items)
+    for _, item in ipairs(items or EMPTY_LIST) do
+        if item.sourceKind == "row" then
+            return item
+        end
+    end
+    return nil
+end
+
+local function rowHasConcreteNpcReward(context, row, banned)
     if banned == nil then
         return true
     end
-    if row ~= nil and row.cageRewards ~= nil and row.cageRewards[1] ~= nil then
-        return rewardItemsAreConcrete(row.cageRewards)
+
+    local items = rowRewardItems(context, row)
+    local cageState = rewardItemsConcreteStateForSource(items, "cage")
+    if cageState ~= nil then
+        return cageState
     end
-    if row ~= nil and row.encounterRewardLegs ~= nil and row.encounterRewardLegs[1] ~= nil then
-        return rewardItemsAreConcrete(row.encounterRewardLegs)
+    local encounterState = rewardItemsConcreteStateForSource(items, "encounter")
+    if encounterState ~= nil then
+        return encounterState
     end
-    return rewardItemIsConcrete(row)
+    return semantics.isConcrete(rowPrimaryRewardItem(items))
 end
 
-local function valueIsBanned(value, banned)
-    return value ~= nil and value ~= "" and banned[value] == true
-end
-
-local function rewardItemHasBannedValue(item, banned)
-    if item == nil then
-        return false
-    end
-    if item.rewardKind == "boonSource" and banned.Boon then
-        return true
-    end
-    if item.rewardKind == "devotionPair" and banned.Devotion then
-        return true
-    end
-    for _, value in ipairs(item.rewards or EMPTY_LIST) do
-        if valueIsBanned(value, banned) then
-            return true
-        end
-    end
-    for _, pick in ipairs(item.rewardPicks or EMPTY_LIST) do
-        if valueIsBanned(pick.value, banned) then
-            return true
-        end
-    end
-    return false
-end
-
-local function rowHasBannedReward(row, banned)
+local function rowHasBannedReward(context, row, banned)
     if banned == nil then
         return false
     end
-    if rewardItemHasBannedValue(row, banned) then
-        return true
-    end
-    for _, cageReward in ipairs(row and row.cageRewards or EMPTY_LIST) do
-        if rewardItemHasBannedValue(cageReward, banned) then
-            return true
-        end
-    end
-    for _, encounterRewardLeg in ipairs(row and row.encounterRewardLegs or EMPTY_LIST) do
-        if rewardItemHasBannedValue(encounterRewardLeg, banned) then
+
+    for _, item in ipairs(rowRewardItems(context, row)) do
+        if item.sourceKind ~= "side" and semantics.hasBannedValue(item, banned) then
             return true
         end
     end
@@ -598,7 +499,7 @@ local function variantMatchesRow(context, npc, biomeEntry, variant, row)
     end
     local banned = npcRewardBanLookup(context, npc)
     return rowHasConcreteRoom(row)
-        and rowHasConcreteNpcReward(row, banned)
+        and rowHasConcreteNpcReward(context, row, banned)
         and roleMatches(context, npc, row)
         and targetKindMatches(npc, biomeEntry, variant, row)
         and valueInRange(variant.biomeDepthCache, row.biomeDepthCache)
@@ -687,7 +588,7 @@ local function buildNpcTargets(context, routeKey)
                 local npc = context.npcs.byKey and context.npcs.byKey[npcKey] or nil
                 local biomeEntry = npc and npc.biomes and npc.biomes[biomeKey] or nil
                 local banned = npcRewardBanLookup(context, npc or {})
-                if biomeEntry ~= nil and not rowHasBannedReward(row, banned) then
+                if biomeEntry ~= nil and not rowHasBannedReward(context, row, banned) then
                     for _, variant in ipairs(biomeEntry.variants or EMPTY_LIST) do
                         if variantMatchesRow(context, npc, biomeEntry, variant, row) then
                             addNpcTarget(targets, {
@@ -957,10 +858,18 @@ function runContext.create(opts)
         end
 
         local count = selectionCount(selections)
+        self.rewardGodLootItemScratch = self.rewardGodLootItemScratch or {}
+        self.rewardGodLootSourceScratch = self.rewardGodLootSourceScratch or {}
         for index = 1, info.index - 1 do
             local snapshot = controlSnapshot(self, info.route.key, info.route.biomes[index])
             for _, row in ipairs(snapshot and snapshot.rows or EMPTY_LIST) do
-                count = count + collectRowGodLoot(row, countedLookup, selections)
+                count = count + collectRowGodLoot(
+                    row,
+                    countedLookup,
+                    selections,
+                    self.rewardGodLootItemScratch,
+                    self.rewardGodLootSourceScratch
+                )
                 if stopAtCount ~= nil and count >= stopAtCount then
                     return selections
                 end

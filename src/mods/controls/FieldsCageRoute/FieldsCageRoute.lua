@@ -4,6 +4,7 @@ local runtime = import("mods/controls/FieldsCageRoute/runtime.lua", nil, {
     data = data,
     common = deps.route.common,
     rewardRuntime = deps.rewards.runtime,
+    rewardItems = deps.route.rewardItems,
     rewardOfferPolicies = deps.route.rewardOfferPolicies,
     rewardOfferRules = deps.route.rewardOfferRules,
 })

@@ -5,6 +5,7 @@ local routeRequirements = import("mods/route/requirements.lua", nil, {
 local routeBiomeRules = import("mods/route/biome_rules.lua", nil, {
     common = routeCommon,
 })
+local rewardSemantics = import("mods/rewards/semantics.lua")
 local route = {
     common = routeCommon,
     availability = import("mods/route/availability.lua"),
@@ -12,8 +13,12 @@ local route = {
     requirements = routeRequirements,
     biomeRules = routeBiomeRules,
     timeline = import("mods/route/timeline.lua"),
+    rewardItems = import("mods/route/reward_items.lua"),
+    rewardSemantics = rewardSemantics,
     rewardOfferPolicies = import("mods/data/reward_offer_policies.lua"),
-    rewardOfferRules = import("mods/route/reward_offer_rules.lua"),
+    rewardOfferRules = import("mods/route/reward_offer_rules.lua", nil, {
+        semantics = rewardSemantics,
+    }),
 }
 route.rowEngine = import("mods/route/row_engine.lua", nil, route)
 

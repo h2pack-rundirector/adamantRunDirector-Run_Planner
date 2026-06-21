@@ -18,6 +18,27 @@ local function withTestImport(callback)
     end
 end
 
+local function normalizeRewardRows(rows)
+    local rewardItems = testImport("mods/route/reward_items.lua")
+    for _, row in ipairs(rows or {}) do
+        rewardItems.attach(row)
+    end
+    return rows
+end
+
+local function primaryRewardItem(row)
+    return row and row.rewardItems and row.rewardItems[1] or nil
+end
+
+local function rewardItemBySource(row, sourceKind, sourceIndex)
+    for _, item in ipairs(row and row.rewardItems or {}) do
+        if item.sourceKind == sourceKind and (sourceIndex == nil or item.sourceIndex == sourceIndex) then
+            return item
+        end
+    end
+    return nil
+end
+
 local function loadCatalog()
     local data = dofile("src/mods/data.lua")
     return data.loadCatalog(testImport), data
@@ -109,6 +130,8 @@ local function loadRewardLegality()
     return testImport("mods/route/reward_legality.lua", nil, {
         routeRules = testImport("mods/rewards/route_rules.lua"),
         timeline = testImport("mods/route/timeline.lua"),
+        rewardItems = testImport("mods/route/reward_items.lua"),
+        semantics = testImport("mods/rewards/semantics.lua"),
     })
 end
 
@@ -136,6 +159,8 @@ local function loadRunContext()
     return testImport("mods/route/run_context.lua", nil, {
         rewardLegality = loadRewardLegality(),
         timeline = testImport("mods/route/timeline.lua"),
+        rewardItems = testImport("mods/route/reward_items.lua"),
+        semantics = testImport("mods/rewards/semantics.lua"),
     })
 end
 
@@ -409,6 +434,12 @@ function TestRunPlannerControls.testRouteStatusDrawsFirstInvalidMessage()
             Text = function(text)
                 rendered[#rendered + 1] = text
             end,
+            SameLine = function()
+                rendered[#rendered + 1] = "<same-line>"
+            end,
+            SetCursorPosX = function(x)
+                rendered[#rendered + 1] = "<x:" .. tostring(x) .. ">"
+            end,
         },
     }
 
@@ -421,9 +452,63 @@ function TestRunPlannerControls.testRouteStatusDrawsFirstInvalidMessage()
     })
 
     lu.assertEquals(rendered, {
-        "Underworld: Invalid",
+        "Underworld Invalid:",
+        "<same-line>",
+        "<x:165>",
         "Trial requires 15 rooms since the previous Trial",
     })
+end
+
+function TestRunPlannerControls.testRewardItemsNormalizeRowRewardMetadata()
+    local rewardItems = testImport("mods/route/reward_items.lua")
+    local row = {
+        rowIndex = 2,
+        routeOrdinal = 2,
+        rewardKind = "majorMinor",
+        rewards = { "Major", "Boon", "ZeusUpgrade" },
+        rewardPicks = {
+            { kind = "boonSource", value = "ZeusUpgrade" },
+        },
+        sideRooms = {
+            {
+                sideIndex = 1,
+                rewardKind = "roomStore",
+                rewards = { "MaxHealthDrop" },
+            },
+        },
+        cageRewards = {
+            {
+                cageIndex = 2,
+                rewardKind = "fixedReward",
+                rewards = { "Boon" },
+            },
+        },
+        encounterRewardLegs = {
+            {
+                legIndex = 3,
+                rewardKind = "roomStore",
+                rewards = { "RoomMoneyDrop" },
+            },
+        },
+    }
+
+    rewardItems.attach(row)
+
+    lu.assertEquals(#row.rewardItems, 4)
+    lu.assertEquals(row.rewardItems[1].address, "row")
+    lu.assertEquals(row.rewardItems[1].sourceKind, "row")
+    lu.assertEquals(row.rewardItems[1].rewards[2], "Boon")
+    lu.assertEquals(row.rewardItems[2].address, "side:1")
+    lu.assertEquals(row.rewardItems[2].sourceKind, "side")
+    lu.assertEquals(row.rewardItems[3].address, "cage:2")
+    lu.assertEquals(row.rewardItems[3].sourceKind, "cage")
+    lu.assertEquals(row.rewardItems[4].address, "encounter:3")
+    lu.assertEquals(row.rewardItems[4].sourceKind, "encounter")
+
+    local scratch = {}
+    lu.assertIs(rewardItems.collect(row, scratch), scratch)
+    lu.assertEquals(#scratch, 4)
+    lu.assertEquals(scratch[3].address, "cage:2")
 end
 
 function TestRunPlannerControls.testCatalogBuildsControlsForSupportedAdapters()
@@ -824,7 +909,7 @@ function TestRunPlannerControls.testRouteNpcsUsesBiomeRoomTypeSelection()
                                 controlName = "RouteF",
                                 valid = true,
                                 invalidRows = {},
-                                rows = {
+                                rows = normalizeRewardRows({
                                     {
                                         rowIndex = 3,
                                         routeOrdinal = 5,
@@ -854,7 +939,7 @@ function TestRunPlannerControls.testRouteNpcsUsesBiomeRoomTypeSelection()
                                         rewardKind = "majorMinor",
                                         rewards = {},
                                     },
-                                },
+                                }),
                             }
                         end
                         return nil
@@ -999,7 +1084,7 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
                                 controlName = "RouteP",
                                 valid = true,
                                 invalidRows = {},
-                                rows = {
+                                rows = normalizeRewardRows({
                                     {
                                         rowIndex = 1,
                                         routeOrdinal = 0,
@@ -1055,7 +1140,7 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
-                                },
+                                }),
                             }
                         end
                         return nil
@@ -1124,7 +1209,7 @@ function TestRunPlannerControls.testRouteContextDisablesFeatureTargetsWhenFeatur
                                 controlName = "RouteP",
                                 valid = true,
                                 invalidRows = {},
-                                rows = {
+                                rows = normalizeRewardRows({
                                     {
                                         rowIndex = 1,
                                         routeOrdinal = 4,
@@ -1134,7 +1219,7 @@ function TestRunPlannerControls.testRouteContextDisablesFeatureTargetsWhenFeatur
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
-                                },
+                                }),
                             }
                         end
                         return nil
@@ -1197,10 +1282,14 @@ function TestRunPlannerControls.testRouteSnapshotsTreatRewardsAsVanillaWhenRewar
 
     local row = fControl:rowSnapshot(1)
 
-    lu.assertEquals(row.rewardKind, "vanilla")
-    lu.assertEquals(row.rewards, {})
-    lu.assertEquals(row.rewardLoot, {})
-    lu.assertEquals(row.rewardPicks, {})
+    lu.assertNil(row.rewardKind)
+    lu.assertNil(row.rewards)
+    lu.assertNil(row.rewardLoot)
+    lu.assertNil(row.rewardPicks)
+    lu.assertEquals(primaryRewardItem(row).rewardKind, "vanilla")
+    lu.assertEquals(primaryRewardItem(row).rewards, {})
+    lu.assertEquals(primaryRewardItem(row).rewardLoot, {})
+    lu.assertEquals(primaryRewardItem(row).rewardPicks, {})
 end
 
 function TestRunPlannerControls.testRouteFeaturesUsesShopDepthPolicy()
@@ -1232,7 +1321,7 @@ function TestRunPlannerControls.testRouteFeaturesUsesShopDepthPolicy()
                                 controlName = "RouteO",
                                 valid = true,
                                 invalidRows = {},
-                                rows = {
+                                rows = normalizeRewardRows({
                                     {
                                         rowIndex = 1,
                                         routeOrdinal = 0,
@@ -1266,7 +1355,7 @@ function TestRunPlannerControls.testRouteFeaturesUsesShopDepthPolicy()
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
-                                },
+                                }),
                             }
                         end
                         return nil
@@ -1312,7 +1401,7 @@ function TestRunPlannerControls.testRouteFeaturesRejectsRepeatedTargetsInsideSpa
                                 controlName = "RouteF",
                                 valid = true,
                                 invalidRows = {},
-                                rows = {
+                                rows = normalizeRewardRows({
                                     {
                                         rowIndex = 1,
                                         routeOrdinal = 0,
@@ -1353,7 +1442,7 @@ function TestRunPlannerControls.testRouteFeaturesRejectsRepeatedTargetsInsideSpa
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
-                                },
+                                }),
                             }
                         end
                         return nil
@@ -1431,7 +1520,7 @@ function TestRunPlannerControls.testRouteFeaturesUsesTimelineBlockersForPostBoss
                                 controlName = "RouteG",
                                 valid = true,
                                 invalidRows = {},
-                                rows = {
+                                rows = normalizeRewardRows({
                                     {
                                         rowIndex = 1,
                                         routeOrdinal = 3,
@@ -1441,7 +1530,7 @@ function TestRunPlannerControls.testRouteFeaturesUsesTimelineBlockersForPostBoss
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
-                                },
+                                }),
                             }
                         end
                         return nil
@@ -1488,7 +1577,7 @@ function TestRunPlannerControls.testRouteFeaturesCanTargetEnabledSideRooms()
                                 controlName = "RouteN",
                                 valid = true,
                                 invalidRows = {},
-                                rows = {
+                                rows = normalizeRewardRows({
                                     {
                                         rowIndex = 1,
                                         routeOrdinal = 0,
@@ -1551,7 +1640,7 @@ function TestRunPlannerControls.testRouteFeaturesCanTargetEnabledSideRooms()
                                             },
                                         },
                                     },
-                                },
+                                }),
                             }
                         end
                         return nil
@@ -1987,7 +2076,7 @@ function TestRunPlannerControls.testFixedLinearQShopSharedOfferGroupInvalidatesD
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
     lu.assertFalse(snapshot.rows[8].valid)
-    lu.assertEquals(snapshot.rows[8].rewardKind, "shop")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[8]).rewardKind, "shop")
     lu.assertEquals(snapshot.rows[8].invalidCode, "duplicate_shop_group_option")
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 8)
     lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_shop_group_option")
@@ -2179,7 +2268,7 @@ function TestRunPlannerControls.testClockworkGoalRuntimeBuildsValidatedSnapshot(
     lu.assertEquals(snapshot.rows[1].slotKind, "intro")
     lu.assertEquals(snapshot.rows[1].roomKey, "I_Intro")
     lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
-    lu.assertEquals(snapshot.rows[1].rewardKind, "none")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[1]).rewardKind, "none")
     lu.assertTrue(snapshot.rows[1].valid)
 
     lu.assertEquals(snapshot.rows[2].slotKind, "biomeRow")
@@ -2187,20 +2276,20 @@ function TestRunPlannerControls.testClockworkGoalRuntimeBuildsValidatedSnapshot(
     lu.assertEquals(snapshot.rows[2].roleKey, "Goal")
     lu.assertEquals(snapshot.rows[2].optionKey, "I_Combat01")
     lu.assertEquals(snapshot.rows[2].roomKey, "I_Combat01")
-    lu.assertEquals(snapshot.rows[2].rewardKind, "fixedReward")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardKind, "fixedReward")
     lu.assertTrue(snapshot.rows[2].countsGoalReward)
     lu.assertFalse(snapshot.rows[2].countsNonGoalReward)
 
     lu.assertEquals(snapshot.rows[3].roleKey, "ExtensionCombat")
-    lu.assertEquals(snapshot.rows[3].rewardKind, "roomStore")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardKind, "roomStore")
     lu.assertFalse(snapshot.rows[3].countsGoalReward)
     lu.assertTrue(snapshot.rows[3].countsNonGoalReward)
-    lu.assertEquals(snapshot.rows[3].rewardPicks[1].value, "MaxHealthDrop")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[1].value, "MaxHealthDrop")
 
     lu.assertEquals(snapshot.rows[12].roleKey, "Story")
     lu.assertEquals(snapshot.rows[12].optionKey, "I_Story01")
     lu.assertEquals(snapshot.rows[12].roomKey, "I_Story01")
-    lu.assertEquals(snapshot.rows[12].rewardKind, "none")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[12]).rewardKind, "none")
     lu.assertFalse(snapshot.rows[12].countsGoalReward)
     lu.assertFalse(snapshot.rows[12].countsNonGoalReward)
     lu.assertTrue(snapshot.rows[12].valid)
@@ -2210,7 +2299,7 @@ function TestRunPlannerControls.testClockworkGoalRuntimeBuildsValidatedSnapshot(
     lu.assertEquals(snapshot.rows[14].roleKey, "Preboss")
     lu.assertEquals(snapshot.rows[14].roomOptions[1].key, "I_PreBoss01")
     lu.assertEquals(snapshot.rows[14].roomOptions[2].key, "I_PreBoss02")
-    lu.assertEquals(snapshot.rows[14].rewardKind, "shop")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[14]).rewardKind, "shop")
     lu.assertTrue(snapshot.rows[14].valid)
 end
 
@@ -2235,13 +2324,13 @@ function TestRunPlannerControls.testClockworkGoalCombatCanSelectDevotionRewardSu
     local snapshot = control:buildSnapshot()
 
     lu.assertEquals(snapshot.rows[3].roleKey, "ExtensionCombat")
-    lu.assertEquals(snapshot.rows[3].rewardKind, "roomStore")
-    lu.assertEquals(snapshot.rows[3].rewardPicks[1].key, "rewardType")
-    lu.assertEquals(snapshot.rows[3].rewardPicks[1].value, "Devotion")
-    lu.assertEquals(snapshot.rows[3].rewardPicks[2].key, "lootAName")
-    lu.assertEquals(snapshot.rows[3].rewardPicks[2].value, "ZeusUpgrade")
-    lu.assertEquals(snapshot.rows[3].rewardPicks[3].key, "lootBName")
-    lu.assertEquals(snapshot.rows[3].rewardPicks[3].value, "ApolloUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardKind, "roomStore")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[1].key, "rewardType")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[1].value, "Devotion")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[2].key, "lootAName")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[2].value, "ZeusUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[3].key, "lootBName")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[3].value, "ApolloUpgrade")
 end
 
 function TestRunPlannerControls.testClockworkGoalValidationModelsCountersAndSidePaths()
@@ -2911,7 +3000,7 @@ function TestRunPlannerControls.testHubPylonRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[1].roomKey, "N_Opening01")
     lu.assertEquals(snapshot.rows[1].roleKey, "Opening")
     lu.assertTrue(snapshot.rows[1].valid)
-    lu.assertEquals(snapshot.rows[1].rewardKind, "roomStore")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[1]).rewardKind, "roomStore")
     lu.assertEquals(snapshot.rows[3].slotLabel, "Hub")
     lu.assertEquals(snapshot.rows[3].roomHistoryCost, 0)
 
@@ -2925,17 +3014,17 @@ function TestRunPlannerControls.testHubPylonRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(#snapshot.rows[4].sideDoors, 3)
     lu.assertEquals(#snapshot.rows[4].sideRooms, 3)
     lu.assertTrue(snapshot.rows[4].valid)
-    lu.assertEquals(snapshot.rows[4].rewardKind, "roomStore")
-    lu.assertEquals(snapshot.rows[4].rewardPicks[1].value, "Boon")
-    lu.assertEquals(snapshot.rows[4].rewardPicks[2].value, "ZeusUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardKind, "roomStore")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardPicks[1].value, "Boon")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardPicks[2].value, "ZeusUpgrade")
     lu.assertEquals(snapshot.rows[4].sideRooms[1].roomKey, "N_Sub09")
     lu.assertEquals(snapshot.rows[4].sideRooms[1].doorId, 558352)
     lu.assertEquals(snapshot.rows[4].sideRooms[1].modeKey, "Enabled")
     lu.assertEquals(snapshot.rows[4].sideRooms[1].storedModeKey, "Enabled")
     lu.assertTrue(snapshot.rows[4].sideRooms[1].enabled)
     lu.assertEquals(snapshot.rows[4].sideRooms[1].rewardStore, "SubRoomRewardsHard")
-    lu.assertEquals(snapshot.rows[4].sideRooms[1].rewardKind, "roomStore")
-    lu.assertEquals(snapshot.rows[4].sideRooms[1].rewardPicks[1], {
+    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 1).rewardKind, "roomStore")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 1).rewardPicks[1], {
         key = "rewardType",
         kind = "rewardType",
         alias = "Reward1Key",
@@ -2947,14 +3036,14 @@ function TestRunPlannerControls.testHubPylonRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[4].sideRooms[2].storedModeKey, "Disabled")
     lu.assertFalse(snapshot.rows[4].sideRooms[2].enabled)
     lu.assertEquals(snapshot.rows[4].sideRooms[2].rewardStore, "SubRoomRewardsHard")
-    lu.assertEquals(snapshot.rows[4].sideRooms[2].rewardKind, "none")
-    lu.assertEquals(snapshot.rows[4].sideRooms[2].rewardPicks, {})
+    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 2).rewardKind, "none")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 2).rewardPicks, {})
     lu.assertEquals(snapshot.rows[4].sideRooms[3].roomKey, "N_Sub07")
     lu.assertEquals(snapshot.rows[4].sideRooms[3].modeKey, "Vanilla")
     lu.assertEquals(snapshot.rows[4].sideRooms[3].storedModeKey, "")
     lu.assertFalse(snapshot.rows[4].sideRooms[3].enabled)
     lu.assertEquals(snapshot.rows[4].sideRooms[3].rewardStore, "SubRoomRewards")
-    lu.assertEquals(snapshot.rows[4].sideRooms[3].rewardPicks, {})
+    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 3).rewardPicks, {})
 
     lu.assertEquals(snapshot.rows[5].roleKey, "Story")
     lu.assertEquals(snapshot.rows[5].optionKey, "N_Story01")
@@ -2965,8 +3054,8 @@ function TestRunPlannerControls.testHubPylonRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[6].roleKey, "Miniboss")
     lu.assertEquals(snapshot.rows[6].optionKey, "N_MiniBoss02")
     lu.assertEquals(snapshot.rows[6].roomKey, "N_MiniBoss02")
-    lu.assertEquals(snapshot.rows[6].rewardKind, "boonSource")
-    lu.assertEquals(snapshot.rows[6].rewardPicks[1].value, "AphroditeUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[6]).rewardKind, "boonSource")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[6]).rewardPicks[1].value, "AphroditeUpgrade")
     lu.assertTrue(snapshot.rows[6].valid)
 
     lu.assertEquals(snapshot.rows[7].roleKey, "Story")
@@ -2979,7 +3068,7 @@ function TestRunPlannerControls.testHubPylonRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[10].roleKey, "Preboss")
     lu.assertEquals(snapshot.rows[10].roomHistoryCost, 1)
     lu.assertTrue(snapshot.rows[10].valid)
-    lu.assertEquals(snapshot.rows[10].rewardKind, "shop")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[10]).rewardKind, "shop")
 end
 
 function TestRunPlannerControls.testHubPylonPolicyAllowsDuplicateBoonSources()
@@ -3011,8 +3100,8 @@ function TestRunPlannerControls.testHubPylonPolicyAllowsDuplicateBoonSources()
     lu.assertTrue(snapshot.valid)
     lu.assertFalse(snapshot.disabled)
     lu.assertEquals(#snapshot.invalidRows, 0)
-    lu.assertEquals(snapshot.rows[4].rewardPicks[2].value, "ZeusUpgrade")
-    lu.assertEquals(snapshot.rows[5].rewardPicks[2].value, "ZeusUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardPicks[2].value, "ZeusUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardPicks[2].value, "ZeusUpgrade")
 end
 
 function TestRunPlannerControls.testHubPylonPolicyRejectsDuplicateNonBoonRewards()
@@ -3143,10 +3232,10 @@ function TestRunPlannerControls.testFixedLinearRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[4].option.label, "Brute")
     lu.assertTrue(snapshot.rows[4].valid)
     lu.assertEquals(snapshot.rows[4].variantKey, "Manual")
-    lu.assertEquals(snapshot.rows[4].rewards[1], "Boon")
-    lu.assertEquals(snapshot.rows[4].rewards[2], "ZeusUpgrade")
-    lu.assertEquals(snapshot.rows[4].rewardKind, "roomStore")
-    lu.assertEquals(snapshot.rows[4].rewardPicks, {
+    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewards[1], "Boon")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewards[2], "ZeusUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardKind, "roomStore")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardPicks, {
         {
             key = "rewardType",
             kind = "rewardType",
@@ -3160,6 +3249,11 @@ function TestRunPlannerControls.testFixedLinearRuntimeBuildsValidatedSnapshot()
             value = "ZeusUpgrade",
         },
     })
+    lu.assertEquals(snapshot.rows[4].rewardItems[1].address, "row")
+    lu.assertEquals(snapshot.rows[4].rewardItems[1].sourceKind, "row")
+    lu.assertEquals(snapshot.rows[4].rewardItems[1].rewardKind, "roomStore")
+    lu.assertEquals(snapshot.rows[4].rewardItems[1].rewards[1], "Boon")
+    lu.assertEquals(snapshot.rows[4].rewardItems[1].rewardPicks[2].value, "ZeusUpgrade")
 
     lu.assertEquals(snapshot.rows[5].roleKey, "Missing")
     lu.assertEquals(snapshot.rows[5].invalidCode, "unknown_role")
@@ -3255,7 +3349,7 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
     lu.assertEquals(snapshot.rows[1].slotKind, "intro")
     lu.assertEquals(snapshot.rows[1].roomKey, "O_Intro")
     lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
-    lu.assertEquals(snapshot.rows[1].rewardKind, "none")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[1]).rewardKind, "none")
     lu.assertTrue(snapshot.rows[1].valid)
 
     lu.assertEquals(snapshot.rows[2].routeOrdinal, 1)
@@ -3264,8 +3358,8 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
     lu.assertEquals(snapshot.rows[2].variantKey, "")
     lu.assertEquals(snapshot.rows[2].variant.sourceKey, "Vanilla")
     lu.assertNil(snapshot.rows[2].realCombatCount)
-    lu.assertEquals(snapshot.rows[2].rewardKind, "none")
-    lu.assertEquals(snapshot.rows[2].rewardPicks, {})
+    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardKind, "none")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardPicks, {})
     lu.assertEquals(snapshot.rows[2].encounterRewardLegs, {})
 
     lu.assertEquals(snapshot.rows[3].routeOrdinal, 2)
@@ -3276,15 +3370,15 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
     lu.assertEquals(snapshot.rows[3].variant.label, "2 Combats")
     lu.assertEquals(snapshot.rows[3].realCombatCount, 2)
     lu.assertEquals(snapshot.rows[3].encounterPolicyKey, "O_CombatData")
-    lu.assertEquals(snapshot.rows[3].rewardKind, "none")
-    lu.assertEquals(snapshot.rows[3].rewardPicks, {})
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardKind, "none")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks, {})
     lu.assertEquals(#snapshot.rows[3].encounterRewardLegs, 1)
     lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].key, "Combat1")
     lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].label, "First Combat")
-    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].rewardKind, "majorMinor")
-    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].rewardPicks[1].value, "Major")
-    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].rewardPicks[2].value, "Boon")
-    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].rewardPicks[3].value, "ZeusUpgrade")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardKind, "majorMinor")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardPicks[1].value, "Major")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardPicks[2].value, "Boon")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardPicks[3].value, "ZeusUpgrade")
 
     lu.assertEquals(snapshot.rows[4].routeOrdinal, 3)
     lu.assertEquals(snapshot.rows[4].roleKey, "Combat")
@@ -3295,41 +3389,41 @@ function TestRunPlannerControls.testMultiEncounterRuntimeBuildsValidatedSnapshot
     lu.assertEquals(snapshot.rows[4].realCombatCount, 3)
     lu.assertEquals(#snapshot.rows[4].encounterRewardLegs, 2)
     lu.assertEquals(snapshot.rows[4].encounterRewardLegs[1].key, "Combat1")
-    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[1].rewardPicks[3].value, "ZeusUpgrade")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "encounter", 1).rewardPicks[3].value, "ZeusUpgrade")
     lu.assertEquals(snapshot.rows[4].encounterRewardLegs[2].key, "Combat2")
-    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[2].rewardPicks[1].value, "Minor")
-    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[2].rewardPicks[2].value, "GiftDrop")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "encounter", 2).rewardPicks[1].value, "Minor")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "encounter", 2).rewardPicks[2].value, "GiftDrop")
 
     lu.assertEquals(snapshot.rows[5].roleKey, "Fountain")
     lu.assertEquals(snapshot.rows[5].variantKey, "")
     lu.assertNil(snapshot.rows[5].variant)
     lu.assertNil(snapshot.rows[5].encounterPolicyKey)
-    lu.assertEquals(snapshot.rows[5].rewardKind, "majorMinor")
-    lu.assertEquals(snapshot.rows[5].rewardPicks[1].value, "Minor")
-    lu.assertEquals(snapshot.rows[5].rewardPicks[2].value, "GiftDrop")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardKind, "majorMinor")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardPicks[1].value, "Minor")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardPicks[2].value, "GiftDrop")
 
     lu.assertEquals(snapshot.rows[6].roleKey, "Story")
     lu.assertEquals(snapshot.rows[6].optionKey, "O_Story01")
     lu.assertEquals(snapshot.rows[6].variantKey, "")
     lu.assertNil(snapshot.rows[6].variant)
     lu.assertNil(snapshot.rows[6].realCombatCount)
-    lu.assertEquals(snapshot.rows[6].rewardKind, "none")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[6]).rewardKind, "none")
     lu.assertEquals(snapshot.rows[6].encounterRewardLegs, {})
 
     lu.assertEquals(snapshot.rows[7].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[7].variantKey, "TwoCombats")
     lu.assertEquals(snapshot.rows[7].realCombatCount, 2)
-    lu.assertEquals(snapshot.rows[7].rewardKind, "none")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[7]).rewardKind, "none")
     lu.assertEquals(#snapshot.rows[7].encounterRewardLegs, 1)
     lu.assertEquals(snapshot.rows[7].encounterRewardLegs[1].key, "Combat1")
-    lu.assertEquals(snapshot.rows[7].encounterRewardLegs[1].rewardPicks[3].value, "HestiaUpgrade")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[7], "encounter", 1).rewardPicks[3].value, "HestiaUpgrade")
 
     lu.assertEquals(snapshot.rows[8].slotKind, "preboss")
     lu.assertEquals(snapshot.rows[8].roomKey, "O_PreBoss01")
     lu.assertEquals(snapshot.rows[8].branchKey, "Shop")
     lu.assertEquals(snapshot.rows[8].roleKey, "Shop")
     lu.assertEquals(snapshot.rows[8].role.label, "Preboss Shop")
-    lu.assertEquals(snapshot.rows[8].rewardKind, "shop")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[8]).rewardKind, "shop")
 end
 
 function TestRunPlannerControls.testMultiEncounterRuntimeInvalidatesUnavailableCombatCount()
@@ -3418,7 +3512,7 @@ function TestRunPlannerControls.testFieldsCageRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[1].roomKey, "H_Intro")
     lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
     lu.assertTrue(snapshot.rows[1].valid)
-    lu.assertEquals(snapshot.rows[1].rewardKind, "none")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[1]).rewardKind, "none")
 
     lu.assertEquals(snapshot.rows[2].slotKind, "biomeRow")
     lu.assertEquals(snapshot.rows[2].routeOrdinal, 1)
@@ -3428,43 +3522,43 @@ function TestRunPlannerControls.testFieldsCageRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(snapshot.rows[2].variantKey, "ThreeRewards")
     lu.assertEquals(snapshot.rows[2].cagePolicyKey, "H_FieldsCageRewards")
     lu.assertEquals(snapshot.rows[2].cageRewardCount, 3)
-    lu.assertEquals(snapshot.rows[2].rewardKind, "none")
-    lu.assertEquals(snapshot.rows[2].rewardPicks, {})
+    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardKind, "none")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardPicks, {})
     lu.assertEquals(#snapshot.rows[2].cageRewards, 3)
     lu.assertEquals(snapshot.rows[2].cageRewards[1].key, "Cage1")
     lu.assertEquals(snapshot.rows[2].cageRewards[1].label, "Cage 1")
-    lu.assertEquals(snapshot.rows[2].cageRewards[1].rewardKind, "roomStore")
-    lu.assertEquals(snapshot.rows[2].cageRewards[1].rewardPicks[1].value, "Boon")
-    lu.assertEquals(snapshot.rows[2].cageRewards[1].rewardPicks[2].value, "PoseidonUpgrade")
-    lu.assertEquals(snapshot.rows[2].cageRewards[1].rewardPicks[2].storageAlias, "Reward2Key")
-    lu.assertEquals(snapshot.rows[2].cageRewards[2].rewardPicks[1].value, "HermesUpgrade")
-    lu.assertEquals(snapshot.rows[2].cageRewards[3].rewardPicks[1].value, "StackUpgrade")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[2], "cage", 1).rewardKind, "roomStore")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[2], "cage", 1).rewardPicks[1].value, "Boon")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[2], "cage", 1).rewardPicks[2].value, "PoseidonUpgrade")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[2], "cage", 1).rewardPicks[2].storageAlias, "Reward2Key")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[2], "cage", 2).rewardPicks[1].value, "HermesUpgrade")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[2], "cage", 3).rewardPicks[1].value, "StackUpgrade")
 
     lu.assertEquals(snapshot.rows[3].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[3].optionKey, "H_Combat09")
     lu.assertEquals(snapshot.rows[3].cageRewardCount, 2)
     lu.assertEquals(#snapshot.rows[3].cageRewards, 2)
-    lu.assertEquals(snapshot.rows[3].cageRewards[1].rewardPicks[2].value, "HestiaUpgrade")
-    lu.assertEquals(snapshot.rows[3].cageRewards[2].rewardPicks[1].value, "WeaponUpgrade")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[3], "cage", 1).rewardPicks[2].value, "HestiaUpgrade")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[3], "cage", 2).rewardPicks[1].value, "WeaponUpgrade")
 
     lu.assertEquals(snapshot.rows[4].roleKey, "Bridge")
     lu.assertEquals(snapshot.rows[4].role.label, "Echo")
     lu.assertEquals(snapshot.rows[4].optionKey, "H_Bridge01")
     lu.assertEquals(snapshot.rows[4].roomKey, "H_Bridge01")
     lu.assertTrue(snapshot.rows[4].valid)
-    lu.assertEquals(snapshot.rows[4].rewardKind, "none")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardKind, "none")
 
     lu.assertEquals(snapshot.rows[5].roleKey, "Miniboss")
     lu.assertEquals(snapshot.rows[5].optionKey, "H_MiniBoss01")
     lu.assertEquals(snapshot.rows[5].roomKey, "H_MiniBoss01")
-    lu.assertEquals(snapshot.rows[5].rewardKind, "boonSource")
-    lu.assertEquals(snapshot.rows[5].rewardPicks[1].value, "ZeusUpgrade")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardKind, "boonSource")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardPicks[1].value, "ZeusUpgrade")
 
     lu.assertEquals(snapshot.rows[6].slotKind, "fixedAfterRoute")
     lu.assertEquals(snapshot.rows[6].slotLabel, "Preboss Shop")
     lu.assertEquals(snapshot.rows[6].roomKey, "H_PreBoss01")
     lu.assertEquals(snapshot.rows[6].roleKey, "Preboss")
-    lu.assertEquals(snapshot.rows[6].rewardKind, "shop")
+    lu.assertEquals(primaryRewardItem(snapshot.rows[6]).rewardKind, "shop")
 end
 
 function TestRunPlannerControls.testFieldsCageRuntimeInvalidatesCageCountAboveMapCapacity()
@@ -3654,8 +3748,8 @@ function TestRunPlannerControls.testFixedLinearRuntimeSnapshotsPrebossBranchRows
     lu.assertEquals(snapshot.rows[8].roleKey, "Shop")
     lu.assertEquals(snapshot.rows[8].role.label, "Preboss Shop")
     lu.assertTrue(snapshot.rows[8].valid)
-    lu.assertEquals(snapshot.rows[8].rewardKind, "shop")
-    lu.assertEquals(#snapshot.rows[8].rewardPicks, 0)
+    lu.assertEquals(primaryRewardItem(snapshot.rows[8]).rewardKind, "shop")
+    lu.assertEquals(#primaryRewardItem(snapshot.rows[8]).rewardPicks, 0)
 end
 
 function TestRunPlannerControls.testSingleRoomRolesDefaultToConcreteOption()
@@ -4489,7 +4583,7 @@ local function fakeRouteControlSnapshot(controlName, rows)
                     controlName = controlName,
                     valid = true,
                     invalidRows = {},
-                    rows = rows or {},
+                    rows = normalizeRewardRows(rows or {}),
                 }
             end
             return nil
@@ -4573,11 +4667,41 @@ function TestRunPlannerControls.testRouteContextInvalidatesTalentRewardsBeforeSp
     lu.assertFalse(overview.valid)
     lu.assertEquals(#overview.invalidRows, 2)
     lu.assertEquals(overview.invalidRows[1].rowIndex, 1)
+    lu.assertEquals(overview.invalidRows[1].address, "row")
+    lu.assertEquals(overview.invalidRows[1].rewardType, "TalentDrop")
     lu.assertEquals(overview.invalidRows[1].code, "talent_requires_spell")
     lu.assertEquals(overview.invalidRows[2].rowIndex, 2)
+    lu.assertEquals(overview.invalidRows[2].address, "row")
+    lu.assertEquals(overview.invalidRows[2].rewardType, "MinorTalentDrop")
     lu.assertEquals(overview.invalidRows[2].code, "talent_requires_spell")
     lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 1).code, "talent_requires_spell")
+    lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 1).address, "row")
+    lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 1).rewardType, "TalentDrop")
     lu.assertNil(routeContext:rewardRowValidation("Underworld", "F", 4))
+end
+
+function TestRunPlannerControls.testRouteContextPreservesRewardInvalidAddress()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "Shop", {
+                rewardKind = "shop",
+                rewards = { "RandomLoot", "TalentDrop" },
+                rewardLoot = { "ZeusUpgrade", "" },
+            }),
+        }),
+    })
+
+    local invalid = routeContext:overview("Underworld").invalidRows[1]
+
+    lu.assertEquals(invalid.rowIndex, 1)
+    lu.assertEquals(invalid.address, "shop:2")
+    lu.assertEquals(invalid.rewardType, "TalentDrop")
+    lu.assertEquals(invalid.code, "talent_requires_spell")
+    lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 1).address, "shop:2")
 end
 
 function TestRunPlannerControls.testRouteContextInvalidatesDevotionBeforeSevenRunEncounters()
@@ -5056,7 +5180,7 @@ function TestRunPlannerControls.testRouteContextBuildsNpcTargetsFromValidCombatR
                                 controlName = "RouteF",
                                 valid = true,
                                 invalidRows = {},
-                                rows = {
+                                rows = normalizeRewardRows({
                                     {
                                         rowIndex = 1,
                                         routeOrdinal = 3,
@@ -5085,7 +5209,7 @@ function TestRunPlannerControls.testRouteContextBuildsNpcTargetsFromValidCombatR
                                         rewardKind = "majorMinor",
                                         rewards = { "Major", "MaxHealthDrop" },
                                     },
-                                },
+                                }),
                             }
                         end
                         return nil
@@ -5142,7 +5266,7 @@ function TestRunPlannerControls.testRouteContextDisablesNpcTargetsWhenRewardsAre
                                 controlName = "RouteF",
                                 valid = true,
                                 invalidRows = {},
-                                rows = {
+                                rows = normalizeRewardRows({
                                     {
                                         rowIndex = 1,
                                         routeOrdinal = 5,
@@ -5153,7 +5277,7 @@ function TestRunPlannerControls.testRouteContextDisablesNpcTargetsWhenRewardsAre
                                         rewardKind = "majorMinor",
                                         rewards = { "Major", "Boon", "ZeusUpgrade" },
                                     },
-                                },
+                                }),
                             }
                         end
                         return nil
@@ -5237,7 +5361,7 @@ function TestRunPlannerControls.testRouteContextAddsPostBiomeTimelineForNpcSpaci
                                 controlName = "RouteF",
                                 valid = true,
                                 invalidRows = {},
-                                rows = {
+                                rows = normalizeRewardRows({
                                     {
                                         rowIndex = 1,
 	                                        routeOrdinal = 4,
@@ -5248,7 +5372,7 @@ function TestRunPlannerControls.testRouteContextAddsPostBiomeTimelineForNpcSpaci
 	                                        rewardKind = "majorMinor",
 	                                        rewards = { "Major", "MaxHealthDrop" },
 	                                    },
-                                },
+                                }),
                             }
                         end
                         return nil
@@ -5262,7 +5386,7 @@ function TestRunPlannerControls.testRouteContextAddsPostBiomeTimelineForNpcSpaci
                                 controlName = "RouteG",
                                 valid = true,
                                 invalidRows = {},
-                                rows = {
+                                rows = normalizeRewardRows({
                                     {
                                         rowIndex = 1,
 	                                        routeOrdinal = 4,
@@ -5273,7 +5397,7 @@ function TestRunPlannerControls.testRouteContextAddsPostBiomeTimelineForNpcSpaci
 	                                        rewardKind = "majorMinor",
 	                                        rewards = { "Major", "MaxHealthDrop" },
 	                                    },
-                                },
+                                }),
                             }
                         end
                         return nil
@@ -5392,7 +5516,7 @@ function TestRunPlannerControls.testRouteNpcsSnapshotValidatesTargetsAndSpacing(
                                 controlName = "RouteF",
                                 valid = true,
                                 invalidRows = {},
-                                rows = {
+                                rows = normalizeRewardRows({
                                     {
                                         rowIndex = 2,
 	                                        routeOrdinal = 4,
@@ -5423,7 +5547,7 @@ function TestRunPlannerControls.testRouteNpcsSnapshotValidatesTargetsAndSpacing(
 	                                        rewardKind = "majorMinor",
                                         rewards = { "Major", "MaxHealthDrop" },
                                     },
-                                },
+                                }),
                             }
                         end
                         return nil
