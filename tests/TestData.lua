@@ -606,15 +606,15 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     lu.assertEquals(biomes.lookup.I.rolesByKey.ExtensionCombat.reward, roomStoreReward("ClockworkExtensionRewards"))
     lu.assertNil(biomes.lookup.I.rolesByKey.Trial)
     lu.assertEquals(biomes.lookup.I.rolesByKey.Story.roomOptions[1].key, "I_Story01")
-    assertOneShotRole(biomes.lookup.I.rolesByKey.Story)
+    lu.assertEquals(biomes.lookup.I.rolesByKey.Story.maxCreationsThisRun, 1)
     lu.assertEquals(biomes.lookup.I.rolesByKey.Fountain.roomOptions[1].key, "I_Reprieve01")
     lu.assertEquals(biomes.lookup.I.rolesByKey.Fountain.reward, roomStoreReward("TartarusRewards", {
         ineligibleRewardTypes = { "Devotion" },
     }))
-    assertOneShotRole(biomes.lookup.I.rolesByKey.Fountain)
+    lu.assertEquals(biomes.lookup.I.rolesByKey.Fountain.maxCreationsThisRun, 1)
     lu.assertNil(biomes.lookup.I.rolesByKey.Midshop)
     lu.assertEquals(biomes.lookup.I.rolesByKey.Miniboss.roomOptions[2].key, "I_MiniBoss02")
-    lu.assertEquals(biomes.lookup.I.rolesByKey.Miniboss.routeRules, oneShotRouteRules())
+    lu.assertEquals(biomes.lookup.I.rolesByKey.Miniboss.maxCreationsThisRun, 1)
 
     lu.assertEquals(biomes.lookup.N.rolesByKey.Combat.mapOptions[1].key, "N_Combat01")
     lu.assertEquals(biomes.lookup.N.rolesByKey.Combat.reward, roomStoreReward("HubRewards"))
@@ -707,13 +707,14 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.slotLayout.fixedAfterGoals[1].roomOptions[2].key, "I_PreBoss02")
     lu.assertEquals(tartarus.slotLayout.fixedAfterGoals[1].reward, shopReward("I_WorldShop"))
 
-    lu.assertEquals(tartarus.clockwork.requiredGoalRewards, 5)
     lu.assertEquals(tartarus.clockwork.forcedFirstRouteRole, "Goal")
-    lu.assertEquals(tartarus.clockwork.extensionRewardBudget, {
-        mode = "Vanilla",
-        min = 3,
-        max = 6,
-        counter = "BiomeRewardsSpawned",
+    lu.assertEquals(tartarus.clockwork.routeCounters, {
+        clockworkGoal = {
+            maxCreationsThisRun = 5,
+        },
+        clockworkNonGoalReward = {
+            maxCreationsThisRun = 6,
+        },
     })
 
     lu.assertEquals(#tartarus.clockwork.goalRoom.roomOptions, 24)
@@ -726,6 +727,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.clockwork.goalRoom.roomOptions[24].exitCount, 1)
     lu.assertFalse(tartarus.clockwork.goalRoom.roomOptions[24].supportsExtensionChoice)
     lu.assertEquals(tartarus.clockwork.goalRoom.reward, forcedReward("ClockworkGoal"))
+    lu.assertEquals(tartarus.clockwork.goalRoom.increments, { clockworkGoal = 1 })
     lu.assertEquals(tartarus.clockwork.extensionRoom.combatOptions[1].reward, roomStoreReward("ClockworkExtensionRewards"))
 
     local combat24 = tartarus.clockwork.goalRoom.roomOptions[24]
@@ -735,17 +737,22 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.clockwork.extensionRoom.combatOptions[1].key, "I_Combat01")
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].key, "I_Story01")
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].reward, noneReward())
-    lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].countsNonGoalReward, false)
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].exitCount, 1)
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.story[1].availability.biomeDepthCache, { min = 2 })
-    lu.assertTrue(tartarus.clockwork.extensionRoom.specialOptions.story[1].requiresExistingIExit)
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.fountain[1].key, "I_Reprieve01")
     lu.assertEquals(
         tartarus.clockwork.extensionRoom.specialOptions.fountain[1].reward,
         roomStoreReward("TartarusRewards", { ineligibleRewardTypes = { "Devotion" } })
     )
-    lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.fountain[1].countsNonGoalReward, true)
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.fountain[1].exitCount, 2)
+    lu.assertEquals(tartarus.rolesByKey.ExtensionCombat.increments, { clockworkNonGoalReward = 1 })
+    lu.assertEquals(tartarus.rolesByKey.Story.increments, { clockworkStory = 1 })
+    lu.assertEquals(tartarus.rolesByKey.Story.maxCreationsThisRun, 1)
+    lu.assertEquals(tartarus.rolesByKey.Fountain.increments, { clockworkNonGoalReward = 1 })
+    lu.assertEquals(tartarus.rolesByKey.Fountain.maxCreationsThisRun, 1)
+    lu.assertEquals(tartarus.rolesByKey.Miniboss.increments, { clockworkNonGoalReward = 1 })
+    lu.assertEquals(tartarus.rolesByKey.Miniboss.maxCreationsThisRun, 1)
+    lu.assertEquals(tartarus.rolesByKey.Miniboss.requiresPrevious, { supportsExtensionChoice = true })
     lu.assertNil(tartarus.clockwork.extensionRoom.specialOptions.shop)
     lu.assertEquals(tartarus.clockwork.extensionRoom.specialOptions.miniboss[2].exitCount, 2)
     lu.assertTrue(tartarus.clockwork.extensionRoom.specialOptions.miniboss[2].supportsExtensionChoice)

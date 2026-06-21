@@ -31,11 +31,8 @@ local function roomOption(roomKey, label, opts)
         features = opts.features,
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
-        countsNonGoalReward = opts.countsNonGoalReward,
         exitCount = opts.exitCount,
         supportsExtensionChoice = opts.exitCount ~= nil and opts.exitCount > 1,
-        maxCreationsThisRun = opts.maxCreationsThisRun,
-        requiresExistingIExit = opts.requiresExistingIExit,
     }
 end
 
@@ -84,10 +81,7 @@ layout.specialExtensionRooms = {
     fountain = {
         roomOption("I_Reprieve01", "Fountain", {
             reward = rewards.roomStore("TartarusRewards", { ineligibleRewardTypes = { "Devotion" } }),
-            countsNonGoalReward = true,
             exitCount = 2,
-            maxCreationsThisRun = 1,
-            requiresExistingIExit = true,
             availability = {
                 biomeDepthCache = { min = 4 },
             },
@@ -96,10 +90,7 @@ layout.specialExtensionRooms = {
     story = {
         roomOption("I_Story01", "Hades", {
             reward = rewards.none(),
-            countsNonGoalReward = false,
             exitCount = 1,
-            maxCreationsThisRun = 1,
-            requiresExistingIExit = true,
             availability = {
                 biomeDepthCache = { min = 2 },
             },
@@ -110,10 +101,7 @@ layout.specialExtensionRooms = {
             reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
             features = WELL_SHOP_FEATURES,
             biomeEncounterDepthCost = 1,
-            countsNonGoalReward = true,
             exitCount = 2,
-            maxCreationsThisRun = 1,
-            requiresExistingIExit = true,
             availability = {
                 biomeDepthCache = { min = 3, max = 7 },
             },
@@ -122,10 +110,7 @@ layout.specialExtensionRooms = {
             reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
             features = WELL_SHOP_FEATURES,
             biomeEncounterDepthCost = 1,
-            countsNonGoalReward = true,
             exitCount = 2,
-            maxCreationsThisRun = 1,
-            requiresExistingIExit = true,
             availability = {
                 biomeDepthCache = { min = 3, max = 7 },
             },

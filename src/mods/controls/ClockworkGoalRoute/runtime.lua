@@ -186,9 +186,8 @@ function runtime.create(fields, instance)
             optionKey = optionKey,
             option = option,
             features = data.rowFeatures(slot, role, option),
-            countsGoalReward = role ~= nil and role.countsGoalReward == true,
-            countsNonGoalReward = role ~= nil and role.countsNonGoalReward == true
-                or option ~= nil and option.countsNonGoalReward == true,
+            countsGoalReward = data.rowCountsGoalReward(role, option),
+            countsNonGoalReward = data.rowCountsNonGoalReward(role, option),
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,

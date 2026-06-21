@@ -6,10 +6,15 @@ local rowEngine = deps.rowEngine
 local VANILLA_ROLE_KEY = common.VANILLA_ROLE_KEY
 local GOAL_ROLE_KEY = "Goal"
 local PREBOSS_ROLE_KEY = "Preboss"
+local GOAL_COUNTER_KEY = "clockworkGoal"
+local NON_GOAL_COUNTER_KEY = "clockworkNonGoalReward"
+local STORY_COUNTER_KEY = "clockworkStory"
 
 local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
 local buildOptionChoices = common.buildOptionChoices
+local optionListForRole = common.optionListForRole
+local shouldOfferAutoOption = common.shouldOfferAutoOption
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
 local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
@@ -156,32 +161,69 @@ local function addFixedRoleLabels(instance)
     end
 end
 
+local function routeCounter(instance, key)
+    local counters = instance.clockwork.routeCounters or {}
+    return counters[key] or {}
+end
+
+local function routeCounterLimit(instance, key, fallback)
+    local counter = routeCounter(instance, key)
+    return tonumber(counter.maxCreationsThisRun) or fallback or 0
+end
+
 local function requiredGoalRewards(instance)
-    return tonumber(instance.clockwork.requiredGoalRewards) or 0
+    return routeCounterLimit(instance, GOAL_COUNTER_KEY)
 end
 
 local function maxNonGoalRewards(instance)
-    local budget = instance.clockwork.extensionRewardBudget or {}
-    return tonumber(budget.max) or 0
+    return routeCounterLimit(instance, NON_GOAL_COUNTER_KEY)
 end
 
-local function roleForCount(instance, rows, rowIndex)
-    local roleKey, role = data.resolveRole(instance, rows, rowIndex)
-    return roleKey, role
+local function counterIncrement(source, counterKey)
+    local increments = source and source.increments or nil
+    if increments == nil then
+        return 0
+    end
+    return tonumber(increments[counterKey]) or 0
 end
 
-local function optionForCount(instance, rows, rowIndex, roleKey)
-    local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
-    return option
+local function rowCounterIncrement(role, option, counterKey)
+    return counterIncrement(role, counterKey) + counterIncrement(option, counterKey)
 end
 
-local function rowCountsGoal(roleKey, role)
-    return roleKey == GOAL_ROLE_KEY or (role ~= nil and role.countsGoalReward == true)
+local function rowGoalIncrement(role, option)
+    return rowCounterIncrement(role, option, GOAL_COUNTER_KEY)
+end
+
+local function rowNonGoalIncrement(role, option)
+    return rowCounterIncrement(role, option, NON_GOAL_COUNTER_KEY)
+end
+
+local function rowStoryIncrement(role, option)
+    return rowCounterIncrement(role, option, STORY_COUNTER_KEY)
+end
+
+local function rowCountsGoal(role, option)
+    return rowGoalIncrement(role, option) > 0
 end
 
 local function rowCountsNonGoal(role, option)
-    return role ~= nil and role.countsNonGoalReward == true
-        or option ~= nil and option.countsNonGoalReward == true
+    return rowNonGoalIncrement(role, option) > 0
+end
+
+local function canOfferExtensionChoice(option)
+    if option == nil then
+        return false
+    end
+    if option.supportsExtensionChoice ~= nil then
+        return option.supportsExtensionChoice == true
+    end
+    return tonumber(option.exitCount) ~= nil and tonumber(option.exitCount) > 1
+end
+
+local function requiresPreviousExtensionChoice(role)
+    local requiresPrevious = role and role.requiresPrevious or nil
+    return requiresPrevious ~= nil and requiresPrevious.supportsExtensionChoice == true
 end
 
 local function activeReadPass(instance)
@@ -192,170 +234,209 @@ local function activeReadPass(instance)
     return nil
 end
 
-local function clearMap(map)
-    for key in pairs(map) do
-        map[key] = nil
+local function rawRoleKey(instance, rows, rowIndex, slot)
+    if isFixedSlot(slot) then
+        return slot.roleKey
     end
+    local forcedRoleKey = forcedRouteRoleKey(instance, slot)
+    if forcedRoleKey ~= nil and forcedRoleKey ~= "" then
+        return forcedRoleKey
+    end
+    local roleKey = rows and rows:read(rowIndex, "RoleKey") or nil
+    if roleKey == nil or roleKey == "" then
+        return VANILLA_ROLE_KEY
+    end
+    return roleKey
 end
 
-local function countCache(instance, rows)
-    local pass = activeReadPass(instance)
-    if pass == nil then
+local function rawRoleForKey(instance, _rowIndex, roleKey, slot)
+    if isFixedSlot(slot) then
+        if roleKey == nil or roleKey == "" or roleKey == slot.roleKey then
+            return slot.role
+        end
         return nil
     end
+    local forcedRoleKey = forcedRouteRoleKey(instance, slot)
+    if forcedRoleKey ~= nil and forcedRoleKey ~= "" then
+        if roleKey == forcedRoleKey then
+            return instance.rolesByKey[forcedRoleKey]
+        end
+        return nil
+    end
+    return instance.rolesByKey[roleKey]
+end
 
-    local cache = instance._clockworkCountCache
+local function rawOptionForRole(role, rows, rowIndex)
+    if role == nil then
+        return "", nil
+    end
+
+    local optionKey = rows and rows:read(rowIndex, "OptionKey") or ""
+    if optionKey ~= "" then
+        return optionKey, role.optionsByKey and role.optionsByKey[optionKey] or nil
+    end
+
+    local options = optionListForRole(role)
+    if #options == 0 or role.requiresConcreteOption then
+        return "", nil
+    end
+    if shouldOfferAutoOption(role, options) then
+        return "", nil
+    end
+
+    local option = options[1]
+    return option.key or "", option
+end
+
+local function clockworkStateCache(instance, rows)
+    local pass = activeReadPass(instance)
+    if pass == nil then
+        return {
+            rows = rows,
+            byRow = {},
+            volatile = true,
+        }
+    end
+
+    local cache = instance._clockworkStateCache
     if cache == nil then
         cache = {
-            priorGoals = {},
-            priorNonGoals = {},
+            byRow = {},
         }
-        instance._clockworkCountCache = cache
+        instance._clockworkStateCache = cache
     end
     if cache.pass ~= pass or cache.rows ~= rows then
         cache.pass = pass
         cache.rows = rows
-        clearMap(cache.priorGoals)
-        clearMap(cache.priorNonGoals)
+        cache.built = nil
+        cache.goalCount = 0
+        cache.nonGoalCount = 0
+        cache.storyCount = 0
     end
     return cache
 end
 
-local function countPriorGoals(instance, rows, rowIndex)
-    local cache = countCache(instance, rows)
-    if cache ~= nil and cache.priorGoals[rowIndex] ~= nil then
-        return cache.priorGoals[rowIndex]
+local function canSpendBranchingRoomAt(nonGoalCount, instance, option)
+    if not canOfferExtensionChoice(option) then
+        return true
     end
-
-    local count = 0
-    local startIndex = 1
-    if cache ~= nil and rowIndex > 1 then
-        count = countPriorGoals(instance, rows, rowIndex - 1)
-        startIndex = rowIndex - 1
-    end
-
-    for priorIndex = startIndex, rowIndex - 1 do
-        local roleKey, role = roleForCount(instance, rows, priorIndex)
-        if rowCountsGoal(roleKey, role) then
-            count = count + 1
-        end
-    end
-    if cache ~= nil then
-        cache.priorGoals[rowIndex] = count
-    end
-    return count
+    return nonGoalCount < maxNonGoalRewards(instance) - 1
 end
 
-local function goalsCompleteBeforeRow(instance, rows, rowIndex, slot)
-    return isRouteSlot(slot)
-        and countPriorGoals(instance, rows, rowIndex) >= requiredGoalRewards(instance)
+local function buildClockworkState(instance, rows, cache)
+    if cache.built then
+        return cache
+    end
+
+    local goalLimit = requiredGoalRewards(instance)
+    local nonGoalLimit = maxNonGoalRewards(instance)
+    local goalCount = 0
+    local nonGoalCount = 0
+    local storyCount = 0
+    local previousSupportsExtensionChoice = false
+
+    for rowIndex, slot in ipairs(instance.routeSlots or {}) do
+        local state = cache.byRow[rowIndex]
+        if state == nil then
+            state = {}
+            cache.byRow[rowIndex] = state
+        end
+
+        state.priorGoals = goalCount
+        state.priorNonGoals = nonGoalCount
+        state.priorStories = storyCount
+        state.previousSupportsExtensionChoice = previousSupportsExtensionChoice
+        state.inactive = false
+        state.roleKey = nil
+        state.role = nil
+        state.optionKey = nil
+        state.option = nil
+        state.countsGoal = false
+        state.countsNonGoal = false
+        state.countsStory = false
+
+        if isRouteSlot(slot) then
+            state.inactive = goalCount >= goalLimit and not previousSupportsExtensionChoice
+            if state.inactive then
+                state.roleKey = VANILLA_ROLE_KEY
+                state.optionKey = ""
+                previousSupportsExtensionChoice = false
+            else
+                local roleKey = rawRoleKey(instance, rows, rowIndex, slot)
+                local role = rawRoleForKey(instance, rowIndex, roleKey, slot)
+                local optionKey, option = rawOptionForRole(role, rows, rowIndex)
+                local goalIncrement = rowGoalIncrement(role, option)
+                local nonGoalIncrement = rowNonGoalIncrement(role, option)
+                local storyIncrement = rowStoryIncrement(role, option)
+                local countsGoal = goalIncrement > 0
+                local countsNonGoal = nonGoalIncrement > 0
+                local countsStory = storyIncrement > 0
+                local withinGoalLimit = not countsGoal or goalCount + goalIncrement <= goalLimit
+                local withinNonGoalLimit = not countsNonGoal or nonGoalCount + nonGoalIncrement <= nonGoalLimit
+                local hasRequiredPreviousExtensionChoice = not requiresPreviousExtensionChoice(role) or previousSupportsExtensionChoice
+                local canSpendBranch = canSpendBranchingRoomAt(nonGoalCount, instance, option)
+                local supportsNextExtensionChoice = roleKey ~= VANILLA_ROLE_KEY
+                    and role ~= nil
+                    and withinGoalLimit
+                    and withinNonGoalLimit
+                    and hasRequiredPreviousExtensionChoice
+                    and canSpendBranch
+                    and canOfferExtensionChoice(option)
+
+                state.roleKey = roleKey
+                state.role = role
+                state.optionKey = optionKey
+                state.option = option
+
+                if countsGoal and withinGoalLimit then
+                    goalCount = goalCount + goalIncrement
+                    state.countsGoal = true
+                elseif countsNonGoal and withinNonGoalLimit then
+                    nonGoalCount = nonGoalCount + nonGoalIncrement
+                    state.countsNonGoal = true
+                end
+                if countsStory then
+                    storyCount = storyCount + storyIncrement
+                    state.countsStory = true
+                end
+
+                previousSupportsExtensionChoice = supportsNextExtensionChoice
+            end
+        else
+            previousSupportsExtensionChoice = false
+        end
+    end
+
+    cache.goalCount = goalCount
+    cache.nonGoalCount = nonGoalCount
+    cache.storyCount = storyCount
+    cache.built = true
+    return cache
+end
+
+local function clockworkState(instance, rows)
+    return buildClockworkState(instance, rows, clockworkStateCache(instance, rows))
+end
+
+local function clockworkRowState(instance, rows, rowIndex)
+    local cache = clockworkState(instance, rows)
+    return cache.byRow[rowIndex] or {}
+end
+
+local function countPriorGoals(instance, rows, rowIndex)
+    return clockworkRowState(instance, rows, rowIndex).priorGoals or 0
 end
 
 local function countPriorNonGoals(instance, rows, rowIndex)
-    local cache = countCache(instance, rows)
-    if cache ~= nil and cache.priorNonGoals[rowIndex] ~= nil then
-        return cache.priorNonGoals[rowIndex]
-    end
-
-    local count = 0
-    local startIndex = 1
-    if cache ~= nil and rowIndex > 1 then
-        count = countPriorNonGoals(instance, rows, rowIndex - 1)
-        startIndex = rowIndex - 1
-    end
-
-    for priorIndex = startIndex, rowIndex - 1 do
-        local roleKey, role = roleForCount(instance, rows, priorIndex)
-        local option = optionForCount(instance, rows, priorIndex, roleKey)
-        if rowCountsNonGoal(role, option) then
-            count = count + 1
-        end
-    end
-    if cache ~= nil then
-        cache.priorNonGoals[rowIndex] = count
-    end
-    return count
+    return clockworkRowState(instance, rows, rowIndex).priorNonGoals or 0
 end
 
-local function countRouteRows(instance, rows, predicate)
-    local count = 0
-    local goalLimit = requiredGoalRewards(instance)
-    for rowIndex, slot in ipairs(instance.routeSlots or {}) do
-        if isRouteSlot(slot) then
-            if routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
-                break
-            end
-            local roleKey, role = roleForCount(instance, rows, rowIndex)
-            local option = optionForCount(instance, rows, rowIndex, roleKey)
-            local shouldCount = true
-            if rowCountsGoal(roleKey, role) then
-                shouldCount = countPriorGoals(instance, rows, rowIndex) < goalLimit
-            elseif rowCountsNonGoal(role, option) then
-                shouldCount = countPriorNonGoals(instance, rows, rowIndex) < maxNonGoalRewards(instance)
-            end
-            if shouldCount and predicate(roleKey, role, option) then
-                count = count + 1
-            end
-        end
-    end
-    return count
-end
-
-local function canOfferIExit(option)
-    if option == nil then
-        return false
-    end
-    if option.supportsExtensionChoice ~= nil then
-        return option.supportsExtensionChoice == true
-    end
-    return tonumber(option.exitCount) ~= nil and tonumber(option.exitCount) > 1
-end
-
-local function canSpendBranchingRoom(instance, rows, rowIndex, option)
-    if not canOfferIExit(option) then
-        return true
-    end
-    return countPriorNonGoals(instance, rows, rowIndex) < maxNonGoalRewards(instance) - 1
-end
-
-local function roleRequiresPreviousIExit(role)
-    return role ~= nil and role.countsNonGoalReward == true
-end
-
-local function optionRequiresPreviousIExit(option)
-    return option ~= nil and (option.countsNonGoalReward == true or option.requiresExistingIExit == true)
-end
-
-local function previousRouteSupportsIExit(instance, rows, rowIndex)
-    local previousIndex = rowIndex - 1
-    if previousIndex < 1 then
-        return false
-    end
-
-    local previousSlot = slotForRow(instance, previousIndex)
-    if not isRouteSlot(previousSlot) then
-        return false
-    end
-
-    local previousValidation = data.validateRow(instance, rows, previousIndex)
-    if not previousValidation.valid then
-        return false
-    end
-
-    local roleKey, role = roleForCount(instance, rows, previousIndex)
-    if roleKey == VANILLA_ROLE_KEY or role == nil then
-        return false
-    end
-    return canOfferIExit(optionForCount(instance, rows, previousIndex, roleKey))
-end
-
-local function requiresPreviousIExit(role, option)
-    return roleRequiresPreviousIExit(role) or optionRequiresPreviousIExit(option)
+local function previousRouteSupportsExtensionChoice(instance, rows, rowIndex)
+    return clockworkRowState(instance, rows, rowIndex).previousSupportsExtensionChoice == true
 end
 
 routeTerminatedBeforeRow = function(instance, rows, rowIndex, slot)
-    return goalsCompleteBeforeRow(instance, rows, rowIndex, slot)
-        and not previousRouteSupportsIExit(instance, rows, rowIndex)
+    return isRouteSlot(slot) and clockworkRowState(instance, rows, rowIndex).inactive == true
 end
 
 local function roleIsAllowedByCounters(instance, rows, rowIndex, roleKey, role)
@@ -365,11 +446,13 @@ local function roleIsAllowedByCounters(instance, rows, rowIndex, roleKey, role)
     if routeTerminatedBeforeRow(instance, rows, rowIndex, slotForRow(instance, rowIndex)) then
         return false
     end
-    if rowCountsGoal(roleKey, role) then
-        return countPriorGoals(instance, rows, rowIndex) < requiredGoalRewards(instance)
+    local goalIncrement = rowGoalIncrement(role)
+    if goalIncrement > 0 then
+        return countPriorGoals(instance, rows, rowIndex) + goalIncrement <= requiredGoalRewards(instance)
     end
-    if role ~= nil and role.countsNonGoalReward == true then
-        return countPriorNonGoals(instance, rows, rowIndex) < maxNonGoalRewards(instance)
+    local nonGoalIncrement = rowNonGoalIncrement(role)
+    if nonGoalIncrement > 0 then
+        return countPriorNonGoals(instance, rows, rowIndex) + nonGoalIncrement <= maxNonGoalRewards(instance)
     end
     return true
 end
@@ -378,26 +461,26 @@ local function roleIsAllowed(instance, rows, rowIndex, roleKey, role)
     if not roleIsAllowedByCounters(instance, rows, rowIndex, roleKey, role) then
         return false
     end
-    if roleRequiresPreviousIExit(role) and not previousRouteSupportsIExit(instance, rows, rowIndex) then
+    if requiresPreviousExtensionChoice(role) and not previousRouteSupportsExtensionChoice(instance, rows, rowIndex) then
         return false
     end
     return true
 end
 
 local function roleDisallowedStatus(instance, rows, rowIndex, roleKey, role)
-    if roleRequiresPreviousIExit(role) and not previousRouteSupportsIExit(instance, rows, rowIndex) then
+    if requiresPreviousExtensionChoice(role) and not previousRouteSupportsExtensionChoice(instance, rows, rowIndex) then
         return invalidStatus(
-            "clockwork_previous_i_exit",
-            tostring(role.label or roleKey) .. " requires a previous planned room with an I exit"
+            "clockwork_previous_extension_choice",
+            tostring(role.label or roleKey) .. " requires a previous planned room with an extension choice"
         )
     end
-    if rowCountsGoal(roleKey, role) then
+    if rowGoalIncrement(role) > 0 then
         return invalidStatus(
             "clockwork_goal_limit",
             "Clockwork Goal is already planned " .. tostring(requiredGoalRewards(instance)) .. " times"
         )
     end
-    if role ~= nil and role.countsNonGoalReward == true then
+    if rowNonGoalIncrement(role) > 0 then
         return invalidStatus(
             "clockwork_extension_budget",
             "Clockwork non-goal rewards are already planned " .. tostring(maxNonGoalRewards(instance)) .. " times"
@@ -493,14 +576,19 @@ local adapter = {
         return roleIsAllowed(instance, rows, rowIndex, roleKey, role)
     end,
 
-    isOptionAllowed = function(instance, rows, rowIndex, _, _, _, option, slot)
+    isOptionAllowed = function(instance, rows, rowIndex, _, _, role, option, slot)
         if not isRouteSlot(slot) then
             return true
         end
-        if not canSpendBranchingRoom(instance, rows, rowIndex, option) then
+        local priorNonGoals = countPriorNonGoals(instance, rows, rowIndex)
+        local nonGoalIncrement = rowNonGoalIncrement(role, option)
+        if nonGoalIncrement > 0 and priorNonGoals + nonGoalIncrement > maxNonGoalRewards(instance) then
             return false
         end
-        if optionRequiresPreviousIExit(option) and not previousRouteSupportsIExit(instance, rows, rowIndex) then
+        if not canSpendBranchingRoomAt(priorNonGoals, instance, option) then
+            return false
+        end
+        if requiresPreviousExtensionChoice(role) and not previousRouteSupportsExtensionChoice(instance, rows, rowIndex) then
             return false
         end
         return true
@@ -535,11 +623,10 @@ local adapter = {
             return roleDisallowedStatus(instance, rows, rowIndex, roleKey, role)
         end
 
-        local option = optionForCount(instance, rows, rowIndex, roleKey)
-        if requiresPreviousIExit(role, option) and not previousRouteSupportsIExit(instance, rows, rowIndex) then
+        if requiresPreviousExtensionChoice(role) and not previousRouteSupportsExtensionChoice(instance, rows, rowIndex) then
             return invalidStatus(
-                "clockwork_previous_i_exit",
-                tostring(role.label or roleKey) .. " requires a previous planned room with an I exit"
+                "clockwork_previous_extension_choice",
+                tostring(role.label or roleKey) .. " requires a previous planned room with an extension choice"
             )
         end
         return nil
@@ -592,22 +679,24 @@ function data.maxNonGoalRewards(instance)
     return maxNonGoalRewards(instance)
 end
 
+function data.rowCountsGoalReward(role, option)
+    return rowCountsGoal(role, option)
+end
+
+function data.rowCountsNonGoalReward(role, option)
+    return rowCountsNonGoal(role, option)
+end
+
 function data.countGoals(instance, rows)
-    return countRouteRows(instance, rows, function(roleKey, role)
-        return rowCountsGoal(roleKey, role)
-    end)
+    return clockworkState(instance, rows).goalCount or 0
 end
 
 function data.countNonGoals(instance, rows)
-    return countRouteRows(instance, rows, function(_, role, option)
-        return rowCountsNonGoal(role, option)
-    end)
+    return clockworkState(instance, rows).nonGoalCount or 0
 end
 
 function data.countStories(instance, rows)
-    return countRouteRows(instance, rows, function(roleKey)
-        return roleKey == "Story"
-    end)
+    return clockworkState(instance, rows).storyCount or 0
 end
 
 function data.isRouteSlot(slot)

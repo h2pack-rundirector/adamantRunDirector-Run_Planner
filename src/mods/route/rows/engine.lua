@@ -392,7 +392,11 @@ function rowEngine.create(adapter)
     end
 
     local function isRoleWithinSelectionCap(instance, role, rows, rowIndex)
-        local maxSelections = role and role.routeRules and role.routeRules.maxSelectionsPerBiome
+        local maxSelections = role and (
+            role.maxCreationsThisRun
+                or role.maxAppearancesThisBiome
+                or role.routeRules and role.routeRules.maxSelectionsPerBiome
+        )
         if maxSelections == nil then
             return true
         end

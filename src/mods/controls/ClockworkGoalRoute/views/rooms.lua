@@ -160,10 +160,8 @@ local function isRoomTabRow(control, rowIndex)
 end
 
 local function shouldRenderRow(control, instance, rows, rowIndex)
-    if data.isInactiveRouteRow(instance, rows, rowIndex) then
-        return false
-    end
     return isRoomTabRow(control, rowIndex)
+        and not data.isInactiveRouteRow(instance, rows, rowIndex)
 end
 
 function rooms.draw(draw, control, instance)

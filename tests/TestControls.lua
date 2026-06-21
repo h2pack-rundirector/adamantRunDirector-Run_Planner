@@ -2207,7 +2207,7 @@ function TestRunPlannerControls.testClockworkGoalStorageMatchesTartarusRouteRows
         "Fountain",
         "Miniboss",
     })
-    lu.assertEquals(instance.roleLabels.Goal, "Clockwork Goal")
+    lu.assertEquals(instance.roleLabels.Goal, "Goal Room")
     lu.assertEquals(instance.optionValuesByRole.Goal[1], "")
     lu.assertEquals(instance.optionValuesByRole.Goal[2], "I_Combat01")
     lu.assertNil(instance.rolesByKey.Goal.mapOptions[1].reward)
@@ -2376,7 +2376,7 @@ function TestRunPlannerControls.testClockworkGoalValidationModelsCountersAndSide
     })
     local validation = data.validateRow(instance, storyAfterOneExit, 3)
     lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "clockwork_previous_i_exit")
+    lu.assertEquals(validation.code, "clockwork_previous_extension_choice")
     lu.assertTrue(hasValue(data.roleValuesForRow(instance, storyAfterOneExit, 3), "Story"))
     lu.assertNotNil(data.roleValueColorsForRow(instance, storyAfterOneExit, 3).Story)
     lu.assertTrue(hasValue(data.optionValuesForRow(instance, storyAfterOneExit, 3, "Story"), "I_Story01"))
@@ -2389,7 +2389,7 @@ function TestRunPlannerControls.testClockworkGoalValidationModelsCountersAndSide
     })
     validation = data.validateRow(instance, extensionAfterOneExit, 3)
     lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "clockwork_previous_i_exit")
+    lu.assertEquals(validation.code, "clockwork_previous_extension_choice")
 
     local rolesAfterTwoExit = data.roleValuesForRow(instance, fakeRows({
         {},
@@ -2412,7 +2412,7 @@ function TestRunPlannerControls.testClockworkGoalValidationModelsCountersAndSide
     })
     validation = data.validateRow(instance, seventhExtension, 9)
     lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "clockwork_previous_i_exit")
+    lu.assertEquals(validation.code, "clockwork_previous_extension_choice")
 
     local finalExtensionTwoExit = fakeRows({
         {},
@@ -2596,6 +2596,44 @@ function TestRunPlannerControls.testClockworkGoalTerminatesAfterOneExitFifthGoal
     lu.assertEquals(data.countGoals(instance, rows), 5)
     lu.assertEquals(data.countStories(instance, rows), 0)
     lu.assertTrue(data.validateRow(instance, rows, 14).valid)
+end
+
+function TestRunPlannerControls.testClockworkGoalRoomViewHidesInactiveRows()
+    local catalog = loadCatalog()
+    local template = loadClockworkGoalTemplate()
+    local instance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    local rowData = {
+        {},
+        { RoleKey = "Goal", OptionKey = "I_Combat01" },
+        { RoleKey = "Goal", OptionKey = "I_Combat03" },
+        { RoleKey = "Goal", OptionKey = "I_Combat04" },
+        { RoleKey = "Goal", OptionKey = "I_Combat09" },
+        { RoleKey = "Goal", OptionKey = "I_Combat02" },
+        { RoleKey = "Story", OptionKey = "I_Story01" },
+    }
+    for rowIndex, row in ipairs(rowData) do
+        for alias, value in pairs(row) do
+            fields.Rooms:get(rowIndex, alias):write(value)
+        end
+    end
+
+    local control = template.createUi(fields, instance)
+    local draw = noOpDraw()
+    local rendered = {}
+    draw.imgui.Text = function(text)
+        rendered[tostring(text)] = true
+    end
+
+    template.views.rooms(draw, control, instance)
+
+    lu.assertTrue(rendered.Intro)
+    lu.assertTrue(rendered["Step 5"])
+    lu.assertNil(rendered["Step 6"])
+    lu.assertNil(rendered["Step 12"])
 end
 
 function TestRunPlannerControls.testHubPylonStorageMatchesEphyraRouteRows()

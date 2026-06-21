@@ -2,7 +2,6 @@ return function(importer, deps)
     local layout = importer("mods/biomes/declarations/i_tartarus_layout.lua")(importer, deps)
     local parser = deps.parser
     local rewards = deps.rewards
-    local routeRules = deps.routeRules
 
     return {
         key = "I",
@@ -52,28 +51,23 @@ return function(importer, deps)
             },
         },
         clockwork = {
-            requiredGoalRewards = 5,
             forcedFirstRouteRole = "Goal",
-            extensionRewardBudget = {
-                mode = "Vanilla",
-                min = 3,
-                max = 6,
-                counter = "BiomeRewardsSpawned",
-            },
-            extensionChoice = {
-                default = false,
-                requiresPreviousRoomSupportsExtensionChoice = true,
+            routeCounters = {
+                clockworkGoal = {
+                    maxCreationsThisRun = 5,
+                },
+                clockworkNonGoalReward = {
+                    maxCreationsThisRun = 6,
+                },
             },
             goalRoom = {
                 roomOptions = layout.combatRooms,
                 reward = rewards.forcedReward("ClockworkGoal"),
-                countsGoalReward = true,
-                countsNonGoalReward = false,
+                increments = { clockworkGoal = 1 },
             },
             extensionRoom = {
                 combatOptions = layout.combatRooms,
                 specialOptions = layout.specialExtensionRooms,
-                countsGoalReward = false,
             },
         },
         roles = {
@@ -84,24 +78,27 @@ return function(importer, deps)
             },
             {
                 key = "Goal",
-                label = "Clockwork Goal",
+                label = "Goal Room",
                 mapOptions = layout.combatRooms,
                 reward = rewards.forcedReward("ClockworkGoal"),
-                countsGoalReward = true,
+                increments = { clockworkGoal = 1 },
             },
             {
                 key = "ExtensionCombat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,
                 reward = rewards.roomStore("ClockworkExtensionRewards"),
-                countsNonGoalReward = true,
+                increments = { clockworkNonGoalReward = 1 },
+                requiresPrevious = { supportsExtensionChoice = true },
             },
             {
                 key = "Story",
                 label = "Story",
                 roomOptions = layout.specialExtensionRooms.story,
                 reward = rewards.none(),
-                routeRules = routeRules.role("Story"),
+                increments = { clockworkStory = 1 },
+                maxCreationsThisRun = 1,
+                requiresPrevious = { supportsExtensionChoice = true },
                 biomeEncounterDepthCost = 0,
                 reserve = true,
             },
@@ -110,7 +107,9 @@ return function(importer, deps)
                 label = "Fountain",
                 roomOptions = layout.specialExtensionRooms.fountain,
                 reward = rewards.roomStore("TartarusRewards", { ineligibleRewardTypes = { "Devotion" } }),
-                routeRules = routeRules.role("Fountain"),
+                increments = { clockworkNonGoalReward = 1 },
+                maxCreationsThisRun = 1,
+                requiresPrevious = { supportsExtensionChoice = true },
                 biomeEncounterDepthCost = 0,
                 reserve = true,
             },
@@ -120,7 +119,9 @@ return function(importer, deps)
                 roomOptions = layout.specialExtensionRooms.miniboss,
                 reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
                 requiresConcreteOption = true,
-                routeRules = routeRules.role("Miniboss"),
+                increments = { clockworkNonGoalReward = 1 },
+                maxCreationsThisRun = 1,
+                requiresPrevious = { supportsExtensionChoice = true },
                 reserve = true,
             },
         },
