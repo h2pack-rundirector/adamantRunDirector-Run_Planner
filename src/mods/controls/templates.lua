@@ -14,10 +14,10 @@ local route = {
     biomeRules = routeBiomeRules,
     timeline = import("mods/route/timeline.lua"),
     invalidLocations = import("mods/route/invalid_locations.lua"),
-    rewardItems = import("mods/route/reward_items.lua"),
+    rewardItems = import("mods/rewards/items.lua"),
     rewardSemantics = rewardSemantics,
-    rewardOfferPolicies = import("mods/data/reward_offer_policies.lua"),
-    rewardOfferRules = import("mods/route/reward_offer_rules.lua", nil, {
+    rewardOfferPolicies = import("mods/rewards/offer_policies.lua"),
+    rewardOfferRules = import("mods/rewards/offer_rules.lua", nil, {
         semantics = rewardSemantics,
     }),
 }

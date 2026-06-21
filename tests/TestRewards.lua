@@ -21,8 +21,8 @@ local function loadRuntime()
     })
 end
 
-local function loadRouteRules()
-    return dofile("src/mods/rewards/route_rules.lua")
+local function loadConditions()
+    return dofile("src/mods/rewards/conditions.lua")
 end
 
 local function loadSemantics()
@@ -187,8 +187,8 @@ function TestRunPlannerRewards.testSemanticsConcreteAndBannedChecks()
     }))
 end
 
-function TestRunPlannerRewards.testRouteRulesGroupTalentVariantsBehindSpellRequirement()
-    local rules = loadRouteRules()
+function TestRunPlannerRewards.testConditionsGroupTalentVariantsBehindSpellRequirement()
+    local rules = loadConditions()
     local talentRule = ruleByRequirementCode(rules, "talent_requires_spell")
 
     lu.assertNotNil(talentRule)
@@ -207,8 +207,8 @@ function TestRunPlannerRewards.testRouteRulesGroupTalentVariantsBehindSpellRequi
     })
 end
 
-function TestRunPlannerRewards.testRouteRulesApplyDevotionByRewardTypeWithThessalyExitException()
-    local rules = loadRouteRules()
+function TestRunPlannerRewards.testConditionsApplyDevotionByRewardTypeWithThessalyExitException()
+    local rules = loadConditions()
     local devotionRule = ruleByTarget(rules, "Devotion")
 
     lu.assertNotNil(devotionRule)
@@ -224,8 +224,8 @@ function TestRunPlannerRewards.testRouteRulesApplyDevotionByRewardTypeWithThessa
     })
 end
 
-function TestRunPlannerRewards.testRouteRulesBlockTalentAfterShopTalent()
-    local rules = loadRouteRules()
+function TestRunPlannerRewards.testConditionsBlockTalentAfterShopTalent()
+    local rules = loadConditions()
     local blockerRule = ruleByRequirementCode(rules, "talent_shop_conflict")
 
     lu.assertNotNil(blockerRule)
@@ -244,8 +244,8 @@ function TestRunPlannerRewards.testRouteRulesBlockTalentAfterShopTalent()
     })
 end
 
-function TestRunPlannerRewards.testRouteRulesBlockRoomHammerAfterShopHammer()
-    local rules = loadRouteRules()
+function TestRunPlannerRewards.testConditionsBlockRoomHammerAfterShopHammer()
+    local rules = loadConditions()
     local hammerRule = ruleByTarget(rules, "WeaponUpgrade")
     local blockerRule = ruleByRequirementCode(rules, "weapon_upgrade_shop_conflict")
 

@@ -7,7 +7,7 @@ if routeTimeline == nil then
     error("run_context requires route timeline")
 end
 if rewardItems == nil then
-    error("run_context requires route reward items")
+    error("run_context requires reward items")
 end
 if semantics == nil then
     error("run_context requires reward semantics")

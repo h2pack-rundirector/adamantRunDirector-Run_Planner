@@ -19,7 +19,7 @@ local function withTestImport(callback)
 end
 
 local function normalizeRewardRows(rows)
-    local rewardItems = testImport("mods/route/reward_items.lua")
+    local rewardItems = testImport("mods/rewards/items.lua")
     for _, row in ipairs(rows or {}) do
         rewardItems.attach(row)
     end
@@ -127,10 +127,10 @@ local function loadRouteFeaturesTemplate()
 end
 
 local function loadRewardLegality()
-    return testImport("mods/route/reward_legality.lua", nil, {
-        routeRules = testImport("mods/rewards/route_rules.lua"),
+    return testImport("mods/rewards/legality.lua", nil, {
+        conditions = testImport("mods/rewards/conditions.lua"),
         timeline = testImport("mods/route/timeline.lua"),
-        rewardItems = testImport("mods/route/reward_items.lua"),
+        rewardItems = testImport("mods/rewards/items.lua"),
         semantics = testImport("mods/rewards/semantics.lua"),
         invalidLocations = testImport("mods/route/invalid_locations.lua"),
     })
@@ -160,7 +160,7 @@ local function loadRunContext()
     return testImport("mods/route/run_context.lua", nil, {
         rewardLegality = loadRewardLegality(),
         timeline = testImport("mods/route/timeline.lua"),
-        rewardItems = testImport("mods/route/reward_items.lua"),
+        rewardItems = testImport("mods/rewards/items.lua"),
         semantics = testImport("mods/rewards/semantics.lua"),
     })
 end
@@ -464,7 +464,7 @@ function TestRunPlannerControls.testRouteStatusDrawsFirstInvalidMessage()
 end
 
 function TestRunPlannerControls.testRewardItemsNormalizeRowRewardMetadata()
-    local rewardItems = testImport("mods/route/reward_items.lua")
+    local rewardItems = testImport("mods/rewards/items.lua")
     local row = {
         rowIndex = 2,
         routeOrdinal = 2,

@@ -25,14 +25,14 @@ end
 function biomes.load(importer)
     importer = importer or defaultImporter
 
-    local rewards = importer("mods/data/rewards.lua")(importer)
+    local rewards = importer("mods/biomes/reward_contexts.lua")(importer)
     local gods = importer("mods/data/gods.lua")
     local npcs = importer("mods/npcs/definitions.lua")
     local features = importer("mods/features/definitions.lua")
     local routes = importer("mods/data/routes.lua").load()
     local biomeParser = importer("mods/biomes/parser.lua").create({
         rewards = rewards,
-        routeRules = importer("mods/data/route_rules.lua"),
+        routeRules = importer("mods/biomes/declaration_rules.lua"),
     })
     local declarationDeps = biomeParser.declarationDeps()
     local ordered = {}

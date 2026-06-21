@@ -1,7 +1,7 @@
 local deps = ... or {}
 local semantics = deps.semantics
 if semantics == nil then
-    error("reward_offer_rules requires reward semantics")
+    error("rewards.offer_rules requires reward semantics")
 end
 
 local rewardOfferRules = {}

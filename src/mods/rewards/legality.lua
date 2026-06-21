@@ -1,20 +1,20 @@
 local deps = ... or {}
-local routeRules = deps.routeRules or deps.rules or {}
+local conditions = deps.conditions or {}
 local routeTimeline = deps.timeline
 local rowRewardItems = deps.rewardItems
 local semantics = deps.semantics
 local invalidLocations = deps.invalidLocations
 if routeTimeline == nil then
-    error("reward_legality requires route timeline")
+    error("rewards.legality requires route timeline")
 end
 if rowRewardItems == nil then
-    error("reward_legality requires route reward items")
+    error("rewards.legality requires reward items")
 end
 if semantics == nil then
-    error("reward_legality requires reward semantics")
+    error("rewards.legality requires reward semantics")
 end
 if invalidLocations == nil then
-    error("reward_legality requires invalid location formatter")
+    error("rewards.legality requires invalid location formatter")
 end
 
 local rewardLegality = {}
@@ -60,7 +60,7 @@ local function compileRules(rules)
     return byTarget
 end
 
-local compiledRulesByTarget = compileRules(routeRules)
+local compiledRulesByTarget = compileRules(conditions)
 
 local function newResult()
     return {

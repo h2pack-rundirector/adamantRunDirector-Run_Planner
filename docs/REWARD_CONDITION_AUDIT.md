@@ -67,8 +67,8 @@ Planner status: partially represented in bundles and reward offer policies.
 
 Recommended model: keep structural filters in bundle/surface declarations, then
 run a route reward validator over the selected rewards. Dynamic reward legality
-belongs in `src/mods/rewards/route_rules.lua`; interpretation belongs in
-`src/mods/route/reward_legality.lua`.
+belongs in `src/mods/rewards/conditions.lua`; interpretation belongs in
+`src/mods/rewards/legality.lua`.
 
 ### Reward Store Entries And Depletion
 

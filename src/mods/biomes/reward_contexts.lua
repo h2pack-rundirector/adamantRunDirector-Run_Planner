@@ -1,5 +1,5 @@
 return function(importer)
-local routeRules = importer("mods/data/route_rules.lua")
+local routeRules = importer("mods/biomes/declaration_rules.lua")
 local rewards = {}
 
 local function copyList(items)

@@ -25,10 +25,10 @@ local function init()
     local routeControls = data.buildControls(catalog)
     local routeTimeline = import("mods/route/timeline.lua")
     local invalidLocations = import("mods/route/invalid_locations.lua")
-    local rewardItems = import("mods/route/reward_items.lua")
+    local rewardItems = import("mods/rewards/items.lua")
     local rewardSemantics = import("mods/rewards/semantics.lua")
-    local rewardLegality = import("mods/route/reward_legality.lua", nil, {
-        routeRules = import("mods/rewards/route_rules.lua"),
+    local rewardLegality = import("mods/rewards/legality.lua", nil, {
+        conditions = import("mods/rewards/conditions.lua"),
         timeline = routeTimeline,
         rewardItems = rewardItems,
         semantics = rewardSemantics,
