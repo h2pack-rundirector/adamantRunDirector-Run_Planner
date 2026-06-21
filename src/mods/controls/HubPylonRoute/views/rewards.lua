@@ -1,8 +1,7 @@
 -- luacheck: no unused args
 
 local deps = ...
-local rewardRuntime = deps.rewardRuntime
-local rewardUi = deps.rewardUi
+local rewardSystem = deps.rewards
 
 local rewards = {}
 
@@ -59,13 +58,13 @@ local function drawRewardRow(draw, control, rowIndex)
 
     drawRewardRowHeader(imgui, control, rowIndex, slot)
 
-    if rewardUi ~= nil
-        and rewardRuntime ~= nil
-        and rewardRuntime.hasControls(surface)
+    if rewardSystem ~= nil
+        and rewardSystem ~= nil
+        and rewardSystem.hasControls(surface)
     then
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)
-        if rewardUi.draw(draw, surface, rewardFields(control, rowIndex), rewardDrawOpts(control)) then
+        if rewardSystem.draw(draw, surface, rewardFields(control, rowIndex), rewardDrawOpts(control)) then
             control:invalidateReadPass()
         end
     end

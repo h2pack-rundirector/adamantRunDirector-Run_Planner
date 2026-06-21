@@ -5,7 +5,7 @@ can offer. They should not encode route-history legality such as whether
 `TalentDrop` is currently legal. That second layer belongs in route reward
 validation/runtime resolution.
 
-This audit compares `src/mods/rewards/definitions.lua` against vanilla data in:
+This audit compares `src/mods/rewards/declarations/definitions.lua` against vanilla data in:
 
 - `Scripts/LootData.lua`
 - `Scripts/RewardData.lua`

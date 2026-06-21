@@ -1,7 +1,7 @@
 local deps = ... or {}
 local semantics = deps.semantics
 if semantics == nil then
-    error("rewards.offer_rules requires reward semantics")
+    error("route.planning.offer_rules requires reward semantics")
 end
 
 local rewardOfferRules = {}
@@ -54,14 +54,14 @@ local function rewardLabel(value)
     return tostring(value)
 end
 
-local function validateItem(policy, seenRewardTypes, seenBoonSources, item, invalidOut)
+local function validateItem(group, seenRewardTypes, seenBoonSources, item, invalidOut)
     local selectedRewardType = item.rewardType or semantics.rewardType(item)
     if selectedRewardType == nil or selectedRewardType == "" then
         return nil
     end
 
-    if policy.uniqueRewardTypes
-        and not (policy.allowDuplicateRewardTypes and policy.allowDuplicateRewardTypes[selectedRewardType])
+    if group.uniqueRewardTypes
+        and not (group.allowDuplicateRewardTypes and group.allowDuplicateRewardTypes[selectedRewardType])
     then
         local previous = seenRewardTypes[selectedRewardType]
         if previous ~= nil then
@@ -79,7 +79,7 @@ local function validateItem(policy, seenRewardTypes, seenBoonSources, item, inva
         seenRewardTypes[selectedRewardType] = item
     end
 
-    if policy.uniqueBoonSource and selectedRewardType == "Boon" then
+    if group.uniqueBoonSource and selectedRewardType == "Boon" then
         local selectedBoonSource = item.boonSource or semantics.boonSource(item)
         if selectedBoonSource ~= nil and selectedBoonSource ~= "" then
             local previous = seenBoonSources[selectedBoonSource]
@@ -102,16 +102,16 @@ local function validateItem(policy, seenRewardTypes, seenBoonSources, item, inva
     return nil
 end
 
-function rewardOfferRules.policyForScope(policies, policyKey, scope)
-    local policy = policies and policies[policyKey] or nil
-    if policy == nil or policy.scope ~= scope then
+function rewardOfferRules.groupForScope(groups, groupKey, scope)
+    local group = groups and groups[groupKey] or nil
+    if group == nil or group.scope ~= scope then
         return nil
     end
-    return policy
+    return group
 end
 
-function rewardOfferRules.firstInvalid(policy, items, scratch)
-    if policy == nil then
+function rewardOfferRules.firstInvalid(group, items, scratch)
+    if group == nil then
         return nil
     end
 
@@ -123,7 +123,7 @@ function rewardOfferRules.firstInvalid(policy, items, scratch)
     clearMap(scratch.seenBoonSources)
 
     for _, item in ipairs(items or EMPTY) do
-        local invalidItem = validateItem(policy, scratch.seenRewardTypes, scratch.seenBoonSources, item, scratch.invalid)
+        local invalidItem = validateItem(group, scratch.seenRewardTypes, scratch.seenBoonSources, item, scratch.invalid)
         if invalidItem ~= nil then
             return invalidItem
         end
@@ -131,16 +131,16 @@ function rewardOfferRules.firstInvalid(policy, items, scratch)
     return nil
 end
 
-function rewardOfferRules.validateOffer(policy, items)
+function rewardOfferRules.validateOffer(group, items)
     local invalids = {}
-    if policy == nil then
+    if group == nil then
         return invalids
     end
 
     local seenRewardTypes = {}
     local seenBoonSources = {}
     for _, item in ipairs(items or EMPTY) do
-        appendInvalid(invalids, validateItem(policy, seenRewardTypes, seenBoonSources, item))
+        appendInvalid(invalids, validateItem(group, seenRewardTypes, seenBoonSources, item))
     end
     return invalids
 end

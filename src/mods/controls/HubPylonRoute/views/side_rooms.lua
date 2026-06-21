@@ -3,8 +3,7 @@
 local deps = ...
 local data = deps.data
 local resetSideRewardDetails = deps.resetSideRewardDetails
-local rewardRuntime = deps.rewardRuntime
-local rewardUi = deps.rewardUi
+local rewardSystem = deps.rewards
 
 local sideRooms = {}
 
@@ -88,15 +87,15 @@ local function drawSideRoomRow(draw, control, instance, rowIndex)
         end
         local sideRowIndex, sideDoor = drawSideRoomMode(draw, control, instance, rowIndex, sideIndex)
         local mode = sideRowIndex and control:fields().SideRooms:read(sideRowIndex, data.sideRoomModeAlias()) or ""
-        local surface = sideDoor ~= nil and rewardRuntime and rewardRuntime.surfaceFor(sideDoor.reward) or nil
+        local surface = sideDoor ~= nil and rewardSystem and rewardSystem.surfaceFor(sideDoor.reward) or nil
         if mode == data.sideRoomEnabledMode()
-            and rewardUi ~= nil
-            and rewardRuntime ~= nil
-            and rewardRuntime.hasControls(surface)
+            and rewardSystem ~= nil
+            and rewardSystem ~= nil
+            and rewardSystem.hasControls(surface)
         then
             draw.imgui.SameLine()
             draw.imgui.SetCursorPosX(SIDE_REWARD_COLUMN_X)
-            if rewardUi.draw(draw, surface, sideRewardFields(control, sideRowIndex), rewardDrawOpts(control)) then
+            if rewardSystem.draw(draw, surface, sideRewardFields(control, sideRowIndex), rewardDrawOpts(control)) then
                 control:invalidateReadPass()
             end
         end

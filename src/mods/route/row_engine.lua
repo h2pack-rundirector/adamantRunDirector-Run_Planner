@@ -8,10 +8,13 @@ local timeline = deps.timeline
 if timeline == nil then
     error("row_engine requires route timeline")
 end
+local rewards = deps.rewards
+if rewards == nil then
+    error("row_engine requires rewards")
+end
 
 local rowEngine = {}
 
-local REWARD_SLOT_COUNT = common.REWARD_SLOT_COUNT
 local VANILLA_ROLE_KEY = common.VANILLA_ROLE_KEY
 local INVALID_VALUE_COLOR = { 1.0, 0.24, 0.16, 1.0 }
 
@@ -90,28 +93,6 @@ local function buildRoomRows()
         { key = "OptionKey", type = "string", default = "", maxLen = 64 },
         { key = "VariantKey", type = "string", default = "", maxLen = 64 },
     }
-end
-
-local function buildRewardRows()
-    local rows = {}
-
-    for index = 1, REWARD_SLOT_COUNT do
-        rows[#rows + 1] = {
-            key = "Reward" .. tostring(index) .. "Key",
-            type = "string",
-            default = "",
-            maxLen = 96,
-        }
-    end
-    for index = 1, REWARD_SLOT_COUNT do
-        rows[#rows + 1] = {
-            key = "Reward" .. tostring(index) .. "LootKey",
-            type = "string",
-            default = "",
-            maxLen = 96,
-        }
-    end
-    return rows
 end
 
 local function prepareRoles(instance)
@@ -461,15 +442,11 @@ function rowEngine.create(adapter)
     end
 
     function data.buildRewardRows()
-        return buildRewardRows()
+        return rewards.buildRows()
     end
 
     function data.buildRoomRows()
         return buildRoomRows()
-    end
-
-    function data.isRewardAlias(alias)
-        return type(alias) == "string" and string.match(alias, "^Reward%d+.*Key$") ~= nil
     end
 
     function data.optionListForRole(role)
@@ -958,8 +935,6 @@ function rowEngine.create(adapter)
         validateBaseRow = data.validateBaseRow,
         validateRow = data.validateRow,
     }
-
-    data.REWARD_SLOT_COUNT = REWARD_SLOT_COUNT
 
     return data
 end

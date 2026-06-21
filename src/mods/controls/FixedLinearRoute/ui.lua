@@ -2,6 +2,7 @@
 
 local deps = ...
 local data = deps.data
+local rewardSystem = deps.rewards
 local runtime = deps.runtime
 
 local ui = {}
@@ -12,10 +13,7 @@ local function resetRoomDetails(fields, rowIndex)
 end
 
 local function resetRewardDetails(fields, rowIndex)
-    for index = 1, data.REWARD_SLOT_COUNT do
-        fields.Rewards:reset(rowIndex, "Reward" .. tostring(index) .. "Key")
-        fields.Rewards:reset(rowIndex, "Reward" .. tostring(index) .. "LootKey")
-    end
+    rewardSystem.resetRows(fields.Rewards, rowIndex)
 end
 
 local function resetRowDetails(fields, rowIndex)
@@ -29,8 +27,7 @@ local rooms = import("mods/controls/FixedLinearRoute/views/rooms.lua", nil, {
     resetRowDetails = resetRowDetails,
 })
 local rewards = import("mods/controls/FixedLinearRoute/views/rewards.lua", nil, {
-    rewardRuntime = deps.rewardRuntime,
-    rewardUi = deps.rewardUi,
+    rewards = deps.rewards,
 })
 local planner = import("mods/controls/FixedLinearRoute/views/planner.lua", nil, {
     rooms = rooms,

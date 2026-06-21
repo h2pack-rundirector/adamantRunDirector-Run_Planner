@@ -47,7 +47,7 @@ These fields are part of the current active declaration contract.
 - O Thessaly active policy: `combatEncounterPolicy`, its `countControl`,
   variant legs, and role `encounterPolicy`.
 - Q Summit active policy: `forcedDepthOptions`.
-- N Ephyra active policy: `hub.offerPolicy`, `hub.sideRoomAvailability.modes`,
+- N Ephyra active offer group: `hub.offerGroup`, `hub.sideRoomAvailability.modes`,
   `hub.pylonRoomHistoryCost`, combat/miniboss/story room lists, side doors, and
   side-door rewards embedded on each side door.
 - I Tartarus active policy: `clockwork.requiredGoalRewards`,

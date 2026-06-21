@@ -3,14 +3,13 @@ local data = import("mods/controls/MultiEncounterFixedRoute/data.lua", nil, deps
 local runtime = import("mods/controls/MultiEncounterFixedRoute/runtime.lua", nil, {
     data = data,
     common = deps.route.common,
-    rewardRuntime = deps.rewards.runtime,
+    rewards = deps.rewards,
     rewardItems = deps.route.rewardItems,
     invalidLocations = deps.route.invalidLocations,
 })
 local ui = import("mods/controls/MultiEncounterFixedRoute/ui.lua", nil, {
     data = data,
-    rewardRuntime = deps.rewards.runtime,
-    rewardUi = deps.rewards.ui,
+    rewards = deps.rewards,
     runtime = runtime,
 })
 

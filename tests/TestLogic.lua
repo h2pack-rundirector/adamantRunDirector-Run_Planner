@@ -19,7 +19,7 @@ local function withTestImport(callback)
 end
 
 local function normalizeRewardRows(rows)
-    local rewardItems = testImport("mods/rewards/items.lua")
+    local rewardItems = testImport("mods/route/reward_planning/items.lua")
     for _, row in ipairs(rows or {}) do
         rewardItems.attach(row)
     end
@@ -36,11 +36,11 @@ local function loadCatalog()
 end
 
 local function loadRewardLegality()
-    return testImport("mods/rewards/legality.lua", nil, {
-        conditions = testImport("mods/rewards/conditions.lua"),
+    return testImport("mods/route/reward_planning/legality.lua", nil, {
+        conditions = testImport("mods/rewards/declarations/conditions.lua"),
         timeline = testImport("mods/route/timeline.lua"),
-        rewardItems = testImport("mods/rewards/items.lua"),
-        semantics = testImport("mods/rewards/semantics.lua"),
+        rewardItems = testImport("mods/route/reward_planning/items.lua"),
+        semantics = testImport("mods/route/reward_planning/semantics.lua"),
         invalidLocations = testImport("mods/route/invalid_locations.lua"),
     })
 end
@@ -51,8 +51,8 @@ local function loadRoutePlan()
         routeContext = testImport("mods/route/run_context.lua", nil, {
             rewardLegality = loadRewardLegality(),
             timeline = testImport("mods/route/timeline.lua"),
-            rewardItems = testImport("mods/rewards/items.lua"),
-            semantics = testImport("mods/rewards/semantics.lua"),
+            rewardItems = testImport("mods/route/reward_planning/items.lua"),
+            semantics = testImport("mods/route/reward_planning/semantics.lua"),
         }),
     })
 end
@@ -877,12 +877,13 @@ function TestRunPlannerLogic.testRoutePlanRegistersCacheAndStartNewRunHook()
 end
 
 function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
-    local _, data = loadCatalog()
+    local catalog, data = loadCatalog()
     local logic
     withTestImport(function()
-        logic = testImport("mods/logic.lua", nil, {
+        logic = testImport("mods/systems.lua").create({
             data = data,
-        })
+            catalog = catalog,
+        }).logic
     end)
 
     local cacheDefined = false

@@ -360,11 +360,23 @@ Room-store contexts can also carry `eligibleRewardTypes` and
 Reward rendering is shared infrastructure, not owned by one route control
 template:
 
-- `mods/rewards/definitions.lua` owns the curated planner-facing reward surfaces.
-  These surfaces are intentionally explicit instead of pretending to fully
-  evaluate vanilla `RewardStoreData`/`StoreData` requirements.
-- `mods/rewards/catalog.lua` translates planner reward contexts plus curated
-  reward surfaces into normalized picker surfaces.
+- `mods/systems.lua` is the module composition root. It assembles the shared
+  route/reward/logic/UI objects once and passes targeted dependencies to each
+  subsystem.
+- `mods/route/route.lua` is the route subsystem assembler. It owns route
+  internals such as requirements, timeline, row engine, run context, and
+  reward-planning services.
+- `mods/rewards/declarations/` owns static reward declarations: curated
+  planner-facing reward definitions, reward legality conditions, and
+  multi-offer uniqueness groups. These declarations are intentionally
+  explicit instead of pretending to fully evaluate vanilla
+  `RewardStoreData`/`StoreData` requirements.
+- `mods/rewards/rewards.lua` is the reward subsystem entry point threaded into
+  route controls. Route controls consume one reward object instead of separate
+  storage/runtime/UI dependencies.
+- `mods/rewards/surfaces/registry.lua` dispatches planner reward contexts into
+  focused surface builders under `mods/rewards/surfaces/`, producing normalized
+  picker surfaces.
 - `mods/rewards/runtime.lua` reads normalized reward picks through a generic
   field adapter.
 - `mods/rewards/ui.lua` renders normalized reward controls through the same
@@ -372,7 +384,7 @@ template:
   reward-surface rules.
 
 If reward selection later needs stronger live-data guarantees, that can be a
-separate data-layer pass. The current catalog should stay honest: it normalizes
+separate data-layer pass. The surface registry should stay honest: it normalizes
 planner-owned surfaces, with vanilla data used as source reference rather than
 runtime truth.
 
@@ -549,7 +561,7 @@ depend on the display label.
 
 Shop control should model all store options, not only the boon option.
 
-Implemented shop surfaces live in `src/mods/rewards/surfaces.lua`:
+Implemented shop surfaces live under `src/mods/rewards/surfaces/`:
 
 | Surface | Vanilla store | Options | Notes |
 | --- | --- | ---: | --- |
@@ -559,11 +571,11 @@ Implemented shop surfaces live in `src/mods/rewards/surfaces.lua`:
 
 Biome definitions reference these surfaces with `reward = { kind = "shop",
 shopProfile = "..." }`. Runtime/shop UI should render option controls from the
-reward catalog surface instead of hard-coding a single boon field.
+reward surface registry instead of hard-coding a single boon field.
 
 Biome files should not duplicate shop internals. They only select the shop
 surface that applies to a route depth. Store-specific shape belongs inside
-`mods/rewards/definitions.lua`:
+`mods/rewards/declarations/definitions.lua`:
 
 - `key`: stable route/storage identity, matching the source group/offer shape
   such as `Group4Offer1`.

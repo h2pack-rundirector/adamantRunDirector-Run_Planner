@@ -2,8 +2,7 @@
 
 local deps = ...
 local data = deps.data
-local rewardRuntime = deps.rewardRuntime
-local rewardUi = deps.rewardUi
+local rewardSystem = deps.rewards
 
 local rewards = {}
 
@@ -72,11 +71,11 @@ local function drawEncounterRewardRows(draw, control, instance, rowIndex)
     for legIndex = 1, data.encounterRewardLegCountForRow(instance, control:routeRows(), rowIndex) do
         local leg = data.encounterRewardLegForRow(instance, control:routeRows(), rowIndex, legIndex)
         local encounterRewardRowIndex = data.encounterRewardRowIndex(instance, rowIndex, legIndex)
-        local legSurface = leg ~= nil and rewardRuntime and rewardRuntime.surfaceFor(leg.reward) or nil
+        local legSurface = leg ~= nil and rewardSystem and rewardSystem.surfaceFor(leg.reward) or nil
         if encounterRewardRowIndex ~= nil
-            and rewardUi ~= nil
-            and rewardRuntime ~= nil
-            and rewardRuntime.hasControls(legSurface)
+            and rewardSystem ~= nil
+            and rewardSystem ~= nil
+            and rewardSystem.hasControls(legSurface)
         then
             if legIndex == 1 then
                 imgui.SameLine()
@@ -88,7 +87,7 @@ local function drawEncounterRewardRows(draw, control, instance, rowIndex)
             imgui.Text(tostring(leg.label or leg.key or "Reward"))
             imgui.SameLine()
             imgui.SetCursorPosX(ENCOUNTER_REWARD_COLUMN_X)
-            if rewardUi.draw(
+            if rewardSystem.draw(
                 draw,
                 legSurface,
                 encounterRewardFields(control, encounterRewardRowIndex),
@@ -112,13 +111,13 @@ local function drawRewardRow(draw, control, instance, rowIndex)
     drawRewardRowHeader(imgui, control, rowIndex, slot)
     drawEncounterRewardRows(draw, control, instance, rowIndex)
 
-    if rewardUi ~= nil
-        and rewardRuntime ~= nil
-        and rewardRuntime.hasControls(surface)
+    if rewardSystem ~= nil
+        and rewardSystem ~= nil
+        and rewardSystem.hasControls(surface)
     then
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)
-        if rewardUi.draw(draw, surface, rewardFields(control, rowIndex), rewardDrawOpts(control)) then
+        if rewardSystem.draw(draw, surface, rewardFields(control, rowIndex), rewardDrawOpts(control)) then
             control:invalidateReadPass()
         end
     end

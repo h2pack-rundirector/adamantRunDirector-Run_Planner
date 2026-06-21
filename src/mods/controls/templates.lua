@@ -1,40 +1,15 @@
-local routeCommon = import("mods/route/common.lua")
-local routeRequirements = import("mods/route/requirements.lua", nil, {
-    common = routeCommon,
-})
-local routeBiomeRules = import("mods/route/biome_rules.lua", nil, {
-    common = routeCommon,
-})
-local rewardSemantics = import("mods/rewards/semantics.lua")
-local route = {
-    common = routeCommon,
-    availability = import("mods/route/availability.lua"),
-    readCache = import("mods/route/read_cache.lua"),
-    requirements = routeRequirements,
-    biomeRules = routeBiomeRules,
-    timeline = import("mods/route/timeline.lua"),
-    invalidLocations = import("mods/route/invalid_locations.lua"),
-    rewardItems = import("mods/rewards/items.lua"),
-    rewardSemantics = rewardSemantics,
-    rewardOfferPolicies = import("mods/rewards/offer_policies.lua"),
-    rewardOfferRules = import("mods/rewards/offer_rules.lua", nil, {
-        semantics = rewardSemantics,
-    }),
-}
-route.rowEngine = import("mods/route/row_engine.lua", nil, route)
+local deps = ... or {}
+local route = deps.route
+local rewards = deps.rewards or (route and route.rewards) or nil
 
-local rewardCatalogFactory = import("mods/rewards/catalog.lua")
-local rewardCatalog = rewardCatalogFactory.create(import("mods/rewards/definitions.lua"))
-local rewardRuntime = import("mods/rewards/runtime.lua", nil, {
-    catalog = rewardCatalog,
-})
-local godData = import("mods/data/gods.lua")
-local rewards = {
-    runtime = rewardRuntime,
-    ui = import("mods/rewards/ui.lua", nil, {
-        runtime = rewardRuntime,
-    }),
-}
+if route == nil then
+    error("controls.templates requires route bundle")
+end
+if rewards == nil then
+    error("controls.templates requires rewards")
+end
+
+local godData = deps.godData or import("mods/data/gods.lua")
 
 return {
     ClockworkGoalRoute = import("mods/controls/ClockworkGoalRoute/ClockworkGoalRoute.lua", nil, {

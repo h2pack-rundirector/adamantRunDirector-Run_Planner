@@ -1,8 +1,14 @@
 local data = {}
 
-function data.loadControlTemplates(importer)
+function data.loadControlTemplates(route, importer)
     importer = importer or import
-    return importer("mods/controls/templates.lua")
+    if route == nil then
+        error("data.loadControlTemplates requires an assembled route bundle")
+    end
+    return importer("mods/controls/templates.lua", nil, {
+        route = route,
+        rewards = route.rewards,
+    })
 end
 
 function data.loadBiomes(importer)

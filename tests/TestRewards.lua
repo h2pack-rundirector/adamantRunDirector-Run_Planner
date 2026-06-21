@@ -3,14 +3,30 @@ local lu = require("luaunit")
 -- luacheck: globals TestRunPlannerRewards
 TestRunPlannerRewards = {}
 
+local function testImport(path, _, deps)
+    local chunk = assert(loadfile("src/" .. path))
+    return chunk(deps)
+end
+
+local function loadCatalogFactory()
+    local previousImport = _G.import
+    _G.import = testImport
+    local ok, factory = pcall(testImport, "mods/rewards/surfaces/registry.lua")
+    _G.import = previousImport
+    if not ok then
+        error(factory, 0)
+    end
+    return factory
+end
+
 local function loadCatalog()
-    local factory = dofile("src/mods/rewards/catalog.lua")
-    local definitions = dofile("src/mods/rewards/definitions.lua")
+    local factory = loadCatalogFactory()
+    local definitions = dofile("src/mods/rewards/declarations/definitions.lua")
     return factory.create(definitions)
 end
 
 local function loadCatalogWith(definitions)
-    local factory = dofile("src/mods/rewards/catalog.lua")
+    local factory = loadCatalogFactory()
     return factory.create(definitions)
 end
 
@@ -22,11 +38,11 @@ local function loadRuntime()
 end
 
 local function loadConditions()
-    return dofile("src/mods/rewards/conditions.lua")
+    return dofile("src/mods/rewards/declarations/conditions.lua")
 end
 
 local function loadSemantics()
-    return dofile("src/mods/rewards/semantics.lua")
+    return dofile("src/mods/route/reward_planning/semantics.lua")
 end
 
 local function fakeFields(values)

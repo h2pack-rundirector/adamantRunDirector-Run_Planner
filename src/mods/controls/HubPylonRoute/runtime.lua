@@ -3,51 +3,27 @@
 local deps = ...
 local data = deps.data
 local common = deps.common
-local rewardRuntime = deps.rewardRuntime
+local rewardSystem = deps.rewards
 local rewardItems = deps.rewardItems
-local rewardOfferPolicies = deps.rewardOfferPolicies
+local rewardOfferGroups = deps.rewardOfferGroups
 local rewardOfferRules = deps.rewardOfferRules
 local invalidLocations = deps.invalidLocations
 
 local runtime = {}
 local EMPTY_LIST = {}
 
-local function readRewards(rewardRows, rowIndex)
-    local rewards = {}
-    for index = 1, data.REWARD_SLOT_COUNT do
-        rewards[index] = rewardRows:read(rowIndex, "Reward" .. tostring(index) .. "Key") or ""
-    end
-    return rewards
-end
-
-local function readRewardLoot(rewardRows, rowIndex)
-    local loot = {}
-    for index = 1, data.REWARD_SLOT_COUNT do
-        loot[index] = rewardRows:read(rowIndex, "Reward" .. tostring(index) .. "LootKey") or ""
-    end
-    return loot
-end
-
-local function rewardFields(rewardRows, rowIndex)
-    return {
-        read = function(_, alias)
-            return rewardRows:read(rowIndex, alias)
-        end,
-    }
+local function sideRewardAlias(alias)
+    return data.sideRoomRewardAlias(nil, alias)
 end
 
 local function sideRewardFields(sideRewardRows, sideRowIndex)
-    return {
-        read = function(_, alias)
-            return sideRewardRows:read(sideRowIndex, data.sideRoomRewardAlias(nil, alias))
-        end,
-    }
+    return rewardSystem.fields(sideRewardRows, sideRowIndex, sideRewardAlias)
 end
 
 local function createRouteRows(fields)
     return {
         read = function(_, rowIndex, alias)
-            if data.isRewardAlias(alias) then
+            if rewardSystem.isAlias(alias) then
                 return fields.Rewards:read(rowIndex, alias)
             end
             return fields.Rooms:read(rowIndex, alias)
@@ -63,17 +39,17 @@ local function rewardContext(role, option)
 end
 
 local function rewardSurfaceForContext(context)
-    if rewardRuntime == nil then
+    if rewardSystem == nil then
         return nil
     end
-    return rewardRuntime.surfaceFor(context)
+    return rewardSystem.surfaceFor(context)
 end
 
 local function rewardSurface(role, option)
-    if rewardRuntime == nil or role == nil then
+    if rewardSystem == nil or role == nil then
         return nil
     end
-    return rewardRuntime.surfaceFor(rewardContext(role, option))
+    return rewardSystem.surfaceFor(rewardContext(role, option))
 end
 
 local function prewarmRewardSurface(role, option)
@@ -107,22 +83,16 @@ end
 
 local function readSideRewards(sideRewardRows, sideRowIndex)
     local rewards = {}
-    for index = 1, data.REWARD_SLOT_COUNT do
-        rewards[index] = sideRewardRows:read(
-            sideRowIndex,
-            data.sideRoomRewardAlias(nil, "Reward" .. tostring(index) .. "Key")
-        ) or ""
+    for index = 1, rewardSystem.SLOT_COUNT do
+        rewards[index] = sideRewardRows:read(sideRowIndex, sideRewardAlias(rewardSystem.rewardAlias(index))) or ""
     end
     return rewards
 end
 
 local function readSideRewardLoot(sideRewardRows, sideRowIndex)
     local loot = {}
-    for index = 1, data.REWARD_SLOT_COUNT do
-        loot[index] = sideRewardRows:read(
-            sideRowIndex,
-            data.sideRoomRewardAlias(nil, "Reward" .. tostring(index) .. "LootKey")
-        ) or ""
+    for index = 1, rewardSystem.SLOT_COUNT do
+        loot[index] = sideRewardRows:read(sideRowIndex, sideRewardAlias(rewardSystem.lootAlias(index))) or ""
     end
     return loot
 end
@@ -136,7 +106,7 @@ local function sideRoomMode(sideRows, sideRowIndex)
 end
 
 local function sideRewardPicks(surface, sideRewardRows, sideRowIndex)
-    local picks = rewardRuntime and rewardRuntime.snapshot(surface, sideRewardFields(sideRewardRows, sideRowIndex)) or {}
+    local picks = rewardSystem and rewardSystem.snapshot(surface, sideRewardFields(sideRewardRows, sideRowIndex)) or {}
     for _, pick in ipairs(picks) do
         pick.storageAlias = pick.alias
     end
@@ -194,20 +164,20 @@ local function collectPylonRewardItems(rows)
     return items
 end
 
-local function applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
-    if rewardOfferRules == nil or rewardOfferPolicies == nil then
+local function applyOfferGroups(instance, rows, invalidRows, seenInvalids)
+    if rewardOfferRules == nil or rewardOfferGroups == nil then
         return
     end
 
-    local policyKey = instance.biome
+    local groupKey = instance.biome
         and instance.biome.hub
-        and instance.biome.hub.offerPolicy
-    local policy = rewardOfferRules.policyForScope(rewardOfferPolicies, policyKey, "biome.pylonRows")
-    if policy == nil then
+        and instance.biome.hub.offerGroup
+    local group = rewardOfferRules.groupForScope(rewardOfferGroups, groupKey, "biome.pylonRows")
+    if group == nil then
         return
     end
 
-    for _, invalid in ipairs(rewardOfferRules.validateOffer(policy, collectPylonRewardItems(rows))) do
+    for _, invalid in ipairs(rewardOfferRules.validateOffer(group, collectPylonRewardItems(rows))) do
         local row = rows[invalid.rowIndex]
         if row ~= nil and row.valid then
             row.valid = false
@@ -351,12 +321,12 @@ function runtime.create(fields, instance)
             invalidCode = validation.code,
             invalidReason = validation.message,
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
-            rewards = rewardsConfigured and readRewards(fields.Rewards, rowIndex) or EMPTY_LIST,
-            rewardLoot = rewardsConfigured and readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
+            rewards = rewardsConfigured and rewardSystem.readRewards(fields.Rewards, rowIndex) or EMPTY_LIST,
+            rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
             rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
             rewardPicks = rewardsConfigured
-                and rewardRuntime
-                and rewardRuntime.snapshot(surface, rewardFields(fields.Rewards, rowIndex))
+                and rewardSystem
+                and rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex))
                 or EMPTY_LIST,
         }
         return rewardItems.attach(row)
@@ -381,7 +351,7 @@ function runtime.create(fields, instance)
             end
         end
         if self:rewardsConfigured() then
-            applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
+        applyOfferGroups(instance, rows, invalidRows, seenInvalids)
         end
         self:endReadPass()
         return {

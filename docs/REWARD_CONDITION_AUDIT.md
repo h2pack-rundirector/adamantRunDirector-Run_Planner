@@ -63,12 +63,12 @@ Room fields still matter before reward-specific rules:
 - `previouslyChosenRewards` blocks duplicate reward names unless the reward
   entry has `AllowDuplicates = true`.
 
-Planner status: partially represented in bundles and reward offer policies.
+Planner status: partially represented in bundles and reward offer groups.
 
 Recommended model: keep structural filters in bundle/surface declarations, then
 run a route reward validator over the selected rewards. Dynamic reward legality
-belongs in `src/mods/rewards/conditions.lua`; interpretation belongs in
-`src/mods/rewards/legality.lua`.
+belongs in `src/mods/rewards/declarations/conditions.lua`; interpretation belongs in
+`src/mods/route/reward_planning/legality.lua`.
 
 ### Reward Store Entries And Depletion
 

@@ -4,7 +4,6 @@ local VALID_STATUS = {
     valid = true,
 }
 
-common.REWARD_SLOT_COUNT = 6
 common.VANILLA_ROLE_KEY = "Vanilla"
 
 function common.shallowCopyList(source)

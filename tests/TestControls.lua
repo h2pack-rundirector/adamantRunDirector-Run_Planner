@@ -19,7 +19,7 @@ local function withTestImport(callback)
 end
 
 local function normalizeRewardRows(rows)
-    local rewardItems = testImport("mods/rewards/items.lua")
+    local rewardItems = testImport("mods/route/reward_planning/items.lua")
     for _, row in ipairs(rows or {}) do
         rewardItems.attach(row)
     end
@@ -46,13 +46,21 @@ end
 
 local function loadRouteDeps()
     local common = testImport("mods/route/common.lua")
+    local rewards
+    withTestImport(function()
+        rewards = testImport("mods/rewards/rewards.lua").create({
+            definitions = testImport("mods/rewards/declarations/definitions.lua"),
+        })
+    end)
     local route = {
         common = common,
         availability = testImport("mods/route/availability.lua"),
         readCache = testImport("mods/route/read_cache.lua"),
         timeline = testImport("mods/route/timeline.lua"),
+        rewards = rewards,
         requirements = testImport("mods/route/requirements.lua", nil, {
             common = common,
+            rewards = rewards,
         }),
         biomeRules = testImport("mods/route/biome_rules.lua", nil, {
             common = common,
@@ -62,76 +70,59 @@ local function loadRouteDeps()
     return route
 end
 
+local loadedControlTemplates
+
+local function loadControlTemplates()
+    if loadedControlTemplates == nil then
+        withTestImport(function()
+            local catalog, data = loadCatalog()
+            loadedControlTemplates = testImport("mods/systems.lua").create({
+                data = data,
+                catalog = catalog,
+            }).controlTemplates
+        end)
+    end
+    return loadedControlTemplates
+end
+
 local function loadFixedLinearTemplate()
-    local template
-    withTestImport(function()
-        template = testImport("mods/controls/templates.lua").FixedLinearRoute
-    end)
-    return template
+    return loadControlTemplates().FixedLinearRoute
 end
 
 local function loadClockworkGoalTemplate()
-    local template
-    withTestImport(function()
-        template = testImport("mods/controls/templates.lua").ClockworkGoalRoute
-    end)
-    return template
+    return loadControlTemplates().ClockworkGoalRoute
 end
 
 local function loadHubPylonTemplate()
-    local template
-    withTestImport(function()
-        template = testImport("mods/controls/templates.lua").HubPylonRoute
-    end)
-    return template
+    return loadControlTemplates().HubPylonRoute
 end
 
 local function loadMultiEncounterTemplate()
-    local template
-    withTestImport(function()
-        template = testImport("mods/controls/templates.lua").MultiEncounterFixedRoute
-    end)
-    return template
+    return loadControlTemplates().MultiEncounterFixedRoute
 end
 
 local function loadFieldsCageTemplate()
-    local template
-    withTestImport(function()
-        template = testImport("mods/controls/templates.lua").FieldsCageRoute
-    end)
-    return template
+    return loadControlTemplates().FieldsCageRoute
 end
 
 local function loadRouteGlobalTemplate()
-    local template
-    withTestImport(function()
-        template = testImport("mods/controls/templates.lua").RouteGlobal
-    end)
-    return template
+    return loadControlTemplates().RouteGlobal
 end
 
 local function loadRouteNpcsTemplate()
-    local template
-    withTestImport(function()
-        template = testImport("mods/controls/templates.lua").RouteNpcs
-    end)
-    return template
+    return loadControlTemplates().RouteNpcs
 end
 
 local function loadRouteFeaturesTemplate()
-    local template
-    withTestImport(function()
-        template = testImport("mods/controls/templates.lua").RouteFeatures
-    end)
-    return template
+    return loadControlTemplates().RouteFeatures
 end
 
 local function loadRewardLegality()
-    return testImport("mods/rewards/legality.lua", nil, {
-        conditions = testImport("mods/rewards/conditions.lua"),
+    return testImport("mods/route/reward_planning/legality.lua", nil, {
+        conditions = testImport("mods/rewards/declarations/conditions.lua"),
         timeline = testImport("mods/route/timeline.lua"),
-        rewardItems = testImport("mods/rewards/items.lua"),
-        semantics = testImport("mods/rewards/semantics.lua"),
+        rewardItems = testImport("mods/route/reward_planning/items.lua"),
+        semantics = testImport("mods/route/reward_planning/semantics.lua"),
         invalidLocations = testImport("mods/route/invalid_locations.lua"),
     })
 end
@@ -160,8 +151,8 @@ local function loadRunContext()
     return testImport("mods/route/run_context.lua", nil, {
         rewardLegality = loadRewardLegality(),
         timeline = testImport("mods/route/timeline.lua"),
-        rewardItems = testImport("mods/rewards/items.lua"),
-        semantics = testImport("mods/rewards/semantics.lua"),
+        rewardItems = testImport("mods/route/reward_planning/items.lua"),
+        semantics = testImport("mods/route/reward_planning/semantics.lua"),
     })
 end
 
@@ -464,7 +455,7 @@ function TestRunPlannerControls.testRouteStatusDrawsFirstInvalidMessage()
 end
 
 function TestRunPlannerControls.testRewardItemsNormalizeRowRewardMetadata()
-    local rewardItems = testImport("mods/rewards/items.lua")
+    local rewardItems = testImport("mods/route/reward_planning/items.lua")
     local row = {
         rowIndex = 2,
         routeOrdinal = 2,

@@ -3,41 +3,17 @@
 local deps = ...
 local data = deps.data
 local common = deps.common
-local rewardRuntime = deps.rewardRuntime
+local rewardSystem = deps.rewards
 local rewardItems = deps.rewardItems
 local invalidLocations = deps.invalidLocations
 
 local runtime = {}
 local EMPTY_LIST = {}
 
-local function readRewards(rewardRows, rowIndex)
-    local rewards = {}
-    for index = 1, data.REWARD_SLOT_COUNT do
-        rewards[index] = rewardRows:read(rowIndex, "Reward" .. tostring(index) .. "Key") or ""
-    end
-    return rewards
-end
-
-local function readRewardLoot(rewardRows, rowIndex)
-    local loot = {}
-    for index = 1, data.REWARD_SLOT_COUNT do
-        loot[index] = rewardRows:read(rowIndex, "Reward" .. tostring(index) .. "LootKey") or ""
-    end
-    return loot
-end
-
-local function rewardFields(rewardRows, rowIndex)
-    return {
-        read = function(_, alias)
-            return rewardRows:read(rowIndex, alias)
-        end,
-    }
-end
-
 local function createRouteRows(fields)
     return {
         read = function(_, rowIndex, alias)
-            if data.isRewardAlias(alias) then
+            if rewardSystem.isAlias(alias) then
                 return fields.Rewards:read(rowIndex, alias)
             end
             return fields.Rooms:read(rowIndex, alias)
@@ -56,10 +32,10 @@ local function rewardContext(role, option)
 end
 
 local function rewardSurface(role, option)
-    if rewardRuntime == nil or role == nil then
+    if rewardSystem == nil or role == nil then
         return nil
     end
-    return rewardRuntime.surfaceFor(rewardContext(role, option))
+    return rewardSystem.surfaceFor(rewardContext(role, option))
 end
 
 local function prewarmRewardSurface(role, option)
@@ -217,12 +193,12 @@ function runtime.create(fields, instance)
             invalidCode = validation.code,
             invalidReason = validation.message,
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
-            rewards = rewardsConfigured and readRewards(fields.Rewards, rowIndex) or EMPTY_LIST,
-            rewardLoot = rewardsConfigured and readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
+            rewards = rewardsConfigured and rewardSystem.readRewards(fields.Rewards, rowIndex) or EMPTY_LIST,
+            rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
             rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
             rewardPicks = rewardsConfigured
-                and rewardRuntime
-                and rewardRuntime.snapshot(surface, rewardFields(fields.Rewards, rowIndex))
+                and rewardSystem
+                and rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex))
                 or EMPTY_LIST,
         }
         return rewardItems.attach(row)

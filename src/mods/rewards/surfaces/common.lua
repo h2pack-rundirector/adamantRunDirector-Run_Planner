@@ -1,0 +1,165 @@
+local storage = import("mods/rewards/storage.lua")
+
+local common = {}
+
+common.storage = storage
+common.VANILLA_VALUE = ""
+common.MAJOR_VALUE = "Major"
+common.MINOR_VALUE = "Minor"
+
+function common.copyList(source)
+    local copy = {}
+    for index, value in ipairs(source or {}) do
+        copy[index] = value
+    end
+    return copy
+end
+
+function common.lookupList(values)
+    if values == nil then
+        return nil
+    end
+
+    local lookup = {}
+    for _, value in ipairs(values) do
+        lookup[value] = true
+    end
+    return lookup
+end
+
+function common.lookupListWithDefaultBan(values, bannedKey, banEnabled)
+    local lookup = common.lookupList(values)
+    if banEnabled and bannedKey ~= nil then
+        lookup = lookup or {}
+        lookup[bannedKey] = true
+    end
+    return lookup
+end
+
+function common.isOnlyEligible(values, expected)
+    if values == nil or values[1] == nil then
+        return false
+    end
+    return values[1] == expected and values[2] == nil
+end
+
+function common.addOption(values, labels, key, label)
+    if key == nil then
+        return
+    end
+    values[#values + 1] = key
+    labels[key] = label or key
+end
+
+function common.displayLabel(definitions, key)
+    if key == nil or key == "" then
+        return "Vanilla"
+    end
+
+    local primitive = definitions.primitives and definitions.primitives[key]
+    if primitive ~= nil and primitive.label ~= nil then
+        return primitive.label
+    end
+
+    local label = tostring(key)
+    label = string.gsub(label, "Upgrade$", "")
+    label = string.gsub(label, "Drop$", "")
+    label = string.gsub(label, "([a-z])([A-Z])", "%1 %2")
+    label = string.gsub(label, "([A-Z])([A-Z][a-z])", "%1 %2")
+    return label
+end
+
+function common.bundleOptions(definitions, bundleName)
+    local bundle = definitions.bundles and definitions.bundles[bundleName]
+    if bundle ~= nil then
+        return bundle.options or {}
+    end
+    return {}
+end
+
+function common.bundleLabel(definitions, bundleName, fallback)
+    local bundle = definitions.bundles and definitions.bundles[bundleName]
+    if bundle ~= nil and bundle.label ~= nil then
+        return bundle.label
+    end
+    return fallback
+end
+
+function common.uniqueNames(items, eligible, ineligible, labelFor)
+    local values = {}
+    local labels = {}
+    local seen = {}
+    labelFor = labelFor or function(name)
+        return common.displayLabel({ primitives = {} }, name)
+    end
+
+    common.addOption(values, labels, common.VANILLA_VALUE, "Vanilla")
+    for _, name in ipairs(items or {}) do
+        if name ~= nil
+            and seen[name] == nil
+            and (eligible == nil or eligible[name])
+            and (ineligible == nil or not ineligible[name])
+        then
+            seen[name] = true
+            common.addOption(values, labels, name, labelFor(name))
+        end
+    end
+    return values, labels
+end
+
+function common.rewardOptionLabel(definitions, name)
+    return common.displayLabel(definitions, name)
+end
+
+function common.godSourceOptions(definitions)
+    local values = {}
+    local labels = {}
+    common.addOption(values, labels, common.VANILLA_VALUE, "Vanilla")
+    for _, lootName in ipairs(definitions.godLoot or {}) do
+        common.addOption(values, labels, lootName, common.rewardOptionLabel(definitions, lootName))
+    end
+    return values, labels
+end
+
+function common.dropdown(alias, key, label, values, labels, opts)
+    opts = opts or {}
+    local controlWidth = opts.controlWidth or 160
+    local drawOpts = {
+        label = label,
+        values = values,
+        displayValues = labels,
+        controlWidth = controlWidth,
+        labelWidth = opts.labelWidth,
+        controlGap = opts.controlGap,
+    }
+    local control = {
+        alias = alias,
+        key = key,
+        kind = opts.kind or key,
+        label = label,
+        values = values,
+        displayValues = labels,
+        controlWidth = controlWidth,
+        drawOpts = drawOpts,
+        visibleWhen = opts.visibleWhen,
+    }
+    if label == "Reward" then
+        control.genericRewardLabelHiddenDrawOpts = {
+            label = "",
+            values = values,
+            displayValues = labels,
+            controlWidth = controlWidth,
+            labelWidth = opts.labelWidth,
+            controlGap = opts.controlGap,
+        }
+    end
+    if opts.rewardStore ~= nil then
+        control.rewardStore = opts.rewardStore
+    end
+    if opts.rowIndex ~= nil then
+        control.rowIndex = opts.rowIndex
+    end
+    return control
+end
+
+return common

@@ -1,5 +1,6 @@
 local deps = ...
 local common = deps.common
+local rewards = deps.rewards
 
 local requirements = {}
 local EMPTY_LIST = {}
@@ -115,12 +116,12 @@ local function collectRewardGodLoot(route, instance, rows, rowIndex, selections,
         return 0
     end
 
-    local reward1 = rows:read(rowIndex, "Reward1Key") or ""
-    local reward2 = rows:read(rowIndex, "Reward2Key") or ""
-    local reward3 = rows:read(rowIndex, "Reward3Key") or ""
-    local reward4 = rows:read(rowIndex, "Reward4Key") or ""
-    local reward5 = rows:read(rowIndex, "Reward5Key") or ""
-    local reward6 = rows:read(rowIndex, "Reward6Key") or ""
+    local reward1 = rows:read(rowIndex, rewards.rewardAlias(1)) or ""
+    local reward2 = rows:read(rowIndex, rewards.rewardAlias(2)) or ""
+    local reward3 = rows:read(rowIndex, rewards.rewardAlias(3)) or ""
+    local reward4 = rows:read(rowIndex, rewards.rewardAlias(4)) or ""
+    local reward5 = rows:read(rowIndex, rewards.rewardAlias(5)) or ""
+    local reward6 = rows:read(rowIndex, rewards.rewardAlias(6)) or ""
     local count = 0
 
     if context.kind == "majorMinor" or context.kind == "shipWheel" then

@@ -2,25 +2,20 @@
 
 local deps = ...
 local data = deps.data
+local rewardSystem = deps.rewards
 local runtime = deps.runtime
 
 local ui = {}
 
 local function resetRewardDetails(fields, rowIndex)
-    for index = 1, data.REWARD_SLOT_COUNT do
-        fields.Rewards:reset(rowIndex, "Reward" .. tostring(index) .. "Key")
-        fields.Rewards:reset(rowIndex, "Reward" .. tostring(index) .. "LootKey")
-    end
+    rewardSystem.resetRows(fields.Rewards, rowIndex)
 end
 
 local function resetCageRewardDetails(fields, instance, rowIndex)
     for cageIndex = 1, data.maxCageRewardCount(instance) do
         local cageRewardRowIndex = data.cageRewardRowIndex(instance, rowIndex, cageIndex)
         if cageRewardRowIndex ~= nil then
-            for rewardIndex = 1, data.REWARD_SLOT_COUNT do
-                fields.CageRewards:reset(cageRewardRowIndex, "Reward" .. tostring(rewardIndex) .. "Key")
-                fields.CageRewards:reset(cageRewardRowIndex, "Reward" .. tostring(rewardIndex) .. "LootKey")
-            end
+            rewardSystem.resetRows(fields.CageRewards, cageRewardRowIndex)
         end
     end
 end
@@ -44,8 +39,7 @@ local rooms = import("mods/controls/FieldsCageRoute/views/rooms.lua", nil, {
 })
 local rewards = import("mods/controls/FieldsCageRoute/views/rewards.lua", nil, {
     data = data,
-    rewardRuntime = deps.rewardRuntime,
-    rewardUi = deps.rewardUi,
+    rewards = deps.rewards,
 })
 local planner = import("mods/controls/FieldsCageRoute/views/planner.lua", nil, {
     rooms = rooms,

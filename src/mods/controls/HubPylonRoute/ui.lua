@@ -2,25 +2,20 @@
 
 local deps = ...
 local data = deps.data
+local rewardSystem = deps.rewards
 local runtime = deps.runtime
 
 local ui = {}
 
 local function resetRewardDetails(fields, rowIndex)
-    for index = 1, data.REWARD_SLOT_COUNT do
-        fields.Rewards:reset(rowIndex, "Reward" .. tostring(index) .. "Key")
-        fields.Rewards:reset(rowIndex, "Reward" .. tostring(index) .. "LootKey")
-    end
+    rewardSystem.resetRows(fields.Rewards, rowIndex)
 end
 
 local function resetSideRewardDetails(fields, sideRowIndex)
     if sideRowIndex == nil then
         return
     end
-    for index = 1, data.REWARD_SLOT_COUNT do
-        fields.SideRewards:reset(sideRowIndex, "Reward" .. tostring(index) .. "Key")
-        fields.SideRewards:reset(sideRowIndex, "Reward" .. tostring(index) .. "LootKey")
-    end
+    rewardSystem.resetRows(fields.SideRewards, sideRowIndex)
 end
 
 local function resetSideRoomDetails(fields, sideRowIndex)
@@ -55,14 +50,12 @@ local rooms = import("mods/controls/HubPylonRoute/views/rooms.lua", nil, {
     resetRowDetails = resetRowDetails,
 })
 local rewards = import("mods/controls/HubPylonRoute/views/rewards.lua", nil, {
-    rewardRuntime = deps.rewardRuntime,
-    rewardUi = deps.rewardUi,
+    rewards = deps.rewards,
 })
 local sideRooms = import("mods/controls/HubPylonRoute/views/side_rooms.lua", nil, {
     data = data,
     resetSideRewardDetails = resetSideRewardDetails,
-    rewardRuntime = deps.rewardRuntime,
-    rewardUi = deps.rewardUi,
+    rewards = deps.rewards,
 })
 local planner = import("mods/controls/HubPylonRoute/views/planner.lua", nil, {
     rooms = rooms,
