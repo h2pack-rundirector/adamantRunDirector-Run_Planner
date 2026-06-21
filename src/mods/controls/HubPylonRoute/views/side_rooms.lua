@@ -41,11 +41,18 @@ local function getSideModeOpts(control, instance)
     return control._sideModeOpts
 end
 
-local function sideRewardFields(control, sideRowIndex)
+local function sideRewardFields(control, sideRowIndex, rowIndex, sideIndex)
     control._sideRewardFieldsByRow = control._sideRewardFieldsByRow or {}
     local fields = control._sideRewardFieldsByRow[sideRowIndex]
     if fields == nil then
         fields = {
+            rewardContext = {
+                rowIndex = rowIndex,
+                address = "side:" .. tostring(sideIndex),
+                sourceKind = "side",
+                sourceIndex = sideIndex,
+                storageRowIndex = sideRowIndex,
+            },
             get = function(_, alias)
                 return control:sideRewardField(sideRowIndex, data.sideRoomRewardAlias(nil, alias))
             end,
@@ -95,7 +102,7 @@ local function drawSideRoomRow(draw, control, instance, rowIndex)
         then
             draw.imgui.SameLine()
             draw.imgui.SetCursorPosX(SIDE_REWARD_COLUMN_X)
-            if rewardSystem.draw(draw, surface, sideRewardFields(control, sideRowIndex), rewardDrawOpts(control)) then
+            if rewardSystem.draw(draw, surface, sideRewardFields(control, sideRowIndex, rowIndex, sideIndex), rewardDrawOpts(control)) then
                 control:invalidateReadPass()
             end
         end

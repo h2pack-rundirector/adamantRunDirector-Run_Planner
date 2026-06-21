@@ -135,6 +135,20 @@ function rewards.create(opts)
         return byRow and byRow[rowIndex] or nil
     end
 
+    function rewardState.valueStates(
+        _context,
+        _routeKey,
+        _biomeKey,
+        _rowIndex,
+        _rewardAddress,
+        _controlAlias,
+        _control,
+        _fields,
+        _rewardContext
+    )
+        return nil
+    end
+
     return rewardState
 end
 

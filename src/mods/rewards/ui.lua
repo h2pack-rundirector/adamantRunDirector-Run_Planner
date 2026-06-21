@@ -5,6 +5,7 @@ local ui = {}
 
 local ROW_HEADER_WIDTH = 80
 local GENERIC_REWARD_HEADER = "Reward"
+local INVALID_VALUE_COLOR = { 1.0, 0.22, 0.16, 1.0 }
 
 local function conditionMatches(condition, fields)
     return fields:read(condition.alias) == condition.value
@@ -101,8 +102,8 @@ local function groupMembers(group)
     return group.aliases or {}
 end
 
-local function localValueColors(surface, fields, control, opts)
-    if runtime == nil or runtime.valueColors == nil then
+local function localValueStates(surface, fields, control, opts)
+    if runtime == nil or runtime.valueStates == nil then
         return nil
     end
     local uniqueValueGroups = surface and surface.uniqueValueGroups
@@ -125,42 +126,74 @@ local function localValueColors(surface, fields, control, opts)
     if not participates then
         return nil
     end
-    local colors = control._localValueColors
-    if colors == nil then
-        colors = {}
-        control._localValueColors = colors
+    local states = control._localValueStates
+    if states == nil then
+        states = {}
+        control._localValueStates = states
     end
-    return runtime.valueColors(surface, fields, control, colors, opts)
+    return runtime.valueStates(surface, fields, control, states, opts)
 end
 
-local function externalValueColors(fields, control, opts)
-    if opts == nil or opts.valueColorsForControl == nil then
+local function externalValueStates(fields, control, opts)
+    if opts == nil or opts.valueStatesForControl == nil then
         return nil
     end
-    return opts.valueColorsForControl(control, fields)
+    return opts.valueStatesForControl(control, fields, fields.rewardContext)
 end
 
-local function combineValueColors(control, first, second)
+local function combineValueStates(control, first, second)
     if first == nil then
         return second
     elseif second == nil then
         return first
     end
 
-    local colors = control._combinedValueColors
+    local states = control._combinedValueStates
+    if states == nil then
+        states = {}
+        control._combinedValueStates = states
+    else
+        clearMap(states)
+    end
+    for key, value in pairs(first) do
+        states[key] = value
+    end
+    for key, value in pairs(second) do
+        states[key] = value
+    end
+    return states
+end
+
+local function colorForState(state)
+    if state == nil or state == false or state == 0 then
+        return nil
+    end
+    return INVALID_VALUE_COLOR
+end
+
+local function valueColorsForStates(control, valueStates)
+    if valueStates == nil then
+        return nil
+    end
+    local colors = control._valueColorsFromStates
     if colors == nil then
         colors = {}
-        control._combinedValueColors = colors
+        control._valueColorsFromStates = colors
     else
         clearMap(colors)
     end
-    for key, value in pairs(first) do
-        colors[key] = value
+    local hasColors = false
+    for key, state in pairs(valueStates) do
+        local color = colorForState(state)
+        if color ~= nil then
+            colors[key] = color
+            hasColors = true
+        end
     end
-    for key, value in pairs(second) do
-        colors[key] = value
+    if hasColors then
+        return colors
     end
-    return colors
+    return nil
 end
 
 local function drawControl(draw, surface, fields, control, opts)
@@ -179,11 +212,12 @@ local function drawControl(draw, surface, fields, control, opts)
     then
         drawOpts = opts.godSource:godSourceDrawOpts(drawOpts, field:read())
     end
-    local valueColors = combineValueColors(
+    local valueStates = combineValueStates(
         control,
-        externalValueColors(fields, control, opts),
-        localValueColors(surface, fields, control, opts)
+        externalValueStates(fields, control, opts),
+        localValueStates(surface, fields, control, opts)
     )
+    local valueColors = valueColorsForStates(control, valueStates)
     if valueColors ~= nil then
         drawOpts = cachedColoredDrawOpts(control, drawOpts, valueColors)
     end

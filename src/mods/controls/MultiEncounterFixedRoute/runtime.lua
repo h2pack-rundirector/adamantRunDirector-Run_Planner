@@ -173,6 +173,7 @@ function runtime.create(fields, instance)
         instance.rewardDrawOpts = instance.rewardDrawOpts or {}
         instance.rewardDrawOpts.hideGenericRewardLabel = baseOpts and baseOpts.hideGenericRewardLabel
         instance.rewardDrawOpts.godSource = self:godSource()
+        instance.rewardDrawOpts.valueStatesForControl = rewardSystem.routeValueStatesForControl(instance)
         return instance.rewardDrawOpts
     end
 

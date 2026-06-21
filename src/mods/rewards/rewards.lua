@@ -1,5 +1,33 @@
 local rewardSystem = {}
 
+local function rewardValueStatesForControl(instance, surfaceControl, rewardFields, sourceContext)
+    if instance.routeContext ~= nil and instance.routeContext.rewardValueStates ~= nil then
+        return instance.routeContext:rewardValueStates(
+            instance.routeKey,
+            instance.biomeKey,
+            sourceContext and sourceContext.rowIndex,
+            sourceContext and sourceContext.address,
+            surfaceControl and surfaceControl.alias,
+            surfaceControl,
+            rewardFields,
+            sourceContext
+        )
+    end
+    return nil
+end
+
+local function routeValueStatesForControl(instance)
+    if instance.routeContext == nil or instance.routeContext.rewardValueStates == nil then
+        return nil
+    end
+    if instance.rewardValueStatesForControl == nil then
+        instance.rewardValueStatesForControl = function(surfaceControl, rewardFields, sourceContext)
+            return rewardValueStatesForControl(instance, surfaceControl, rewardFields, sourceContext)
+        end
+    end
+    return instance.rewardValueStatesForControl
+end
+
 function rewardSystem.create(opts)
     opts = opts or {}
 
@@ -32,6 +60,7 @@ function rewardSystem.create(opts)
         validate = runtime.validate,
 
         godLootOptions = surfaceRegistry.godLootOptions,
+        routeValueStatesForControl = routeValueStatesForControl,
     }
 end
 

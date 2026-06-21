@@ -22,6 +22,11 @@ local function rewardFields(control, rowIndex)
     local fields = control._rewardFieldsByRow[rowIndex]
     if fields == nil then
         fields = {
+            rewardContext = {
+                rowIndex = rowIndex,
+                address = "row",
+                sourceKind = "row",
+            },
             get = function(_, alias)
                 return control:rewardField(rowIndex, alias)
             end,

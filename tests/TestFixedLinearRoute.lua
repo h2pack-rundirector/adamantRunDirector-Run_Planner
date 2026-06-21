@@ -956,6 +956,75 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeUsesRouteRewardVal
     lu.assertEquals(validation.code, "route_reward")
 end
 
+function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeRoutesRewardValueStateContext()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(routeFields({
+        {
+            RoleKey = "",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat02",
+        },
+    }), instance)
+    local seen = {}
+    control:setRouteContext({
+        rewardValueStates = function(
+            _,
+            routeKey,
+            biomeKey,
+            rowIndex,
+            rewardAddress,
+            controlAlias,
+            surfaceControl,
+            rewardFields,
+            rewardContext
+        )
+            seen.routeKey = routeKey
+            seen.biomeKey = biomeKey
+            seen.rowIndex = rowIndex
+            seen.rewardAddress = rewardAddress
+            seen.controlAlias = controlAlias
+            seen.surfaceControl = surfaceControl
+            seen.rewardFields = rewardFields
+            seen.rewardContext = rewardContext
+            return {
+                Boon = 1,
+            }
+        end,
+    }, "Underworld")
+
+    local rewardContext = {
+        rowIndex = 2,
+        address = "row",
+    }
+    local rewardFields = {
+        rewardContext = rewardContext,
+    }
+    local surfaceControl = {
+        alias = "Reward1Key",
+    }
+    local opts = control:rewardDrawOpts({
+        hideGenericRewardLabel = true,
+    })
+    local states = opts.valueStatesForControl(surfaceControl, rewardFields, rewardContext)
+
+    lu.assertEquals(states.Boon, 1)
+    lu.assertEquals(seen.routeKey, "Underworld")
+    lu.assertEquals(seen.biomeKey, "F")
+    lu.assertEquals(seen.rowIndex, 2)
+    lu.assertEquals(seen.rewardAddress, "row")
+    lu.assertEquals(seen.controlAlias, "Reward1Key")
+    lu.assertIs(seen.surfaceControl, surfaceControl)
+    lu.assertIs(seen.rewardFields, rewardFields)
+    lu.assertIs(seen.rewardContext, rewardContext)
+end
+
 function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesPreviousRoomExitRequirement()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()

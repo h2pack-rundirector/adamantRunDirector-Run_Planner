@@ -309,6 +309,29 @@ function runContext.create(opts)
         return self.rewardState.rowValidation(self, routeKey, biomeKey, rowIndex)
     end
 
+    function context:rewardValueStates(
+        routeKey,
+        biomeKey,
+        rowIndex,
+        rewardAddress,
+        controlAlias,
+        control,
+        fields,
+        rewardContext
+    )
+        return self.rewardState.valueStates(
+            self,
+            routeKey,
+            biomeKey,
+            rowIndex,
+            rewardAddress,
+            controlAlias,
+            control,
+            fields,
+            rewardContext
+        )
+    end
+
     function context:snapshot(routeKey)
         local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
         local snapshots = {}

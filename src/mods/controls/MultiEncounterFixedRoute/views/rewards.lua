@@ -24,6 +24,11 @@ local function rewardFields(control, rowIndex)
     local fields = control._rewardFieldsByRow[rowIndex]
     if fields == nil then
         fields = {
+            rewardContext = {
+                rowIndex = rowIndex,
+                address = "row",
+                sourceKind = "row",
+            },
             get = function(_, alias)
                 return control:rewardField(rowIndex, alias)
             end,
@@ -36,11 +41,18 @@ local function rewardFields(control, rowIndex)
     return fields
 end
 
-local function encounterRewardFields(control, encounterRewardRowIndex)
+local function encounterRewardFields(control, encounterRewardRowIndex, rowIndex, legIndex)
     control._encounterRewardFieldsByRow = control._encounterRewardFieldsByRow or {}
     local fields = control._encounterRewardFieldsByRow[encounterRewardRowIndex]
     if fields == nil then
         fields = {
+            rewardContext = {
+                rowIndex = rowIndex,
+                address = "encounter:" .. tostring(legIndex),
+                sourceKind = "encounter",
+                sourceIndex = legIndex,
+                storageRowIndex = encounterRewardRowIndex,
+            },
             get = function(_, alias)
                 return control:encounterRewardField(encounterRewardRowIndex, alias)
             end,
@@ -90,7 +102,7 @@ local function drawEncounterRewardRows(draw, control, instance, rowIndex)
             if rewardSystem.draw(
                 draw,
                 legSurface,
-                encounterRewardFields(control, encounterRewardRowIndex),
+                encounterRewardFields(control, encounterRewardRowIndex, rowIndex, legIndex),
                 rewardDrawOpts(control)
             ) then
                 control:invalidateReadPass()

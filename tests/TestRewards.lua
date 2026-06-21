@@ -894,7 +894,7 @@ function TestRunPlannerRewards.testRuntimeIgnoresHiddenDevotionGodDuplicates()
     })).valid)
 end
 
-function TestRunPlannerRewards.testRuntimeColorsOnlyLaterLinkedShopDuplicateCandidates()
+function TestRunPlannerRewards.testRuntimeStatesOnlyLaterLinkedShopDuplicateCandidates()
     local runtime = loadRuntime()
     local surface = runtime.surfaceFor({
         kind = "shop",
@@ -906,17 +906,17 @@ function TestRunPlannerRewards.testRuntimeColorsOnlyLaterLinkedShopDuplicateCand
     })
     local scratch = {}
 
-    lu.assertNil(runtime.valueColors(surface, fields, controlByKey(surface, "Group1Offer1"), scratch))
+    lu.assertNil(runtime.valueStates(surface, fields, controlByKey(surface, "Group1Offer1"), scratch))
     lu.assertEquals(scratch, {})
 
-    local colors = runtime.valueColors(surface, fields, controlByKey(surface, "Group1Offer2"), scratch)
+    local states = runtime.valueStates(surface, fields, controlByKey(surface, "Group1Offer2"), scratch)
 
-    lu.assertIs(colors, scratch)
-    lu.assertEquals(colors.RandomLoot, { 1.0, 0.22, 0.16, 1.0 })
-    lu.assertNil(colors.BoostedRandomLoot)
+    lu.assertIs(states, scratch)
+    lu.assertEquals(states.RandomLoot, 1)
+    lu.assertNil(states.BoostedRandomLoot)
 end
 
-function TestRunPlannerRewards.testRuntimeColorsOnlySecondDevotionGodDuplicateCandidates()
+function TestRunPlannerRewards.testRuntimeStatesOnlySecondDevotionGodDuplicateCandidates()
     local runtime = loadRuntime()
     local surface = runtime.surfaceFor({
         kind = "forcedReward",
@@ -928,17 +928,17 @@ function TestRunPlannerRewards.testRuntimeColorsOnlySecondDevotionGodDuplicateCa
     })
     local scratch = {}
 
-    lu.assertNil(runtime.valueColors(surface, fields, controlByKey(surface, "lootAName"), scratch))
+    lu.assertNil(runtime.valueStates(surface, fields, controlByKey(surface, "lootAName"), scratch))
     lu.assertEquals(scratch, {})
 
-    local colors = runtime.valueColors(surface, fields, controlByKey(surface, "lootBName"), scratch)
+    local states = runtime.valueStates(surface, fields, controlByKey(surface, "lootBName"), scratch)
 
-    lu.assertIs(colors, scratch)
-    lu.assertEquals(colors.ZeusUpgrade, { 1.0, 0.22, 0.16, 1.0 })
-    lu.assertNil(colors.HeraUpgrade)
+    lu.assertIs(states, scratch)
+    lu.assertEquals(states.ZeusUpgrade, 1)
+    lu.assertNil(states.HeraUpgrade)
 end
 
-function TestRunPlannerRewards.testRuntimeColorsFieldsCageDuplicateCandidates()
+function TestRunPlannerRewards.testRuntimeStatesFieldsCageDuplicateCandidates()
     local runtime = loadRuntime()
     local surface = runtime.surfaceFor({
         kind = "fieldsCages",
@@ -947,29 +947,29 @@ function TestRunPlannerRewards.testRuntimeColorsFieldsCageDuplicateCandidates()
     })
     local scratch = {}
 
-    local rewardColors = runtime.valueColors(surface, fakeFields({
+    local rewardStates = runtime.valueStates(surface, fakeFields({
         Reward1Key = "MaxHealthDrop",
         Reward2Key = "MaxHealthDrop",
     }), controlByKey(surface, "Cage2"), scratch, { sourceCount = 2 })
 
-    lu.assertIs(rewardColors, scratch)
-    lu.assertEquals(rewardColors.MaxHealthDrop, { 1.0, 0.22, 0.16, 1.0 })
+    lu.assertIs(rewardStates, scratch)
+    lu.assertEquals(rewardStates.MaxHealthDrop, 1)
 
-    lu.assertNil(runtime.valueColors(surface, fakeFields({
+    lu.assertNil(runtime.valueStates(surface, fakeFields({
         Reward1Key = "Boon",
         Reward2Key = "Boon",
     }), controlByKey(surface, "Cage2"), scratch, { sourceCount = 2 }))
     lu.assertEquals(scratch, {})
 
-    local boonSourceColors = runtime.valueColors(surface, fakeFields({
+    local boonSourceStates = runtime.valueStates(surface, fakeFields({
         Reward1Key = "Boon",
         Reward1LootKey = "ZeusUpgrade",
         Reward2Key = "Boon",
         Reward2LootKey = "ZeusUpgrade",
     }), controlByKey(surface, "Cage2Loot"), scratch, { sourceCount = 2 })
 
-    lu.assertIs(boonSourceColors, scratch)
-    lu.assertEquals(boonSourceColors.ZeusUpgrade, { 1.0, 0.22, 0.16, 1.0 })
+    lu.assertIs(boonSourceStates, scratch)
+    lu.assertEquals(boonSourceStates.ZeusUpgrade, 1)
 end
 
 function TestRunPlannerRewards.testUiAppliesLinkedShopDuplicateValueColors()
@@ -1004,6 +1004,60 @@ function TestRunPlannerRewards.testUiAppliesLinkedShopDuplicateValueColors()
 
     lu.assertNil(captured.Reward1Key.valueColors)
     lu.assertEquals(captured.Reward2Key.valueColors.RandomLoot, { 1.0, 0.22, 0.16, 1.0 })
+end
+
+function TestRunPlannerRewards.testUiPassesRewardContextToExternalValueStates()
+    local ui, runtime = loadUi()
+    local surface = runtime.surfaceFor({
+        kind = "roomStore",
+        rewardStore = "RunProgress",
+    })
+    local rewardContext = {
+        rowIndex = 2,
+        address = "row",
+    }
+    local fields = drawableFields({
+        Reward1Key = "Boon",
+    })
+    fields.rewardContext = rewardContext
+    local seenByAlias = {}
+    local captured = {}
+    local draw = {
+        imgui = {
+            GetCursorPosX = function()
+                return 0
+            end,
+            AlignTextToFramePadding = function() end,
+            Text = function() end,
+            SameLine = function() end,
+            SetCursorPosX = function() end,
+        },
+        widgets = {
+            dropdown = function(field, opts)
+                captured[field.alias] = opts
+                return false
+            end,
+        },
+    }
+
+    ui.draw(draw, surface, fields, {
+        valueStatesForControl = function(control, callbackFields, callbackContext)
+            seenByAlias[control.alias] = {
+                control = control,
+                fields = callbackFields,
+                context = callbackContext,
+            }
+            return {
+                Boon = 1,
+            }
+        end,
+    })
+
+    local seen = seenByAlias.Reward1Key
+    lu.assertEquals(seen.control.alias, "Reward1Key")
+    lu.assertIs(seen.fields, fields)
+    lu.assertIs(seen.context, rewardContext)
+    lu.assertEquals(captured.Reward1Key.valueColors.Boon, { 1.0, 0.22, 0.16, 1.0 })
 end
 
 function TestRunPlannerRewards.testCatalogAppliesIneligibleRewardTypes()

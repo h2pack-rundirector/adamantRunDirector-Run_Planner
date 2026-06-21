@@ -3,7 +3,7 @@ local catalog = deps.catalog
 
 local runtime = {}
 local VALID = { valid = true }
-local INVALID_VALUE_COLOR = { 1.0, 0.22, 0.16, 1.0 }
+local INVALID_VALUE_STATE = 1
 
 local function conditionMatches(condition, fields)
     return fields:read(condition.alias) == condition.value
@@ -129,27 +129,29 @@ local function clearMap(map)
 end
 
 local function appendPriorDuplicateValues(out, group, fields, controlAlias, opts)
-    local aliases = {}
-    local values = {}
     local allowDuplicateValues = group.allowDuplicateValues or {}
+    local participates = false
+    for _, member in ipairs(groupMembers(group)) do
+        local alias = memberAlias(member)
+        if alias == controlAlias and isMemberActive(group, member, fields, opts) then
+            participates = true
+            break
+        end
+    end
+    if not participates then
+        return false
+    end
+
     for _, member in ipairs(groupMembers(group)) do
         local alias = memberAlias(member)
         if alias ~= nil and isMemberActive(group, member, fields, opts) then
-            aliases[#aliases + 1] = alias
-            values[#values + 1] = fields:read(alias) or ""
-        end
-    end
-    for index, alias in ipairs(aliases) do
-        if alias == controlAlias then
-            local hasColors = false
-            for previousIndex = 1, index - 1 do
-                local previousValue = values[previousIndex]
-                if previousValue ~= "" and not allowDuplicateValues[previousValue] then
-                    out[previousValue] = INVALID_VALUE_COLOR
-                    hasColors = true
-                end
+            if alias == controlAlias then
+                return next(out) ~= nil
             end
-            return hasColors
+            local value = fields:read(alias) or ""
+            if value ~= "" and not allowDuplicateValues[value] then
+                out[value] = INVALID_VALUE_STATE
+            end
         end
     end
     return false
@@ -186,7 +188,7 @@ function runtime.validate(surface, fields, opts)
     return VALID
 end
 
-function runtime.valueColors(surface, fields, control, out, opts)
+function runtime.valueStates(surface, fields, control, out, opts)
     if surface == nil or fields == nil or control == nil or control.alias == nil then
         return nil
     end
@@ -201,11 +203,11 @@ function runtime.valueColors(surface, fields, control, out, opts)
     out = out or {}
     clearMap(out)
 
-    local hasColors = false
+    local hasStates = false
     for _, group in ipairs(uniqueValueGroups) do
-        hasColors = appendPriorDuplicateValues(out, group, fields, control.alias, opts) or hasColors
+        hasStates = appendPriorDuplicateValues(out, group, fields, control.alias, opts) or hasStates
     end
-    if hasColors then
+    if hasStates then
         return out
     end
     return nil
