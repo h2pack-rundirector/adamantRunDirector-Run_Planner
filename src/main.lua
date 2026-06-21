@@ -40,13 +40,15 @@ local function init()
         rewardItems = rewardItems,
         semantics = rewardSemantics,
     })
-    local logic = import("mods/logic.lua").bind(data)
-    local ui = import("mods/ui.lua").bind({
+    local logic = import("mods/logic.lua", nil, {
+        catalog = catalog,
+        data = data,
+    })
+    local ui = import("mods/ui.lua", nil, {
         catalog = catalog,
         data = data,
         routeContext = routeContext,
         routeControlTabs = data.routeControlTabs(catalog),
-        routeStatusUi = import("mods/controls/route_status_ui.lua"),
     })
 
     local module = lib.createModule({

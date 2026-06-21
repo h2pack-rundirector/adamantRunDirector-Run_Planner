@@ -1,4 +1,4 @@
-local routeStatusUi = {}
+local routeStatus = {}
 
 local ROUTE_MESSAGE_COLUMN_X = 165
 local INVALID_COLOR = { 1.0, 0.24, 0.16, 1.0 }
@@ -46,7 +46,7 @@ local function firstInvalidMessage(routeSnapshot)
     return tostring(message)
 end
 
-function routeStatusUi.drawRouteStatus(draw, routeSnapshot)
+function routeStatus.drawRouteStatus(draw, routeSnapshot)
     local label = tostring((routeSnapshot and routeSnapshot.label) or (routeSnapshot and routeSnapshot.routeKey) or "Route")
     local valid = routeSnapshot ~= nil and routeSnapshot.valid
     local message = not valid and firstInvalidMessage(routeSnapshot) or nil
@@ -62,4 +62,4 @@ function routeStatusUi.drawRouteStatus(draw, routeSnapshot)
     end
 end
 
-return routeStatusUi
+return routeStatus

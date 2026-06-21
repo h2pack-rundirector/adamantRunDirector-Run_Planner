@@ -428,7 +428,7 @@ local function measureAllocKb(iterations, callback)
 end
 
 function TestRunPlannerControls.testRouteStatusDrawsFirstInvalidMessage()
-    local routeStatusUi = dofile("src/mods/controls/route_status_ui.lua")
+    local routeStatus = dofile("src/mods/ui/route_status.lua")
     local rendered = {}
     local draw = {
         imgui = {
@@ -444,7 +444,7 @@ function TestRunPlannerControls.testRouteStatusDrawsFirstInvalidMessage()
         },
     }
 
-    routeStatusUi.drawRouteStatus(draw, {
+    routeStatus.drawRouteStatus(draw, {
         label = "Underworld",
         valid = false,
         invalidRows = {
@@ -723,7 +723,7 @@ function TestRunPlannerControls.testRouteGlobalDrawDisablesNpcToggleWhenRewardsA
 end
 
 function TestRunPlannerControls.testRouteUiHidesTabsForDisabledLayers()
-    local routeUi = dofile("src/mods/ui.lua")
+    local routeUi
     local capturedTabs
     local routeContext = {
         beginPass = function()
@@ -741,32 +741,34 @@ function TestRunPlannerControls.testRouteUiHidesTabsForDisabledLayers()
             return layer ~= "npcs" and layer ~= "features"
         end,
     }
-    routeUi.bind({
-        routes = routeDefinitions({
-            {
-                key = "Underworld",
-                label = "Underworld",
-                biomes = { "F" },
+    withTestImport(function()
+        routeUi = testImport("mods/ui.lua", nil, {
+            routes = routeDefinitions({
+                {
+                    key = "Underworld",
+                    label = "Underworld",
+                    biomes = { "F" },
+                },
+            }),
+            routeControlTabs = {
+                Underworld = {
+                    { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
+                    { key = "F", label = "Erebus", controlName = "RouteF" },
+                    { key = "NPCs", label = "NPCs", layer = "npcs", controlName = "RouteNpcsUnderworld" },
+                    { key = "Features", label = "Features", layer = "features", controlNames = {} },
+                },
             },
-        }),
-        routeControlTabs = {
-            Underworld = {
-                { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
-                { key = "F", label = "Erebus", controlName = "RouteF" },
-                { key = "NPCs", label = "NPCs", layer = "npcs", controlName = "RouteNpcsUnderworld" },
-                { key = "Features", label = "Features", layer = "features", controlNames = {} },
+            routeContext = {
+                create = function()
+                    return routeContext
+                end,
             },
-        },
-        routeContext = {
-            create = function()
-                return routeContext
-            end,
-        },
-        routeStatusUi = {
-            drawRouteStatus = function()
-            end,
-        },
-    })
+            routeStatus = {
+                drawRouteStatus = function()
+                end,
+            },
+        })
+    end)
     local draw = noOpDraw()
     draw.imgui.BeginTabBar = function()
         return true

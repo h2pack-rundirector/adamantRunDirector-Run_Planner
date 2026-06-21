@@ -878,16 +878,18 @@ end
 
 function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
     local _, data = loadCatalog()
-    local bound
+    local logic
     withTestImport(function()
-        bound = testImport("mods/logic.lua").bind(data)
+        logic = testImport("mods/logic.lua", nil, {
+            data = data,
+        })
     end)
 
     local cacheDefined = false
     local hookedStartNewRun = false
     local hookedChooseStartingRoom = false
     local hookedChooseNextRoomData = false
-    bound.attach({
+    logic.attach({
         cache = {
             define = function(defs)
                 cacheDefined = defs.RoutePlan ~= nil
