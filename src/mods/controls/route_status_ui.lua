@@ -41,6 +41,9 @@ local function firstInvalidMessage(routeSnapshot)
     if message == nil or message == "" then
         return nil
     end
+    if invalid.locationLabel ~= nil and invalid.locationLabel ~= "" then
+        return tostring(invalid.locationLabel) .. ": " .. tostring(message)
+    end
     return tostring(message)
 end
 

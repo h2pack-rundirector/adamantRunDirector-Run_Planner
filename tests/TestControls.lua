@@ -132,6 +132,7 @@ local function loadRewardLegality()
         timeline = testImport("mods/route/timeline.lua"),
         rewardItems = testImport("mods/route/reward_items.lua"),
         semantics = testImport("mods/rewards/semantics.lua"),
+        invalidLocations = testImport("mods/route/invalid_locations.lua"),
     })
 end
 
@@ -447,7 +448,10 @@ function TestRunPlannerControls.testRouteStatusDrawsFirstInvalidMessage()
         label = "Underworld",
         valid = false,
         invalidRows = {
-            { message = "Trial requires 15 rooms since the previous Trial" },
+            {
+                locationLabel = "Oceanus Depth 5 Rewards",
+                message = "Trial requires 15 rooms since the previous Trial",
+            },
         },
     })
 
@@ -455,7 +459,7 @@ function TestRunPlannerControls.testRouteStatusDrawsFirstInvalidMessage()
         "Underworld Invalid:",
         "<same-line>",
         "<x:165>",
-        "Trial requires 15 rooms since the previous Trial",
+        "Oceanus Depth 5 Rewards: Trial requires 15 rooms since the previous Trial",
     })
 end
 
@@ -464,6 +468,7 @@ function TestRunPlannerControls.testRewardItemsNormalizeRowRewardMetadata()
     local row = {
         rowIndex = 2,
         routeOrdinal = 2,
+        slotLabel = "Depth 2",
         rewardKind = "majorMinor",
         rewards = { "Major", "Boon", "ZeusUpgrade" },
         rewardPicks = {
@@ -496,13 +501,18 @@ function TestRunPlannerControls.testRewardItemsNormalizeRowRewardMetadata()
 
     lu.assertEquals(#row.rewardItems, 4)
     lu.assertEquals(row.rewardItems[1].address, "row")
+    lu.assertEquals(row.rewardItems[1].rowLabel, "Depth 2")
+    lu.assertEquals(row.rewardItems[1].sourceLabel, "Rewards")
     lu.assertEquals(row.rewardItems[1].sourceKind, "row")
     lu.assertEquals(row.rewardItems[1].rewards[2], "Boon")
     lu.assertEquals(row.rewardItems[2].address, "side:1")
+    lu.assertEquals(row.rewardItems[2].sourceLabel, "Side Room 1 Reward")
     lu.assertEquals(row.rewardItems[2].sourceKind, "side")
     lu.assertEquals(row.rewardItems[3].address, "cage:2")
+    lu.assertEquals(row.rewardItems[3].sourceLabel, "Cage 2 Reward")
     lu.assertEquals(row.rewardItems[3].sourceKind, "cage")
     lu.assertEquals(row.rewardItems[4].address, "encounter:3")
+    lu.assertEquals(row.rewardItems[4].sourceLabel, "Combat 3 Reward")
     lu.assertEquals(row.rewardItems[4].sourceKind, "encounter")
 
     local scratch = {}
@@ -994,6 +1004,8 @@ function TestRunPlannerControls.testRouteNpcsUsesBiomeRoomTypeSelection()
     lu.assertEquals(fields.Targets:read(2, "TargetKey"), "F:3:Random")
     lu.assertEquals(control:selectedTargetKey(2), "F:3:Random")
     lu.assertEquals(control:rowValidation(2).code, "npc_room_occupied")
+    local npcSnapshot = control:buildSnapshot()
+    lu.assertEquals(npcSnapshot.invalidRows[1].locationLabel, "Underworld Nemesis")
 
     control:writeBiome(2, "")
     lu.assertEquals(fields.Targets:read(2, "BiomeKey"), nil)
@@ -1169,6 +1181,8 @@ function TestRunPlannerControls.testRouteFeaturesUsesBiomeRoomSelectionAndPolici
 
     control:writeTarget(1, "P:7")
     lu.assertEquals(control:rowValidation(1).code, "feature_target_unavailable")
+    local featureSnapshot = control:buildSnapshot()
+    lu.assertEquals(featureSnapshot.invalidRows[1].locationLabel, "Surface Chaos Gate Entry 1")
 
     control:writeBiome(1, "")
     lu.assertEquals(fields.Targets:read(1, "BiomeKey"), nil)
@@ -3214,6 +3228,7 @@ function TestRunPlannerControls.testFixedLinearRuntimeBuildsValidatedSnapshot()
     lu.assertEquals(#snapshot.invalidRows, 1)
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
     lu.assertEquals(snapshot.invalidRows[1].code, "unknown_role")
+    lu.assertEquals(snapshot.invalidRows[1].locationLabel, "Summit Depth 4")
     lu.assertEquals(snapshot.rows[1].routeOrdinal, 0)
     lu.assertEquals(snapshot.rows[1].slotKind, "intro")
     lu.assertEquals(snapshot.rows[1].roomKey, "Q_Intro")
@@ -4660,6 +4675,10 @@ function TestRunPlannerControls.testRouteContextInvalidatesTalentRewardsBeforeSp
             routeRewardRow(3, "SpellDrop"),
             routeRewardRow(4, "TalentBigDrop"),
         }),
+    }, {
+        biomes = {
+            F = { label = "Erebus" },
+        },
     })
 
     local overview = routeContext:overview("Underworld")
@@ -4669,6 +4688,7 @@ function TestRunPlannerControls.testRouteContextInvalidatesTalentRewardsBeforeSp
     lu.assertEquals(overview.invalidRows[1].rowIndex, 1)
     lu.assertEquals(overview.invalidRows[1].address, "row")
     lu.assertEquals(overview.invalidRows[1].rewardType, "TalentDrop")
+    lu.assertEquals(overview.invalidRows[1].locationLabel, "Erebus Depth 1 Rewards")
     lu.assertEquals(overview.invalidRows[1].code, "talent_requires_spell")
     lu.assertEquals(overview.invalidRows[2].rowIndex, 2)
     lu.assertEquals(overview.invalidRows[2].address, "row")
@@ -4693,6 +4713,10 @@ function TestRunPlannerControls.testRouteContextPreservesRewardInvalidAddress()
                 rewardLoot = { "ZeusUpgrade", "" },
             }),
         }),
+    }, {
+        biomes = {
+            F = { label = "Erebus" },
+        },
     })
 
     local invalid = routeContext:overview("Underworld").invalidRows[1]
@@ -4700,6 +4724,7 @@ function TestRunPlannerControls.testRouteContextPreservesRewardInvalidAddress()
     lu.assertEquals(invalid.rowIndex, 1)
     lu.assertEquals(invalid.address, "shop:2")
     lu.assertEquals(invalid.rewardType, "TalentDrop")
+    lu.assertEquals(invalid.locationLabel, "Erebus Depth 1 Shop Offer 2")
     lu.assertEquals(invalid.code, "talent_requires_spell")
     lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 1).address, "shop:2")
 end
@@ -5575,6 +5600,7 @@ function TestRunPlannerControls.testRouteNpcsSnapshotValidatesTargetsAndSpacing(
     lu.assertFalse(routeSnapshot.valid)
     lu.assertEquals(routeSnapshot.invalidRows[1].controlName, "RouteNpcsUnderworld")
     lu.assertEquals(routeSnapshot.invalidRows[1].code, "npc_spacing")
+    lu.assertEquals(routeSnapshot.invalidRows[1].locationLabel, snapshot.invalidRows[1].locationLabel)
 end
 
 function TestRunPlannerControls.testRouteOverviewRebuildsOnlyWhenDirty()

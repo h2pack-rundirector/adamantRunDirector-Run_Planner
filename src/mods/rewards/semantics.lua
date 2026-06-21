@@ -52,6 +52,15 @@ local function shopAddress(address, index)
     return tostring(address) .. "/" .. shopSuffix
 end
 
+local function shopAddressLabel(item, index)
+    local label = item and item.sourceLabel or nil
+    local offerLabel = "Shop Offer " .. tostring(index)
+    if label == nil or label == "" or label == "Rewards" then
+        return offerLabel
+    end
+    return tostring(label) .. " " .. offerLabel
+end
+
 local function sourceForShopReward(item, index, rewardType)
     if not SHOP_BOON_SOURCE_REWARDS[rewardType] then
         return nil
@@ -197,7 +206,7 @@ function semantics.hasBannedValue(item, banned)
     return false
 end
 
-local function appendEvent(events, row, item, rewardType, address, boonSource, devotionSourceA, devotionSourceB)
+local function appendEvent(events, row, item, rewardType, address, addressLabel, boonSource, devotionSourceA, devotionSourceB)
     if rewardType == nil or rewardType == "" then
         return
     end
@@ -207,6 +216,8 @@ local function appendEvent(events, row, item, rewardType, address, boonSource, d
         item = item,
         rewardType = rewardType,
         address = address,
+        addressLabel = addressLabel,
+        rowLabel = item and item.rowLabel or nil,
     }
     if boonSource ~= nil and boonSource ~= "" then
         event.boonSource = boonSource
@@ -234,6 +245,7 @@ function semantics.eventsForItem(item, row, out)
                 item,
                 rewardType,
                 shopAddress(item.address, index),
+                shopAddressLabel(item, index),
                 sourceForShopReward(item, index, rewardType)
             )
         end
@@ -250,6 +262,7 @@ function semantics.eventsForItem(item, row, out)
                 item,
                 rewardType,
                 item.address,
+                item.sourceLabel,
                 nil,
                 pickValue(item, "lootAName") or rewards[1],
                 pickValue(item, "lootBName") or rewards[2]
@@ -261,6 +274,7 @@ function semantics.eventsForItem(item, row, out)
                 item,
                 rewardType,
                 item.address,
+                item.sourceLabel,
                 nil,
                 pickValue(item, "lootAName") or rewards[3],
                 pickValue(item, "lootBName") or rewards[4]
@@ -272,16 +286,17 @@ function semantics.eventsForItem(item, row, out)
                 item,
                 rewardType,
                 item.address,
+                item.sourceLabel,
                 nil,
                 pickValue(item, "lootAName") or rewards[5],
                 pickValue(item, "lootBName") or rewards[6]
             )
         else
-            appendEvent(events, row, item, rewardType, item.address)
+            appendEvent(events, row, item, rewardType, item.address, item.sourceLabel)
         end
         return events
     end
-    appendEvent(events, row, item, rewardType, item.address, semantics.boonSource(item))
+    appendEvent(events, row, item, rewardType, item.address, item.sourceLabel, semantics.boonSource(item))
     return events
 end
 

@@ -5,6 +5,7 @@ local runtime = import("mods/controls/ClockworkGoalRoute/runtime.lua", nil, {
     common = deps.route.common,
     rewardRuntime = deps.rewards.runtime,
     rewardItems = deps.route.rewardItems,
+    invalidLocations = deps.route.invalidLocations,
 })
 local ui = import("mods/controls/ClockworkGoalRoute/ui.lua", nil, {
     data = data,

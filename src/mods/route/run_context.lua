@@ -33,6 +33,23 @@ local function routeFeatureControlName(routeKey, featureKey)
     return "RouteFeature" .. tostring(featureKey or "") .. tostring(routeKey or "")
 end
 
+local function biomeLabel(context, biomeKey)
+    local biome = context and context.biomeLookup and context.biomeLookup[biomeKey] or nil
+    return tostring(biome and (biome.label or biome.key) or biomeKey or "Route")
+end
+
+local function appendInvalidRow(invalidRows, invalidRow, extras)
+    local copied = {}
+    for key, value in pairs(invalidRow or {}) do
+        copied[key] = value
+    end
+    for key, value in pairs(extras or {}) do
+        copied[key] = value
+    end
+    invalidRows[#invalidRows + 1] = copied
+    return copied
+end
+
 local function buildRouteInfo(routes)
     local routeInfoByRoute = {}
     local routeInfoByBiome = {}
@@ -984,19 +1001,16 @@ function runContext.create(opts)
                 invalidRows[#invalidRows + 1] = {
                     biomeKey = biomeKey,
                     controlName = routeControlName(biomeKey),
+                    locationLabel = biomeLabel(self, biomeKey),
                     code = "missing_control",
                     message = "Missing route control: " .. tostring(biomeKey),
                 }
             else
                 for _, invalidRow in ipairs(snapshot.invalidRows or EMPTY_LIST) do
-                    invalidRows[#invalidRows + 1] = {
+                    appendInvalidRow(invalidRows, invalidRow, {
                         biomeKey = biomeKey,
                         controlName = snapshot.controlName,
-                        rowIndex = invalidRow.rowIndex,
-                        routeOrdinal = invalidRow.routeOrdinal,
-                        code = invalidRow.code,
-                        message = invalidRow.message,
-                    }
+                    })
                 end
             end
         end
@@ -1013,12 +1027,9 @@ function runContext.create(opts)
             if npcControl ~= nil and npcControl.read ~= nil then
                 npcSnapshot = npcControl:read("snapshot")
                 for _, invalidRow in ipairs(npcSnapshot and npcSnapshot.invalidRows or EMPTY_LIST) do
-                    invalidRows[#invalidRows + 1] = {
+                    appendInvalidRow(invalidRows, invalidRow, {
                         controlName = npcSnapshot.controlName,
-                        rowIndex = invalidRow.rowIndex,
-                        code = invalidRow.code,
-                        message = invalidRow.message,
-                    }
+                    })
                 end
             end
         end
@@ -1030,12 +1041,9 @@ function runContext.create(opts)
                     local featureSnapshot = featureControl:read("snapshot")
                     featureSnapshots[#featureSnapshots + 1] = featureSnapshot
                     for _, invalidRow in ipairs(featureSnapshot and featureSnapshot.invalidRows or EMPTY_LIST) do
-                        invalidRows[#invalidRows + 1] = {
+                        appendInvalidRow(invalidRows, invalidRow, {
                             controlName = featureSnapshot.controlName,
-                            rowIndex = invalidRow.rowIndex,
-                            code = invalidRow.code,
-                            message = invalidRow.message,
-                        }
+                        })
                     end
                 end
             end

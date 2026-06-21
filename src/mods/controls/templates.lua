@@ -13,6 +13,7 @@ local route = {
     requirements = routeRequirements,
     biomeRules = routeBiomeRules,
     timeline = import("mods/route/timeline.lua"),
+    invalidLocations = import("mods/route/invalid_locations.lua"),
     rewardItems = import("mods/route/reward_items.lua"),
     rewardSemantics = rewardSemantics,
     rewardOfferPolicies = import("mods/data/reward_offer_policies.lua"),
@@ -64,9 +65,11 @@ return {
         routeStatusUi = routeStatusUi,
     }),
     RouteNpcs = import("mods/controls/RouteNpcs/RouteNpcs.lua", nil, {
+        route = route,
         routeStatusUi = routeStatusUi,
     }),
     RouteFeatures = import("mods/controls/RouteFeatures/RouteFeatures.lua", nil, {
+        route = route,
         routeStatusUi = routeStatusUi,
     }),
     RouteGlobal = import("mods/controls/RouteGlobal/RouteGlobal.lua", nil, {

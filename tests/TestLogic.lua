@@ -41,6 +41,7 @@ local function loadRewardLegality()
         timeline = testImport("mods/route/timeline.lua"),
         rewardItems = testImport("mods/route/reward_items.lua"),
         semantics = testImport("mods/rewards/semantics.lua"),
+        invalidLocations = testImport("mods/route/invalid_locations.lua"),
     })
 end
 

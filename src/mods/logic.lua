@@ -3,6 +3,7 @@ local logic = {}
 function logic.bind(data)
     local catalog = data.loadCatalog()
     local routeTimeline = import("mods/route/timeline.lua")
+    local invalidLocations = import("mods/route/invalid_locations.lua")
     local rewardItems = import("mods/route/reward_items.lua")
     local rewardSemantics = import("mods/rewards/semantics.lua")
     local rewardLegality = import("mods/route/reward_legality.lua", nil, {
@@ -10,6 +11,7 @@ function logic.bind(data)
         timeline = routeTimeline,
         rewardItems = rewardItems,
         semantics = rewardSemantics,
+        invalidLocations = invalidLocations,
     })
     local routePlan = import("mods/logic/route_plan.lua", nil, {
         executionPlan = import("mods/logic/execution_plan.lua"),

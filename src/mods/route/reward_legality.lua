@@ -3,6 +3,7 @@ local routeRules = deps.routeRules or deps.rules or {}
 local routeTimeline = deps.timeline
 local rowRewardItems = deps.rewardItems
 local semantics = deps.semantics
+local invalidLocations = deps.invalidLocations
 if routeTimeline == nil then
     error("reward_legality requires route timeline")
 end
@@ -11,6 +12,9 @@ if rowRewardItems == nil then
 end
 if semantics == nil then
     error("reward_legality requires reward semantics")
+end
+if invalidLocations == nil then
+    error("reward_legality requires invalid location formatter")
 end
 
 local rewardLegality = {}
@@ -75,7 +79,7 @@ local function invalidRowKey(biomeKey, rowIndex, code, address)
         .. tostring(address or "")
 end
 
-local function addInvalid(result, seenInvalids, ctx, event, code, message)
+local function addInvalid(context, result, seenInvalids, ctx, event, code, message)
     local row = event and event.row or nil
     if row == nil then
         return
@@ -95,6 +99,7 @@ local function addInvalid(result, seenInvalids, ctx, event, code, message)
         routeOrdinal = row.routeOrdinal,
         address = event.address,
         rewardType = event.rewardType,
+        locationLabel = invalidLocations.rewardEvent(context, ctx, event),
         code = code,
         message = message,
     }
@@ -318,7 +323,7 @@ local function storeRewardOccurrence(state, ctx, event)
     end
 end
 
-local function applyEventRules(result, seenInvalids, state, ctx, event)
+local function applyEventRules(context, result, seenInvalids, state, ctx, event)
     local rules = compiledRulesByTarget[event.rewardType]
     if rules == nil then
         storeEventGodLoot(state, event)
@@ -330,7 +335,7 @@ local function applyEventRules(result, seenInvalids, state, ctx, event)
         if ruleApplies(rule, event) then
             local invalid = ruleInvalid(rule, state, ctx, event)
             if invalid ~= nil then
-                addInvalid(result, seenInvalids, ctx, event, invalid.code, invalid.message)
+                addInvalid(context, result, seenInvalids, ctx, event, invalid.code, invalid.message)
                 return
             end
         end
@@ -406,7 +411,7 @@ function rewardLegality.evaluate(context, routeKey, opts)
                 end
                 collectRewardEvents(row, events, rewardItemScratch)
                 for _, event in ipairs(events) do
-                    applyEventRules(result, seenInvalids, state, ctx, event)
+                    applyEventRules(context, result, seenInvalids, state, ctx, event)
                 end
                 storePreviousShopRewards(state, events)
                 state.previousRows[biomeKey] = row

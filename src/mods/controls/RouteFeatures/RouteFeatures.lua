@@ -2,6 +2,7 @@ local deps = ...
 local data = import("mods/controls/RouteFeatures/data.lua")
 local runtime = import("mods/controls/RouteFeatures/runtime.lua", nil, {
     data = data,
+    invalidLocations = deps.route.invalidLocations,
 })
 local ui = import("mods/controls/RouteFeatures/ui.lua", nil, {
     data = data,

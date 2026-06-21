@@ -2,6 +2,7 @@
 
 local deps = ...
 local data = deps.data
+local invalidLocations = deps.invalidLocations
 
 local runtime = {}
 
@@ -574,6 +575,7 @@ function runtime.create(fields, instance)
             if row ~= nil and not row.valid then
                 invalidRows[#invalidRows + 1] = {
                     rowIndex = row.rowIndex,
+                    locationLabel = invalidLocations.routeRow(instance, row),
                     code = row.invalidCode,
                     message = row.invalidReason,
                 }

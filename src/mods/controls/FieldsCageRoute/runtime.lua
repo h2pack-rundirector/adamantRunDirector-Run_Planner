@@ -7,6 +7,7 @@ local rewardRuntime = deps.rewardRuntime
 local rewardItems = deps.rewardItems
 local rewardOfferPolicies = deps.rewardOfferPolicies
 local rewardOfferRules = deps.rewardOfferRules
+local invalidLocations = deps.invalidLocations
 
 local runtime = {}
 local EMPTY_LIST = {}
@@ -205,6 +206,7 @@ local function applyOfferPolicies(instance, rows, invalidRows, seenInvalids)
                     row.invalidCode = invalid.code
                     row.invalidReason = invalid.message
                 end
+                invalid.locationLabel = invalid.locationLabel or invalidLocations.biomeRow(instance, row, "Rewards")
                 appendInvalidRow(invalidRows, seenInvalids, invalid)
             end
         end
@@ -360,6 +362,7 @@ function runtime.create(fields, instance)
                 appendInvalidRow(invalidRows, seenInvalids, {
                     rowIndex = row.rowIndex,
                     routeOrdinal = row.routeOrdinal,
+                    locationLabel = invalidLocations.biomeRow(instance, row),
                     code = row.invalidCode,
                     message = row.invalidReason,
                 })

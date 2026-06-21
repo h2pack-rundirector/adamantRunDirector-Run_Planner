@@ -5,6 +5,7 @@ local data = deps.data
 local common = deps.common
 local rewardRuntime = deps.rewardRuntime
 local rewardItems = deps.rewardItems
+local invalidLocations = deps.invalidLocations
 
 local runtime = {}
 local EMPTY_LIST = {}
@@ -302,6 +303,7 @@ function runtime.create(fields, instance)
                 invalidRows[#invalidRows + 1] = {
                     rowIndex = row.rowIndex,
                     routeOrdinal = row.routeOrdinal,
+                    locationLabel = invalidLocations.biomeRow(instance, row),
                     code = row.invalidCode,
                     message = row.invalidReason,
                 }

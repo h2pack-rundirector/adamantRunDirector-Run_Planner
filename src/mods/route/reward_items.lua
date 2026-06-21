@@ -35,6 +35,30 @@ local function hasRewardSourceFields(source)
     return false
 end
 
+local function indexedLabel(prefix, index, suffix)
+    return tostring(prefix) .. " " .. tostring(index or "") .. tostring(suffix or "")
+end
+
+local function defaultSourceLabel(source, sourceKind, sourceIndex)
+    if sourceKind == "row" then
+        return "Rewards"
+    end
+
+    local label = source and (source.rewardLocationLabel or source.label) or nil
+    if label ~= nil and label ~= "" then
+        return tostring(label) .. " Reward"
+    end
+
+    if sourceKind == "side" then
+        return indexedLabel("Side Room", sourceIndex, " Reward")
+    elseif sourceKind == "cage" then
+        return indexedLabel("Cage", sourceIndex, " Reward")
+    elseif sourceKind == "encounter" then
+        return indexedLabel("Combat", sourceIndex, " Reward")
+    end
+    return "Rewards"
+end
+
 local function appendItem(items, row, source, address, sourceKind, sourceIndex)
     if source == nil then
         return
@@ -42,8 +66,10 @@ local function appendItem(items, row, source, address, sourceKind, sourceIndex)
 
     items[#items + 1] = {
         address = address,
+        sourceLabel = defaultSourceLabel(source, sourceKind, sourceIndex),
         sourceKind = sourceKind,
         sourceIndex = sourceIndex,
+        rowLabel = row and row.slotLabel or source.slotLabel,
         rowIndex = row and row.rowIndex or source.rowIndex,
         routeOrdinal = row and row.routeOrdinal or source.routeOrdinal,
         rewardKind = source.rewardKind,

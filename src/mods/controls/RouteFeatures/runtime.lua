@@ -2,6 +2,7 @@
 
 local deps = ...
 local data = deps.data
+local invalidLocations = deps.invalidLocations
 
 local runtime = {}
 
@@ -463,8 +464,13 @@ function runtime.create(fields, instance)
             local row = self:rowSnapshot(rowIndex)
             rows[#rows + 1] = row
             if row ~= nil and not row.valid then
+                local locationRow = {
+                    label = tostring(instance.label or "") .. " " .. tostring(row.label or ""),
+                    rowIndex = row.rowIndex,
+                }
                 invalidRows[#invalidRows + 1] = {
                     rowIndex = row.rowIndex,
+                    locationLabel = invalidLocations.routeRow(instance, locationRow),
                     code = row.invalidCode,
                     message = row.invalidReason,
                 }
