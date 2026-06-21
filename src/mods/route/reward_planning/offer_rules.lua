@@ -1,8 +1,5 @@
 local deps = ... or {}
 local semantics = deps.semantics
-if semantics == nil then
-    error("route.planning.offer_rules requires reward semantics")
-end
 
 local rewardOfferRules = {}
 

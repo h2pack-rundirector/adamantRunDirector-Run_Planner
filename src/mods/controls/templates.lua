@@ -2,13 +2,6 @@ local deps = ... or {}
 local route = deps.route
 local rewards = deps.rewards or (route and route.rewards) or nil
 
-if route == nil then
-    error("controls.templates requires route bundle")
-end
-if rewards == nil then
-    error("controls.templates requires rewards")
-end
-
 local godData = deps.godData or import("mods/data/gods.lua")
 
 return {

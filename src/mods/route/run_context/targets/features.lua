@@ -2,13 +2,6 @@ local deps = ... or {}
 local routeTimeline = deps.timeline
 local common = deps.common
 
-if routeTimeline == nil then
-    error("run_context.targets.features requires route timeline")
-end
-if common == nil then
-    error("run_context.targets.features requires target common")
-end
-
 local featureTargets = {}
 local EMPTY_LIST = common.EMPTY_LIST
 

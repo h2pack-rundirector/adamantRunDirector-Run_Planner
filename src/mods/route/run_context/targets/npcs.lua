@@ -4,19 +4,6 @@ local rewardItems = deps.rewardItems
 local semantics = deps.semantics
 local common = deps.common
 
-if routeTimeline == nil then
-    error("run_context.targets.npcs requires route timeline")
-end
-if rewardItems == nil then
-    error("run_context.targets.npcs requires reward items")
-end
-if semantics == nil then
-    error("run_context.targets.npcs requires reward semantics")
-end
-if common == nil then
-    error("run_context.targets.npcs requires target common")
-end
-
 local npcTargets = {}
 local EMPTY_LIST = common.EMPTY_LIST
 

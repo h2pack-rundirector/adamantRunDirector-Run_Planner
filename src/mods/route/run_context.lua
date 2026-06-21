@@ -2,15 +2,6 @@ local deps = ... or {}
 local routeControls = deps.controls
 local routeTargets = deps.targets
 local routeRewards = deps.rewards
-if routeControls == nil then
-    error("run_context requires route controls")
-end
-if routeTargets == nil then
-    error("run_context requires route targets")
-end
-if routeRewards == nil then
-    error("run_context requires route rewards")
-end
 
 local runContext = {}
 local EMPTY_LIST = {}

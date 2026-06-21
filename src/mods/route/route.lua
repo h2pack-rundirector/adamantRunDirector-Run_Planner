@@ -41,9 +41,6 @@ function routeFactory.create(opts)
     opts = opts or {}
 
     local rewards = opts.rewards
-    if rewards == nil then
-        error("route.create requires rewards")
-    end
 
     local routeTimeline = import("mods/route/timeline.lua")
     local invalidLocations = import("mods/route/invalid_locations.lua")

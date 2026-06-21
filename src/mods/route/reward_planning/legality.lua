@@ -4,18 +4,6 @@ local routeTimeline = deps.timeline
 local rowRewardItems = deps.rewardItems
 local semantics = deps.semantics
 local invalidLocations = deps.invalidLocations
-if routeTimeline == nil then
-    error("route.planning.legality requires route timeline")
-end
-if rowRewardItems == nil then
-    error("route.planning.legality requires reward items")
-end
-if semantics == nil then
-    error("route.planning.legality requires reward semantics")
-end
-if invalidLocations == nil then
-    error("route.planning.legality requires invalid location formatter")
-end
 
 local rewardLegality = {}
 local EMPTY_LIST = {}

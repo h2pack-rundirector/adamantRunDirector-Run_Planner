@@ -2,13 +2,6 @@ local deps = ... or {}
 local npcTargets = deps.npcs
 local featureTargets = deps.features
 
-if npcTargets == nil then
-    error("run_context.targets requires npc targets")
-end
-if featureTargets == nil then
-    error("run_context.targets requires feature targets")
-end
-
 local targets = {}
 
 function targets.emptyNpcTargets()

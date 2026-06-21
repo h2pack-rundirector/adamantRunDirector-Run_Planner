@@ -3,13 +3,6 @@ local rewardItems = deps.rewardItems
 local semantics = deps.semantics
 local defaultRewardLegality = deps.rewardLegality
 
-if rewardItems == nil then
-    error("run_context.rewards requires reward items")
-end
-if semantics == nil then
-    error("run_context.rewards requires reward semantics")
-end
-
 local rewards = {}
 local EMPTY_LIST = {}
 local GOD_LOOT_SOURCE_SCRATCH = {}

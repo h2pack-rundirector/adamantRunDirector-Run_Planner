@@ -5,13 +5,7 @@ local readCache = deps.readCache
 local requirements = deps.requirements
 local biomeRules = deps.biomeRules
 local timeline = deps.timeline
-if timeline == nil then
-    error("row_engine requires route timeline")
-end
 local rewards = deps.rewards
-if rewards == nil then
-    error("row_engine requires rewards")
-end
 
 local rowEngine = {}
 

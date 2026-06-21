@@ -2,9 +2,6 @@ local data = {}
 
 function data.loadControlTemplates(route, importer)
     importer = importer or import
-    if route == nil then
-        error("data.loadControlTemplates requires an assembled route bundle")
-    end
     return importer("mods/controls/templates.lua", nil, {
         route = route,
         rewards = route.rewards,

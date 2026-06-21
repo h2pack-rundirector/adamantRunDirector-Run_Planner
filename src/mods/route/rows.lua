@@ -1,14 +1,8 @@
 local deps = ...
 
 local rewards = deps.rewards
-if rewards == nil then
-    error("route.rows requires rewards")
-end
 
 local timeline = deps.timeline
-if timeline == nil then
-    error("route.rows requires timeline")
-end
 
 local common = import("mods/route/rows/common.lua")
 local availability = import("mods/route/rows/availability.lua")
