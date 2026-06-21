@@ -6,7 +6,6 @@ local runtime = import("mods/controls/RouteNpcs/runtime.lua", nil, {
 })
 local ui = import("mods/controls/RouteNpcs/ui.lua", nil, {
     data = data,
-    routeStatusUi = deps.routeStatusUi,
     runtime = runtime,
 })
 

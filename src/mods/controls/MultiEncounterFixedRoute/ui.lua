@@ -4,7 +4,6 @@ local deps = ...
 local data = deps.data
 local rewardRuntime = deps.rewardRuntime
 local rewardUi = deps.rewardUi
-local routeStatusUi = deps.routeStatusUi
 local runtime = deps.runtime
 
 local ui = {}
@@ -236,15 +235,6 @@ local function drawVariantDropdown(draw, control, instance, rowIndex, roleKey)
     )
 end
 
-local function drawRowValidation(draw, control, instance, rowIndex)
-    local validation = data.validateRow(instance, control:routeRows(), rowIndex)
-    if validation.valid then
-        return
-    end
-
-    routeStatusUi.drawInvalid(draw, validation)
-end
-
 local function drawRouteRowHeader(imgui, slot)
     imgui.AlignTextToFramePadding()
     imgui.Text(slot.label)
@@ -297,7 +287,6 @@ local function drawRoomRow(draw, control, instance, rowIndex)
             control:invalidateReadPass()
         end
     end
-    drawRowValidation(draw, control, instance, rowIndex)
 end
 
 local function drawRewardRow(draw, control, instance, rowIndex)
@@ -310,7 +299,6 @@ local function drawRewardRow(draw, control, instance, rowIndex)
     local surface = control:rewardSurface(rowIndex)
 
     drawRewardRowHeader(imgui, control, rowIndex, slot)
-    drawRowValidation(draw, control, instance, rowIndex)
 
     for legIndex = 1, data.encounterRewardLegCountForRow(instance, control:routeRows(), rowIndex) do
         local leg = data.encounterRewardLegForRow(instance, control:routeRows(), rowIndex, legIndex)

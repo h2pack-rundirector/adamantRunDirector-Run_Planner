@@ -4,9 +4,6 @@ local deps = ...
 local data = deps.data
 local rewardRuntime = deps.rewardRuntime
 local rewardUi = deps.rewardUi
-local rewardOfferPolicies = deps.rewardOfferPolicies
-local rewardOfferRules = deps.rewardOfferRules
-local routeStatusUi = deps.routeStatusUi
 local runtime = deps.runtime
 
 local ui = {}
@@ -178,88 +175,6 @@ local function cageRewardFields(control, cageRewardRowIndex)
     return fields
 end
 
-local function trimList(list, count)
-    for index = count + 1, #list do
-        list[index] = nil
-    end
-end
-
-local function policyForScope(instance, scope)
-    if rewardOfferRules == nil or rewardOfferPolicies == nil then
-        return nil
-    end
-
-    local policyKey = instance.biome
-        and instance.biome.fields
-        and instance.biome.fields.offerPolicy
-    return rewardOfferRules.policyForScope(rewardOfferPolicies, policyKey, scope)
-end
-
-local function fillCageRewardOfferItems(items, fields, instance, routeRows, rowIndex)
-    local slot = instance.routeSlots and instance.routeSlots[rowIndex] or nil
-    local count = 0
-    for cageIndex = 1, data.cageRewardCountForRow(instance, routeRows, rowIndex) do
-        local cageRewardRowIndex = data.cageRewardRowIndex(instance, rowIndex, cageIndex)
-        if cageRewardRowIndex ~= nil then
-            count = count + 1
-            local item = items[count] or {}
-            item.rowIndex = rowIndex
-            item.routeOrdinal = slot and slot.routeOrdinal or nil
-            item.rewardType = fields.CageRewards:read(cageRewardRowIndex, "Reward1Key") or ""
-            item.boonSource = item.rewardType == "Boon"
-                and (fields.CageRewards:read(cageRewardRowIndex, "Reward2Key") or "")
-                or nil
-            items[count] = item
-        end
-    end
-    trimList(items, count)
-    return items
-end
-
-local function validationFromInvalid(invalid, target)
-    if invalid == nil then
-        return nil
-    end
-    target = target or {}
-    target.valid = false
-    target.code = invalid.code
-    target.message = invalid.message
-    return target
-end
-
-local function uiRowOfferValidation(control, instance, rowIndex, scratch)
-    local policy = policyForScope(instance, "row.cageRewards")
-    if policy == nil then
-        return nil
-    end
-
-    scratch.items = scratch.items or {}
-    scratch.validation = scratch.validation or {}
-    local items = fillCageRewardOfferItems(
-        scratch.items,
-        control:fields(),
-        instance,
-        control:routeRows(),
-        rowIndex
-    )
-    return validationFromInvalid(rewardOfferRules.firstInvalid(policy, items, scratch), scratch.validation)
-end
-
-local function uiRowValidation(control, instance, rowIndex)
-    local validation = data.validateRow(instance, control:routeRows(), rowIndex)
-    if not validation.valid then
-        return validation
-    end
-
-    control._uiRowOfferScratchByRow = control._uiRowOfferScratchByRow or {}
-    local scratch = control._uiRowOfferScratchByRow[rowIndex]
-    if scratch == nil then
-        scratch = {}
-        control._uiRowOfferScratchByRow[rowIndex] = scratch
-    end
-    return uiRowOfferValidation(control, instance, rowIndex, scratch) or validation
-end
-
 local function optionLabelAddsInformation(role, option)
     if role == nil or option == nil then
         return false
@@ -320,15 +235,6 @@ local function drawCageCountDropdown(draw, control, instance, rowIndex, roleKey)
     )
 end
 
-local function drawRowValidation(draw, control, instance, rowIndex)
-    local validation = control:uiRowValidation(rowIndex)
-    if validation.valid then
-        return
-    end
-
-    routeStatusUi.drawInvalid(draw, validation)
-end
-
 local function drawRouteRowHeader(imgui, slot)
     imgui.AlignTextToFramePadding()
     imgui.Text(slot.label)
@@ -381,7 +287,6 @@ local function drawRoomRow(draw, control, instance, rowIndex)
             control:invalidateReadPass()
         end
     end
-    drawRowValidation(draw, control, instance, rowIndex)
 end
 
 local function drawCageRewardRows(draw, control, instance, rowIndex)
@@ -421,7 +326,6 @@ local function drawRewardRow(draw, control, instance, rowIndex)
     local surface = control:rewardSurface(rowIndex)
 
     drawRewardRowHeader(imgui, control, rowIndex, slot)
-    drawRowValidation(draw, control, instance, rowIndex)
     drawCageRewardRows(draw, control, instance, rowIndex)
 
     if rewardUi ~= nil
@@ -473,10 +377,6 @@ function ui.create(fields, instance)
 
     function control:cageRewardField(cageRewardRowIndex, rowAlias)
         return fields.CageRewards:get(cageRewardRowIndex, rowAlias)
-    end
-
-    function control:uiRowValidation(rowIndex)
-        return uiRowValidation(self, instance, rowIndex)
     end
 
     function control:resetRow(rowIndex)

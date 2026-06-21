@@ -1,14 +1,12 @@
 -- luacheck: no unused args
 
 local deps = ...
-local routeStatusUi = deps.routeStatusUi
 local runtime = deps.runtime
 
 local ui = {}
 
 local LABEL_COLUMN_X = 74
 local TARGET_COLUMN_X = 145
-local STATUS_COLUMN_X = 540
 local BIOME_OPTS = {
     label = "",
     controlWidth = 140,
@@ -98,11 +96,7 @@ local function drawFeatureRow(draw, control, rowIndex)
 
     local imgui = draw.imgui
     imgui.AlignTextToFramePadding()
-	imgui.Text(slot.label)
-
-	if routeStatusUi ~= nil then
-		routeStatusUi.drawInvalid(draw, control:rowValidation(rowIndex), STATUS_COLUMN_X)
-	end
+    imgui.Text(slot.label)
 
     drawDropdownLine(draw, "Biome", control:biomeField(rowIndex), biomeOpts(control, rowIndex), function()
         control:writeBiome(rowIndex, control:rawBiomeKey(rowIndex))

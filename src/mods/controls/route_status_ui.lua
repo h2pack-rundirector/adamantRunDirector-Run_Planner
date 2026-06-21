@@ -1,6 +1,5 @@
 local routeStatusUi = {}
 
-local STATUS_COLUMN_X = 590
 local ROUTE_MESSAGE_COLUMN_X = 165
 local INVALID_COLOR = { 1.0, 0.24, 0.16, 1.0 }
 local VALID_COLOR = { 0.35, 0.9, 0.45, 1.0 }
@@ -45,31 +44,6 @@ local function firstInvalidMessage(routeSnapshot)
         return tostring(invalid.locationLabel) .. ": " .. tostring(message)
     end
     return tostring(message)
-end
-
-function routeStatusUi.drawInvalid(draw, validation, columnX)
-    if validation == nil or validation.valid then
-        return false
-    end
-
-    local imgui = draw.imgui
-    imgui.SameLine()
-    imgui.SetCursorPosX(columnX or STATUS_COLUMN_X)
-    imgui.AlignTextToFramePadding()
-    drawColoredText(imgui, INVALID_COLOR, "Invalid")
-    return true
-end
-
-function routeStatusUi.drawInvalidInline(draw, validation)
-    if validation == nil or validation.valid then
-        return false
-    end
-
-    local imgui = draw.imgui
-    imgui.SameLine()
-    imgui.AlignTextToFramePadding()
-    drawColoredText(imgui, INVALID_COLOR, "Invalid")
-    return true
 end
 
 function routeStatusUi.drawRouteStatus(draw, routeSnapshot)

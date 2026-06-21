@@ -29,14 +29,6 @@ local function loadSemantics()
     return dofile("src/mods/rewards/semantics.lua")
 end
 
-local function loadUi(routeStatusUi)
-    local chunk = assert(loadfile("src/mods/rewards/ui.lua"))
-    return chunk({
-        runtime = loadRuntime(),
-        routeStatusUi = routeStatusUi,
-    })
-end
-
 local function fakeFields(values)
     return {
         read = function(_, alias)
@@ -193,22 +185,6 @@ function TestRunPlannerRewards.testSemanticsConcreteAndBannedChecks()
     }, {
         SpellDrop = true,
     }))
-end
-
-local function fakeDrawFields(values)
-    return {
-        read = function(_, alias)
-            return values[alias]
-        end,
-        get = function(_, alias)
-            return {
-                alias = alias,
-                read = function()
-                    return values[alias]
-                end,
-            }
-        end,
-    }
 end
 
 function TestRunPlannerRewards.testRouteRulesGroupTalentVariantsBehindSpellRequirement()
@@ -755,55 +731,6 @@ function TestRunPlannerRewards.testRuntimeInvalidatesLinkedShopOfferDuplicates()
     lu.assertEquals(validation.aliases, {
         "Reward1Key",
         "Reward2Key",
-    })
-end
-
-function TestRunPlannerRewards.testUiDrawsLinkedShopInvalidationOnAffectedOfferRows()
-    local runtime = loadRuntime()
-    local surface = runtime.surfaceFor({
-        kind = "shop",
-        shopProfile = "Q_WorldShop",
-    })
-    local invalidAfterAliases = {}
-    local draw
-    draw = {
-        lastAlias = nil,
-        imgui = {
-            AlignTextToFramePadding = function()
-            end,
-            GetCursorPosX = function()
-                return 0
-            end,
-            SameLine = function()
-            end,
-            SetCursorPosX = function()
-            end,
-            Text = function()
-            end,
-        },
-        widgets = {
-            dropdown = function(field)
-                draw.lastAlias = field.alias
-                return false
-            end,
-        },
-    }
-    local routeStatusUi = {
-        drawInvalidInline = function()
-            invalidAfterAliases[#invalidAfterAliases + 1] = draw.lastAlias
-        end,
-    }
-    local rewardUi = loadUi(routeStatusUi)
-
-    lu.assertFalse(rewardUi.draw(draw, surface, fakeDrawFields({
-        Reward1Key = "RandomLoot",
-        Reward1LootKey = "ZeusUpgrade",
-        Reward2Key = "RandomLoot",
-        Reward2LootKey = "HeraUpgrade",
-    })))
-    lu.assertEquals(invalidAfterAliases, {
-        "Reward1LootKey",
-        "Reward2LootKey",
     })
 end
 

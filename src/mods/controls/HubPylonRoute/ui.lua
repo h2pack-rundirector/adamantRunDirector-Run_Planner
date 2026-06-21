@@ -4,9 +4,6 @@ local deps = ...
 local data = deps.data
 local rewardRuntime = deps.rewardRuntime
 local rewardUi = deps.rewardUi
-local rewardOfferPolicies = deps.rewardOfferPolicies
-local rewardOfferRules = deps.rewardOfferRules
-local routeStatusUi = deps.routeStatusUi
 local runtime = deps.runtime
 
 local ui = {}
@@ -49,18 +46,6 @@ local function copyBaseOpts(base)
         copy[key] = value
     end
     return copy
-end
-
-local function clearMap(map)
-    for key in pairs(map) do
-        map[key] = nil
-    end
-end
-
-local function trimList(list, count)
-    for index = count + 1, #list do
-        list[index] = nil
-    end
 end
 
 local function resetRewardDetails(fields, rowIndex)
@@ -188,96 +173,6 @@ local function sideRewardFields(control, sideRowIndex)
     return fields
 end
 
-local function policyForScope(instance, scope)
-    if rewardOfferRules == nil or rewardOfferPolicies == nil then
-        return nil
-    end
-
-    local policyKey = instance.biome
-        and instance.biome.hub
-        and instance.biome.hub.offerPolicy
-    return rewardOfferRules.policyForScope(rewardOfferPolicies, policyKey, scope)
-end
-
-local function fillPylonOfferItems(items, control, instance)
-    local fields = control:fields()
-    local routeRows = control:routeRows()
-    local count = 0
-    for rowIndex = 1, control:rowCount() do
-        local slot = control:slot(rowIndex)
-        if slot ~= nil and (slot.kind or "biomeRow") == "biomeRow" then
-            local validation = data.validateRow(instance, routeRows, rowIndex)
-            if validation.valid then
-                count = count + 1
-                local item = items[count] or {}
-                item.rowIndex = rowIndex
-                item.routeOrdinal = slot.routeOrdinal
-                item.rewardType = fields.Rewards:read(rowIndex, "Reward1Key") or ""
-                item.boonSource = item.rewardType == "Boon"
-                    and (fields.Rewards:read(rowIndex, "Reward2Key") or "")
-                    or nil
-                items[count] = item
-            end
-        end
-    end
-    trimList(items, count)
-    return items
-end
-
-local function validationFromInvalid(invalid, target)
-    if invalid == nil then
-        return nil
-    end
-    target = target or {}
-    target.valid = false
-    target.code = invalid.code
-    target.message = invalid.message
-    return target
-end
-
-local function pylonOfferValidationByRow(control, instance)
-    local policy = policyForScope(instance, "biome.pylonRows")
-    if policy == nil then
-        return nil
-    end
-
-    local scratch = control._uiPylonOfferScratch
-    if scratch == nil then
-        scratch = {
-            dirty = true,
-            items = {},
-            invalidByRow = {},
-            validationByRow = {},
-        }
-        control._uiPylonOfferScratch = scratch
-    end
-    if not scratch.dirty then
-        return scratch.validationByRow
-    end
-
-    clearMap(scratch.invalidByRow)
-    clearMap(scratch.validationByRow)
-    local items = fillPylonOfferItems(scratch.items, control, instance)
-    for _, invalid in ipairs(rewardOfferRules.validateOffer(policy, items)) do
-        scratch.invalidByRow[invalid.rowIndex] = invalid
-    end
-    for rowIndex, invalid in pairs(scratch.invalidByRow) do
-        scratch.validationByRow[rowIndex] = validationFromInvalid(invalid, scratch.validationByRow[rowIndex])
-    end
-    scratch.dirty = false
-    return scratch.validationByRow
-end
-
-local function uiRowValidation(control, instance, rowIndex)
-    local validation = data.validateRow(instance, control:routeRows(), rowIndex)
-    if not validation.valid then
-        return validation
-    end
-
-    local invalidByRow = pylonOfferValidationByRow(control, instance)
-    return (invalidByRow and invalidByRow[rowIndex]) or validation
-end
-
 local function optionLabelAddsInformation(role, option)
     if role == nil or option == nil then
         return false
@@ -322,15 +217,6 @@ local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey, co
         control:roomField(rowIndex, "OptionKey"),
         optionOpts
     )
-end
-
-local function drawRowValidation(draw, control, instance, rowIndex)
-    local validation = control:uiRowValidation(rowIndex)
-    if validation.valid then
-        return
-    end
-
-    routeStatusUi.drawInvalid(draw, validation)
 end
 
 local function drawRouteRowHeader(imgui, slot)
@@ -404,7 +290,6 @@ local function drawRoomRow(draw, control, instance, rowIndex)
             control:invalidateReadPass()
         end
     end
-    drawRowValidation(draw, control, instance, rowIndex)
 end
 
 local function drawPrimaryRewardRow(draw, control, instance, rowIndex)
@@ -417,7 +302,6 @@ local function drawPrimaryRewardRow(draw, control, instance, rowIndex)
     local surface = control:rewardSurface(rowIndex)
 
     drawRewardRowHeader(imgui, control, rowIndex, slot)
-    drawRowValidation(draw, control, instance, rowIndex)
 
     if rewardUi ~= nil
         and rewardRuntime ~= nil
@@ -485,8 +369,6 @@ end
 
 function ui.create(fields, instance)
     local control = runtime.create(fields, instance)
-    local invalidateReadPass = control.invalidateReadPass
-
     function control:fields()
         return fields
     end
@@ -505,17 +387,6 @@ function ui.create(fields, instance)
 
     function control:sideRewardField(sideRowIndex, rowAlias)
         return fields.SideRewards:get(sideRowIndex, rowAlias)
-    end
-
-    function control:invalidateReadPass()
-        if self._uiPylonOfferScratch ~= nil then
-            self._uiPylonOfferScratch.dirty = true
-        end
-        invalidateReadPass(self)
-    end
-
-    function control:uiRowValidation(rowIndex)
-        return uiRowValidation(self, instance, rowIndex)
     end
 
     function control:resetRow(rowIndex)

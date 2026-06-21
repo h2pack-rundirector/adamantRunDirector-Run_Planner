@@ -1,6 +1,5 @@
 local deps = ... or {}
 local runtime = deps.runtime
-local routeStatusUi = deps.routeStatusUi
 
 local ui = {}
 
@@ -83,49 +82,12 @@ local function hasGroupedRows(surface)
     return false
 end
 
-local function surfaceValidation(surface, fields)
-    if runtime == nil
-        or runtime.validate == nil
-        or surface == nil
-        or surface.uniqueOfferGroups == nil
-        or surface.uniqueOfferGroups[1] == nil
-    then
-        return nil
-    end
-    return runtime.validate(surface, fields)
-end
-
-local function aliasIsInvalid(validation, alias)
-    if validation == nil or validation.valid or alias == nil then
-        return false
-    end
-    for _, invalidAlias in ipairs(validation.aliases or {}) do
-        if invalidAlias == alias then
-            return true
-        end
-    end
-    return false
-end
-
-local function drawInvalid(draw, validation)
-    if routeStatusUi == nil then
-        return
-    end
-    if routeStatusUi.drawInvalidInline ~= nil then
-        routeStatusUi.drawInvalidInline(draw, validation)
-    elseif routeStatusUi.drawInvalid ~= nil then
-        routeStatusUi.drawInvalid(draw, validation)
-    end
-end
-
 local function drawGroupedControls(draw, surface, fields, opts)
     local imgui = draw.imgui
     local startX = imgui.GetCursorPosX()
     local rowIndex = nil
-    local rowInvalid = false
     local drew = false
     local changed = false
-    local validation = surfaceValidation(surface, fields)
     local rowHeader = surface.rowHeader
     if opts ~= nil and opts.hideGenericRewardLabel and rowHeader == GENERIC_REWARD_HEADER then
         rowHeader = nil
@@ -135,22 +97,14 @@ local function drawGroupedControls(draw, surface, fields, opts)
     for _, control in ipairs(surface.controls or {}) do
         if isControlVisible(control, fields) then
             if rowIndex ~= control.rowIndex then
-                if rowInvalid then
-                    drawInvalid(draw, validation)
-                    rowInvalid = false
-                end
                 rowIndex = control.rowIndex
                 drawGroupedRowStart(imgui, startX, not drew and rowHeader or nil, reserveHeaderColumn)
             else
                 imgui.SameLine()
             end
-            rowInvalid = rowInvalid or aliasIsInvalid(validation, control.alias)
             changed = drawControl(draw, fields, control, opts) or changed
             drew = true
         end
-    end
-    if rowInvalid then
-        drawInvalid(draw, validation)
     end
     return changed
 end
@@ -164,10 +118,8 @@ function ui.draw(draw, surface, fields, opts)
     end
 
     local drew = false
-    local invalid = false
     local changed = false
     local imgui = draw.imgui
-    local validation = surfaceValidation(surface, fields)
     if hasGroupedRows(surface) then
         return drawGroupedControls(draw, surface, fields, opts)
     end
@@ -177,13 +129,9 @@ function ui.draw(draw, surface, fields, opts)
             if drew then
                 imgui.SameLine()
             end
-            invalid = invalid or aliasIsInvalid(validation, control.alias)
             changed = drawControl(draw, fields, control, opts) or changed
             drew = true
         end
-    end
-    if invalid then
-        drawInvalid(draw, validation)
     end
     return changed
 end

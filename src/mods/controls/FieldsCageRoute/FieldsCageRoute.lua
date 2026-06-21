@@ -13,9 +13,6 @@ local ui = import("mods/controls/FieldsCageRoute/ui.lua", nil, {
     data = data,
     rewardRuntime = deps.rewards.runtime,
     rewardUi = deps.rewards.ui,
-    rewardOfferPolicies = deps.route.rewardOfferPolicies,
-    rewardOfferRules = deps.route.rewardOfferRules,
-    routeStatusUi = deps.routeStatusUi,
     runtime = runtime,
 })
 

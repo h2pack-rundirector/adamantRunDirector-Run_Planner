@@ -3150,11 +3150,6 @@ function TestRunPlannerControls.testHubPylonPolicyRejectsDuplicateNonBoonRewards
     lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_reward_type")
     lu.assertEquals(snapshot.rows[5].invalidCode, "duplicate_reward_type")
 
-    local uiControl = template.createUi(routeFields(rowData), instance)
-    lu.assertTrue(uiControl:uiRowValidation(4).valid)
-    local validation = uiControl:uiRowValidation(5)
-    lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "duplicate_reward_type")
 end
 
 function TestRunPlannerControls.testFixedLinearPrebossRowsUseBranchChoices()
@@ -3663,7 +3658,7 @@ function TestRunPlannerControls.testFieldsCagePolicyRejectsDuplicateBoonSourcesI
     lu.assertEquals(snapshot.rows[2].invalidCode, "duplicate_boon_source")
 end
 
-function TestRunPlannerControls.testFieldsCagePolicyRejectsDuplicateNonBoonRewardsInUiRowValidation()
+function TestRunPlannerControls.testFieldsCageRuntimePolicyRejectsDuplicateNonBoonRewards()
     local catalog = loadCatalog()
     local template = loadFieldsCageTemplate()
     local instance = template.prepare({
@@ -3686,14 +3681,9 @@ function TestRunPlannerControls.testFieldsCagePolicyRejectsDuplicateNonBoonRewar
             },
         })
     local runtimeControl = template.createRuntime(fields, instance)
-    local uiControl = template.createUi(fields, instance)
 
     local row = runtimeControl:rowSnapshot(2)
     lu.assertTrue(row.valid)
-
-    local validation = uiControl:uiRowValidation(2)
-    lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "duplicate_reward_type")
 
     local snapshot = runtimeControl:buildSnapshot()
     lu.assertFalse(snapshot.valid)
