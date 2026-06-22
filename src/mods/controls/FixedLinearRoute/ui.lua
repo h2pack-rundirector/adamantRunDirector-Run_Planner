@@ -25,6 +25,7 @@ local rooms = import("mods/controls/FixedLinearRoute/views/rooms.lua", nil, {
     data = data,
     resetRewardDetails = resetRewardDetails,
     resetRowDetails = resetRowDetails,
+    dropdownValues = deps.dropdownValues,
 })
 local rewards = import("mods/controls/FixedLinearRoute/views/rewards.lua", nil, {
     rewards = deps.rewards,

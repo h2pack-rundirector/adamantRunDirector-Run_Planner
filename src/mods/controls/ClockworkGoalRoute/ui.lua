@@ -25,6 +25,7 @@ local rooms = import("mods/controls/ClockworkGoalRoute/views/rooms.lua", nil, {
     data = data,
     resetRewardDetails = resetRewardDetails,
     resetRowDetails = resetRowDetails,
+    dropdownValues = deps.dropdownValues,
 })
 local rewards = import("mods/controls/ClockworkGoalRoute/views/rewards.lua", nil, {
     data = data,

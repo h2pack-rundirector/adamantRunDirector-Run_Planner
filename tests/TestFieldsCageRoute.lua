@@ -304,16 +304,16 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageAvailabilityColorsEchoBefor
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
     lu.assertTrue(hasValue(values, "Bridge"))
-    lu.assertNotNil(data.roleValueColorsForRow(instance, rows, 2).Miniboss)
-    lu.assertNotNil(data.roleValueColorsForRow(instance, rows, 2).Bridge)
+    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 2).Miniboss)
+    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 2).Bridge)
 
     data.fillRoleValues(instance, rows, 3, values)
     lu.assertTrue(hasValue(values, "Miniboss"))
     lu.assertTrue(hasValue(values, "Bridge"))
-    lu.assertNil(data.roleValueColorsForRow(instance, rows, 3).Miniboss)
-    lu.assertNotNil(data.roleValueColorsForRow(instance, rows, 3).Bridge)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 3).Miniboss)
+    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 3).Bridge)
 
     data.fillRoleValues(instance, rows, 4, values)
     lu.assertTrue(hasValue(values, "Bridge"))
-    lu.assertNil(data.roleValueColorsForRow(instance, rows, 4).Bridge)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 4).Bridge)
 end

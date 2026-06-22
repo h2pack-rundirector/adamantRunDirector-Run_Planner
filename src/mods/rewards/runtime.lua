@@ -3,7 +3,7 @@ local catalog = deps.catalog
 
 local runtime = {}
 local VALID = { valid = true }
-local INVALID_VALUE_STATE = 1
+local INVALID_VALUE_STATE = 2
 
 local function conditionMatches(condition, fields)
     return fields:read(condition.alias) == condition.value

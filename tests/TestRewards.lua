@@ -39,9 +39,11 @@ end
 
 local function loadUi()
     local runtime = loadRuntime()
+    local dropdownValues = dofile("src/mods/ui/dropdown_values.lua")
     local chunk = assert(loadfile("src/mods/rewards/ui.lua"))
     return chunk({
         runtime = runtime,
+        dropdownValues = dropdownValues,
     }), runtime
 end
 
@@ -115,6 +117,35 @@ local function ruleByRequirementCode(rules, code)
         end
     end
     return nil
+end
+
+function TestRunPlannerRewards.testDropdownValueDecoratorMapsSemanticStates()
+    local dropdownValues = dofile("src/mods/ui/dropdown_values.lua")
+    local owner = {}
+    local baseOpts = {
+        values = { "A", "B", "C", "D" },
+        valueColors = {
+            A = { 0.1, 0.2, 0.3, 1.0 },
+        },
+        visibleValues = {
+            D = true,
+        },
+    }
+
+    local decorated = dropdownValues.decorate(owner, baseOpts, {
+        A = dropdownValues.NORMAL,
+        B = dropdownValues.HIDDEN,
+        C = dropdownValues.INVALID,
+        D = dropdownValues.WARNING,
+    })
+
+    lu.assertNotIs(decorated, baseOpts)
+    lu.assertIs(decorated.values, baseOpts.values)
+    lu.assertEquals(decorated.visibleValues.B, false)
+    lu.assertEquals(decorated.visibleValues.D, true)
+    lu.assertEquals(decorated.valueColors.A, { 0.1, 0.2, 0.3, 1.0 })
+    lu.assertEquals(decorated.valueColors.C, { 1.0, 0.22, 0.16, 1.0 })
+    lu.assertEquals(decorated.valueColors.D, { 1.0, 0.78, 0.18, 1.0 })
 end
 
 function TestRunPlannerRewards.testSemanticsDecodeRewardTypesAndSources()
@@ -912,7 +943,7 @@ function TestRunPlannerRewards.testRuntimeStatesOnlyLaterLinkedShopDuplicateCand
     local states = runtime.valueStates(surface, fields, controlByKey(surface, "Group1Offer2"), scratch)
 
     lu.assertIs(states, scratch)
-    lu.assertEquals(states.RandomLoot, 1)
+    lu.assertEquals(states.RandomLoot, 2)
     lu.assertNil(states.BoostedRandomLoot)
 end
 
@@ -934,7 +965,7 @@ function TestRunPlannerRewards.testRuntimeStatesOnlySecondDevotionGodDuplicateCa
     local states = runtime.valueStates(surface, fields, controlByKey(surface, "lootBName"), scratch)
 
     lu.assertIs(states, scratch)
-    lu.assertEquals(states.ZeusUpgrade, 1)
+    lu.assertEquals(states.ZeusUpgrade, 2)
     lu.assertNil(states.HeraUpgrade)
 end
 
@@ -953,7 +984,7 @@ function TestRunPlannerRewards.testRuntimeStatesFieldsCageDuplicateCandidates()
     }), controlByKey(surface, "Cage2"), scratch, { sourceCount = 2 })
 
     lu.assertIs(rewardStates, scratch)
-    lu.assertEquals(rewardStates.MaxHealthDrop, 1)
+    lu.assertEquals(rewardStates.MaxHealthDrop, 2)
 
     lu.assertNil(runtime.valueStates(surface, fakeFields({
         Reward1Key = "Boon",
@@ -969,7 +1000,7 @@ function TestRunPlannerRewards.testRuntimeStatesFieldsCageDuplicateCandidates()
     }), controlByKey(surface, "Cage2Loot"), scratch, { sourceCount = 2 })
 
     lu.assertIs(boonSourceStates, scratch)
-    lu.assertEquals(boonSourceStates.ZeusUpgrade, 1)
+    lu.assertEquals(boonSourceStates.ZeusUpgrade, 2)
 end
 
 function TestRunPlannerRewards.testUiAppliesLinkedShopDuplicateValueColors()
@@ -1048,7 +1079,7 @@ function TestRunPlannerRewards.testUiPassesRewardContextToExternalValueStates()
                 context = callbackContext,
             }
             return {
-                Boon = 1,
+                Boon = 2,
             }
         end,
     })

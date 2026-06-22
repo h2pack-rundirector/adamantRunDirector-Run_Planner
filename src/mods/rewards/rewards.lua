@@ -32,6 +32,7 @@ function rewardSystem.create(opts)
     opts = opts or {}
 
     local storage = import("mods/rewards/storage.lua")
+    local dropdownValues = opts.dropdownValues or import("mods/ui/dropdown_values.lua")
     local surfaceRegistry = import("mods/rewards/surfaces/registry.lua").create(
         opts.definitions or import("mods/rewards/declarations/definitions.lua")
     )
@@ -40,6 +41,7 @@ function rewardSystem.create(opts)
     })
     local ui = import("mods/rewards/ui.lua", nil, {
         runtime = runtime,
+        dropdownValues = dropdownValues,
     })
 
     return {

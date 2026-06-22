@@ -3,6 +3,7 @@ local systems = {}
 local function createRewards()
     return import("mods/rewards/rewards.lua").create({
         definitions = import("mods/rewards/declarations/definitions.lua"),
+        dropdownValues = import("mods/ui/dropdown_values.lua"),
     })
 end
 
@@ -11,6 +12,7 @@ local function createControlTemplates(route)
         route = route,
         rewards = route.rewards,
         godData = import("mods/data/gods.lua"),
+        dropdownValues = import("mods/ui/dropdown_values.lua"),
     })
 end
 

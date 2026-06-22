@@ -36,6 +36,7 @@ local rooms = import("mods/controls/MultiEncounterFixedRoute/views/rooms.lua", n
     resetEncounterRewardDetails = resetEncounterRewardDetails,
     resetRewardDetails = resetRewardDetails,
     resetRowDetails = resetRowDetails,
+    dropdownValues = deps.dropdownValues,
 })
 local rewards = import("mods/controls/MultiEncounterFixedRoute/views/rewards.lua", nil, {
     data = data,

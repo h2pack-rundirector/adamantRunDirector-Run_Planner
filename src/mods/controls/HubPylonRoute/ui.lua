@@ -48,6 +48,7 @@ local rooms = import("mods/controls/HubPylonRoute/views/rooms.lua", nil, {
     resetAllSideRoomDetails = resetAllSideRoomDetails,
     resetRewardDetails = resetRewardDetails,
     resetRowDetails = resetRowDetails,
+    dropdownValues = deps.dropdownValues,
 })
 local rewards = import("mods/controls/HubPylonRoute/views/rewards.lua", nil, {
     rewards = deps.rewards,

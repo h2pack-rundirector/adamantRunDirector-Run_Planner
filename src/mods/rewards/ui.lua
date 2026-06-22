@@ -1,11 +1,11 @@
 local deps = ... or {}
 local runtime = deps.runtime
+local dropdownValues = deps.dropdownValues
 
 local ui = {}
 
 local ROW_HEADER_WIDTH = 80
 local GENERIC_REWARD_HEADER = "Reward"
-local INVALID_VALUE_COLOR = { 1.0, 0.22, 0.16, 1.0 }
 
 local function conditionMatches(condition, fields)
     return fields:read(condition.alias) == condition.value
@@ -71,21 +71,6 @@ local function clearMap(map)
     for key in pairs(map) do
         map[key] = nil
     end
-end
-
-local function cachedColoredDrawOpts(control, drawOpts, valueColors)
-    local coloredOpts = control._coloredDrawOpts
-    if coloredOpts == nil then
-        coloredOpts = {}
-        control._coloredDrawOpts = coloredOpts
-    else
-        clearMap(coloredOpts)
-    end
-    for key, value in pairs(drawOpts or {}) do
-        coloredOpts[key] = value
-    end
-    coloredOpts.valueColors = valueColors
-    return coloredOpts
 end
 
 local function memberAlias(member)
@@ -164,38 +149,6 @@ local function combineValueStates(control, first, second)
     return states
 end
 
-local function colorForState(state)
-    if state == nil or state == false or state == 0 then
-        return nil
-    end
-    return INVALID_VALUE_COLOR
-end
-
-local function valueColorsForStates(control, valueStates)
-    if valueStates == nil then
-        return nil
-    end
-    local colors = control._valueColorsFromStates
-    if colors == nil then
-        colors = {}
-        control._valueColorsFromStates = colors
-    else
-        clearMap(colors)
-    end
-    local hasColors = false
-    for key, state in pairs(valueStates) do
-        local color = colorForState(state)
-        if color ~= nil then
-            colors[key] = color
-            hasColors = true
-        end
-    end
-    if hasColors then
-        return colors
-    end
-    return nil
-end
-
 local function drawControl(draw, surface, fields, control, opts)
     local field = fields:get(control.alias)
     local drawOpts = control.drawOpts
@@ -217,10 +170,7 @@ local function drawControl(draw, surface, fields, control, opts)
         externalValueStates(fields, control, opts),
         localValueStates(surface, fields, control, opts)
     )
-    local valueColors = valueColorsForStates(control, valueStates)
-    if valueColors ~= nil then
-        drawOpts = cachedColoredDrawOpts(control, drawOpts, valueColors)
-    end
+    drawOpts = dropdownValues.decorate(control, drawOpts, valueStates)
     return draw.widgets.dropdown(field, drawOpts)
 end
 

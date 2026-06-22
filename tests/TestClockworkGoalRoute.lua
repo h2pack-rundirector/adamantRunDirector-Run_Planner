@@ -244,9 +244,9 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "clockwork_previous_extension_choice")
     lu.assertTrue(hasValue(data.roleValuesForRow(instance, storyAfterOneExit, 3), "Story"))
-    lu.assertNotNil(data.roleValueColorsForRow(instance, storyAfterOneExit, 3).Story)
+    lu.assertNotNil(data.roleValueStatesForRow(instance, storyAfterOneExit, 3).Story)
     lu.assertTrue(hasValue(data.optionValuesForRow(instance, storyAfterOneExit, 3, "Story"), "I_Story01"))
-    lu.assertNotNil(data.optionValueColorsForRow(instance, storyAfterOneExit, 3, "Story").I_Story01)
+    lu.assertNotNil(data.optionValueStatesForRow(instance, storyAfterOneExit, 3, "Story").I_Story01)
 
     local extensionAfterOneExit = fakeRows({
         {},
@@ -296,8 +296,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
     local finalExtensionOptions = data.optionValuesForRow(instance, finalExtensionTwoExit, 8, "ExtensionCombat")
     lu.assertTrue(hasValue(finalExtensionOptions, "I_Combat12"))
     lu.assertTrue(hasValue(finalExtensionOptions, "I_Combat13"))
-    lu.assertNotNil(data.optionValueColorsForRow(instance, finalExtensionTwoExit, 8, "ExtensionCombat").I_Combat12)
-    lu.assertNil(data.optionValueColorsForRow(instance, finalExtensionTwoExit, 8, "ExtensionCombat").I_Combat13)
+    lu.assertNotNil(data.optionValueStatesForRow(instance, finalExtensionTwoExit, 8, "ExtensionCombat").I_Combat12)
+    lu.assertNil(data.optionValueStatesForRow(instance, finalExtensionTwoExit, 8, "ExtensionCombat").I_Combat13)
 
     local finalExtensionOneExit = fakeRows({
         {},
@@ -328,7 +328,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
     local postGoalRoles = data.roleValuesForRow(instance, sixthGoal, 7)
     lu.assertTrue(hasValue(postGoalRoles, "Goal"))
     lu.assertTrue(hasValue(postGoalRoles, "Story"))
-    lu.assertNotNil(data.roleValueColorsForRow(instance, sixthGoal, 7).Goal)
+    lu.assertNotNil(data.roleValueStatesForRow(instance, sixthGoal, 7).Goal)
 
     local missingGoal = fakeRows({
         {},
@@ -407,7 +407,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalAllowsPostGoalExtensi
     lu.assertTrue(data.validateRow(instance, rows, 7).valid)
     local postGoalRoles = data.roleValuesForRow(instance, rows, 7)
     lu.assertTrue(hasValue(postGoalRoles, "Goal"))
-    lu.assertNotNil(data.roleValueColorsForRow(instance, rows, 7).Goal)
+    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 7).Goal)
     lu.assertTrue(hasValue(postGoalRoles, "Story"))
 
     lu.assertEquals(data.readRoleKey(instance, rows, 8), "Vanilla")

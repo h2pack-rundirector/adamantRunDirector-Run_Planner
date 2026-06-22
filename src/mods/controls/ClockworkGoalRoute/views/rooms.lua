@@ -4,6 +4,7 @@ local deps = ...
 local data = deps.data
 local resetRewardDetails = deps.resetRewardDetails
 local resetRowDetails = deps.resetRowDetails
+local dropdownValues = deps.dropdownValues
 
 local rooms = {}
 
@@ -37,8 +38,7 @@ local function getRoleOpts(control, instance, rowIndex)
     end
     local rows = control:routeRows()
     opts.values = data.roleValuesForRow(instance, rows, rowIndex)
-    opts.valueColors = data.roleValueColorsForRow(instance, rows, rowIndex)
-    return opts
+    return dropdownValues.decorate(opts, opts, data.roleValueStatesForRow(instance, rows, rowIndex))
 end
 
 local function optionOptsByRole(control, rowIndex)
@@ -62,8 +62,7 @@ local function getOptionOpts(control, instance, rowIndex, roleKey)
     end
     local rows = control:routeRows()
     opts.values = data.optionValuesForRow(instance, rows, rowIndex, roleKey)
-    opts.valueColors = data.optionValueColorsForRow(instance, rows, rowIndex, roleKey)
-    return opts
+    return dropdownValues.decorate(opts, opts, data.optionValueStatesForRow(instance, rows, rowIndex, roleKey))
 end
 
 local function optionLabelAddsInformation(role, option)

@@ -13,6 +13,7 @@ local ui = import("mods/controls/HubPylonRoute/ui.lua", nil, {
     data = data,
     rewards = deps.rewards,
     runtime = runtime,
+    dropdownValues = deps.dropdownValues,
 })
 
 return {

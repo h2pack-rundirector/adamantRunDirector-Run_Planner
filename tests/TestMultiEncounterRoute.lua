@@ -500,10 +500,10 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterDevotionRequirement
     oInstance.routeContext = routeContext
     oInstance.routeKey = "Surface"
     lu.assertTrue(hasValue(data.roleValuesForRow(oInstance, rows, 4), "Devotion"))
-    lu.assertNotNil(data.roleValueColorsForRow(oInstance, rows, 4).Devotion)
+    lu.assertNotNil(data.roleValueStatesForRow(oInstance, rows, 4).Devotion)
 
     globalFields.ConfigureRewards:write(true)
     routeContext:beginPass()
     lu.assertTrue(hasValue(data.roleValuesForRow(oInstance, rows, 4), "Devotion"))
-    lu.assertNil(data.roleValueColorsForRow(oInstance, rows, 4).Devotion)
+    lu.assertNil(data.roleValueStatesForRow(oInstance, rows, 4).Devotion)
 end
