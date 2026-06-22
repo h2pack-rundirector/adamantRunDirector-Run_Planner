@@ -1,22 +1,12 @@
 local deps = ... or {}
 local conditions = deps.conditions or {}
-local routeTimeline = deps.timeline
 local rowRewardItems = deps.rewardItems
 local semantics = deps.semantics
 local invalidLocations = deps.invalidLocations
+local rewardContext = deps.context
 
 local rewardLegality = {}
 local EMPTY_LIST = {}
-
-local function defaultRouteControlName(biomeKey)
-    return "Route" .. tostring(biomeKey or "")
-end
-
-local function clearMap(map)
-    for key in pairs(map) do
-        map[key] = nil
-    end
-end
 
 local function buildLookup(values)
     local lookup = {}
@@ -54,11 +44,9 @@ local function newResult()
     return {
         invalidRows = {},
         byBiomeRow = {},
+        candidateRows = {},
+        valueStatesByBiomeRow = {},
     }
-end
-
-local function hasInvalid(result)
-    return result.invalidRows[1] ~= nil
 end
 
 local function invalidRowKey(biomeKey, rowIndex, code, address)
@@ -105,41 +93,7 @@ local function addInvalid(context, result, seenInvalids, ctx, event, code, messa
     if byRow[row.rowIndex] == nil then
         byRow[row.rowIndex] = invalid
     end
-end
-
-local function biomeCounters(state, biomeKey)
-    local counters = state.biomeCounters[biomeKey]
-    if counters == nil then
-        counters = {}
-        state.biomeCounters[biomeKey] = counters
-    end
-    return counters
-end
-
-local function countersForScope(state, scope, biomeKey)
-    if scope == "biome" then
-        return biomeCounters(state, biomeKey)
-    end
-    return state.routeCounters
-end
-
-local function counterValue(state, counterKey, scope, biomeKey)
-    return countersForScope(state, scope, biomeKey)[counterKey] or 0
-end
-
-local function incrementCounter(state, counterKey, scope, biomeKey)
-    local counters = countersForScope(state, scope, biomeKey)
-    counters[counterKey] = (counters[counterKey] or 0) + 1
-end
-
-local function seenGodLootCount(state, requirement)
-    local count = 0
-    for _, lootName in ipairs(requirement.countedLootNames or EMPTY_LIST) do
-        if state.godLootSeen[lootName] then
-            count = count + 1
-        end
-    end
-    return count
+    return invalid
 end
 
 local function requirementSkipped(requirement, ctx)
@@ -151,8 +105,8 @@ local function requirementSkipped(requirement, ctx)
     return false
 end
 
-local function previousRoomExitCountInvalid(requirement, state, ctx)
-    local previousRow = state.previousRows[ctx.biomeKey]
+local function previousRoomExitCountInvalid(requirement, rewardCtx, ctx)
+    local previousRow = rewardContext.previousRow(rewardCtx, ctx.biomeKey)
     if previousRow == nil
         or previousRow.valid == false
         or previousRow.roleKey == "Vanilla"
@@ -168,9 +122,9 @@ local function previousRoomExitCountInvalid(requirement, state, ctx)
     return nil
 end
 
-local function minRoomHistorySpacingInvalid(requirement, state, ctx, event)
+local function minRoomHistorySpacingInvalid(requirement, rewardCtx, ctx, event)
     local rewardType = requirement.event or event.rewardType
-    local previousOrdinal = state.lastRewardRoomHistoryOrdinal[rewardType]
+    local previousOrdinal = rewardContext.lastRewardRoomHistoryOrdinal(rewardCtx, rewardType)
     if previousOrdinal == nil then
         return nil
     end
@@ -218,14 +172,14 @@ local function phaseMatches(phase, count, ctx)
     return inRange(ctx.routeBiomeIndex, phase.routeBiomeIndex)
 end
 
-local function requirementInvalid(requirement, state, ctx, event)
+local function requirementInvalid(requirement, rewardCtx, ctx, event)
     if requirementSkipped(requirement, ctx) then
         return nil
     end
 
     if requirement.kind == "previousShopExclusion" then
         for _, rewardType in ipairs(requirement.rewards or EMPTY_LIST) do
-            if state.previousShopRewards[rewardType] then
+            if rewardContext.hasPreviousShopReward(rewardCtx, rewardType) then
                 return requirement
             end
         end
@@ -233,19 +187,19 @@ local function requirementInvalid(requirement, state, ctx, event)
     end
 
     if requirement.kind == "priorDistinctGodLoot" then
-        if seenGodLootCount(state, requirement) < requirement.minDistinct then
+        if rewardContext.seenGodLootCount(rewardCtx, requirement) < requirement.minDistinct then
             return requirement
         end
         return nil
     elseif requirement.kind == "previousRoomExitCount" then
-        return previousRoomExitCountInvalid(requirement, state, ctx)
+        return previousRoomExitCountInvalid(requirement, rewardCtx, ctx)
     elseif requirement.kind == "minRoomHistorySpacing" then
-        return minRoomHistorySpacingInvalid(requirement, state, ctx, event)
+        return minRoomHistorySpacingInvalid(requirement, rewardCtx, ctx, event)
     elseif requirement.kind == "minRunEncounterDepth" then
         return minRunEncounterDepthInvalid(requirement, ctx)
     end
 
-    local count = counterValue(state, requirement.counter, requirement.scope, ctx.biomeKey)
+    local count = rewardContext.counterValue(rewardCtx, requirement.counter, requirement.scope, ctx.biomeKey)
     if requirement.kind == "maxCount" then
         if count >= requirement.max then
             return requirement
@@ -273,9 +227,9 @@ local function ruleApplies(rule, event)
     return lookup[event.item and event.item.rewardKind or ""] == true
 end
 
-local function ruleInvalid(rule, state, ctx, event)
+local function ruleInvalid(rule, rewardCtx, ctx, event)
     for _, requirement in ipairs(rule.requirements or EMPTY_LIST) do
-        local invalid = requirementInvalid(requirement, state, ctx, event)
+        local invalid = requirementInvalid(requirement, rewardCtx, ctx, event)
         if invalid ~= nil then
             return invalid
         end
@@ -283,163 +237,83 @@ local function ruleInvalid(rule, state, ctx, event)
     return nil
 end
 
-local function applyCounts(rule, state, ctx)
-    for _, count in ipairs(rule.countsAs or EMPTY_LIST) do
-        incrementCounter(state, count.key, count.scope, ctx.biomeKey)
-    end
-end
-
-local function storeGodLootValue(state, lootName)
-    if lootName ~= nil and lootName ~= "" then
-        state.godLootSeen[lootName] = true
-    end
-end
-
-local function storeEventGodLoot(state, event)
-    if event == nil then
-        return
-    end
-
-    if event.rewardType == "Boon" then
-        storeGodLootValue(state, event.boonSource)
-    elseif event.rewardType == "Devotion" then
-        storeGodLootValue(state, event.devotionSourceA)
-        storeGodLootValue(state, event.devotionSourceB)
-    else
-        storeGodLootValue(state, event.boonSource)
-    end
-end
-
-local function storeRewardOccurrence(state, ctx, event)
-    if event.rewardType ~= nil and ctx.roomHistoryOrdinal ~= nil then
-        state.lastRewardRoomHistoryOrdinal[event.rewardType] = ctx.roomHistoryOrdinal
-    end
-end
-
-local function applyEventRules(context, result, seenInvalids, state, ctx, event)
+local function eventInvalid(rewardCtx, ctx, event)
     local rules = compiledRulesByTarget[event.rewardType]
     if rules == nil then
-        storeEventGodLoot(state, event)
-        storeRewardOccurrence(state, ctx, event)
-        return
+        return nil
     end
 
     for _, rule in ipairs(rules) do
         if ruleApplies(rule, event) then
-            local invalid = ruleInvalid(rule, state, ctx, event)
+            local invalid = ruleInvalid(rule, rewardCtx, ctx, event)
             if invalid ~= nil then
-                addInvalid(context, result, seenInvalids, ctx, event, invalid.code, invalid.message)
-                return
+                return invalid
             end
         end
     end
-
-    for _, rule in ipairs(rules) do
-        if ruleApplies(rule, event) then
-            applyCounts(rule, state, ctx)
-        end
-    end
-    storeEventGodLoot(state, event)
-    storeRewardOccurrence(state, ctx, event)
+    return nil
 end
 
-local function storePreviousShopRewards(state, events)
-    clearMap(state.previousShopRewards)
-    for _, event in ipairs(events) do
-        if event.item ~= nil and event.item.rewardKind == "shop" then
-            state.previousShopRewards[event.rewardType] = true
+local function applyEventRules(context, result, seenInvalids, rewardCtx, ctx, event)
+    local invalid = eventInvalid(rewardCtx, ctx, event)
+    if invalid ~= nil then
+        return addInvalid(context, result, seenInvalids, ctx, event, invalid.code, invalid.message)
+    end
+
+    local rules = compiledRulesByTarget[event.rewardType]
+    if rules ~= nil then
+        for _, rule in ipairs(rules) do
+            if ruleApplies(rule, event) then
+                rewardContext.applyCounts(rewardCtx, rule.countsAs, ctx)
+            end
         end
     end
+    rewardContext.storeEventGodLoot(rewardCtx, event)
+    rewardContext.storeRewardOccurrence(rewardCtx, ctx, event)
+    return nil
 end
 
 function rewardLegality.emptyResult()
     return newResult()
 end
 
-function rewardLegality.evaluate(context, routeKey, opts)
-    opts = opts or {}
-    local route = context.routes.lookup and context.routes.lookup[routeKey] or nil
-    local result = newResult()
-    if route == nil then
-        return result
+function rewardLegality.beginRoute()
+    return rewardContext.create()
+end
+
+function rewardLegality.snapshotContext(rewardCtx)
+    return rewardContext.snapshot(rewardCtx)
+end
+
+function rewardLegality.candidateInvalid(rewardCtx, ctx, event)
+    return eventInvalid(rewardCtx, ctx, event)
+end
+
+function rewardLegality.evaluateRow(context, result, rewardCtx, ctx, row, scratch)
+    if row == nil or row.valid == false then
+        rewardContext.clearPreviousShopRewards(rewardCtx)
+        rewardContext.clearPreviousRow(rewardCtx, ctx)
+        return nil
     end
 
-    local snapshotForBiome = opts.snapshotForBiome
-    local routeControlName = opts.routeControlName or defaultRouteControlName
-    local stopAfterFirstInvalid = opts.stopAfterFirstInvalid == true
-    local stopBeforeBiomeIndex = opts.stopBeforeBiomeIndex
-    local stopBeforeRouteOrdinal = opts.stopBeforeRouteOrdinal
-    local state = {
-        routeCounters = {},
-        biomeCounters = {},
-        godLootSeen = {},
-        lastRewardRoomHistoryOrdinal = {},
-        previousShopRewards = {},
-        previousRows = {},
-    }
-    local events = {}
-    local rewardItemScratch = {}
-    local seenInvalids = {}
-    local stopped = false
+    scratch = scratch or {}
+    local events = scratch.events or {}
+    local rewardItemScratch = scratch.rewardItems or {}
+    local seenInvalids = scratch.seenInvalids or {}
+    scratch.events = events
+    scratch.rewardItems = rewardItemScratch
+    scratch.seenInvalids = seenInvalids
 
-    routeTimeline.walkRoute(route, {
-        biomeLookup = context.biomeLookup,
-        snapshotForBiome = function(_, biomeKey)
-            return snapshotForBiome and snapshotForBiome(route.key, biomeKey) or nil
-        end,
-        onRow = function(rowContext)
-            if stopped then
-                return
-            end
-
-            if stopBeforeBiomeIndex ~= nil and rowContext.routeBiomeIndex >= stopBeforeBiomeIndex then
-                stopped = true
-                return
-            end
-            if stopBeforeRouteOrdinal ~= nil and rowContext.routeOrdinal >= stopBeforeRouteOrdinal then
-                stopped = true
-                return
-            end
-
-            local row = rowContext.row
-            local biomeKey = rowContext.biomeKey
-            local ctx = {
-                biomeKey = biomeKey,
-                routeBiomeIndex = rowContext.routeBiomeIndex,
-                controlName = routeControlName(biomeKey),
-                routeOrdinal = rowContext.routeOrdinal,
-                roomHistoryOrdinal = rowContext.roomHistoryOrdinal,
-                runDepthCache = rowContext.runDepthCache,
-                runEncounterDepth = rowContext.runEncounterDepth,
-                runEncounterDepthMin = rowContext.runEncounterDepthMin,
-                runEncounterDepthMax = rowContext.runEncounterDepthMax,
-                biomeDepthCache = rowContext.biomeDepthCache,
-                biomeEncounterDepth = rowContext.biomeEncounterDepth,
-                biomeEncounterDepthMin = rowContext.biomeEncounterDepthMin,
-                biomeEncounterDepthMax = rowContext.biomeEncounterDepthMax,
-            }
-            if row ~= nil and row.valid ~= false then
-                for index in pairs(events) do
-                    events[index] = nil
-                end
-                collectRewardEvents(row, events, rewardItemScratch)
-                for _, event in ipairs(events) do
-                    applyEventRules(context, result, seenInvalids, state, ctx, event)
-                    if stopAfterFirstInvalid and hasInvalid(result) then
-                        stopped = true
-                        return
-                    end
-                end
-                storePreviousShopRewards(state, events)
-                state.previousRows[biomeKey] = row
-            else
-                clearMap(state.previousShopRewards)
-                state.previousRows[biomeKey] = nil
-            end
-        end,
-    })
-
-    return result
+    collectRewardEvents(row, events, rewardItemScratch)
+    for _, event in ipairs(events) do
+        local invalid = applyEventRules(context, result, seenInvalids, rewardCtx, ctx, event)
+        if invalid ~= nil then
+            return invalid
+        end
+    end
+    rewardContext.storePreviousShopRewards(rewardCtx, events)
+    rewardContext.storePreviousRow(rewardCtx, ctx, row)
+    return nil
 end
 
 return rewardLegality

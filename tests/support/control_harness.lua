@@ -129,10 +129,10 @@ end
 local function loadRewardLegality()
     return testImport("mods/route/reward_planning/legality.lua", nil, {
         conditions = testImport("mods/rewards/declarations/conditions.lua"),
-        timeline = testImport("mods/route/timeline.lua"),
         rewardItems = testImport("mods/route/reward_planning/items.lua"),
         semantics = testImport("mods/route/reward_planning/semantics.lua"),
         invalidLocations = testImport("mods/route/invalid_locations.lua"),
+        context = testImport("mods/route/reward_planning/context.lua"),
     })
 end
 
@@ -183,6 +183,8 @@ local function loadRunContext()
             rewardLegality = loadRewardLegality(),
             rewardItems = rewardItems,
             semantics = semantics,
+            timeline = timeline,
+            valueStates = testImport("mods/route/value_states.lua"),
         }),
     })
 end

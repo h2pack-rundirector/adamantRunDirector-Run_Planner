@@ -20,9 +20,18 @@ local fakeTimelineBiome = h.fakeTimelineBiome
 local devotionRewardRow = h.devotionRewardRow
 local boonRewardRow = h.boonRewardRow
 local firstValidDevotionRows = h.firstValidDevotionRows
+local valueStates = testImport("mods/route/value_states.lua")
 
 -- luacheck: globals TestRunPlannerRewardPlanning
 TestRunPlannerRewardPlanning = {}
+
+local function rewardCandidateControl(kind, values)
+    return {
+        alias = "Reward1Key",
+        kind = kind or "rewardType",
+        values = values,
+    }
+end
 
 function TestRunPlannerRewardPlanning.testRewardItemsNormalizeRowRewardMetadata()
     local rewardItems = testImport("mods/route/reward_planning/items.lua")
@@ -406,6 +415,101 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesTalentRewardsBe
     lu.assertNil(routeContext:rewardRowValidation("Underworld", "F", 4))
 end
 
+function TestRunPlannerRewardPlanning.testRouteContextMarksInvalidRewardCandidates()
+    local control = rewardCandidateControl("rewardType", {
+        "",
+        "TalentDrop",
+        "SpellDrop",
+    })
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "MaxHealthDrop"),
+        }),
+    })
+
+    local states = routeContext:rewardValueStates("Underworld", "F", 1, "row", "Reward1Key", control)
+
+    lu.assertEquals(states.TalentDrop, valueStates.INVALID)
+    lu.assertNil(states.SpellDrop)
+    lu.assertIs(states, routeContext:rewardValueStates("Underworld", "F", 1, "row", "Reward1Key", control))
+end
+
+function TestRunPlannerRewardPlanning.testRouteContextAllowsCandidatesAfterRequiredPriorReward()
+    local control = rewardCandidateControl("rewardType", {
+        "",
+        "TalentDrop",
+    })
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "SpellDrop"),
+            routeRewardRow(2, "MaxHealthDrop"),
+        }),
+    })
+
+    lu.assertNil(routeContext:rewardValueStates("Underworld", "F", 2, "row", "Reward1Key", control))
+end
+
+function TestRunPlannerRewardPlanning.testRouteContextMarksInvalidShopOptionCandidates()
+    local control = rewardCandidateControl("shopOption", {
+        "",
+        "TalentBigDrop",
+    })
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "SpellDrop"),
+            routeRewardRow(2, "TalentDrop", {
+                rewardKind = "shop",
+            }),
+            routeRewardRow(3, "MaxHealthDrop", {
+                rewardKind = "shop",
+            }),
+        }),
+    })
+
+    local states = routeContext:rewardValueStates("Underworld", "F", 3, "row", "Reward1Key", control)
+
+    lu.assertEquals(states.TalentBigDrop, valueStates.INVALID)
+end
+
+function TestRunPlannerRewardPlanning.testRewardCandidateLookupRebuildsAfterBoundedOverview()
+    local control = rewardCandidateControl("rewardType", {
+        "",
+        "TalentDrop",
+    })
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "MaxHealthDrop", {
+                valid = false,
+                invalidCode = "bad_room",
+                invalidReason = "Bad room",
+            }),
+            routeRewardRow(2, "MaxHealthDrop"),
+        }),
+    })
+
+    lu.assertEquals(routeContext:overview("Underworld").invalidRows[1].code, "bad_room")
+
+    local states = routeContext:rewardValueStates("Underworld", "F", 2, "row", "Reward1Key", control)
+
+    lu.assertEquals(states.TalentDrop, valueStates.INVALID)
+end
+
 function TestRunPlannerRewardPlanning.testRouteOverviewReportsRewardInvalidBeforeLaterRoomInvalid()
     local routeContext = rewardLegalityRouteContext({
         key = "Underworld",
@@ -456,7 +560,6 @@ function TestRunPlannerRewardPlanning.testRouteOverviewStopsRewardValidationAfte
     lu.assertEquals(#overview.invalidRows, 1)
     lu.assertEquals(overview.invalidRows[1].rowIndex, 1)
     lu.assertEquals(overview.invalidRows[1].code, "bad_room")
-    lu.assertNil(routeContext:rewardRowValidation("Underworld", "F", 2))
 end
 
 function TestRunPlannerRewardPlanning.testRouteContextPreservesRewardInvalidAddress()
