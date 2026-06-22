@@ -285,6 +285,26 @@ local adapter = {
         )
     end,
 
+    roleDisallowedFailureCode = function()
+        return "forced_depth_role"
+    end,
+
+    optionDisallowedStatus = function(instance, _rows, rowIndex, _roleKey, _optionKey, role)
+        return invalidStatus(
+            "forced_depth_option",
+            tostring(role.label or role.key) .. " is not valid at "
+                .. routeRowLabel(
+                    instance.biome and instance.biome.slotLayout or nil,
+                    instance.routeSlots[rowIndex] and instance.routeSlots[rowIndex].routeOrdinal,
+                    "Depth"
+                )
+        )
+    end,
+
+    optionDisallowedFailureCode = function()
+        return "forced_depth_option"
+    end,
+
     optionUnavailableMessage = function(_, _, _, _, role)
         return tostring(role.label or role.key) .. " is not valid at this depth"
     end,

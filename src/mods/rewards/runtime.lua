@@ -1,9 +1,9 @@
 local deps = ... or {}
 local catalog = deps.catalog
+local valueStates = deps.valueStates or import("mods/route/value_states.lua")
 
 local runtime = {}
 local VALID = { valid = true }
-local INVALID_VALUE_STATE = 2
 
 local function conditionMatches(condition, fields)
     return fields:read(condition.alias) == condition.value
@@ -150,7 +150,7 @@ local function appendPriorDuplicateValues(out, group, fields, controlAlias, opts
             end
             local value = fields:read(alias) or ""
             if value ~= "" and not allowDuplicateValues[value] then
-                out[value] = INVALID_VALUE_STATE
+                out[value] = valueStates.INVALID
             end
         end
     end

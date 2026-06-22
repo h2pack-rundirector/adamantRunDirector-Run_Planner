@@ -30,16 +30,28 @@ local function loadCatalogWith(definitions)
     return factory.create(definitions)
 end
 
+local function loadValueStates()
+    return dofile("src/mods/route/value_states.lua")
+end
+
+local function loadDropdownValues()
+    local chunk = assert(loadfile("src/mods/ui/dropdown_values.lua"))
+    return chunk({
+        valueStates = loadValueStates(),
+    })
+end
+
 local function loadRuntime()
     local chunk = assert(loadfile("src/mods/rewards/runtime.lua"))
     return chunk({
         catalog = loadCatalog(),
+        valueStates = loadValueStates(),
     })
 end
 
 local function loadUi()
     local runtime = loadRuntime()
-    local dropdownValues = dofile("src/mods/ui/dropdown_values.lua")
+    local dropdownValues = loadDropdownValues()
     local chunk = assert(loadfile("src/mods/rewards/ui.lua"))
     return chunk({
         runtime = runtime,
@@ -120,7 +132,8 @@ local function ruleByRequirementCode(rules, code)
 end
 
 function TestRunPlannerRewards.testDropdownValueDecoratorMapsSemanticStates()
-    local dropdownValues = dofile("src/mods/ui/dropdown_values.lua")
+    local valueStates = loadValueStates()
+    local dropdownValues = loadDropdownValues()
     local owner = {}
     local baseOpts = {
         values = { "A", "B", "C", "D" },
@@ -133,10 +146,10 @@ function TestRunPlannerRewards.testDropdownValueDecoratorMapsSemanticStates()
     }
 
     local decorated = dropdownValues.decorate(owner, baseOpts, {
-        A = dropdownValues.NORMAL,
-        B = dropdownValues.HIDDEN,
-        C = dropdownValues.INVALID,
-        D = dropdownValues.WARNING,
+        A = valueStates.NORMAL,
+        B = valueStates.HIDDEN,
+        C = valueStates.INVALID,
+        D = valueStates.WARNING,
     })
 
     lu.assertNotIs(decorated, baseOpts)

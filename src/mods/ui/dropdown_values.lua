@@ -1,12 +1,9 @@
+local deps = ... or {}
+local valueStates = deps.valueStates or import("mods/route/value_states.lua")
 local dropdownValues = {}
 
 local INVALID_VALUE_COLOR = { 1.0, 0.22, 0.16, 1.0 }
 local WARNING_VALUE_COLOR = { 1.0, 0.78, 0.18, 1.0 }
-
-dropdownValues.NORMAL = 0
-dropdownValues.HIDDEN = 1
-dropdownValues.INVALID = 2
-dropdownValues.WARNING = 3
 
 local function clearMap(map)
     for key in pairs(map) do
@@ -18,16 +15,16 @@ local function colorForState(state, opts)
     if state == nil or state == false or state == 0 then
         return nil
     end
-    if state == dropdownValues.INVALID then
+    if state == valueStates.INVALID then
         return (opts and opts.invalidColor) or INVALID_VALUE_COLOR
-    elseif state == dropdownValues.WARNING then
+    elseif state == valueStates.WARNING then
         return (opts and opts.warningColor) or WARNING_VALUE_COLOR
     end
     return nil
 end
 
 local function visibilityForState(state)
-    if state == dropdownValues.HIDDEN then
+    if state == valueStates.HIDDEN then
         return false
     end
     return nil

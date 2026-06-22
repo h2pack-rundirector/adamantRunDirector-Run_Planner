@@ -492,6 +492,19 @@ local function roleDisallowedStatus(instance, rows, rowIndex, roleKey, role)
     )
 end
 
+local function roleDisallowedFailureCode(instance, rows, rowIndex, _roleKey, role)
+    if requiresPreviousExtensionChoice(role) and not previousRouteSupportsExtensionChoice(instance, rows, rowIndex) then
+        return "clockwork_previous_extension_choice"
+    end
+    if rowGoalIncrement(role) > 0 then
+        return "clockwork_goal_limit"
+    end
+    if rowNonGoalIncrement(role) > 0 then
+        return "clockwork_extension_budget"
+    end
+    return "clockwork_route_complete"
+end
+
 local adapter = {
     slotForRow = slotForRow,
     isFixedIdentitySlot = isFixedSlot,
@@ -596,6 +609,10 @@ local adapter = {
 
     roleDisallowedStatus = function(instance, rows, rowIndex, roleKey, role)
         return roleDisallowedStatus(instance, rows, rowIndex, roleKey, role)
+    end,
+
+    roleDisallowedFailureCode = function(instance, rows, rowIndex, roleKey, role)
+        return roleDisallowedFailureCode(instance, rows, rowIndex, roleKey, role)
     end,
 
     optionUnavailableMessage = function(_, _, _, _, role)

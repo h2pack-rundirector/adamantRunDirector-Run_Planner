@@ -4,6 +4,7 @@ local rewards = deps.rewards
 
 local timeline = deps.timeline
 
+local valueStates = import("mods/route/value_states.lua")
 local common = import("mods/route/rows/common.lua")
 local availability = import("mods/route/rows/availability.lua")
 local readCache = import("mods/route/rows/read_cache.lua")
@@ -27,7 +28,9 @@ return {
         readCache = readCache,
         requirements = requirements,
         biomeRules = biomeRules,
+        valueStates = valueStates,
         timeline = timeline,
         rewards = rewards,
     }),
+    valueStates = valueStates,
 }

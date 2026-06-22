@@ -56,6 +56,7 @@ function routeFactory.create(opts)
         readCache = rows.readCache,
         requirements = rows.requirements,
         biomeRules = rows.biomeRules,
+        valueStates = rows.valueStates,
         rowEngine = rows.engine,
         timeline = routeTimeline,
         invalidLocations = invalidLocations,

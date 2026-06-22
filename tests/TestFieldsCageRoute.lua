@@ -7,6 +7,7 @@ local loadFieldsCageData = h.loadFieldsCageData
 local hasValue = h.hasValue
 local fakeRows = h.fakeRows
 local routeFields = h.routeFields
+local valueStates = dofile("src/mods/route/value_states.lua")
 
 -- luacheck: globals TestRunPlannerFieldsCageRoute
 TestRunPlannerFieldsCageRoute = {}
@@ -289,7 +290,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimePolicyRejectsDuplica
     lu.assertEquals(snapshot.rows[2].invalidCode, "duplicate_reward_type")
 end
 
-function TestRunPlannerFieldsCageRoute.testFieldsCageAvailabilityColorsEchoBeforeThirdPick()
+function TestRunPlannerFieldsCageRoute.testFieldsCageValueStatesEchoBeforeThirdPick()
     local catalog = loadCatalog()
     local data = loadFieldsCageData()
     local instance = data.prepare({
@@ -304,14 +305,14 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageAvailabilityColorsEchoBefor
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
     lu.assertTrue(hasValue(values, "Bridge"))
-    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 2).Miniboss)
-    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 2).Bridge)
+    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 2).Miniboss, valueStates.HIDDEN)
+    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 2).Bridge, valueStates.HIDDEN)
 
     data.fillRoleValues(instance, rows, 3, values)
     lu.assertTrue(hasValue(values, "Miniboss"))
     lu.assertTrue(hasValue(values, "Bridge"))
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 3).Miniboss)
-    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 3).Bridge)
+    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 3).Bridge, valueStates.HIDDEN)
 
     data.fillRoleValues(instance, rows, 4, values)
     lu.assertTrue(hasValue(values, "Bridge"))

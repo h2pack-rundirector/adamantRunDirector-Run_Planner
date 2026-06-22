@@ -4,13 +4,13 @@ local availability = deps.availability
 local readCache = deps.readCache
 local requirements = deps.requirements
 local biomeRules = deps.biomeRules
+local valueStates = deps.valueStates
 local timeline = deps.timeline
 local rewards = deps.rewards
 
 local rowEngine = {}
 
 local VANILLA_ROLE_KEY = common.VANILLA_ROLE_KEY
-local INVALID_VALUE_STATE = 2
 
 local shallowCopyList = common.shallowCopyList
 local optionListForRole = common.optionListForRole
@@ -22,6 +22,7 @@ local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
 local isAvailable = availability.isAvailable
 local availabilityStatus = availability.status
+local availabilityFailureCode = availability.failureCode
 local optionCap = availability.optionCap
 local activeReadCache = readCache.active
 local rowRecord = readCache.rowRecord
@@ -880,12 +881,188 @@ function rowEngine.create(adapter)
         return values
     end
 
+    local function roleAllowedValueState(instance, rows, rowIndex, roleKey, role)
+        if not isRoleLayerConfigured(instance, role) then
+            return valueStates.INVALID
+        end
+        if adapter.isRoleAllowed == nil
+            or adapter.isRoleAllowed(instance, rows, rowIndex, roleKey, role, slotForRow(instance, rowIndex))
+        then
+            return valueStates.NORMAL
+        end
+        if adapter.roleDisallowedFailureCode ~= nil then
+            return valueStates.forFailureCode(adapter.roleDisallowedFailureCode(
+                instance,
+                rows,
+                rowIndex,
+                roleKey,
+                role,
+                slotForRow(instance, rowIndex)
+            ))
+        end
+        if adapter.roleDisallowedStatus ~= nil then
+            return valueStates.forStatus(adapter.roleDisallowedStatus(
+                instance,
+                rows,
+                rowIndex,
+                roleKey,
+                role,
+                slotForRow(instance, rowIndex)
+            ))
+        end
+        return valueStates.INVALID
+    end
+
+    local function optionAllowedValueState(instance, rows, rowIndex, roleKey, optionKey, role, option)
+        if adapter.isOptionAllowed == nil
+            or adapter.isOptionAllowed(instance, rows, rowIndex, roleKey, optionKey, role, option, slotForRow(instance, rowIndex))
+        then
+            return valueStates.NORMAL
+        end
+        if adapter.optionDisallowedFailureCode ~= nil then
+            return valueStates.forFailureCode(adapter.optionDisallowedFailureCode(
+                instance,
+                rows,
+                rowIndex,
+                roleKey,
+                optionKey,
+                role,
+                option,
+                slotForRow(instance, rowIndex)
+            ))
+        end
+        if adapter.optionDisallowedStatus ~= nil then
+            return valueStates.forStatus(adapter.optionDisallowedStatus(
+                instance,
+                rows,
+                rowIndex,
+                roleKey,
+                optionKey,
+                role,
+                option,
+                slotForRow(instance, rowIndex)
+            ))
+        end
+        return valueStates.INVALID
+    end
+
+    local function optionValueStateUncached(instance, rows, rowIndex, roleKey, optionKey)
+        local slot = slotForRow(instance, rowIndex)
+        if adapter.skipOptionsForSlot ~= nil
+            and adapter.skipOptionsForSlot(instance, rows, rowIndex, slot)
+        then
+            return valueStates.HIDDEN
+        end
+
+        local role = roleForRow(instance, rowIndex, roleKey)
+        if role == nil then
+            return valueStates.INVALID
+        end
+
+        if optionKey == "" then
+            if not shouldOfferAutoOption(role, optionListForRole(role)) then
+                return valueStates.HIDDEN
+            end
+
+            local state = valueStates.NORMAL
+            local hasConcreteOption = false
+            for _, option in ipairs(optionListForRole(role)) do
+                if option.key ~= nil and option.key ~= "" then
+                    hasConcreteOption = true
+                    local optionState = optionValueStateUncached(instance, rows, rowIndex, roleKey, option.key)
+                    if optionState == valueStates.NORMAL then
+                        return valueStates.NORMAL
+                    end
+                    state = valueStates.merge(state, optionState)
+                end
+            end
+            if hasConcreteOption then
+                return state
+            end
+            return valueStates.INVALID
+        end
+
+        local option = role.optionsByKey and role.optionsByKey[optionKey] or nil
+        if option == nil then
+            return valueStates.INVALID
+        end
+
+        local state = valueStates.forFailureCodeOrNormal(
+            availabilityFailureCode(option, data.rowContext(instance, rows, rowIndex))
+        )
+        if not isOptionWithinSelectionCap(instance, role, option, rows, rowIndex) then
+            state = valueStates.merge(state, valueStates.INVALID)
+        end
+        state = valueStates.merge(
+            state,
+            optionAllowedValueState(instance, rows, rowIndex, roleKey, optionKey, role, option)
+        )
+        return state
+    end
+
+    local function aggregateOptionValueState(instance, rows, rowIndex, roleKey, role)
+        local state = valueStates.NORMAL
+        local hasOption = false
+        for _, optionKey in ipairs(optionValuesForRole(instance, role)) do
+            if optionKey ~= "" then
+                hasOption = true
+                local nextState = optionValueStateUncached(instance, rows, rowIndex, roleKey, optionKey)
+                if nextState == valueStates.NORMAL then
+                    return valueStates.NORMAL
+                end
+                state = valueStates.merge(state, nextState)
+            end
+        end
+        if hasOption then
+            return state
+        end
+        return valueStates.INVALID
+    end
+
+    local function roleValueStateUncached(instance, rows, rowIndex, roleKey)
+        local slot = slotForRow(instance, rowIndex)
+        if adapter.roleAvailabilityForSlot ~= nil then
+            local value = adapter.roleAvailabilityForSlot(instance, rows, rowIndex, roleKey, slot)
+            if value == false then
+                return valueStates.HIDDEN
+            end
+        end
+
+        local role = instance.rolesByKey[roleKey]
+        if role == nil then
+            return valueStates.INVALID
+        end
+        if roleKey == VANILLA_ROLE_KEY then
+            return valueStates.NORMAL
+        end
+
+        local options = optionListForRole(role)
+        local optionState = valueStates.NORMAL
+        if #options > 0 then
+            optionState = aggregateOptionValueState(instance, rows, rowIndex, roleKey, role)
+            if optionState == valueStates.HIDDEN then
+                return valueStates.HIDDEN
+            end
+        end
+
+        local state = roleAllowedValueState(instance, rows, rowIndex, roleKey, role)
+        if not isRoleWithinSelectionCap(instance, role, rows, rowIndex) then
+            state = valueStates.merge(state, valueStates.INVALID)
+        end
+        if not requirements.isSatisfied(routeApi, instance, rows, rowIndex, role) then
+            state = valueStates.merge(state, valueStates.INVALID)
+        end
+
+        if #options > 0 then
+            state = valueStates.merge(state, optionState)
+        end
+        return state
+    end
+
     local function fillRoleValueStatesUncached(instance, rows, rowIndex, states)
         clearMap(states)
         for _, roleKey in ipairs(data.roleValuesForRow(instance, rows, rowIndex)) do
-            if not data.isRoleAvailable(instance, rows, rowIndex, roleKey) then
-                states[roleKey] = INVALID_VALUE_STATE
-            end
+            valueStates.set(states, roleKey, roleValueStateUncached(instance, rows, rowIndex, roleKey))
         end
         return states
     end
@@ -909,9 +1086,7 @@ function rowEngine.create(adapter)
     local function fillOptionValueStatesUncached(instance, rows, rowIndex, roleKey, states)
         clearMap(states)
         for _, optionKey in ipairs(data.optionValuesForRow(instance, rows, rowIndex, roleKey)) do
-            if not data.isOptionAvailable(instance, rows, rowIndex, roleKey, optionKey) then
-                states[optionKey] = INVALID_VALUE_STATE
-            end
+            valueStates.set(states, optionKey, optionValueStateUncached(instance, rows, rowIndex, roleKey, optionKey))
         end
         return states
     end

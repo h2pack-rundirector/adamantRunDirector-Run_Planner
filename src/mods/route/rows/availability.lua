@@ -70,26 +70,41 @@ local function biomeEncounterDepthBounds(context)
 end
 
 function availability.status(option, context)
+    local code = availability.failureCode(option, context)
+    if code == nil then
+        return VALID_STATUS
+    end
+    if code == "biome_depth_unavailable" then
+        return invalidStatus(code, "Room is not valid at this biome depth")
+    elseif code == "encounter_depth_unknown" then
+        return invalidStatus(code, "Choose concrete prior rooms to prove encounter depth")
+    elseif code == "encounter_depth_unavailable" then
+        return invalidStatus(code, "Room is not valid at this encounter depth")
+    end
+    return invalidStatus(code, "Room is not valid here")
+end
+
+function availability.failureCode(option, context)
     local optionAvailability = option and option.availability
     if optionAvailability == nil then
-        return VALID_STATUS
+        return nil
     end
 
     if not availability.isInRange(context and context.biomeDepthCache, optionAvailability.biomeDepthCache) then
-        return invalidStatus("biome_depth_unavailable", "Room is not valid at this biome depth")
+        return "biome_depth_unavailable"
     end
 
     if optionAvailability.biomeEncounterDepth ~= nil then
         local minDepth, maxDepth = biomeEncounterDepthBounds(context)
         if minDepth == nil or maxDepth == nil then
-            return invalidStatus("encounter_depth_unknown", "Choose concrete prior rooms to prove encounter depth")
+            return "encounter_depth_unknown"
         end
         if not availability.boundsInRange(minDepth, maxDepth, optionAvailability.biomeEncounterDepth) then
-            return invalidStatus("encounter_depth_unavailable", "Room is not valid at this encounter depth")
+            return "encounter_depth_unavailable"
         end
     end
 
-    return VALID_STATUS
+    return nil
 end
 
 function availability.isAvailable(option, context)
