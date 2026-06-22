@@ -15,12 +15,11 @@ local builders = {
     forcedReward = import("mods/rewards/surfaces/forced_reward.lua", nil, {
         common = common,
     }),
+    groupedMajorMinor = import("mods/rewards/surfaces/grouped_major_minor.lua", nil, {
+        common = common,
+    }),
     majorMinor = majorMinor,
     roomStore = roomStore,
-    shipWheel = import("mods/rewards/surfaces/ship_wheel.lua", nil, {
-        common = common,
-        majorMinor = majorMinor,
-    }),
     shop = import("mods/rewards/surfaces/shop.lua", nil, {
         common = common,
     }),

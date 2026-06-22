@@ -251,25 +251,26 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
             {
                 Reward1Key = "Major",
                 Reward2Key = "Boon",
+                Reward2LootKey = "ZeusUpgrade",
             },
             {},
             {
                 Reward1Key = "Major",
                 Reward2Key = "Boon",
-                Reward3Key = "ZeusUpgrade",
+                Reward2LootKey = "ZeusUpgrade",
             },
             {
                 Reward1Key = "Minor",
-                Reward4Key = "GiftDrop",
+                Reward3Key = "GiftDrop",
             },
             {
                 Reward1Key = "Major",
                 Reward2Key = "Boon",
-                Reward3Key = "ZeusUpgrade",
+                Reward2LootKey = "ZeusUpgrade",
             },
             {
                 Reward1Key = "Minor",
-                Reward4Key = "GiftDrop",
+                Reward3Key = "GiftDrop",
             },
             {},
             {},
@@ -278,7 +279,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
             {
                 Reward1Key = "Major",
                 Reward2Key = "Boon",
-                Reward3Key = "HestiaUpgrade",
+                Reward2LootKey = "HestiaUpgrade",
             },
             {},
         }), instance)
@@ -318,9 +319,9 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardKind, "none")
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks, {})
     lu.assertEquals(#snapshot.rows[3].encounterRewardLegs, 1)
-    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].key, "Combat1")
-    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].label, "First Combat")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardKind, "majorMinor")
+    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].key, "Encounter1")
+    lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].label, "First Encounter")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardKind, "groupedMajorMinor")
     lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardPicks[1].value, "Major")
     lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardPicks[2].value, "Boon")
     lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardPicks[3].value, "ZeusUpgrade")
@@ -333,9 +334,9 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
     lu.assertEquals(snapshot.rows[4].variant.label, "3 Combats")
     lu.assertEquals(snapshot.rows[4].realCombatCount, 3)
     lu.assertEquals(#snapshot.rows[4].encounterRewardLegs, 2)
-    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[1].key, "Combat1")
+    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[1].key, "Encounter1")
     lu.assertEquals(rewardItemBySource(snapshot.rows[4], "encounter", 1).rewardPicks[3].value, "ZeusUpgrade")
-    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[2].key, "Combat2")
+    lu.assertEquals(snapshot.rows[4].encounterRewardLegs[2].key, "Encounter2")
     lu.assertEquals(rewardItemBySource(snapshot.rows[4], "encounter", 2).rewardPicks[1].value, "Minor")
     lu.assertEquals(rewardItemBySource(snapshot.rows[4], "encounter", 2).rewardPicks[2].value, "GiftDrop")
 
@@ -360,7 +361,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
     lu.assertEquals(snapshot.rows[7].realCombatCount, 2)
     lu.assertEquals(primaryRewardItem(snapshot.rows[7]).rewardKind, "none")
     lu.assertEquals(#snapshot.rows[7].encounterRewardLegs, 1)
-    lu.assertEquals(snapshot.rows[7].encounterRewardLegs[1].key, "Combat1")
+    lu.assertEquals(snapshot.rows[7].encounterRewardLegs[1].key, "Encounter1")
     lu.assertEquals(rewardItemBySource(snapshot.rows[7], "encounter", 1).rewardPicks[3].value, "HestiaUpgrade")
 
     lu.assertEquals(snapshot.rows[8].slotKind, "preboss")

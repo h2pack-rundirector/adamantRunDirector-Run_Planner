@@ -1,5 +1,6 @@
-return function(_, deps)
+return function(importer, deps)
 local rewards = deps.rewards
+local rewardLayout = importer("mods/biomes/declarations/o_thessaly_rewards.lua")(importer, deps)
 local layout = {}
 
 local SURFACE_SHOP_FEATURES = { surfaceShop = true }
@@ -95,16 +96,16 @@ layout.combatEncounterPolicy = {
             countsForRoomEncounterDepth = false,
         },
         {
-            key = "Combat1",
-            label = "First Combat",
-            reward = rewards.shipWheel(),
+            key = "Encounter1",
+            label = "First Encounter",
+            reward = rewardLayout.wheelChoice,
             hasReward = true,
             required = true,
         },
         {
-            key = "Combat2",
-            label = "Second Combat",
-            reward = rewards.shipWheel(),
+            key = "Encounter2",
+            label = "Second Encounter",
+            reward = rewardLayout.wheelChoice,
             hasReward = true,
             required = false,
             vanillaChance = 0.6,

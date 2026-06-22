@@ -681,6 +681,29 @@ function TestRunPlannerRewardPlanning.testFieldsCageRewardsDoNotSatisfySameBatch
     lu.assertEquals(invalid.code, "talent_requires_spell")
 end
 
+function TestRunPlannerRewardPlanning.testGroupedMajorMinorRewardsDoNotSatisfySameBatchRewards()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "O" },
+    }, {
+        RouteO = fakeRouteControlSnapshot("RouteO", {
+            routeRewardRow(1, "Wheel", {
+                rewardKind = "groupedMajorMinor",
+                rewardSourceCount = 2,
+                rewards = { "Major", "SpellDrop", "", "TalentBigDrop" },
+            }),
+        }),
+    })
+
+    local invalid = routeContext:overview("Surface").invalidRows[1]
+
+    lu.assertEquals(invalid.rowIndex, 1)
+    lu.assertEquals(invalid.address, "wheel:2")
+    lu.assertEquals(invalid.rewardType, "TalentBigDrop")
+    lu.assertEquals(invalid.code, "talent_requires_spell")
+end
+
 function TestRunPlannerRewardPlanning.testRouteContextInvalidatesDevotionBeforeSevenRunEncounters()
     local routeContext = rewardLegalityRouteContext({
         key = "Underworld",

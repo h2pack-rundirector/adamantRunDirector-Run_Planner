@@ -156,11 +156,16 @@ local function fieldsBridgeReward()
     }
 end
 
-local function shipWheelReward()
+local function groupedMajorMinorReward()
     return {
-        kind = "shipWheel",
-        storeSource = "ChooseNextRewardStore",
-        defaultRewardStore = "RunProgress",
+        kind = "groupedMajorMinor",
+        majorRewardStore = "RunProgress",
+        minorRewardStore = "MetaProgress",
+        sourceCount = 2,
+        sharedRewardClass = true,
+        rewardGeneration = {
+            effectTiming = "afterBatch",
+        },
     }
 end
 
@@ -689,7 +694,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     lu.assertEquals(biomes.lookup.Q.rolesByKey.Miniboss.routeRules, maxSelectionRouteRules(2))
 
     lu.assertEquals(biomes.lookup.O.adapter, "multiEncounterFixed")
-    lu.assertEquals(biomes.lookup.O.rolesByKey.Combat.reward, shipWheelReward())
+    lu.assertEquals(biomes.lookup.O.rolesByKey.Combat.reward, noneReward())
     lu.assertEquals(biomes.lookup.O.rolesByKey.Combat.encounterPolicy, "O_CombatData")
     lu.assertEquals(biomes.lookup.O.rolesByKey.Fountain.reward, majorMinorReward())
     assertOneShotRole(biomes.lookup.O.rolesByKey.Story)
@@ -987,11 +992,11 @@ function TestRunPlannerData.testThessalyCombatPolicyModelsShipEncounters()
     lu.assertEquals(policy.legs[1].reward, noneReward())
     lu.assertFalse(policy.legs[1].hasReward)
     lu.assertFalse(policy.legs[1].countsForRoomEncounterDepth)
-    lu.assertEquals(policy.legs[2].key, "Combat1")
-    lu.assertEquals(policy.legs[2].reward, shipWheelReward())
+    lu.assertEquals(policy.legs[2].key, "Encounter1")
+    lu.assertEquals(policy.legs[2].reward, groupedMajorMinorReward())
     lu.assertTrue(policy.legs[2].required)
-    lu.assertEquals(policy.legs[3].key, "Combat2")
-    lu.assertEquals(policy.legs[3].reward, shipWheelReward())
+    lu.assertEquals(policy.legs[3].key, "Encounter2")
+    lu.assertEquals(policy.legs[3].reward, groupedMajorMinorReward())
     lu.assertEquals(policy.legs[3].vanillaChance, 0.6)
     lu.assertEquals(policy.legs[3].availableAtBiomeEncounterDepth, { min = 2, max = 5 })
 end

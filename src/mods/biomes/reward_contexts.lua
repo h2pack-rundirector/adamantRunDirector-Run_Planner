@@ -18,6 +18,30 @@ local function indexByKey(items)
     return lookup
 end
 
+local function copyUniqueOfferGroups(context, groups)
+    if groups == nil then
+        return
+    end
+    local copiedGroups = {}
+    for groupIndex, group in ipairs(groups) do
+        copiedGroups[groupIndex] = {
+            slots = copyList(group.slots),
+            code = group.code,
+            message = group.message,
+        }
+    end
+    context.uniqueOfferGroups = copiedGroups
+end
+
+local function copyRewardGeneration(context, generation)
+    if generation == nil then
+        return
+    end
+    context.rewardGeneration = {
+        effectTiming = generation.effectTiming,
+    }
+end
+
 function rewards.none()
     return {
         kind = "none",
@@ -64,6 +88,18 @@ function rewards.majorMinor(opts)
     return context
 end
 
+function rewards.groupedMajorMinor(opts)
+    opts = opts or {}
+    local context = rewards.majorMinor(opts)
+    context.kind = "groupedMajorMinor"
+    context.sourceCount = opts.sourceCount or 2
+    if opts.sharedRewardClass == true then
+        context.sharedRewardClass = true
+    end
+    copyRewardGeneration(context, opts.rewardGeneration)
+    return context
+end
+
 function rewards.forcedReward(rewardType, opts)
     opts = opts or {}
     local context = {
@@ -80,30 +116,6 @@ function rewards.devotion()
     local context = rewards.forcedReward("Devotion")
     context.pick = routeRules.devotionPick()
     return context
-end
-
-local function copyUniqueOfferGroups(context, groups)
-    if groups == nil then
-        return
-    end
-    local copiedGroups = {}
-    for groupIndex, group in ipairs(groups) do
-        copiedGroups[groupIndex] = {
-            slots = copyList(group.slots),
-            code = group.code,
-            message = group.message,
-        }
-    end
-    context.uniqueOfferGroups = copiedGroups
-end
-
-local function copyRewardGeneration(context, generation)
-    if generation == nil then
-        return
-    end
-    context.rewardGeneration = {
-        effectTiming = generation.effectTiming,
-    }
 end
 
 function rewards.shop(shopProfile, opts)
@@ -140,22 +152,6 @@ function rewards.fieldsBridge()
         shopReward = "Shop",
         shopProfile = "WorldShop",
     }
-end
-
-function rewards.shipWheel(opts)
-    opts = opts or {}
-    local context = {
-        kind = "shipWheel",
-        storeSource = opts.storeSource or "ChooseNextRewardStore",
-        defaultRewardStore = opts.defaultRewardStore or "RunProgress",
-    }
-    if opts.eligibleRewardTypes ~= nil then
-        context.eligibleRewardTypes = copyList(opts.eligibleRewardTypes)
-    end
-    if opts.ineligibleRewardTypes ~= nil then
-        context.ineligibleRewardTypes = copyList(opts.ineligibleRewardTypes)
-    end
-    return context
 end
 
 function rewards.rewardTypeMetadata()

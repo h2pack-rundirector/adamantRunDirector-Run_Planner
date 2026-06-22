@@ -70,7 +70,7 @@ return function(importer, deps)
                 key = "Combat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,
-                reward = rewards.shipWheel(),
+                reward = rewards.none(),
                 encounterPolicy = "O_CombatData",
                 biomeEncounterDepthCost = routeRules.encounterDepthCost(1, 2),
             },

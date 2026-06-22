@@ -121,6 +121,8 @@ local function encounterRewardLegSnapshot(fields, instance, rowIndex, legIndex, 
         rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.EncounterRewards, encounterRewardRowIndex)
             or EMPTY_LIST,
         rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
+        rewardSourceCount = surface and surface.sourceCount or nil,
+        rewardGeneration = surface and surface.context and surface.context.rewardGeneration or nil,
         rewardPicks = rewardsConfigured
             and encounterRewardPicks(surface, fields.EncounterRewards, encounterRewardRowIndex)
             or EMPTY_LIST,
