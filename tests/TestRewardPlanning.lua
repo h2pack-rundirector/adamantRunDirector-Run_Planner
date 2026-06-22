@@ -457,6 +457,51 @@ function TestRunPlannerRewardPlanning.testRouteContextAllowsCandidatesAfterRequi
     lu.assertNil(routeContext:rewardValueStates("Underworld", "F", 2, "row", "Reward1Key", control))
 end
 
+function TestRunPlannerRewardPlanning.testRouteContextMarksCandidatesInvalidBeforePendingShopRewardPromotes()
+    local control = rewardCandidateControl("rewardType", {
+        "",
+        "TalentDrop",
+    })
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "SpellDrop", {
+                rewardKind = "shop",
+            }),
+            routeRewardRow(2, "MaxHealthDrop"),
+        }),
+    })
+
+    local states = routeContext:rewardValueStates("Underworld", "F", 2, "row", "Reward1Key", control)
+
+    lu.assertEquals(states.TalentDrop, valueStates.INVALID)
+end
+
+function TestRunPlannerRewardPlanning.testRouteContextAllowsCandidatesAfterPendingShopRewardPromotes()
+    local control = rewardCandidateControl("rewardType", {
+        "",
+        "TalentDrop",
+    })
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "SpellDrop", {
+                rewardKind = "shop",
+            }),
+            routeRewardRow(2, "MaxHealthDrop"),
+            routeRewardRow(3, "MaxHealthDrop"),
+        }),
+    })
+
+    lu.assertNil(routeContext:rewardValueStates("Underworld", "F", 3, "row", "Reward1Key", control))
+end
+
 function TestRunPlannerRewardPlanning.testRouteContextMarksInvalidShopOptionCandidates()
     local control = rewardCandidateControl("shopOption", {
         "",
@@ -589,6 +634,51 @@ function TestRunPlannerRewardPlanning.testRouteContextPreservesRewardInvalidAddr
     lu.assertEquals(invalid.locationLabel, "Erebus Depth 1 Shop Offer 2")
     lu.assertEquals(invalid.code, "talent_requires_spell")
     lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 1).address, "shop:2")
+end
+
+function TestRunPlannerRewardPlanning.testShopRewardsDoNotSatisfySameBatchRewards()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "Shop", {
+                rewardKind = "shop",
+                rewards = { "SpellDrop", "TalentDrop" },
+            }),
+        }),
+    })
+
+    local invalid = routeContext:overview("Underworld").invalidRows[1]
+
+    lu.assertEquals(invalid.rowIndex, 1)
+    lu.assertEquals(invalid.address, "shop:2")
+    lu.assertEquals(invalid.rewardType, "TalentDrop")
+    lu.assertEquals(invalid.code, "talent_requires_spell")
+end
+
+function TestRunPlannerRewardPlanning.testFieldsCageRewardsDoNotSatisfySameBatchRewards()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "H" },
+    }, {
+        RouteH = fakeRouteControlSnapshot("RouteH", {
+            routeRewardRow(1, "Cages", {
+                rewardKind = "fieldsCages",
+                rewards = { "SpellDrop", "TalentBigDrop" },
+                rewardSourceCount = 2,
+            }),
+        }),
+    })
+
+    local invalid = routeContext:overview("Underworld").invalidRows[1]
+
+    lu.assertEquals(invalid.rowIndex, 1)
+    lu.assertEquals(invalid.address, "cage:2")
+    lu.assertEquals(invalid.rewardType, "TalentBigDrop")
+    lu.assertEquals(invalid.code, "talent_requires_spell")
 end
 
 function TestRunPlannerRewardPlanning.testRouteContextInvalidatesDevotionBeforeSevenRunEncounters()
@@ -726,6 +816,71 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesDuplicateSpellD
     lu.assertEquals(overview.invalidRows[1].code, "spell_drop_limit")
 end
 
+function TestRunPlannerRewardPlanning.testRouteContextInvalidatesSpellAfterPendingShopSpell()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "SpellDrop", {
+                rewardKind = "shop",
+            }),
+            routeRewardRow(2, "SpellDrop"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(overview.invalidRows[1].code, "spell_shop_conflict")
+end
+
+function TestRunPlannerRewardPlanning.testRouteContextPromotesShopSpellAfterNextRow()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "SpellDrop", {
+                rewardKind = "shop",
+            }),
+            routeRewardRow(2, "MaxHealthDrop"),
+            routeRewardRow(3, "TalentDrop"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertTrue(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 0)
+end
+
+function TestRunPlannerRewardPlanning.testRouteContextInvalidatesTalentAfterPendingShopSpell()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "SpellDrop", {
+                rewardKind = "shop",
+            }),
+            routeRewardRow(2, "TalentDrop"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(overview.invalidRows[1].code, "talent_requires_spell")
+end
+
 function TestRunPlannerRewardPlanning.testRouteContextInvalidatesTalentAfterPreviousShopTalent()
     local routeContext = rewardLegalityRouteContext({
         key = "Underworld",
@@ -769,6 +924,28 @@ function TestRunPlannerRewardPlanning.testRouteContextOnlyAppliesShopTalentBlock
 
     lu.assertTrue(overview.valid)
     lu.assertEquals(#overview.invalidRows, 0)
+end
+
+function TestRunPlannerRewardPlanning.testRouteContextInvalidatesHermesAfterPendingShopHermes()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "ShopHermesUpgrade", {
+                rewardKind = "shop",
+            }),
+            routeRewardRow(2, "HermesUpgrade"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(overview.invalidRows[1].code, "hermes_shop_conflict")
 end
 
 function TestRunPlannerRewardPlanning.testRouteContextDevotionPairSkipsPreviousExitRequirement()

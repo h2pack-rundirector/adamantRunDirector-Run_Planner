@@ -82,11 +82,39 @@ function rewards.devotion()
     return context
 end
 
-function rewards.shop(shopProfile)
-    return {
+local function copyUniqueOfferGroups(context, groups)
+    if groups == nil then
+        return
+    end
+    local copiedGroups = {}
+    for groupIndex, group in ipairs(groups) do
+        copiedGroups[groupIndex] = {
+            slots = copyList(group.slots),
+            code = group.code,
+            message = group.message,
+        }
+    end
+    context.uniqueOfferGroups = copiedGroups
+end
+
+local function copyRewardGeneration(context, generation)
+    if generation == nil then
+        return
+    end
+    context.rewardGeneration = {
+        effectTiming = generation.effectTiming,
+    }
+end
+
+function rewards.shop(shopProfile, opts)
+    opts = opts or {}
+    local context = {
         kind = "shop",
         shopProfile = shopProfile,
     }
+    copyUniqueOfferGroups(context, opts.uniqueOfferGroups)
+    copyRewardGeneration(context, opts.rewardGeneration)
+    return context
 end
 
 function rewards.fieldsCages(opts)
@@ -101,6 +129,7 @@ function rewards.fieldsCages(opts)
     if opts.ineligibleRewardTypes ~= nil then
         context.ineligibleRewardTypes = copyList(opts.ineligibleRewardTypes)
     end
+    copyRewardGeneration(context, opts.rewardGeneration)
     return context
 end
 

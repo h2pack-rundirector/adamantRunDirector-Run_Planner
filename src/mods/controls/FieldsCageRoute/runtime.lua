@@ -251,6 +251,7 @@ function runtime.create(fields, instance)
             rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
             rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
             rewardSourceCount = sourceCount,
+            rewardGeneration = surface and surface.context and surface.context.rewardGeneration or nil,
             rewardPicks = rewardsConfigured
                 and rewardSystem
                 and rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex), {

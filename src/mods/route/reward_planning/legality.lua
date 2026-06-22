@@ -16,8 +16,8 @@ local function buildLookup(values)
     return lookup
 end
 
-local function collectRewardEvents(row, events, items)
-    semantics.eventsForRow(row, rowRewardItems, events, items)
+local function collectRewardBatches(row, batches, items, events)
+    semantics.batchesForRow(row, rowRewardItems, batches, items, events)
 end
 
 local function compileRules(rules)
@@ -177,9 +177,9 @@ local function requirementInvalid(requirement, rewardCtx, ctx, event)
         return nil
     end
 
-    if requirement.kind == "previousShopExclusion" then
+    if requirement.kind == "pendingOfferExclusion" then
         for _, rewardType in ipairs(requirement.rewards or EMPTY_LIST) do
-            if rewardContext.hasPreviousShopReward(rewardCtx, rewardType) then
+            if rewardContext.hasPendingOffer(rewardCtx, rewardType) then
                 return requirement
             end
         end
@@ -254,12 +254,7 @@ local function eventInvalid(rewardCtx, ctx, event)
     return nil
 end
 
-local function applyEventRules(context, result, seenInvalids, rewardCtx, ctx, event)
-    local invalid = eventInvalid(rewardCtx, ctx, event)
-    if invalid ~= nil then
-        return addInvalid(context, result, seenInvalids, ctx, event, invalid.code, invalid.message)
-    end
-
+local function applyEventEffects(rewardCtx, ctx, event)
     local rules = compiledRulesByTarget[event.rewardType]
     if rules ~= nil then
         for _, rule in ipairs(rules) do
@@ -270,7 +265,35 @@ local function applyEventRules(context, result, seenInvalids, rewardCtx, ctx, ev
     end
     rewardContext.storeEventGodLoot(rewardCtx, event)
     rewardContext.storeRewardOccurrence(rewardCtx, ctx, event)
+end
+
+local function validateBatch(context, result, seenInvalids, rewardCtx, ctx, batch)
+    for index = batch.firstEventIndex, batch.lastEventIndex do
+        local event = batch.events[index]
+        local invalid = eventInvalid(rewardCtx, ctx, event)
+        if invalid ~= nil then
+            return addInvalid(context, result, seenInvalids, ctx, event, invalid.code, invalid.message)
+        end
+    end
     return nil
+end
+
+local function applyBatchEffects(rewardCtx, ctx, batch)
+    for index = batch.firstEventIndex, batch.lastEventIndex do
+        applyEventEffects(rewardCtx, ctx, batch.events[index])
+    end
+end
+
+local function stagePendingBatch(rewardCtx, ctx, batch)
+    for index = batch.firstEventIndex, batch.lastEventIndex do
+        rewardContext.stagePendingEvent(rewardCtx, ctx, batch.events[index])
+    end
+end
+
+local function promotePendingEffects(rewardCtx)
+    rewardContext.promotePending(rewardCtx, function(ctx, event)
+        applyEventEffects(rewardCtx, ctx, event)
+    end)
 end
 
 function rewardLegality.emptyResult()
@@ -291,27 +314,38 @@ end
 
 function rewardLegality.evaluateRow(context, result, rewardCtx, ctx, row, scratch)
     if row == nil or row.valid == false then
-        rewardContext.clearPreviousShopRewards(rewardCtx)
+        rewardContext.clearPending(rewardCtx)
         rewardContext.clearPreviousRow(rewardCtx, ctx)
         return nil
     end
+    local promotePendingAfterRow = rewardContext.hasPendingEntries(rewardCtx)
 
     scratch = scratch or {}
+    local batches = scratch.batches or {}
     local events = scratch.events or {}
     local rewardItemScratch = scratch.rewardItems or {}
     local seenInvalids = scratch.seenInvalids or {}
+    scratch.batches = batches
     scratch.events = events
     scratch.rewardItems = rewardItemScratch
     scratch.seenInvalids = seenInvalids
 
-    collectRewardEvents(row, events, rewardItemScratch)
-    for _, event in ipairs(events) do
-        local invalid = applyEventRules(context, result, seenInvalids, rewardCtx, ctx, event)
+    collectRewardBatches(row, batches, rewardItemScratch, events)
+    for _, batch in ipairs(batches) do
+        local invalid = validateBatch(context, result, seenInvalids, rewardCtx, ctx, batch)
         if invalid ~= nil then
             return invalid
         end
+        if batch.effectTiming == "afterNextRow" then
+            stagePendingBatch(rewardCtx, ctx, batch)
+        else
+            applyBatchEffects(rewardCtx, ctx, batch)
+        end
     end
-    rewardContext.storePreviousShopRewards(rewardCtx, events)
+    if promotePendingAfterRow then
+        promotePendingEffects(rewardCtx)
+    end
+    rewardContext.activateStagedPending(rewardCtx)
     rewardContext.storePreviousRow(rewardCtx, ctx, row)
     return nil
 end

@@ -91,6 +91,17 @@ local function sourceForFieldsCageReward(item, index, rewardType)
     return item and item.rewardLoot and item.rewardLoot[index] or nil
 end
 
+local function effectTimingForItem(item)
+    local generation = item and item.rewardGeneration or nil
+    if generation ~= nil and generation.effectTiming ~= nil then
+        return generation.effectTiming
+    end
+    if item ~= nil and item.rewardKind == "shop" then
+        return "afterNextRow"
+    end
+    return "afterBatch"
+end
+
 function semantics.rewardType(item)
     if item == nil or item.valid == false then
         return nil
@@ -356,6 +367,29 @@ function semantics.eventsForRow(row, rewardItems, out, itemScratch)
         semantics.eventsForItem(item, row, events)
     end
     return events
+end
+
+function semantics.batchesForRow(row, rewardItems, out, itemScratch, eventScratch)
+    local batches = out or {}
+    local events = eventScratch or {}
+    clearList(batches)
+    clearList(events)
+
+    for _, item in ipairs(rewardItems.collect(row, itemScratch)) do
+        local firstEventIndex = #events + 1
+        semantics.eventsForItem(item, row, events)
+        if events[firstEventIndex] ~= nil then
+            batches[#batches + 1] = {
+                row = row,
+                item = item,
+                effectTiming = effectTimingForItem(item),
+                events = events,
+                firstEventIndex = firstEventIndex,
+                lastEventIndex = #events,
+            }
+        end
+    end
+    return batches
 end
 
 return semantics

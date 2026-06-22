@@ -67,6 +67,20 @@ local function loadSemantics()
     return dofile("src/mods/route/reward_planning/semantics.lua")
 end
 
+local function qSummitShopContext()
+    return {
+        kind = "shop",
+        shopProfile = "Q_WorldShop",
+        uniqueOfferGroups = {
+            {
+                slots = { "Group1Offer1", "Group1Offer2" },
+                code = "duplicate_shop_group_option",
+                message = "Offers 1 and 2 share one vanilla shop group and cannot duplicate the same reward",
+            },
+        },
+    }
+end
+
 local function fakeFields(values)
     return {
         read = function(_, alias)
@@ -352,7 +366,7 @@ function TestRunPlannerRewards.testConditionsBlockTalentAfterShopTalent()
         "TalentBigDrop",
     })
     lu.assertEquals(blockerRule.requirements[1], {
-        kind = "previousShopExclusion",
+        kind = "pendingOfferExclusion",
         rewards = {
             "TalentDrop",
         },
@@ -370,7 +384,7 @@ function TestRunPlannerRewards.testConditionsBlockRoomHammerAfterShopHammer()
     lu.assertNotNil(blockerRule)
     lu.assertEquals(blockerRule.targets, { "WeaponUpgrade" })
     lu.assertEquals(blockerRule.requirements[1], {
-        kind = "previousShopExclusion",
+        kind = "pendingOfferExclusion",
         rewards = {
             "WeaponUpgradeDrop",
         },
@@ -862,10 +876,7 @@ end
 
 function TestRunPlannerRewards.testRuntimeInvalidatesLinkedShopOfferDuplicates()
     local runtime = loadRuntime()
-    local surface = runtime.surfaceFor({
-        kind = "shop",
-        shopProfile = "Q_WorldShop",
-    })
+    local surface = runtime.surfaceFor(qSummitShopContext())
 
     lu.assertEquals(surface.uniqueValueGroups[1].aliases, {
         "Reward1Key",
@@ -940,10 +951,7 @@ end
 
 function TestRunPlannerRewards.testRuntimeStatesOnlyLaterLinkedShopDuplicateCandidates()
     local runtime = loadRuntime()
-    local surface = runtime.surfaceFor({
-        kind = "shop",
-        shopProfile = "Q_WorldShop",
-    })
+    local surface = runtime.surfaceFor(qSummitShopContext())
     local fields = fakeFields({
         Reward1Key = "RandomLoot",
         Reward2Key = "RandomLoot",
@@ -1018,10 +1026,7 @@ end
 
 function TestRunPlannerRewards.testUiAppliesLinkedShopDuplicateValueColors()
     local ui, runtime = loadUi()
-    local surface = runtime.surfaceFor({
-        kind = "shop",
-        shopProfile = "Q_WorldShop",
-    })
+    local surface = runtime.surfaceFor(qSummitShopContext())
     local captured = {}
     local draw = {
         imgui = {

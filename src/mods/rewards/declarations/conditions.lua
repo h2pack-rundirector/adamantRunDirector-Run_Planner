@@ -103,18 +103,49 @@ return {
     },
     {
         targets = {
+            "SpellDrop",
+        },
+        requirements = {
+            {
+                kind = "pendingOfferExclusion",
+                rewards = {
+                    "SpellDrop",
+                },
+                code = "spell_shop_conflict",
+                message = "Selene's Gift cannot be planned after a shop Selene's Gift offer",
+            },
+        },
+    },
+    {
+        targets = {
             "TalentDrop",
             "MinorTalentDrop",
             "TalentBigDrop",
         },
         requirements = {
             {
-                kind = "previousShopExclusion",
+                kind = "pendingOfferExclusion",
                 rewards = {
                     "TalentDrop",
                 },
                 code = "talent_shop_conflict",
                 message = "Path of Stars cannot be planned after a shop Path of Stars offer",
+            },
+        },
+    },
+    {
+        targets = {
+            "HermesUpgrade",
+            "ShopHermesUpgrade",
+        },
+        requirements = {
+            {
+                kind = "pendingOfferExclusion",
+                rewards = {
+                    "ShopHermesUpgrade",
+                },
+                code = "hermes_shop_conflict",
+                message = "Hermes cannot be planned after a shop Hermes offer",
             },
         },
     },
@@ -158,7 +189,7 @@ return {
         },
         requirements = {
             {
-                kind = "previousShopExclusion",
+                kind = "pendingOfferExclusion",
                 rewards = {
                     "WeaponUpgradeDrop",
                 },

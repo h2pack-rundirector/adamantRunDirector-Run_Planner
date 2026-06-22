@@ -23,6 +23,17 @@ local function copyNestedMap(source)
     return copy
 end
 
+local function copyPendingEntries(source)
+    local copy = {}
+    for index, entry in ipairs(source or EMPTY_LIST) do
+        copy[index] = {
+            ctx = entry.ctx,
+            event = entry.event,
+        }
+    end
+    return copy
+end
+
 local function biomeCounters(context, biomeKey)
     local counters = context.biomeCounters[biomeKey]
     if counters == nil then
@@ -51,7 +62,10 @@ function rewardContext.create()
         biomeCounters = {},
         godLootSeen = {},
         lastRewardRoomHistoryOrdinal = {},
-        previousShopRewards = {},
+        pendingOffers = {},
+        pendingEntries = {},
+        stagedPendingOffers = {},
+        stagedPendingEntries = {},
         previousRows = {},
     }
 end
@@ -62,7 +76,10 @@ function rewardContext.snapshot(context)
         biomeCounters = copyNestedMap(context and context.biomeCounters),
         godLootSeen = copyMap(context and context.godLootSeen),
         lastRewardRoomHistoryOrdinal = copyMap(context and context.lastRewardRoomHistoryOrdinal),
-        previousShopRewards = copyMap(context and context.previousShopRewards),
+        pendingOffers = copyMap(context and context.pendingOffers),
+        pendingEntries = copyPendingEntries(context and context.pendingEntries),
+        stagedPendingOffers = copyMap(context and context.stagedPendingOffers),
+        stagedPendingEntries = copyPendingEntries(context and context.stagedPendingEntries),
         previousRows = copyMap(context and context.previousRows),
     }
 end
@@ -100,8 +117,8 @@ function rewardContext.previousRow(context, biomeKey)
     return context.previousRows[biomeKey]
 end
 
-function rewardContext.hasPreviousShopReward(context, rewardType)
-    return context.previousShopRewards[rewardType] == true
+function rewardContext.hasPendingOffer(context, rewardType)
+    return context.pendingOffers[rewardType] == true
 end
 
 function rewardContext.lastRewardRoomHistoryOrdinal(context, rewardType)
@@ -129,17 +146,52 @@ function rewardContext.storeRewardOccurrence(context, rowContext, event)
     end
 end
 
-function rewardContext.storePreviousShopRewards(context, events)
-    clearMap(context.previousShopRewards)
-    for _, event in ipairs(events or EMPTY_LIST) do
-        if event.item ~= nil and event.item.rewardKind == "shop" then
-            context.previousShopRewards[event.rewardType] = true
-        end
+function rewardContext.hasPendingEntries(context)
+    return context.pendingEntries[1] ~= nil
+end
+
+function rewardContext.stagePendingEvent(context, rowContext, event)
+    context.stagedPendingEntries[#context.stagedPendingEntries + 1] = {
+        ctx = rowContext,
+        event = event,
+    }
+    context.stagedPendingOffers[event.rewardType] = true
+end
+
+function rewardContext.clearPending(context)
+    clearMap(context.pendingOffers)
+    clearMap(context.stagedPendingOffers)
+    for index = #context.pendingEntries, 1, -1 do
+        context.pendingEntries[index] = nil
+    end
+    for index = #context.stagedPendingEntries, 1, -1 do
+        context.stagedPendingEntries[index] = nil
     end
 end
 
-function rewardContext.clearPreviousShopRewards(context)
-    clearMap(context.previousShopRewards)
+function rewardContext.promotePending(context, apply)
+    for _, entry in ipairs(context.pendingEntries) do
+        apply(entry.ctx, entry.event)
+    end
+    clearMap(context.pendingOffers)
+    for index = #context.pendingEntries, 1, -1 do
+        context.pendingEntries[index] = nil
+    end
+end
+
+function rewardContext.activateStagedPending(context)
+    clearMap(context.pendingOffers)
+    for index = #context.pendingEntries, 1, -1 do
+        context.pendingEntries[index] = nil
+    end
+    for rewardType in pairs(context.stagedPendingOffers) do
+        context.pendingOffers[rewardType] = true
+    end
+    for index, entry in ipairs(context.stagedPendingEntries) do
+        context.pendingEntries[index] = entry
+        context.stagedPendingEntries[index] = nil
+    end
+    clearMap(context.stagedPendingOffers)
 end
 
 function rewardContext.storePreviousRow(context, rowContext, row)

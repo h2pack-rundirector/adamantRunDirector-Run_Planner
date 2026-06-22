@@ -114,11 +114,19 @@ local function devotionReward()
     return reward
 end
 
-local function shopReward(shopProfile)
-    return {
+local function shopReward(shopProfile, opts)
+    opts = opts or {}
+    local reward = {
         kind = "shop",
         shopProfile = shopProfile,
     }
+    if opts.uniqueOfferGroups ~= nil then
+        reward.uniqueOfferGroups = opts.uniqueOfferGroups
+    end
+    if opts.rewardGeneration ~= nil then
+        reward.rewardGeneration = opts.rewardGeneration
+    end
+    return reward
 end
 
 local function fieldsCagesReward(rewardStore, opts)
@@ -132,6 +140,9 @@ local function fieldsCagesReward(rewardStore, opts)
     end
     if opts.ineligibleRewardTypes ~= nil then
         reward.ineligibleRewardTypes = opts.ineligibleRewardTypes
+    end
+    if opts.rewardGeneration ~= nil then
+        reward.rewardGeneration = opts.rewardGeneration
     end
     return reward
 end
@@ -604,7 +615,18 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
     lu.assertEquals(#qPreboss.branches, 1)
     lu.assertEquals(qPreboss.branches[1].key, "Shop")
     lu.assertEquals(qPreboss.branches[1].label, "Preboss Shop")
-    lu.assertEquals(qPreboss.branches[1].reward, shopReward("Q_WorldShop"))
+    lu.assertEquals(qPreboss.branches[1].reward, shopReward("Q_WorldShop", {
+        rewardGeneration = {
+            effectTiming = "afterNextRow",
+        },
+        uniqueOfferGroups = {
+            {
+                slots = { "Group1Offer1", "Group1Offer2" },
+                code = "duplicate_shop_group_option",
+                message = "Offers 1 and 2 share one vanilla shop group and cannot duplicate the same reward",
+            },
+        },
+    }))
 
     local oPreboss = biomes.lookup.O.slotLayout.special[7]
     lu.assertEquals(oPreboss.roomKey, "O_PreBoss01")
@@ -685,6 +707,9 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     lu.assertEquals(biomes.lookup.H.rolesByKey.Combat.mapOptions[1].key, "H_Combat01")
     lu.assertEquals(biomes.lookup.H.rolesByKey.Combat.reward, fieldsCagesReward("RunProgress", {
         ineligibleRewardTypes = { "Devotion" },
+        rewardGeneration = {
+            effectTiming = "afterBatch",
+        },
     }))
     lu.assertEquals(biomes.lookup.H.rolesByKey.Miniboss.roomOptions[1].encounter, "MiniBossVampire")
     lu.assertEquals(biomes.lookup.H.rolesByKey.Miniboss.roomOptions[2].encounter, "MiniBossLamia")

@@ -326,13 +326,6 @@ definitions.shops = {
         },
     },
     Q_WorldShop = {
-        uniqueOfferGroups = {
-            {
-                slots = { "Group1Offer1", "Group1Offer2" },
-                code = "duplicate_shop_group_option",
-                message = "Offers 1 and 2 share one vanilla shop group and cannot duplicate the same reward",
-            },
-        },
         slots = {
             { key = "Group1Offer1", label = "Offer 1", bundle = "EndShopPrimaryPower" },
             { key = "Group1Offer2", label = "Offer 2", bundle = "EndShopPrimaryPower" },

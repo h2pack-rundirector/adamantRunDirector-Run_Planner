@@ -1,5 +1,6 @@
 return function(importer, deps)
     local layout = importer("mods/biomes/declarations/h_fields_layout.lua")()
+    local rewardLayout = importer("mods/biomes/declarations/h_fields_rewards.lua")(importer, deps)
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules
@@ -69,10 +70,7 @@ return function(importer, deps)
                 key = "Combat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,
-                reward = rewards.fieldsCages({
-                    rewardStore = "RunProgress",
-                    ineligibleRewardTypes = { "Devotion" },
-                }),
+                reward = rewardLayout.combatCages,
                 cageRewardPolicy = "H_FieldsCageRewards",
                 biomeEncounterDepthCost = 1,
             },
