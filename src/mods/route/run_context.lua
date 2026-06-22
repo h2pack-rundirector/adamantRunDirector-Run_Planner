@@ -298,18 +298,6 @@ function runContext.create(opts)
         end
     end
 
-    function context:collectPriorGodLoot(routeKey, biomeKey, countedLookup, selections, stopAtCount)
-        if type(biomeKey) == "table" then
-            stopAtCount = selections
-            selections = countedLookup
-            countedLookup = biomeKey
-            biomeKey = routeKey
-            routeKey = nil
-        end
-
-        return self.rewardState.collectPriorGodLoot(self, routeKey, biomeKey, countedLookup, selections, stopAtCount)
-    end
-
     function context:npcTargets(routeKey)
         local state = routeNpcTargetsState(self, routeKey)
         if state.dirty or state.targets == nil then
@@ -477,8 +465,5 @@ function runContext.create(opts)
 
     return context
 end
-
-runContext.collectRewardGodLoot = routeRewards.collectRewardGodLoot
-runContext.collectRowGodLoot = routeRewards.collectRowGodLoot
 
 return runContext

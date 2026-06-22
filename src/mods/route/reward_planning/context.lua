@@ -127,6 +127,10 @@ function rewardContext.seenGodLootCount(context, requirement)
     return count
 end
 
+function rewardContext.hasSeenGodLoot(context, lootName)
+    return lootName ~= nil and lootName ~= "" and context.godLootSeen[lootName] == true
+end
+
 function rewardContext.previousRow(context, biomeKey)
     return context.previousRows[biomeKey]
 end

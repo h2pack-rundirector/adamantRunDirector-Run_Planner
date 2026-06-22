@@ -544,7 +544,15 @@ local function devotionRewardRow(rowIndex, opts)
     return routeRewardRow(rowIndex, "Devotion", {
         exitCount = opts.exitCount,
         rewardKind = "majorMinor",
-        rewards = { "Major", "Devotion", "", "", "ZeusUpgrade", "ApolloUpgrade" },
+        rewardRowGroup = opts.rewardRowGroup,
+        rewards = {
+            "Major",
+            "Devotion",
+            "",
+            "",
+            opts.lootAName or "ZeusUpgrade",
+            opts.lootBName or "ApolloUpgrade",
+        },
     })
 end
 
@@ -554,6 +562,7 @@ local function boonRewardRow(rowIndex, lootName, opts)
         exitCount = opts.exitCount,
         rewards = { "Major", "Boon", lootName },
         rewardKind = "majorMinor",
+        rewardRowGroup = opts.rewardRowGroup,
         rewardPicks = {
             { kind = "boonSource", value = lootName },
         },

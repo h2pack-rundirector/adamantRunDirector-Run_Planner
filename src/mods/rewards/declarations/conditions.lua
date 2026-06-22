@@ -55,6 +55,11 @@ return {
                 code = "devotion_spacing",
                 message = "Trial requires 15 rooms since the previous Trial",
             },
+            {
+                kind = "devotionSourcesInPriorGodLoot",
+                code = "devotion_sources_not_seen",
+                message = "Trial gods must be planned earlier in the route",
+            },
         },
     },
     {

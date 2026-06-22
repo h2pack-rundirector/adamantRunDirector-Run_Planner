@@ -67,6 +67,12 @@ local function drawRewardRowHeader(imgui, control, rowIndex, slot)
     imgui.Text(rewardRowLabel(control, rowIndex, slot))
 end
 
+local function drawRewardSurface(draw, control, surface, fields, opts)
+    if rewardSystem.draw(draw, surface, fields, opts) and (opts == nil or opts.onControlChanged == nil) then
+        control:invalidateReadPass()
+    end
+end
+
 local function drawRewardRow(draw, control, instance, rowIndex)
     local slot = control:slot(rowIndex)
     if slot == nil then
@@ -85,9 +91,7 @@ local function drawRewardRow(draw, control, instance, rowIndex)
     then
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)
-        if rewardSystem.draw(draw, surface, rewardFields(control, rowIndex), rewardDrawOpts(control, rowIndex)) then
-            control:invalidateReadPass()
-        end
+        drawRewardSurface(draw, control, surface, rewardFields(control, rowIndex), rewardDrawOpts(control, rowIndex))
     end
 end
 

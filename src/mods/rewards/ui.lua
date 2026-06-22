@@ -171,7 +171,11 @@ local function drawControl(draw, surface, fields, control, opts)
         localValueStates(surface, fields, control, opts)
     )
     drawOpts = dropdownValues.decorate(control, drawOpts, valueStates)
-    return draw.widgets.dropdown(field, drawOpts)
+    local changed = draw.widgets.dropdown(field, drawOpts)
+    if changed and opts ~= nil and opts.onControlChanged ~= nil then
+        opts.onControlChanged(control, fields, fields.rewardContext)
+    end
+    return changed
 end
 
 local function hasGroupedRows(surface)

@@ -32,6 +32,12 @@ local function rewardDrawOpts(control)
     return REWARD_DRAW_OPTS
 end
 
+local function drawRewardSurface(draw, control, surface, fields, opts)
+    if rewardSystem.draw(draw, surface, fields, opts) and (opts == nil or opts.onControlChanged == nil) then
+        control:invalidateReadPass()
+    end
+end
+
 local function getSideModeOpts(control, instance)
     if control._sideModeOpts == nil then
         control._sideModeOpts = copyBaseOpts(SIDE_MODE_OPTS)
@@ -97,14 +103,17 @@ local function drawSideRoomRow(draw, control, instance, rowIndex)
         local surface = sideDoor ~= nil and rewardSystem and rewardSystem.surfaceFor(sideDoor.reward) or nil
         if mode == data.sideRoomEnabledMode()
             and rewardSystem ~= nil
-            and rewardSystem ~= nil
             and rewardSystem.hasControls(surface)
         then
             draw.imgui.SameLine()
             draw.imgui.SetCursorPosX(SIDE_REWARD_COLUMN_X)
-            if rewardSystem.draw(draw, surface, sideRewardFields(control, sideRowIndex, rowIndex, sideIndex), rewardDrawOpts(control)) then
-                control:invalidateReadPass()
-            end
+            drawRewardSurface(
+                draw,
+                control,
+                surface,
+                sideRewardFields(control, sideRowIndex, rowIndex, sideIndex),
+                rewardDrawOpts(control)
+            )
         end
     end
 end

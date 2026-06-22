@@ -59,6 +59,52 @@ local function invalidRowKey(biomeKey, rowIndex, code, address)
         .. tostring(address or "")
 end
 
+local function candidateRowsForBiome(result, biomeKey)
+    local byBiome = result.candidateRows[biomeKey]
+    if byBiome == nil then
+        byBiome = {}
+        result.candidateRows[biomeKey] = byBiome
+    end
+    return byBiome
+end
+
+local function candidateRowFor(result, rewardCtx, ctx, row)
+    if row == nil or row.valid == false then
+        return nil
+    end
+
+    local byBiome = candidateRowsForBiome(result, ctx.biomeKey)
+    local candidateRow = byBiome[row.rowIndex]
+    if candidateRow == nil then
+        candidateRow = {
+            rewardCtx = rewardContext.snapshot(rewardCtx),
+            ctx = ctx,
+            row = row,
+        }
+        byBiome[row.rowIndex] = candidateRow
+    end
+    return candidateRow
+end
+
+local function storeCandidateEventContext(result, rewardCtx, ctx, event)
+    local row = event and event.row or nil
+    local address = event and event.address or nil
+    if row == nil or address == nil then
+        return
+    end
+
+    local candidateRow = candidateRowFor(result, rewardCtx, ctx, row)
+    if candidateRow == nil then
+        return
+    end
+    local byAddress = candidateRow.rewardCtxByAddress
+    if byAddress == nil then
+        byAddress = {}
+        candidateRow.rewardCtxByAddress = byAddress
+    end
+    byAddress[address] = rewardContext.snapshot(rewardCtx)
+end
+
 local function addInvalid(context, result, seenInvalids, ctx, event, code, message)
     local row = event and event.row or nil
     if row == nil then
@@ -143,6 +189,18 @@ local function minRunEncounterDepthInvalid(requirement, ctx)
     return nil
 end
 
+local function devotionSourcesInPriorGodLootInvalid(requirement, rewardCtx, event)
+    if event.rewardType ~= "Devotion" then
+        return nil
+    end
+    if not rewardContext.hasSeenGodLoot(rewardCtx, event.devotionSourceA)
+        or not rewardContext.hasSeenGodLoot(rewardCtx, event.devotionSourceB)
+    then
+        return requirement
+    end
+    return nil
+end
+
 local function inRange(value, range)
     if range == nil or value == nil then
         return true
@@ -197,6 +255,8 @@ local function requirementInvalid(requirement, rewardCtx, ctx, event)
         return minRoomHistorySpacingInvalid(requirement, rewardCtx, ctx, event)
     elseif requirement.kind == "minRunEncounterDepth" then
         return minRunEncounterDepthInvalid(requirement, ctx)
+    elseif requirement.kind == "devotionSourcesInPriorGodLoot" then
+        return devotionSourcesInPriorGodLootInvalid(requirement, rewardCtx, event)
     end
 
     local count = rewardContext.counterValue(rewardCtx, requirement.counter, requirement.scope, ctx.biomeKey)
@@ -366,6 +426,7 @@ local function applyRewardRowGroupEffects(rewardCtx)
 end
 
 local function validateAfterRewardRowGroupEntry(context, result, seenInvalids, rewardCtx, entry)
+    storeCandidateEventContext(result, rewardCtx, entry.ctx, entry.event)
     local invalid = eventInvalid(rewardCtx, entry.ctx, entry.event)
     if invalid == nil then
         return nil

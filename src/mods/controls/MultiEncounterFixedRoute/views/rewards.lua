@@ -78,6 +78,12 @@ local function drawRewardRowHeader(imgui, control, rowIndex, slot)
     imgui.Text(rewardRowLabel(control, rowIndex, slot))
 end
 
+local function drawRewardSurface(draw, control, surface, fields, opts)
+    if rewardSystem.draw(draw, surface, fields, opts) and (opts == nil or opts.onControlChanged == nil) then
+        control:invalidateReadPass()
+    end
+end
+
 local function drawEncounterRewardRows(draw, control, instance, rowIndex)
     local imgui = draw.imgui
     for legIndex = 1, data.encounterRewardLegCountForRow(instance, control:routeRows(), rowIndex) do
@@ -99,14 +105,13 @@ local function drawEncounterRewardRows(draw, control, instance, rowIndex)
             imgui.Text(tostring(leg.label or leg.key or "Reward"))
             imgui.SameLine()
             imgui.SetCursorPosX(ENCOUNTER_REWARD_COLUMN_X)
-            if rewardSystem.draw(
+            drawRewardSurface(
                 draw,
+                control,
                 legSurface,
                 encounterRewardFields(control, encounterRewardRowIndex, rowIndex, legIndex),
                 rewardDrawOpts(control)
-            ) then
-                control:invalidateReadPass()
-            end
+            )
         end
     end
 end
@@ -129,9 +134,7 @@ local function drawRewardRow(draw, control, instance, rowIndex)
     then
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)
-        if rewardSystem.draw(draw, surface, rewardFields(control, rowIndex), rewardDrawOpts(control)) then
-            control:invalidateReadPass()
-        end
+        drawRewardSurface(draw, control, surface, rewardFields(control, rowIndex), rewardDrawOpts(control))
     end
 end
 

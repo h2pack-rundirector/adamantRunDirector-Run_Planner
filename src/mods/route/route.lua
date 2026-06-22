@@ -67,7 +67,6 @@ function routeFactory.create(opts)
         targets = createRouteTargets(routeTimeline, planning),
         rewards = import("mods/route/run_context/rewards.lua", nil, {
             rewardLegality = planning.rewardLegality,
-            rewardItems = planning.rewardItems,
             semantics = planning.rewardSemantics,
             timeline = routeTimeline,
             valueStates = rows.valueStates,

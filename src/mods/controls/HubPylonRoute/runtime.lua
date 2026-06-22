@@ -209,9 +209,15 @@ function runtime.create(fields, instance)
 
     function control:rewardDrawOpts(baseOpts)
         instance.rewardDrawOpts = instance.rewardDrawOpts or {}
+        if instance.rewardDrawChanged == nil then
+            instance.rewardDrawChanged = function()
+                self:invalidateReadPass()
+            end
+        end
         instance.rewardDrawOpts.hideGenericRewardLabel = baseOpts and baseOpts.hideGenericRewardLabel
         instance.rewardDrawOpts.godSource = self:godSource()
         instance.rewardDrawOpts.valueStatesForControl = rewardSystem.routeValueStatesForControl(instance)
+        instance.rewardDrawOpts.onControlChanged = instance.rewardDrawChanged
         return instance.rewardDrawOpts
     end
 

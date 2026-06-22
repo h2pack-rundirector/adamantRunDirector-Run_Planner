@@ -25,9 +25,9 @@ local valueStates = testImport("mods/route/value_states.lua")
 -- luacheck: globals TestRunPlannerRewardPlanning
 TestRunPlannerRewardPlanning = {}
 
-local function rewardCandidateControl(kind, values)
+local function rewardCandidateControl(kind, values, alias)
     return {
-        alias = "Reward1Key",
+        alias = alias or "Reward1Key",
         kind = kind or "rewardType",
         values = values,
     }
@@ -457,6 +457,33 @@ function TestRunPlannerRewardPlanning.testRouteContextAllowsCandidatesAfterRequi
     lu.assertNil(routeContext:rewardValueStates("Underworld", "F", 2, "row", "Reward1Key", control))
 end
 
+function TestRunPlannerRewardPlanning.testRouteContextRefreshesRewardCandidateStatesAfterUpstreamEdit()
+    local control = rewardCandidateControl("rewardType", {
+        "",
+        "TalentDrop",
+    })
+    local rows = {
+        routeRewardRow(1, "MaxHealthDrop"),
+        routeRewardRow(2, "MaxHealthDrop"),
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", rows),
+    })
+
+    local states = routeContext:rewardValueStates("Underworld", "F", 2, "row", "Reward1Key", control)
+
+    lu.assertEquals(states.TalentDrop, valueStates.INVALID)
+
+    rows[1] = routeRewardRow(1, "SpellDrop")
+    routeContext:markDirty("Underworld", "F")
+
+    lu.assertNil(routeContext:rewardValueStates("Underworld", "F", 2, "row", "Reward1Key", control))
+end
+
 function TestRunPlannerRewardPlanning.testRouteContextMarksCandidatesInvalidBeforePendingShopRewardPromotes()
     local control = rewardCandidateControl("rewardType", {
         "",
@@ -780,6 +807,43 @@ function TestRunPlannerRewardPlanning.testRewardRowGroupMarksDuplicateRewardCand
     lu.assertNil(states.MaxManaDropBig)
 end
 
+function TestRunPlannerRewardPlanning.testRewardRowGroupRefreshesCandidateStatesAfterPriorRewardChanges()
+    local group = {
+        key = "TestBatch",
+        constraints = {
+            uniqueRewardTypes = {},
+        },
+    }
+    local control = rewardCandidateControl("rewardType", {
+        "",
+        "MaxHealthDropBig",
+        "MaxManaDropBig",
+    })
+    local rows = {
+        routeRewardRow(1, "MaxHealthDropBig", { rewardRowGroup = group }),
+        routeRewardRow(2, "MaxManaDropBig", { rewardRowGroup = group }),
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N" },
+    }, {
+        RouteN = fakeRouteControlSnapshot("RouteN", rows),
+    })
+
+    local states = routeContext:rewardValueStates("Surface", "N", 2, "row", "Reward1Key", control)
+
+    lu.assertEquals(states.MaxHealthDropBig, valueStates.INVALID)
+
+    rows[1] = routeRewardRow(1, "MaxManaDropBig", { rewardRowGroup = group })
+    routeContext:markDirty("Surface", "N")
+
+    states = routeContext:rewardValueStates("Surface", "N", 2, "row", "Reward1Key", control)
+
+    lu.assertNil(states.MaxHealthDropBig)
+    lu.assertEquals(states.MaxManaDropBig, valueStates.INVALID)
+end
+
 function TestRunPlannerRewardPlanning.testRewardRowGroupDoesNotLetEarlierRowsSatisfyLaterRows()
     local group = {
         key = "TestBatch",
@@ -819,6 +883,56 @@ function TestRunPlannerRewardPlanning.testRewardRowGroupEffectsApplyAfterGroupCl
     })
 
     lu.assertTrue(routeContext:overview("Surface").valid)
+end
+
+function TestRunPlannerRewardPlanning.testSideRoomCandidateStatesUsePostRewardGroupContext()
+    local group = {
+        key = "N_HubPylons",
+    }
+    local control = rewardCandidateControl("rewardType", {
+        "",
+        "MinorTalentDrop",
+    })
+    local function pylonRow(primaryReward)
+        local row = routeRewardRow(1, primaryReward, {
+            rewardRowGroup = group,
+        })
+        row.sideRooms = {
+            {
+                sideIndex = 1,
+                rewardKind = "roomStore",
+                rewards = { "MinorTalentDrop" },
+                rewardPicks = {},
+            },
+        }
+        return row
+    end
+    local rows = {
+        pylonRow("SpellDrop"),
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N" },
+    }, {
+        RouteN = fakeRouteControlSnapshot("RouteN", rows),
+    })
+
+    lu.assertTrue(routeContext:overview("Surface").valid)
+    lu.assertNil(routeContext:rewardValueStates("Surface", "N", 1, "side:1", "Reward1Key", control))
+
+    rows[1] = pylonRow("MaxHealthDrop")
+    routeContext:markDirty("Surface", "N")
+
+    local states = routeContext:rewardValueStates("Surface", "N", 1, "side:1", "Reward1Key", control)
+
+    lu.assertEquals(states.MinorTalentDrop, valueStates.INVALID)
+
+    rows[1] = pylonRow("SpellDrop")
+    routeContext:markDirty("Surface", "N")
+
+    lu.assertTrue(routeContext:overview("Surface").valid)
+    lu.assertNil(routeContext:rewardValueStates("Surface", "N", 1, "side:1", "Reward1Key", control))
 end
 
 function TestRunPlannerRewardPlanning.testRouteContextInvalidatesDevotionBeforeSevenRunEncounters()
@@ -862,6 +976,67 @@ function TestRunPlannerRewardPlanning.testRouteContextAllowsDevotionAfterSevenRu
 
     lu.assertTrue(routeContext:overview("Underworld").valid)
     lu.assertNil(routeContext:rewardRowValidation("Underworld", "F", 8))
+end
+
+function TestRunPlannerRewardPlanning.testRouteContextInvalidatesUnseenDevotionGods()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            boonRewardRow(1, "ZeusUpgrade"),
+            boonRewardRow(2, "ApolloUpgrade"),
+            routeRewardRow(3, "MaxHealthDrop"),
+            routeRewardRow(4, "MaxHealthDrop"),
+            routeRewardRow(5, "MaxHealthDrop"),
+            routeRewardRow(6, "MaxHealthDrop"),
+            routeRewardRow(7, "MaxHealthDrop", { exitCount = 2 }),
+            devotionRewardRow(8, {
+                lootAName = "ZeusUpgrade",
+                lootBName = "PoseidonUpgrade",
+            }),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 8)
+    lu.assertEquals(overview.invalidRows[1].code, "devotion_sources_not_seen")
+end
+
+function TestRunPlannerRewardPlanning.testRewardRowGroupDoesNotSatisfyDevotionGods()
+    local group = {
+        key = "TestBatch",
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N" },
+    }, {
+        RouteN = fakeRouteControlSnapshot("RouteN", {
+            boonRewardRow(1, "ZeusUpgrade"),
+            boonRewardRow(2, "ApolloUpgrade"),
+            routeRewardRow(3, "MaxHealthDrop"),
+            routeRewardRow(4, "MaxHealthDrop"),
+            routeRewardRow(5, "MaxHealthDrop"),
+            routeRewardRow(6, "MaxHealthDrop"),
+            routeRewardRow(7, "MaxHealthDrop", { exitCount = 2 }),
+            boonRewardRow(8, "PoseidonUpgrade", { exitCount = 2, rewardRowGroup = group }),
+            devotionRewardRow(9, {
+                rewardRowGroup = group,
+                lootAName = "ZeusUpgrade",
+                lootBName = "PoseidonUpgrade",
+            }),
+        }),
+    })
+
+    local overview = routeContext:overview("Surface")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 9)
+    lu.assertEquals(overview.invalidRows[1].code, "devotion_sources_not_seen")
 end
 
 function TestRunPlannerRewardPlanning.testRouteContextInvalidatesDevotionBeforeFifteenRooms()
@@ -934,6 +1109,51 @@ function TestRunPlannerRewardPlanning.testRouteContextCountsTimelineRoomsForDevo
 
     lu.assertTrue(overview.valid)
     lu.assertNil(routeContext:rewardRowValidation("Underworld", "G", 13))
+end
+
+function TestRunPlannerRewardPlanning.testRouteContextRefreshesDevotionSpacingCandidateAfterPriorTrialChanges()
+    local control = rewardCandidateControl("rewardType", {
+        "",
+        "Devotion",
+        "MaxHealthDrop",
+    }, "Reward2Key")
+    local fRows = firstValidDevotionRows()
+    local gRows = {
+        routeRewardRow(1, "MaxHealthDrop"),
+        routeRewardRow(2, "MaxHealthDrop"),
+        routeRewardRow(3, "MaxHealthDrop"),
+        routeRewardRow(4, "MaxHealthDrop"),
+        routeRewardRow(5, "MaxHealthDrop"),
+        routeRewardRow(6, "MaxHealthDrop"),
+        routeRewardRow(7, "MaxHealthDrop"),
+        routeRewardRow(8, "MaxHealthDrop"),
+        routeRewardRow(9, "MaxHealthDrop"),
+        routeRewardRow(10, "MaxHealthDrop"),
+        routeRewardRow(11, "MaxHealthDrop", { exitCount = 2 }),
+        devotionRewardRow(12),
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", fRows),
+        RouteG = fakeRouteControlSnapshot("RouteG", gRows),
+    }, {
+        biomes = {
+            F = fakeTimelineBiome(),
+            G = fakeTimelineBiome(),
+        },
+    })
+
+    local states = routeContext:rewardValueStates("Underworld", "G", 12, "row", "Reward1Key", control)
+
+    lu.assertEquals(states.Devotion, valueStates.INVALID)
+
+    fRows[9] = routeRewardRow(9, "MaxHealthDrop", { exitCount = 2 })
+    routeContext:markDirty("Underworld", "F")
+
+    lu.assertNil(routeContext:rewardValueStates("Underworld", "G", 12, "row", "Reward1Key", control))
 end
 
 function TestRunPlannerRewardPlanning.testRouteContextInvalidatesDuplicateSpellDrops()

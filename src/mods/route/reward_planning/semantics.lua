@@ -252,9 +252,9 @@ function semantics.hasBannedValue(item, banned)
     return false
 end
 
-local function appendEvent(events, row, item, rewardType, address, addressLabel, boonSource, devotionSourceA, devotionSourceB)
+local function newEvent(row, item, rewardType, address, addressLabel, boonSource, devotionSourceA, devotionSourceB)
     if rewardType == nil or rewardType == "" then
-        return
+        return nil
     end
 
     local event = {
@@ -274,7 +274,113 @@ local function appendEvent(events, row, item, rewardType, address, addressLabel,
     if devotionSourceB ~= nil and devotionSourceB ~= "" then
         event.devotionSourceB = devotionSourceB
     end
+    return event
+end
+
+local function appendEvent(events, row, item, rewardType, address, addressLabel, boonSource, devotionSourceA, devotionSourceB)
+    local event = newEvent(row, item, rewardType, address, addressLabel, boonSource, devotionSourceA, devotionSourceB)
+    if event == nil then
+        return nil
+    end
     events[#events + 1] = event
+    return event
+end
+
+local function candidateRewardType(control, value)
+    if value == nil or value == "" or control == nil then
+        return nil
+    end
+    if control.kind == "rewardType" or control.kind == "shopOption" then
+        return value
+    end
+    return nil
+end
+
+local function candidateSourceIndex(control)
+    return math.floor(tonumber(control and (control.sourceIndex or control.rowIndex) or 0) or 0)
+end
+
+local function candidateBoonSource(item, rewardType, sourceIndex)
+    if rewardType ~= "Boon" then
+        return nil
+    end
+
+    if item.rewardKind == "shop" then
+        return sourceForShopReward(item, sourceIndex, rewardType)
+    elseif item.rewardKind == "fieldsCages" then
+        return sourceForFieldsCageReward(item, sourceIndex, rewardType)
+    end
+
+    local rewards = item.rewards or EMPTY_LIST
+    if item.rewardKind == "boonSource" then
+        return pickValue(item, "boonSource") or pickValueByKind(item, "boonSource") or rewards[1]
+    elseif item.rewardKind == "roomStore" then
+        return pickValue(item, "boonSource") or rewards[2]
+    elseif item.rewardKind == "majorMinor" and rewards[1] == "Major" then
+        return pickValue(item, "boonSource") or rewards[3]
+    end
+    return nil
+end
+
+local function candidateDevotionSources(item, rewardType)
+    if rewardType ~= "Devotion" then
+        return nil, nil
+    end
+
+    local rewards = item.rewards or EMPTY_LIST
+    if item.rewardKind == "devotionPair" then
+        return pickValue(item, "lootAName") or rewards[1], pickValue(item, "lootBName") or rewards[2]
+    elseif item.rewardKind == "roomStore" then
+        return pickValue(item, "lootAName") or rewards[3], pickValue(item, "lootBName") or rewards[4]
+    elseif item.rewardKind == "majorMinor" and rewards[1] == "Major" then
+        return pickValue(item, "lootAName") or rewards[5], pickValue(item, "lootBName") or rewards[6]
+    end
+    return nil, nil
+end
+
+function semantics.candidateEventForControl(row, item, control, value, rewardAddress)
+    if item == nil or item.valid == false then
+        return nil
+    end
+
+    local rewardType = candidateRewardType(control, value)
+    if rewardType == nil then
+        return nil
+    end
+
+    local sourceIndex = candidateSourceIndex(control)
+    local baseAddress = rewardAddress or item.address
+    if item.rewardKind == "shop" and sourceIndex > 0 then
+        return newEvent(
+            row,
+            item,
+            rewardType,
+            shopAddress(baseAddress, sourceIndex),
+            shopAddressLabel(item, sourceIndex),
+            sourceForShopReward(item, sourceIndex, rewardType)
+        )
+    elseif item.rewardKind == "fieldsCages" and sourceIndex > 0 then
+        return newEvent(
+            row,
+            item,
+            rewardType,
+            fieldsCageAddress(baseAddress, sourceIndex),
+            fieldsCageAddressLabel(item, sourceIndex),
+            candidateBoonSource(item, rewardType, sourceIndex)
+        )
+    end
+
+    local devotionSourceA, devotionSourceB = candidateDevotionSources(item, rewardType)
+    return newEvent(
+        row,
+        item,
+        rewardType,
+        baseAddress,
+        item.sourceLabel,
+        candidateBoonSource(item, rewardType, sourceIndex),
+        devotionSourceA,
+        devotionSourceB
+    )
 end
 
 function semantics.eventsForItem(item, row, out)

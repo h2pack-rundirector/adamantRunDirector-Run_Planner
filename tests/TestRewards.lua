@@ -280,6 +280,67 @@ function TestRunPlannerRewards.testSemanticsExposeFieldsCageRewardEvents()
     lu.assertEquals(events[3].address, "cage:3")
 end
 
+function TestRunPlannerRewards.testSemanticsExposeCandidateRewardEvents()
+    local semantics = loadSemantics()
+    local row = {
+        rowIndex = 4,
+    }
+
+    local devotionEvent = semantics.candidateEventForControl(row, {
+        address = "row",
+        sourceLabel = "Rewards",
+        rewardKind = "majorMinor",
+        rewards = { "Major", "", "", "", "ZeusUpgrade", "ApolloUpgrade" },
+        rewardPicks = {
+            { key = "lootAName", value = "HeraUpgrade" },
+            { key = "lootBName", value = "HestiaUpgrade" },
+        },
+    }, {
+        kind = "rewardType",
+        rowIndex = 1,
+    }, "Devotion", "row")
+
+    lu.assertNotNil(devotionEvent)
+    lu.assertEquals(devotionEvent.rewardType, "Devotion")
+    lu.assertEquals(devotionEvent.address, "row")
+    lu.assertEquals(devotionEvent.addressLabel, "Rewards")
+    lu.assertEquals(devotionEvent.devotionSourceA, "HeraUpgrade")
+    lu.assertEquals(devotionEvent.devotionSourceB, "HestiaUpgrade")
+
+    local shopEvent = semantics.candidateEventForControl(row, {
+        address = "row",
+        rewardKind = "shop",
+        rewards = { "" },
+        rewardLoot = { "DemeterUpgrade" },
+    }, {
+        kind = "shopOption",
+        rowIndex = 1,
+    }, "RandomLoot", "row")
+
+    lu.assertNotNil(shopEvent)
+    lu.assertEquals(shopEvent.rewardType, "RandomLoot")
+    lu.assertEquals(shopEvent.address, "shop:1")
+    lu.assertEquals(shopEvent.addressLabel, "Shop Offer 1")
+    lu.assertEquals(shopEvent.boonSource, "DemeterUpgrade")
+
+    local cageEvent = semantics.candidateEventForControl(row, {
+        address = "row",
+        rewardKind = "fieldsCages",
+        rewardSourceCount = 2,
+        rewards = { "", "" },
+        rewardLoot = { "ZeusUpgrade", "PoseidonUpgrade" },
+    }, {
+        kind = "rewardType",
+        sourceIndex = 2,
+    }, "Boon", "row")
+
+    lu.assertNotNil(cageEvent)
+    lu.assertEquals(cageEvent.rewardType, "Boon")
+    lu.assertEquals(cageEvent.address, "cage:2")
+    lu.assertEquals(cageEvent.addressLabel, "Cage 2 Reward")
+    lu.assertEquals(cageEvent.boonSource, "PoseidonUpgrade")
+end
+
 function TestRunPlannerRewards.testSemanticsConcreteAndBannedChecks()
     local semantics = loadSemantics()
 
@@ -1080,6 +1141,47 @@ function TestRunPlannerRewards.testUiPassesRewardContextToExternalValueStates()
     lu.assertIs(seen.fields, fields)
     lu.assertIs(seen.context, rewardContext)
     lu.assertEquals(captured.Reward1Key.valueColors.Boon, { 1.0, 0.22, 0.16, 1.0 })
+end
+
+function TestRunPlannerRewards.testUiInvalidatesImmediatelyAfterRewardControlChanges()
+    local ui, runtime = loadUi()
+    local surface = runtime.surfaceFor(qSummitShopContext())
+    local invalidated = false
+    local secondControlSawInvalidation = false
+    local draw = {
+        imgui = {
+            GetCursorPosX = function()
+                return 0
+            end,
+            AlignTextToFramePadding = function() end,
+            Text = function() end,
+            SameLine = function() end,
+            SetCursorPosX = function() end,
+        },
+        widgets = {
+            dropdown = function(field)
+                return field.alias == "Reward1Key"
+            end,
+        },
+    }
+
+    ui.draw(draw, surface, drawableFields({
+        Reward1Key = "MaxHealthDropBig",
+        Reward2Key = "MaxManaDropBig",
+    }), {
+        onControlChanged = function()
+            invalidated = true
+        end,
+        valueStatesForControl = function(control)
+            if control.alias == "Reward2Key" then
+                secondControlSawInvalidation = invalidated
+            end
+            return nil
+        end,
+    })
+
+    lu.assertTrue(invalidated)
+    lu.assertTrue(secondControlSawInvalidation)
 end
 
 function TestRunPlannerRewards.testCatalogAppliesIneligibleRewardTypes()

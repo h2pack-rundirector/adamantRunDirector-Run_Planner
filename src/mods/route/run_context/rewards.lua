@@ -1,5 +1,4 @@
 local deps = ... or {}
-local rewardItems = deps.rewardItems
 local semantics = deps.semantics
 local defaultRewardLegality = deps.rewardLegality
 local routeTimeline = deps.timeline
@@ -7,41 +6,8 @@ local routeValueStates = deps.valueStates
 
 local rewards = {}
 local EMPTY_LIST = {}
-local GOD_LOOT_SOURCE_SCRATCH = {}
 local NO_VALUE_STATES = false
 local INVALID_VALUE_STATE = routeValueStates and routeValueStates.INVALID or 2
-
-local function addGodLootSelection(selections, countedLookup, lootName)
-    if lootName ~= nil and lootName ~= "" and countedLookup[lootName] and not selections[lootName] then
-        selections[lootName] = true
-        return 1
-    end
-    return 0
-end
-
-local function selectionCount(selections)
-    local count = 0
-    for _ in pairs(selections) do
-        count = count + 1
-    end
-    return count
-end
-
-local function collectRewardGodLoot(item, countedLookup, selections, sourceScratch)
-    local count = 0
-    for _, source in ipairs(semantics.godLootSources(item, sourceScratch or GOD_LOOT_SOURCE_SCRATCH)) do
-        count = count + addGodLootSelection(selections, countedLookup, source)
-    end
-    return count
-end
-
-local function collectRowGodLoot(row, countedLookup, selections, itemScratch, sourceScratch)
-    local count = 0
-    for _, item in ipairs(rewardItems.collect(row, itemScratch)) do
-        count = count + collectRewardGodLoot(item, countedLookup, selections, sourceScratch)
-    end
-    return count
-end
 
 local function routeRewardLegalityState(context, routeKey)
     local state = context.rewardLegalityByRoute[routeKey]
@@ -172,16 +138,6 @@ local function storeCandidateRow(result, rewardLegalityEngine, rewardCtx, ctx, r
     }
 end
 
-local function directCandidateRewardType(control, value)
-    if value == nil or value == "" or control == nil then
-        return nil
-    end
-    if control.kind == "rewardType" or control.kind == "shopOption" then
-        return value
-    end
-    return nil
-end
-
 local function candidateItem(row, rewardAddress, control)
     if control == nil then
         return nil
@@ -197,20 +153,6 @@ local function candidateItem(row, rewardAddress, control)
     return itemForAddress(row, "row")
 end
 
-local function candidateEvent(row, item, control, value, rewardAddress)
-    local rewardType = directCandidateRewardType(control, value)
-    if rewardType == nil or item == nil then
-        return nil
-    end
-    return {
-        row = row,
-        item = item,
-        rewardType = rewardType,
-        address = rewardAddress or item.address,
-        rowLabel = item.rowLabel,
-    }
-end
-
 local function buildCandidateValueStates(rewardLegalityEngine, candidateRow, rewardAddress, control)
     if rewardLegalityEngine == nil or rewardLegalityEngine.candidateInvalid == nil or candidateRow == nil then
         return nil
@@ -221,11 +163,14 @@ local function buildCandidateValueStates(rewardLegalityEngine, candidateRow, rew
         return nil
     end
 
+    local itemRewardCtx = candidateRow.rewardCtxByAddress
+        and candidateRow.rewardCtxByAddress[rewardAddress or item.address or "row"]
+        or candidateRow.rewardCtx
     local states = nil
     for _, value in ipairs(control and control.values or EMPTY_LIST) do
-        local event = candidateEvent(candidateRow.row, item, control, value, rewardAddress)
+        local event = semantics.candidateEventForControl(candidateRow.row, item, control, value, rewardAddress)
         if event ~= nil
-            and rewardLegalityEngine.candidateInvalid(candidateRow.rewardCtx, candidateRow.ctx, event) ~= nil
+            and rewardLegalityEngine.candidateInvalid(itemRewardCtx, candidateRow.ctx, event) ~= nil
         then
             states = states or {}
             states[value] = INVALID_VALUE_STATE
@@ -297,51 +242,12 @@ local function evaluateRouteLegality(context, routeKey, opts)
     return result
 end
 
-function rewards.collectRewardGodLoot(item, countedLookup, selections, sourceScratch)
-    return collectRewardGodLoot(item, countedLookup, selections, sourceScratch)
-end
-
-function rewards.collectRowGodLoot(row, countedLookup, selections, itemScratch, sourceScratch)
-    return collectRowGodLoot(row, countedLookup, selections, itemScratch, sourceScratch)
-end
-
 function rewards.create(opts)
     opts = opts or {}
     local rewardLegalityEngine = opts.rewardLegality or defaultRewardLegality
     local routeControlName = opts.routeControlName or defaultRouteControlName
 
     local rewardState = {}
-
-    function rewardState.collectPriorGodLoot(context, routeKey, biomeKey, countedLookup, selections, stopAtCount)
-        if countedLookup == nil or selections == nil then
-            return selections
-        end
-
-        local info = context:routeInfo(routeKey, biomeKey)
-        if info == nil then
-            return selections
-        end
-
-        local count = selectionCount(selections)
-        context.rewardGodLootItemScratch = context.rewardGodLootItemScratch or {}
-        context.rewardGodLootSourceScratch = context.rewardGodLootSourceScratch or {}
-        for index = 1, info.index - 1 do
-            local snapshot = context:controlSnapshot(info.route.key, info.route.biomes[index])
-            for _, row in ipairs(snapshot and snapshot.rows or EMPTY_LIST) do
-                count = count + collectRowGodLoot(
-                    row,
-                    countedLookup,
-                    selections,
-                    context.rewardGodLootItemScratch,
-                    context.rewardGodLootSourceScratch
-                )
-                if stopAtCount ~= nil and count >= stopAtCount then
-                    return selections
-                end
-            end
-        end
-        return selections
-    end
 
     function rewardState.legality(context, routeKey, rewardOpts)
         local state = routeRewardLegalityState(context, routeKey)
