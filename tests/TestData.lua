@@ -156,19 +156,6 @@ local function fieldsBridgeReward()
     }
 end
 
-local function groupedMajorMinorReward()
-    return {
-        kind = "groupedMajorMinor",
-        majorRewardStore = "RunProgress",
-        minorRewardStore = "MetaProgress",
-        sourceCount = 2,
-        sharedRewardClass = true,
-        rewardGeneration = {
-            effectTiming = "afterBatch",
-        },
-    }
-end
-
 function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
     local data = dofile("src/mods/data.lua")
     local biomes = data.loadBiomes(testImport)
@@ -993,10 +980,10 @@ function TestRunPlannerData.testThessalyCombatPolicyModelsShipEncounters()
     lu.assertFalse(policy.legs[1].hasReward)
     lu.assertFalse(policy.legs[1].countsForRoomEncounterDepth)
     lu.assertEquals(policy.legs[2].key, "Encounter1")
-    lu.assertEquals(policy.legs[2].reward, groupedMajorMinorReward())
+    lu.assertEquals(policy.legs[2].reward, majorMinorReward())
     lu.assertTrue(policy.legs[2].required)
     lu.assertEquals(policy.legs[3].key, "Encounter2")
-    lu.assertEquals(policy.legs[3].reward, groupedMajorMinorReward())
+    lu.assertEquals(policy.legs[3].reward, majorMinorReward())
     lu.assertEquals(policy.legs[3].vanillaChance, 0.6)
     lu.assertEquals(policy.legs[3].availableAtBiomeEncounterDepth, { min = 2, max = 5 })
 end

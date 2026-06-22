@@ -122,8 +122,6 @@ local function collectRewardGodLoot(route, instance, rows, rowIndex, selections,
     local reward4 = rows:read(rowIndex, rewards.rewardAlias(4)) or ""
     local reward5 = rows:read(rowIndex, rewards.rewardAlias(5)) or ""
     local reward6 = rows:read(rowIndex, rewards.rewardAlias(6)) or ""
-    local reward2Loot = rows:read(rowIndex, rewards.lootAlias(2)) or ""
-    local reward4Loot = rows:read(rowIndex, rewards.lootAlias(4)) or ""
     local count = 0
 
     if context.kind == "majorMinor" then
@@ -132,15 +130,6 @@ local function collectRewardGodLoot(route, instance, rows, rowIndex, selections,
         elseif reward1 == "Major" and reward2 == "Devotion" then
             count = count + addGodLootSelection(selections, countedLookup, reward5)
             count = count + addGodLootSelection(selections, countedLookup, reward6)
-        end
-    elseif context.kind == "groupedMajorMinor" then
-        if reward1 == "Major" then
-            if reward2 == "Boon" then
-                count = count + addGodLootSelection(selections, countedLookup, reward2Loot)
-            end
-            if reward4 == "Boon" then
-                count = count + addGodLootSelection(selections, countedLookup, reward4Loot)
-            end
         end
     elseif context.kind == "roomStore" then
         if common.isOnlyEligible(context.eligibleRewardTypes, "Boon") then

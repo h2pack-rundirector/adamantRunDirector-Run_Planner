@@ -88,18 +88,6 @@ function rewards.majorMinor(opts)
     return context
 end
 
-function rewards.groupedMajorMinor(opts)
-    opts = opts or {}
-    local context = rewards.majorMinor(opts)
-    context.kind = "groupedMajorMinor"
-    context.sourceCount = opts.sourceCount or 2
-    if opts.sharedRewardClass == true then
-        context.sharedRewardClass = true
-    end
-    copyRewardGeneration(context, opts.rewardGeneration)
-    return context
-end
-
 function rewards.forcedReward(rewardType, opts)
     opts = opts or {}
     local context = {

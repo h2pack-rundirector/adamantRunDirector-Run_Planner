@@ -251,26 +251,26 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
             {
                 Reward1Key = "Major",
                 Reward2Key = "Boon",
-                Reward2LootKey = "ZeusUpgrade",
+                Reward3Key = "ZeusUpgrade",
             },
             {},
             {
                 Reward1Key = "Major",
                 Reward2Key = "Boon",
-                Reward2LootKey = "ZeusUpgrade",
+                Reward3Key = "ZeusUpgrade",
             },
             {
                 Reward1Key = "Minor",
-                Reward3Key = "GiftDrop",
+                Reward4Key = "GiftDrop",
             },
             {
                 Reward1Key = "Major",
                 Reward2Key = "Boon",
-                Reward2LootKey = "ZeusUpgrade",
+                Reward3Key = "ZeusUpgrade",
             },
             {
                 Reward1Key = "Minor",
-                Reward3Key = "GiftDrop",
+                Reward4Key = "GiftDrop",
             },
             {},
             {},
@@ -279,7 +279,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
             {
                 Reward1Key = "Major",
                 Reward2Key = "Boon",
-                Reward2LootKey = "HestiaUpgrade",
+                Reward3Key = "HestiaUpgrade",
             },
             {},
         }), instance)
@@ -321,7 +321,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
     lu.assertEquals(#snapshot.rows[3].encounterRewardLegs, 1)
     lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].key, "Encounter1")
     lu.assertEquals(snapshot.rows[3].encounterRewardLegs[1].label, "First Encounter")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardKind, "groupedMajorMinor")
+    lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardKind, "majorMinor")
     lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardPicks[1].value, "Major")
     lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardPicks[2].value, "Boon")
     lu.assertEquals(rewardItemBySource(snapshot.rows[3], "encounter", 1).rewardPicks[3].value, "ZeusUpgrade")

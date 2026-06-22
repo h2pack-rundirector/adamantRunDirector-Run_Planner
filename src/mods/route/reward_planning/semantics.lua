@@ -91,44 +91,6 @@ local function sourceForFieldsCageReward(item, index, rewardType)
     return item and item.rewardLoot and item.rewardLoot[index] or nil
 end
 
-local function groupedMajorRewardIndex(index)
-    return 2 + ((index - 1) * 2)
-end
-
-local function groupedMinorRewardIndex(index)
-    return 3 + ((index - 1) * 2)
-end
-
-local function groupedMajorMinorReward(item, index)
-    local rewards = item and item.rewards or EMPTY_LIST
-    local branch = rewards[1]
-    if branch == "Major" then
-        return rewards[groupedMajorRewardIndex(index)]
-    elseif branch == "Minor" then
-        return rewards[groupedMinorRewardIndex(index)]
-    end
-    return nil
-end
-
-local function groupedMajorMinorBoonSource(item, index, rewardType)
-    if rewardType ~= "Boon" then
-        return nil
-    end
-    return item and item.rewardLoot and item.rewardLoot[groupedMajorRewardIndex(index)] or nil
-end
-
-local function groupedMajorMinorAddress(address, index)
-    local wheelSuffix = "wheel:" .. tostring(index)
-    if address == nil or address == "" or address == "row" then
-        return wheelSuffix
-    end
-    return tostring(address) .. "/" .. wheelSuffix
-end
-
-local function groupedMajorMinorAddressLabel(_, index)
-    return "Wheel " .. tostring(index) .. " Reward"
-end
-
 local function effectTimingForItem(item)
     local generation = item and item.rewardGeneration or nil
     if generation ~= nil and generation.effectTiming ~= nil then
@@ -225,12 +187,6 @@ function semantics.godLootSources(item, out)
             appendValue(sources, sourceForFieldsCageReward(item, index, item.rewards and item.rewards[index] or nil))
         end
         return sources
-    elseif item.rewardKind == "groupedMajorMinor" then
-        for index = 1, sourceCount(item) do
-            local rewardType = groupedMajorMinorReward(item, index)
-            appendValue(sources, groupedMajorMinorBoonSource(item, index, rewardType))
-        end
-        return sources
     end
 
     local rewardType = semantics.rewardType(item)
@@ -260,13 +216,6 @@ function semantics.isConcrete(item)
             return rewardValue(item, 4) ~= nil
         end
         return false
-    elseif kind == "groupedMajorMinor" then
-        for index = 1, sourceCount(item) do
-            if groupedMajorMinorReward(item, index) == nil then
-                return false
-            end
-        end
-        return sourceCount(item) > 0
     elseif kind == "shop" then
         return rewardValue(item, 1) ~= nil
     elseif kind == "fieldsCages" then
@@ -358,20 +307,6 @@ function semantics.eventsForItem(item, row, out)
                 fieldsCageAddress(item.address, index),
                 fieldsCageAddressLabel(item, index),
                 sourceForFieldsCageReward(item, index, rewardType)
-            )
-        end
-        return events
-    elseif item.rewardKind == "groupedMajorMinor" then
-        for index = 1, sourceCount(item) do
-            local rewardType = groupedMajorMinorReward(item, index)
-            appendEvent(
-                events,
-                row,
-                item,
-                rewardType,
-                groupedMajorMinorAddress(item.address, index),
-                groupedMajorMinorAddressLabel(item, index),
-                groupedMajorMinorBoonSource(item, index, rewardType)
             )
         end
         return events

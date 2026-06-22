@@ -114,15 +114,6 @@ local function controlByKey(surface, key)
     return nil
 end
 
-local function hasValue(values, expected)
-    for _, value in ipairs(values or {}) do
-        if value == expected then
-            return true
-        end
-    end
-    return false
-end
-
 local function ruleByTarget(rules, target)
     for _, rule in ipairs(rules or {}) do
         for _, value in ipairs(rule.targets or {}) do
@@ -203,11 +194,6 @@ function TestRunPlannerRewards.testSemanticsDecodeRewardTypesAndSources()
         },
     }), "AphroditeUpgrade")
 
-    lu.assertNil(semantics.rewardType({
-        rewardKind = "groupedMajorMinor",
-        rewards = { "Minor", "", "GiftDrop", "", "MetaCurrencyDrop" },
-        rewardSourceCount = 2,
-    }))
 end
 
 function TestRunPlannerRewards.testSemanticsCollectGodLootSources()
@@ -292,38 +278,6 @@ function TestRunPlannerRewards.testSemanticsExposeFieldsCageRewardEvents()
     lu.assertEquals(events[2].address, "cage:2")
     lu.assertEquals(events[3].rewardType, "StackUpgrade")
     lu.assertEquals(events[3].address, "cage:3")
-end
-
-function TestRunPlannerRewards.testSemanticsExposeGroupedMajorMinorRewardEvents()
-    local semantics = loadSemantics()
-    local row = {
-        rowIndex = 2,
-        rewardItems = {
-            {
-                address = "encounter:1",
-                rewardKind = "groupedMajorMinor",
-                rewardSourceCount = 2,
-                rewards = { "Major", "Boon", "", "MaxHealthDrop" },
-                rewardLoot = { "", "ZeusUpgrade", "", "" },
-            },
-        },
-    }
-    local rewardItems = {
-        collect = function()
-            return row.rewardItems
-        end,
-    }
-
-    local events = semantics.eventsForRow(row, rewardItems, {})
-
-    lu.assertEquals(#events, 2)
-    lu.assertEquals(events[1].rewardType, "Boon")
-    lu.assertEquals(events[1].address, "encounter:1/wheel:1")
-    lu.assertEquals(events[1].addressLabel, "Wheel 1 Reward")
-    lu.assertEquals(events[1].boonSource, "ZeusUpgrade")
-    lu.assertEquals(events[2].rewardType, "MaxHealthDrop")
-    lu.assertEquals(events[2].address, "encounter:1/wheel:2")
-    lu.assertEquals(events[2].addressLabel, "Wheel 2 Reward")
 end
 
 function TestRunPlannerRewards.testSemanticsConcreteAndBannedChecks()
@@ -796,41 +750,6 @@ function TestRunPlannerRewards.testCatalogNormalizesEphyraSubRoomRewardSurfaces(
     })
     lu.assertEquals(surface.controls[1].displayValues.EmptyMaxHealthSmallDrop, "Empty Max Health")
     lu.assertEquals(surface.controls[1].displayValues.MinorTalentDrop, "Tiny Path")
-end
-
-function TestRunPlannerRewards.testCatalogNormalizesGroupedMajorMinorSurface()
-    local catalog = loadCatalog()
-    local surface = catalog:surfaceFor({
-        kind = "groupedMajorMinor",
-        sourceCount = 2,
-        sharedRewardClass = true,
-    })
-
-    lu.assertEquals(surface.kind, "groupedMajorMinor")
-    lu.assertEquals(surface.majorRewardStore, "RunProgress")
-    lu.assertEquals(surface.minorRewardStore, "MetaProgress")
-    lu.assertEquals(surface.sourceCount, 2)
-    lu.assertTrue(surface.sharedRewardClass)
-    lu.assertEquals(surface.controls[1].key, "rewardClass")
-    lu.assertEquals(surface.controls[1].alias, "Reward1Key")
-    lu.assertEquals(surface.controls[2].key, "Wheel1Major")
-    lu.assertEquals(surface.controls[2].alias, "Reward2Key")
-    lu.assertEquals(surface.controls[3].key, "Wheel1MajorLoot")
-    lu.assertEquals(surface.controls[3].alias, "Reward2LootKey")
-    lu.assertEquals(surface.controls[4].key, "Wheel1Minor")
-    lu.assertEquals(surface.controls[4].alias, "Reward3Key")
-    lu.assertEquals(surface.controls[5].key, "Wheel2Major")
-    lu.assertEquals(surface.controls[5].alias, "Reward4Key")
-    lu.assertEquals(surface.controls[6].key, "Wheel2MajorLoot")
-    lu.assertEquals(surface.controls[6].alias, "Reward4LootKey")
-    lu.assertEquals(surface.controls[7].key, "Wheel2Minor")
-    lu.assertEquals(surface.controls[7].alias, "Reward5Key")
-    lu.assertFalse(hasValue(surface.controls[2].values, "Devotion"))
-    lu.assertEquals(surface.uniqueValueGroups[1].allowDuplicateValues, {
-        Boon = true,
-    })
-    lu.assertEquals(surface.uniqueValueGroups[2].code, "duplicate_reward_type")
-    lu.assertEquals(surface.uniqueValueGroups[3].code, "duplicate_boon_source")
 end
 
 function TestRunPlannerRewards.testRuntimeSnapshotsMajorMinorVisiblePicks()
