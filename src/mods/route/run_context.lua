@@ -19,7 +19,7 @@ local function biomeLabel(context, biomeKey)
     return tostring(biome and (biome.label or biome.key) or biomeKey or "Route")
 end
 
-local function appendInvalidRow(invalidRows, invalidRow, extras)
+local function copyInvalidRow(invalidRow, extras)
     local copied = {}
     for key, value in pairs(invalidRow or {}) do
         copied[key] = value
@@ -27,6 +27,11 @@ local function appendInvalidRow(invalidRows, invalidRow, extras)
     for key, value in pairs(extras or {}) do
         copied[key] = value
     end
+    return copied
+end
+
+local function appendInvalidRow(invalidRows, invalidRow, extras)
+    local copied = copyInvalidRow(invalidRow, extras)
     invalidRows[#invalidRows + 1] = copied
     return copied
 end
@@ -86,6 +91,52 @@ local function controlSnapshot(context, routeKey, biomeKey)
     local snapshot = control ~= nil and control.read ~= nil and control:read("snapshot") or nil
     snapshots[biomeKey] = snapshot or false
     return snapshot
+end
+
+local function missingControlInvalid(context, routeBiomeIndex, biomeKey)
+    return {
+        biomeKey = biomeKey,
+        routeBiomeIndex = routeBiomeIndex,
+        controlName = routeControlName(biomeKey),
+        locationLabel = biomeLabel(context, biomeKey),
+        code = "missing_control",
+        message = "Missing route control: " .. tostring(biomeKey),
+    }
+end
+
+local function firstLocalInvalid(snapshot, biomeKey, routeBiomeIndex)
+    local invalid = snapshot and snapshot.invalidRows and snapshot.invalidRows[1] or nil
+    if invalid == nil then
+        return nil
+    end
+    return copyInvalidRow(invalid, {
+        biomeKey = biomeKey,
+        routeBiomeIndex = routeBiomeIndex,
+        controlName = snapshot.controlName,
+    })
+end
+
+local function appendFirstInvalid(invalidRows, invalid)
+    if invalid ~= nil and invalidRows[1] == nil then
+        invalidRows[1] = invalid
+    end
+end
+
+local function rewardBoundaryForInvalid(invalid)
+    if invalid == nil then
+        return nil
+    end
+    if invalid.routeOrdinal ~= nil then
+        return {
+            stopBeforeRouteOrdinal = invalid.routeOrdinal,
+        }
+    end
+    if invalid.routeBiomeIndex ~= nil then
+        return {
+            stopBeforeBiomeIndex = invalid.routeBiomeIndex,
+        }
+    end
+    return nil
 end
 
 local function clearMap(map)
@@ -301,8 +352,8 @@ function runContext.create(opts)
         return targets.byFeature[featureKey]
     end
 
-    function context:rewardLegality(routeKey)
-        return self.rewardState.legality(self, routeKey)
+    function context:rewardLegality(routeKey, rewardOpts)
+        return self.rewardState.legality(self, routeKey, rewardOpts)
     end
 
     function context:rewardRowValidation(routeKey, biomeKey, rowIndex)
@@ -336,6 +387,7 @@ function runContext.create(opts)
         local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
         local snapshots = {}
         local invalidRows = {}
+        local routeLocalInvalid
         local npcSnapshot
         local featureSnapshots = {}
         if route == nil then
@@ -352,39 +404,32 @@ function runContext.create(opts)
 
         local previousSnapshotBuilding = self.snapshotBuilding
         self.snapshotBuilding = true
-        for _, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
+        for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
             local snapshot = controlSnapshot(self, route.key, biomeKey)
             snapshots[#snapshots + 1] = snapshot
-            if not snapshot then
-                invalidRows[#invalidRows + 1] = {
-                    biomeKey = biomeKey,
-                    controlName = routeControlName(biomeKey),
-                    locationLabel = biomeLabel(self, biomeKey),
-                    code = "missing_control",
-                    message = "Missing route control: " .. tostring(biomeKey),
-                }
-            else
-                for _, invalidRow in ipairs(snapshot.invalidRows or EMPTY_LIST) do
-                    appendInvalidRow(invalidRows, invalidRow, {
-                        biomeKey = biomeKey,
-                        controlName = snapshot.controlName,
-                    })
+            if routeLocalInvalid == nil then
+                if not snapshot then
+                    routeLocalInvalid = missingControlInvalid(self, routeBiomeIndex, biomeKey)
+                else
+                    routeLocalInvalid = firstLocalInvalid(snapshot, biomeKey, routeBiomeIndex)
                 end
             end
         end
         self.snapshotBuilding = previousSnapshotBuilding
 
         if self:isLayerConfigured(route.key, "rewards") then
-            for _, invalidRow in ipairs(self:rewardLegality(route.key).invalidRows or EMPTY_LIST) do
-                invalidRows[#invalidRows + 1] = invalidRow
-            end
+            local rewardInvalid = self:rewardLegality(route.key, rewardBoundaryForInvalid(routeLocalInvalid)).invalidRows[1]
+            appendFirstInvalid(invalidRows, rewardInvalid or routeLocalInvalid)
+        else
+            appendFirstInvalid(invalidRows, routeLocalInvalid)
         end
 
-        if self:isLayerConfigured(route.key, "npcs") then
+        if invalidRows[1] == nil and self:isLayerConfigured(route.key, "npcs") then
             local npcControl = self:controlByName(routeNpcControlName(route.key), route.key)
             if npcControl ~= nil and npcControl.read ~= nil then
                 npcSnapshot = npcControl:read("snapshot")
-                for _, invalidRow in ipairs(npcSnapshot and npcSnapshot.invalidRows or EMPTY_LIST) do
+                local invalidRow = npcSnapshot and npcSnapshot.invalidRows and npcSnapshot.invalidRows[1] or nil
+                if invalidRow ~= nil then
                     appendInvalidRow(invalidRows, invalidRow, {
                         controlName = npcSnapshot.controlName,
                     })
@@ -392,16 +437,18 @@ function runContext.create(opts)
             end
         end
 
-        if self:isLayerConfigured(route.key, "features") then
+        if invalidRows[1] == nil and self:isLayerConfigured(route.key, "features") then
             for _, featureKey in ipairs(routeFeatureKeys(self, route)) do
                 local featureControl = self:controlByName(routeFeatureControlName(route.key, featureKey), route.key)
                 if featureControl ~= nil and featureControl.read ~= nil then
                     local featureSnapshot = featureControl:read("snapshot")
                     featureSnapshots[#featureSnapshots + 1] = featureSnapshot
-                    for _, invalidRow in ipairs(featureSnapshot and featureSnapshot.invalidRows or EMPTY_LIST) do
+                    local invalidRow = featureSnapshot and featureSnapshot.invalidRows and featureSnapshot.invalidRows[1] or nil
+                    if invalidRow ~= nil then
                         appendInvalidRow(invalidRows, invalidRow, {
                             controlName = featureSnapshot.controlName,
                         })
+                        break
                     end
                 end
             end

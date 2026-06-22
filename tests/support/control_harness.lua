@@ -474,6 +474,9 @@ local function routeRewardRow(rowIndex, rewardType, opts)
         rewardKind = opts.rewardKind or "roomStore",
         rewards = opts.rewards or { rewardType },
         rewardPicks = opts.rewardPicks or {},
+        invalidCode = opts.invalidCode,
+        invalidReason = opts.invalidReason,
+        locationLabel = opts.locationLabel,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
         biomeEncounterDepthCostMin = opts.biomeEncounterDepthCostMin or opts.biomeEncounterDepthCost or 1,
         biomeEncounterDepthCostMax = opts.biomeEncounterDepthCostMax or opts.biomeEncounterDepthCost or 1,
@@ -484,11 +487,24 @@ local function fakeRouteControlSnapshot(controlName, rows)
     return {
         read = function(_, path)
             if path == "snapshot" then
+                local snapshotRows = normalizeRewardRows(rows or {})
+                local invalidRows = {}
+                for _, row in ipairs(snapshotRows) do
+                    if row.valid == false then
+                        invalidRows[#invalidRows + 1] = {
+                            rowIndex = row.rowIndex,
+                            routeOrdinal = row.routeOrdinal,
+                            locationLabel = row.locationLabel or row.slotLabel or ("Row " .. tostring(row.rowIndex)),
+                            code = row.invalidCode or "test_invalid",
+                            message = row.invalidReason or row.message or "Test invalid",
+                        }
+                    end
+                end
                 return {
                     controlName = controlName,
-                    valid = true,
-                    invalidRows = {},
-                    rows = normalizeRewardRows(rows or {}),
+                    valid = invalidRows[1] == nil,
+                    invalidRows = invalidRows,
+                    rows = snapshotRows,
                 }
             end
             return nil

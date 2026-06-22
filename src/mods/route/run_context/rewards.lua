@@ -45,6 +45,8 @@ local function routeRewardLegalityState(context, routeKey)
         state = {
             dirty = true,
             result = nil,
+            stopBeforeBiomeIndex = nil,
+            stopBeforeRouteOrdinal = nil,
         }
         context.rewardLegalityByRoute[routeKey] = state
     end
@@ -104,14 +106,30 @@ function rewards.create(opts)
         return selections
     end
 
-    function rewardState.legality(context, routeKey)
+    function rewardState.legality(context, routeKey, rewardOpts)
         local state = routeRewardLegalityState(context, routeKey)
-        if state.dirty or state.result == nil then
+        local hasBoundaryOptions = rewardOpts ~= nil
+        rewardOpts = rewardOpts or {}
+        local stopBeforeBiomeIndex = rewardOpts.stopBeforeBiomeIndex
+        local stopBeforeRouteOrdinal = rewardOpts.stopBeforeRouteOrdinal
+        if state.dirty
+            or state.result == nil
+            or (
+                hasBoundaryOptions
+                and (
+                    state.stopBeforeBiomeIndex ~= stopBeforeBiomeIndex
+                    or state.stopBeforeRouteOrdinal ~= stopBeforeRouteOrdinal
+                )
+            )
+        then
             if context:isLayerConfigured(routeKey, "rewards") and rewardLegalityEngine ~= nil then
                 local previousRewardLegalityBuilding = context.rewardLegalityBuilding
                 context.rewardLegalityBuilding = true
                 state.result = rewardLegalityEngine.evaluate(context, routeKey, {
                     routeControlName = routeControlName,
+                    stopAfterFirstInvalid = true,
+                    stopBeforeBiomeIndex = stopBeforeBiomeIndex,
+                    stopBeforeRouteOrdinal = stopBeforeRouteOrdinal,
                     snapshotForBiome = function(resolvedRouteKey, biomeKey)
                         return context:controlSnapshot(resolvedRouteKey, biomeKey)
                     end,
@@ -120,6 +138,8 @@ function rewards.create(opts)
             else
                 state.result = newRewardLegalityResult()
             end
+            state.stopBeforeBiomeIndex = stopBeforeBiomeIndex
+            state.stopBeforeRouteOrdinal = stopBeforeRouteOrdinal
             state.dirty = false
         end
         return state.result

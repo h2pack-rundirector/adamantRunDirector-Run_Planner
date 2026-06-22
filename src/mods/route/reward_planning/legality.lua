@@ -57,6 +57,10 @@ local function newResult()
     }
 end
 
+local function hasInvalid(result)
+    return result.invalidRows[1] ~= nil
+end
+
 local function invalidRowKey(biomeKey, rowIndex, code, address)
     return tostring(biomeKey or "")
         .. ":"
@@ -362,6 +366,9 @@ function rewardLegality.evaluate(context, routeKey, opts)
 
     local snapshotForBiome = opts.snapshotForBiome
     local routeControlName = opts.routeControlName or defaultRouteControlName
+    local stopAfterFirstInvalid = opts.stopAfterFirstInvalid == true
+    local stopBeforeBiomeIndex = opts.stopBeforeBiomeIndex
+    local stopBeforeRouteOrdinal = opts.stopBeforeRouteOrdinal
     local state = {
         routeCounters = {},
         biomeCounters = {},
@@ -373,6 +380,7 @@ function rewardLegality.evaluate(context, routeKey, opts)
     local events = {}
     local rewardItemScratch = {}
     local seenInvalids = {}
+    local stopped = false
 
     routeTimeline.walkRoute(route, {
         biomeLookup = context.biomeLookup,
@@ -380,6 +388,19 @@ function rewardLegality.evaluate(context, routeKey, opts)
             return snapshotForBiome and snapshotForBiome(route.key, biomeKey) or nil
         end,
         onRow = function(rowContext)
+            if stopped then
+                return
+            end
+
+            if stopBeforeBiomeIndex ~= nil and rowContext.routeBiomeIndex >= stopBeforeBiomeIndex then
+                stopped = true
+                return
+            end
+            if stopBeforeRouteOrdinal ~= nil and rowContext.routeOrdinal >= stopBeforeRouteOrdinal then
+                stopped = true
+                return
+            end
+
             local row = rowContext.row
             local biomeKey = rowContext.biomeKey
             local ctx = {
@@ -404,6 +425,10 @@ function rewardLegality.evaluate(context, routeKey, opts)
                 collectRewardEvents(row, events, rewardItemScratch)
                 for _, event in ipairs(events) do
                     applyEventRules(context, result, seenInvalids, state, ctx, event)
+                    if stopAfterFirstInvalid and hasInvalid(result) then
+                        stopped = true
+                        return
+                    end
                 end
                 storePreviousShopRewards(state, events)
                 state.previousRows[biomeKey] = row
