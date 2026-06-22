@@ -421,6 +421,80 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesRejectsRepeatedTargetsInsi
 
     control:writeManagedCount("2")
     lu.assertEquals(control:rowValidation(2).code, "feature_spacing")
+    local featureSnapshot = control:buildSnapshot()
+    lu.assertEquals(#featureSnapshot.invalidRows, 2)
+    lu.assertEquals(featureSnapshot.invalidRows[1].markerKind, "primary")
+    lu.assertEquals(featureSnapshot.invalidRows[2].markerKind, "related")
+    lu.assertEquals(control:valueStates(1, "RowIndex")["4"], 2)
+    lu.assertEquals(control:valueStates(2, "RowIndex")["5"], 2)
+    control:setRouteContext({
+        canDecorateLayer = function()
+            return false
+        end,
+    }, "Underworld")
+    lu.assertNil(control:valueStates(1, "RowIndex"))
+end
+
+function TestRunPlannerRouteFeatures.testNpcInvalidSuppressesFeatureDecoration()
+    local catalog = loadCatalog()
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        biomes = catalog.lookup,
+        npcs = catalog.npcs,
+        features = catalog.features,
+        controlResolver = function(controlName)
+            if controlName == "RouteF" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteF",
+                                valid = true,
+                                invalidRows = {},
+                                rows = {},
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            elseif controlName == "RouteNpcsUnderworld" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteNpcsUnderworld",
+                                valid = false,
+                                invalidRows = {
+                                    {
+                                        controlName = "RouteNpcsUnderworld",
+                                        rowIndex = 1,
+                                        code = "npc_invalid",
+                                        message = "NPC invalid",
+                                    },
+                                },
+                                rows = {},
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertTrue(overview.layerStatus.route.valid)
+    lu.assertFalse(overview.layerStatus.npcs.valid)
+    lu.assertFalse(overview.layerStatus.features.canDecorate)
+    lu.assertFalse(routeContext:canDecorateLayer("Underworld", "features"))
 end
 
 function TestRunPlannerRouteFeatures.testRouteFeaturesUsesTimelineBlockersForPostBossShops()

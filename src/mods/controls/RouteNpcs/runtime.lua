@@ -3,6 +3,7 @@
 local deps = ...
 local data = deps.data
 local invalidLocations = deps.invalidLocations
+local targetMarkers = deps.targetMarkers
 
 local runtime = {}
 
@@ -35,12 +36,18 @@ local VALID = {
     valid = true,
 }
 
-local function invalidStatus(code, message)
-    return {
+local function invalidStatus(code, message, extras)
+    local status = {
         valid = false,
         code = code,
         message = message,
     }
+    if extras ~= nil then
+        for key, value in pairs(extras) do
+            status[key] = value
+        end
+    end
+    return status
 end
 
 local function readField(fields, rowIndex, alias)
@@ -94,6 +101,10 @@ local function markDirty(instance)
     if instance.routeContext ~= nil and instance.routeContext.markDirty ~= nil then
         instance.routeContext:markDirty(instance.routeKey)
     end
+end
+
+local function clearValueStateSnapshot(control)
+    control._targetValueStateSnapshot = nil
 end
 
 local function biomeLabel(instance, biomeKey)
@@ -249,13 +260,13 @@ end
 
 local function hasSpacingConflict(control, rowIndex, candidate)
     if candidate == nil then
-        return false
+        return nil
     end
 
     local slot = control:slot(rowIndex)
     local spacing = spacingForSlot(slot)
     if spacing == nil then
-        return false
+        return nil
     end
 
     for priorIndex = 1, rowIndex - 1 do
@@ -267,11 +278,11 @@ local function hasSpacingConflict(control, rowIndex, candidate)
                     (candidate.roomHistoryOrdinal or 0) - (priorCandidate.roomHistoryOrdinal or 0)
                 ) < spacing
             then
-                return true
+                return priorIndex
             end
         end
     end
-    return false
+    return nil
 end
 
 local function sameTargetRoom(left, right)
@@ -283,15 +294,43 @@ end
 
 local function hasRoomConflict(control, rowIndex, candidate)
     if candidate == nil then
-        return false
+        return nil
     end
 
     for priorIndex = 1, rowIndex - 1 do
         if sameTargetRoom(candidate, selectedCandidate(control, priorIndex)) then
-            return true
+            return priorIndex
         end
     end
-    return false
+    return nil
+end
+
+local function markerContext(instance, row)
+    return {
+        biomeKey = row.biomeKey,
+        controlName = instance.name,
+    }
+end
+
+local function invalidForRow(row)
+    return {
+        code = row.invalidCode,
+        message = row.invalidReason,
+    }
+end
+
+local function appendInvalidMarker(instance, invalidRows, row, markerKind)
+    invalidRows[#invalidRows + 1] = targetMarkers.row(
+        markerContext(instance, row),
+        row,
+        invalidForRow(row),
+        markerKind,
+        {
+            scope = "npc",
+            includeVariant = true,
+            locationLabel = invalidLocations.routeRow(instance, row),
+        }
+    )
 end
 
 function runtime.create(fields, instance)
@@ -453,6 +492,7 @@ function runtime.create(fields, instance)
         else
             writeSelection(fields, rowIndex, biomeKey, "", "")
         end
+        clearValueStateSnapshot(self)
         markDirty(instance)
     end
 
@@ -469,6 +509,7 @@ function runtime.create(fields, instance)
             local rowVariants = variants and variants[tostring(targetRowIndex)] or EMPTY_VARIANTS
             writeSelection(fields, rowIndex, biomeKey, tostring(targetRowIndex), rowVariants.values[1] or "")
         end
+        clearValueStateSnapshot(self)
         markDirty(instance)
     end
 
@@ -482,6 +523,7 @@ function runtime.create(fields, instance)
         else
             writeSelection(fields, rowIndex, biomeKey, targetRowIndex, variantKey or "")
         end
+        clearValueStateSnapshot(self)
         markDirty(instance)
     end
 
@@ -502,6 +544,7 @@ function runtime.create(fields, instance)
                 writeField(fields, rowIndex, "RowIndex", tostring(candidate.rowIndex or ""))
             end
         end
+        clearValueStateSnapshot(self)
         markDirty(instance)
     end
 
@@ -527,11 +570,21 @@ function runtime.create(fields, instance)
         if candidate == nil then
             return invalidStatus("npc_target_unavailable", "Selected NPC target is no longer valid")
         end
-        if hasRoomConflict(self, rowIndex, candidate) then
-            return invalidStatus("npc_room_occupied", "Only one NPC encounter can use the same room")
+        local roomConflictRowIndex = hasRoomConflict(self, rowIndex, candidate)
+        if roomConflictRowIndex ~= nil then
+            return invalidStatus(
+                "npc_room_occupied",
+                "Only one NPC encounter can use the same room",
+                { relatedRowIndex = roomConflictRowIndex }
+            )
         end
-        if hasSpacingConflict(self, rowIndex, candidate) then
-            return invalidStatus("npc_spacing", tostring(slot.label) .. " is too close to another planned NPC")
+        local spacingConflictRowIndex = hasSpacingConflict(self, rowIndex, candidate)
+        if spacingConflictRowIndex ~= nil then
+            return invalidStatus(
+                "npc_spacing",
+                tostring(slot.label) .. " is too close to another planned NPC",
+                { relatedRowIndex = spacingConflictRowIndex }
+            )
         end
         return VALID
     end
@@ -563,22 +616,23 @@ function runtime.create(fields, instance)
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,
+            relatedRowIndex = validation.relatedRowIndex,
         }
     end
 
     function control:buildSnapshot()
         local rows = {}
         local invalidRows = {}
+        local foundInvalid = false
         for rowIndex = 1, self:rowCount() do
             local row = self:rowSnapshot(rowIndex)
             rows[#rows + 1] = row
-            if row ~= nil and not row.valid then
-                invalidRows[#invalidRows + 1] = {
-                    rowIndex = row.rowIndex,
-                    locationLabel = invalidLocations.routeRow(instance, row),
-                    code = row.invalidCode,
-                    message = row.invalidReason,
-                }
+            if row ~= nil and not row.valid and not foundInvalid then
+                appendInvalidMarker(instance, invalidRows, row, "primary")
+                if row.relatedRowIndex ~= nil and rows[row.relatedRowIndex] ~= nil then
+                    appendInvalidMarker(instance, invalidRows, rows[row.relatedRowIndex], "related")
+                end
+                foundInvalid = true
             end
         end
 
@@ -599,6 +653,44 @@ function runtime.create(fields, instance)
             return self:rowSnapshot(...)
         end
         return nil
+    end
+
+    function control:valueStateSnapshot()
+        local rowCount = self:rowCount()
+        local cached = self._targetValueStateSnapshot
+        local valid = cached ~= nil and cached.rowCount == rowCount
+        if valid then
+            for rowIndex = 1, rowCount do
+                if cached.sources[rowIndex] ~= self:targetCandidates(rowIndex) then
+                    valid = false
+                    break
+                end
+            end
+            if valid then
+                return cached.snapshot
+            end
+        end
+
+        local snapshot = self:buildSnapshot()
+        local sources = {}
+        for rowIndex = 1, rowCount do
+            sources[rowIndex] = self:targetCandidates(rowIndex)
+        end
+        self._targetValueStateSnapshot = {
+            rowCount = rowCount,
+            sources = sources,
+            snapshot = snapshot,
+        }
+        return snapshot
+    end
+
+    function control:valueStates(rowIndex, controlAlias)
+        if instance.routeContext ~= nil
+            and instance.routeContext:canDecorateLayer(instance.routeKey, "npcs") == false
+        then
+            return nil
+        end
+        return targetMarkers.valueStates(self:valueStateSnapshot(), rowIndex, controlAlias)
     end
 
     return control

@@ -175,7 +175,19 @@ function TestRunPlannerRouteNpcs.testRouteNpcsUsesBiomeRoomTypeSelection()
     lu.assertEquals(control:selectedTargetKey(2), "F:3:Random")
     lu.assertEquals(control:rowValidation(2).code, "npc_room_occupied")
     local npcSnapshot = control:buildSnapshot()
+    lu.assertEquals(#npcSnapshot.invalidRows, 2)
     lu.assertEquals(npcSnapshot.invalidRows[1].locationLabel, "Underworld Nemesis")
+    lu.assertEquals(npcSnapshot.invalidRows[1].markerKind, "primary")
+    lu.assertEquals(npcSnapshot.invalidRows[2].locationLabel, "Underworld Artemis")
+    lu.assertEquals(npcSnapshot.invalidRows[2].markerKind, "related")
+    lu.assertEquals(control:valueStates(1, "RowIndex")["3"], 2)
+    lu.assertEquals(control:valueStates(2, "RowIndex")["3"], 2)
+    control:setRouteContext({
+        canDecorateLayer = function()
+            return false
+        end,
+    }, "Underworld")
+    lu.assertNil(control:valueStates(1, "RowIndex"))
 
     control:writeBiome(2, "")
     lu.assertEquals(fields.Targets:read(2, "BiomeKey"), nil)
@@ -183,6 +195,53 @@ function TestRunPlannerRouteNpcs.testRouteNpcsUsesBiomeRoomTypeSelection()
     lu.assertEquals(fields.Targets:read(2, "VariantKey"), nil)
     lu.assertEquals(fields.Targets:read(2, "TargetKey"), nil)
     lu.assertTrue(control:rowValidation(2).valid)
+end
+
+function TestRunPlannerRouteNpcs.testRouteInvalidSuppressesNpcDecoration()
+    local catalog = loadCatalog()
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        biomes = catalog.lookup,
+        npcs = catalog.npcs,
+        controlResolver = function(controlName)
+            if controlName == "RouteF" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteF",
+                                valid = false,
+                                invalidRows = {
+                                    {
+                                        biomeKey = "F",
+                                        controlName = "RouteF",
+                                        rowIndex = 1,
+                                        code = "route_invalid",
+                                        message = "Route invalid",
+                                    },
+                                },
+                                rows = {},
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.layerStatus.route.valid)
+    lu.assertFalse(overview.layerStatus.npcs.canDecorate)
+    lu.assertFalse(routeContext:canDecorateLayer("Underworld", "npcs"))
 end
 
 function TestRunPlannerRouteNpcs.testRouteContextBuildsNpcTargetsFromValidCombatRows()

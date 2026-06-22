@@ -53,6 +53,10 @@ function routeFactory.create(opts)
         rewards = rewards,
         timeline = routeTimeline,
     })
+    local targetMarkers = import("mods/route/target_markers.lua", nil, {
+        markers = routeMarkers,
+        valueStates = rows.valueStates,
+    })
 
     local route = {
         common = rows.common,
@@ -64,6 +68,7 @@ function routeFactory.create(opts)
         rowEngine = rows.engine,
         timeline = routeTimeline,
         markers = routeMarkers,
+        targetMarkers = targetMarkers,
         invalidLocations = invalidLocations,
         rewards = rewards,
         rewardItems = planning.rewardItems,

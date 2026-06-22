@@ -33,9 +33,11 @@ return {
     }),
     RouteNpcs = import("mods/controls/RouteNpcs/RouteNpcs.lua", nil, {
         route = route,
+        decorations = decorations,
     }),
     RouteFeatures = import("mods/controls/RouteFeatures/RouteFeatures.lua", nil, {
         route = route,
+        decorations = decorations,
     }),
     RouteGlobal = import("mods/controls/RouteGlobal/RouteGlobal.lua", nil, {
         gods = godData,

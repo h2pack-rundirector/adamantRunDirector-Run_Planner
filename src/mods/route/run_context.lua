@@ -384,6 +384,23 @@ function runContext.create(opts)
         local routeLocalInvalid
         local npcSnapshot
         local featureSnapshots = {}
+        local layerStatus = {
+            route = {
+                canDecorate = true,
+                evaluated = false,
+                valid = nil,
+            },
+            npcs = {
+                canDecorate = false,
+                evaluated = false,
+                valid = nil,
+            },
+            features = {
+                canDecorate = false,
+                evaluated = false,
+                valid = nil,
+            },
+        }
         if route == nil then
             return {
                 routeKey = routeKey,
@@ -392,6 +409,7 @@ function runContext.create(opts)
                 invalidRows = {
                     { code = "unknown_route", message = "Unknown route: " .. tostring(routeKey) },
                 },
+                layerStatus = layerStatus,
                 biomes = snapshots,
             }
         end
@@ -422,35 +440,45 @@ function runContext.create(opts)
             appendFirstInvalid(invalidRows, routeLocalInvalid)
         end
 
-        if invalidRows[1] == nil and self:isLayerConfigured(route.key, "npcs") then
+        local routeValid = invalidRows[1] == nil
+        local npcsConfigured = self:isLayerConfigured(route.key, "npcs")
+        layerStatus.route.evaluated = true
+        layerStatus.route.valid = routeValid
+        layerStatus.npcs.canDecorate = routeValid
+
+        if routeValid and npcsConfigured then
             local npcControl = self:controlByName(routeNpcControlName(route.key), route.key)
             if npcControl ~= nil and npcControl.read ~= nil then
+                layerStatus.npcs.evaluated = true
                 npcSnapshot = npcControl:read("snapshot")
                 local invalidRow = npcSnapshot and npcSnapshot.invalidRows and npcSnapshot.invalidRows[1] or nil
                 if invalidRow ~= nil then
-                    appendInvalidRow(invalidRows, invalidRow, {
-                        controlName = npcSnapshot.controlName,
-                    })
+                    appendInvalidRows(invalidRows, npcSnapshot.invalidRows)
                 end
             end
         end
 
-        if invalidRows[1] == nil and self:isLayerConfigured(route.key, "features") then
+        local npcsValid = not npcsConfigured or invalidRows[1] == nil
+        local featuresConfigured = self:isLayerConfigured(route.key, "features")
+        layerStatus.npcs.valid = npcsValid
+        layerStatus.features.canDecorate = routeValid and npcsValid
+
+        if routeValid and npcsValid and featuresConfigured then
             for _, featureKey in ipairs(routeFeatureKeys(self, route)) do
                 local featureControl = self:controlByName(routeFeatureControlName(route.key, featureKey), route.key)
                 if featureControl ~= nil and featureControl.read ~= nil then
+                    layerStatus.features.evaluated = true
                     local featureSnapshot = featureControl:read("snapshot")
                     featureSnapshots[#featureSnapshots + 1] = featureSnapshot
                     local invalidRow = featureSnapshot and featureSnapshot.invalidRows and featureSnapshot.invalidRows[1] or nil
                     if invalidRow ~= nil then
-                        appendInvalidRow(invalidRows, invalidRow, {
-                            controlName = featureSnapshot.controlName,
-                        })
+                        appendInvalidRows(invalidRows, featureSnapshot.invalidRows)
                         break
                     end
                 end
             end
         end
+        layerStatus.features.valid = not featuresConfigured or invalidRows[1] == nil
 
         return {
             routeKey = route.key,
@@ -458,10 +486,17 @@ function runContext.create(opts)
             valid = invalidRows[1] == nil,
             disabled = invalidRows[1] ~= nil,
             invalidRows = invalidRows,
+            layerStatus = layerStatus,
             biomes = snapshots,
             npcs = npcSnapshot,
             features = featureSnapshots,
         }
+    end
+
+    function context:canDecorateLayer(routeKey, layer)
+        local snapshot = self:overview(routeKey)
+        local status = snapshot and snapshot.layerStatus and snapshot.layerStatus[layer] or nil
+        return status == nil or status.canDecorate ~= false
     end
 
     function context:overview(routeKey)

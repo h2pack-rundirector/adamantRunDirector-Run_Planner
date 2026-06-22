@@ -3,6 +3,7 @@
 local deps = ...
 local data = deps.data
 local invalidLocations = deps.invalidLocations
+local targetMarkers = deps.targetMarkers
 
 local runtime = {}
 
@@ -28,12 +29,18 @@ local VALID = {
     valid = true,
 }
 
-local function invalidStatus(code, message)
-    return {
+local function invalidStatus(code, message, extras)
+    local status = {
         valid = false,
         code = code,
         message = message,
     }
+    if extras ~= nil then
+        for key, value in pairs(extras) do
+            status[key] = value
+        end
+    end
+    return status
 end
 
 local function readField(fields, rowIndex, alias)
@@ -83,6 +90,10 @@ local function markDirty(instance)
     if instance.routeContext ~= nil and instance.routeContext.markDirty ~= nil then
         instance.routeContext:markDirty(instance.routeKey)
     end
+end
+
+local function clearValueStateSnapshot(control)
+    control._targetValueStateSnapshot = nil
 end
 
 local function biomeLabel(instance, biomeKey)
@@ -215,13 +226,13 @@ end
 
 local function hasSpacingConflict(control, rowIndex, candidate)
     if candidate == nil then
-        return false
+        return nil
     end
 
     local slot = control:slot(rowIndex)
     local spacing = slot and slot.plannedSpacingRooms or nil
     if spacing == nil then
-        return false
+        return nil
     end
 
     for priorIndex = 1, rowIndex - 1 do
@@ -229,16 +240,43 @@ local function hasSpacingConflict(control, rowIndex, candidate)
         if priorSlot ~= nil and priorSlot.featureKey == slot.featureKey then
             local priorCandidate = selectedCandidate(control, priorIndex)
             if hasRoomHistoryConflict(candidate, priorCandidate, spacing) then
-                return true
+                return priorIndex
             end
         end
     end
     for _, blocker in ipairs(control:targetCandidates(rowIndex).blockers or EMPTY_LIST) do
         if blocker.featureKey == slot.featureKey and hasForwardBlockerConflict(candidate, blocker, spacing) then
-            return true
+            return false
         end
     end
-    return false
+    return nil
+end
+
+local function markerContext(instance, row)
+    return {
+        biomeKey = row.biomeKey,
+        controlName = instance.name,
+    }
+end
+
+local function invalidForRow(row)
+    return {
+        code = row.invalidCode,
+        message = row.invalidReason,
+    }
+end
+
+local function appendInvalidMarker(instance, invalidRows, row, markerKind, locationRow)
+    invalidRows[#invalidRows + 1] = targetMarkers.row(
+        markerContext(instance, row),
+        row,
+        invalidForRow(row),
+        markerKind,
+        {
+            scope = "feature",
+            locationLabel = invalidLocations.routeRow(instance, locationRow or row),
+        }
+    )
 end
 
 function runtime.create(fields, instance)
@@ -282,6 +320,7 @@ function runtime.create(fields, instance)
         if fields.ManagedCount ~= nil and fields.ManagedCount.write ~= nil then
             fields.ManagedCount:write(tostring(count))
         end
+        clearValueStateSnapshot(self)
         markDirty(instance)
     end
 
@@ -372,6 +411,7 @@ function runtime.create(fields, instance)
         else
             writeSelection(fields, rowIndex, biomeKey, "")
         end
+        clearValueStateSnapshot(self)
         markDirty(instance)
     end
 
@@ -384,6 +424,7 @@ function runtime.create(fields, instance)
         else
             writeSelection(fields, rowIndex, biomeKey, tostring(targetRowIndex))
         end
+        clearValueStateSnapshot(self)
         markDirty(instance)
     end
 
@@ -402,6 +443,7 @@ function runtime.create(fields, instance)
                 writeField(fields, rowIndex, "RowIndex", tostring(candidate.targetRowIndex or candidate.rowIndex or ""))
             end
         end
+        clearValueStateSnapshot(self)
         markDirty(instance)
     end
 
@@ -427,8 +469,14 @@ function runtime.create(fields, instance)
         if candidate == nil then
             return invalidStatus("feature_target_unavailable", "Selected feature target is no longer valid")
         end
-        if hasSpacingConflict(self, rowIndex, candidate) then
-            return invalidStatus("feature_spacing", tostring(slot.label) .. " is too close to another planned target")
+        local spacingConflictRowIndex = hasSpacingConflict(self, rowIndex, candidate)
+        if spacingConflictRowIndex ~= nil then
+            local related = spacingConflictRowIndex ~= false and spacingConflictRowIndex or nil
+            return invalidStatus(
+                "feature_spacing",
+                tostring(slot.label) .. " is too close to another planned target",
+                { relatedRowIndex = related }
+            )
         end
         return VALID
     end
@@ -454,26 +502,27 @@ function runtime.create(fields, instance)
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,
+            relatedRowIndex = validation.relatedRowIndex,
         }
     end
 
     function control:buildSnapshot()
         local rows = {}
         local invalidRows = {}
+        local foundInvalid = false
         for rowIndex = 1, self:rowCount() do
             local row = self:rowSnapshot(rowIndex)
             rows[#rows + 1] = row
-            if row ~= nil and not row.valid then
+            if row ~= nil and not row.valid and not foundInvalid then
                 local locationRow = {
                     label = tostring(instance.label or "") .. " " .. tostring(row.label or ""),
                     rowIndex = row.rowIndex,
                 }
-                invalidRows[#invalidRows + 1] = {
-                    rowIndex = row.rowIndex,
-                    locationLabel = invalidLocations.routeRow(instance, locationRow),
-                    code = row.invalidCode,
-                    message = row.invalidReason,
-                }
+                appendInvalidMarker(instance, invalidRows, row, "primary", locationRow)
+                if row.relatedRowIndex ~= nil and rows[row.relatedRowIndex] ~= nil then
+                    appendInvalidMarker(instance, invalidRows, rows[row.relatedRowIndex], "related")
+                end
+                foundInvalid = true
             end
         end
 
@@ -495,6 +544,44 @@ function runtime.create(fields, instance)
             return self:rowSnapshot(...)
         end
         return nil
+    end
+
+    function control:valueStateSnapshot()
+        local rowCount = self:rowCount()
+        local cached = self._targetValueStateSnapshot
+        local valid = cached ~= nil and cached.rowCount == rowCount
+        if valid then
+            for rowIndex = 1, rowCount do
+                if cached.sources[rowIndex] ~= self:targetCandidates(rowIndex) then
+                    valid = false
+                    break
+                end
+            end
+            if valid then
+                return cached.snapshot
+            end
+        end
+
+        local snapshot = self:buildSnapshot()
+        local sources = {}
+        for rowIndex = 1, rowCount do
+            sources[rowIndex] = self:targetCandidates(rowIndex)
+        end
+        self._targetValueStateSnapshot = {
+            rowCount = rowCount,
+            sources = sources,
+            snapshot = snapshot,
+        }
+        return snapshot
+    end
+
+    function control:valueStates(rowIndex, controlAlias)
+        if instance.routeContext ~= nil
+            and instance.routeContext:canDecorateLayer(instance.routeKey, "features") == false
+        then
+            return nil
+        end
+        return targetMarkers.valueStates(self:valueStateSnapshot(), rowIndex, controlAlias)
     end
 
     return control

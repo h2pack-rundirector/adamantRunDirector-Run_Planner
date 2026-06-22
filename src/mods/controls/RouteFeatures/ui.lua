@@ -2,6 +2,7 @@
 
 local deps = ...
 local runtime = deps.runtime
+local decorations = deps.decorations
 
 local ui = {}
 
@@ -76,6 +77,10 @@ local function managedCountOpts(control)
     return opts
 end
 
+local function decoratedOpts(control, rowIndex, alias, opts)
+    return decorations.decorateDropdown(opts, opts, control:valueStates(rowIndex, alias))
+end
+
 local function drawDropdownLine(draw, label, field, opts, onChange)
     local imgui = draw.imgui
     imgui.AlignTextToFramePadding()
@@ -98,12 +103,22 @@ local function drawFeatureRow(draw, control, rowIndex)
     imgui.AlignTextToFramePadding()
     imgui.Text(slot.label)
 
-    drawDropdownLine(draw, "Biome", control:biomeField(rowIndex), biomeOpts(control, rowIndex), function()
+    drawDropdownLine(draw, "Biome", control:biomeField(rowIndex), decoratedOpts(
+        control,
+        rowIndex,
+        "BiomeKey",
+        biomeOpts(control, rowIndex)
+    ), function()
         control:writeBiome(rowIndex, control:rawBiomeKey(rowIndex))
     end)
 
     if control:shouldRenderRoom(rowIndex) then
-        drawDropdownLine(draw, "Room", control:roomField(rowIndex), roomOpts(control, rowIndex), function()
+        drawDropdownLine(draw, "Room", control:roomField(rowIndex), decoratedOpts(
+            control,
+            rowIndex,
+            "RowIndex",
+            roomOpts(control, rowIndex)
+        ), function()
             control:writeRoom(rowIndex, control:rawRowIndex(rowIndex))
         end)
     end

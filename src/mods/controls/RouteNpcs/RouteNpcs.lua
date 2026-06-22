@@ -3,9 +3,11 @@ local data = import("mods/controls/RouteNpcs/data.lua")
 local runtime = import("mods/controls/RouteNpcs/runtime.lua", nil, {
     data = data,
     invalidLocations = deps.route.invalidLocations,
+    targetMarkers = deps.route.targetMarkers,
 })
 local ui = import("mods/controls/RouteNpcs/ui.lua", nil, {
     data = data,
+    decorations = deps.decorations,
     runtime = runtime,
 })
 
