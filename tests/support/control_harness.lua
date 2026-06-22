@@ -127,12 +127,19 @@ local function loadRouteFeaturesTemplate()
 end
 
 local function loadRewardLegality()
+    local semantics = testImport("mods/route/reward_planning/semantics.lua")
+    local invalidLocations = testImport("mods/route/invalid_locations.lua")
     return testImport("mods/route/reward_planning/legality.lua", nil, {
         conditions = testImport("mods/rewards/declarations/conditions.lua"),
         rewardItems = testImport("mods/route/reward_planning/items.lua"),
-        semantics = testImport("mods/route/reward_planning/semantics.lua"),
-        invalidLocations = testImport("mods/route/invalid_locations.lua"),
+        semantics = semantics,
+        invalidLocations = invalidLocations,
         context = testImport("mods/route/reward_planning/context.lua"),
+        markers = testImport("mods/route/reward_planning/marker_targets.lua", nil, {
+            markers = testImport("mods/route/markers.lua"),
+            semantics = semantics,
+            invalidLocations = invalidLocations,
+        }),
     })
 end
 

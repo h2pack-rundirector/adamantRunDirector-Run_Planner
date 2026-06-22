@@ -2,8 +2,8 @@ local deps = ... or {}
 local conditions = deps.conditions or {}
 local rowRewardItems = deps.rewardItems
 local semantics = deps.semantics
-local invalidLocations = deps.invalidLocations
 local rewardContext = deps.context
+local markers = deps.markers
 
 local rewardLegality = {}
 local EMPTY_LIST = {}
@@ -136,31 +136,29 @@ local function storeSelectedInvalid(decision, invalid)
     end
 end
 
-local function addInvalid(context, result, seenInvalids, ctx, event, code, message)
+local function addInvalid(context, result, seenInvalids, ctx, event, invalid)
     local row = event and event.row or nil
     if row == nil then
         return
     end
 
-    local key = invalidRowKey(ctx.biomeKey, row.rowIndex, code, event.address)
+    local key = invalidRowKey(ctx.biomeKey, row.rowIndex, invalid.code, event.address)
     if seenInvalids[key] then
         return
     end
     seenInvalids[key] = true
 
-    local invalid = {
-        valid = false,
-        biomeKey = ctx.biomeKey,
-        controlName = ctx.controlName,
-        rowIndex = row.rowIndex,
-        routeOrdinal = row.routeOrdinal,
-        address = event.address,
-        rewardType = event.rewardType,
-        locationLabel = invalidLocations.rewardEvent(context, ctx, event),
-        code = code,
-        message = message,
-    }
-    result.invalidRows[#result.invalidRows + 1] = invalid
+    local primaryMarker = markers.primary(context, ctx, event, invalid)
+    result.invalidRows[#result.invalidRows + 1] = primaryMarker
+    for _, relatedEvent in ipairs(invalid.relatedEvents or EMPTY_LIST) do
+        result.invalidRows[#result.invalidRows + 1] = markers.related(context, {
+            ctx = ctx,
+            event = relatedEvent,
+        }, invalid)
+    end
+    for _, occurrence in ipairs(invalid.relatedOccurrences or EMPTY_LIST) do
+        result.invalidRows[#result.invalidRows + 1] = markers.related(context, occurrence, invalid)
+    end
 
     local byRow = result.byBiomeRow[ctx.biomeKey]
     if byRow == nil then
@@ -168,9 +166,9 @@ local function addInvalid(context, result, seenInvalids, ctx, event, code, messa
         result.byBiomeRow[ctx.biomeKey] = byRow
     end
     if byRow[row.rowIndex] == nil then
-        byRow[row.rowIndex] = invalid
+        byRow[row.rowIndex] = primaryMarker
     end
-    return invalid
+    return primaryMarker
 end
 
 local function requirementSkipped(requirement, ctx)
@@ -261,6 +259,45 @@ local function phaseMatches(phase, count, ctx)
     return inRange(ctx.routeBiomeIndex, phase.routeBiomeIndex)
 end
 
+local function relatedOccurrenceForSpec(spec, rewardCtx, ctx, event, requirement)
+    if spec.source == "counterProducer" then
+        return rewardContext.counterProducerOccurrence(
+            rewardCtx,
+            requirement.counter,
+            requirement.scope,
+            ctx.biomeKey,
+            spec.select
+        )
+    elseif spec.source == "pendingOffer" then
+        local rewardType = (requirement.rewards or EMPTY_LIST)[1]
+        return rewardContext.pendingOfferOccurrence(rewardCtx, rewardType, spec.select)
+    elseif spec.source == "lastOccurrence" then
+        local rewardType = requirement.event or event.rewardType
+        return rewardContext.lastRewardOccurrence(rewardCtx, rewardType)
+    end
+    return nil
+end
+
+local function relatedOccurrencesForRequirement(requirement, rewardCtx, ctx, event)
+    local related = nil
+    for _, spec in ipairs(requirement.relatedParticipants or EMPTY_LIST) do
+        local occurrence = relatedOccurrenceForSpec(spec, rewardCtx, ctx, event, requirement)
+        if occurrence ~= nil then
+            related = related or {}
+            related[#related + 1] = occurrence
+        end
+    end
+    return related
+end
+
+local function requirementPayload(requirement, rewardCtx, ctx, event)
+    return {
+        code = requirement.code,
+        message = requirement.message,
+        relatedOccurrences = relatedOccurrencesForRequirement(requirement, rewardCtx, ctx, event),
+    }
+end
+
 local function requirementInvalid(requirement, rewardCtx, ctx, event)
     if requirementSkipped(requirement, ctx) then
         return nil
@@ -269,7 +306,7 @@ local function requirementInvalid(requirement, rewardCtx, ctx, event)
     if requirement.kind == "pendingOfferExclusion" then
         for _, rewardType in ipairs(requirement.rewards or EMPTY_LIST) do
             if rewardContext.hasPendingOffer(rewardCtx, rewardType) then
-                return requirement
+                return requirementPayload(requirement, rewardCtx, ctx, event)
             end
         end
         return nil
@@ -277,27 +314,39 @@ local function requirementInvalid(requirement, rewardCtx, ctx, event)
 
     if requirement.kind == "priorDistinctGodLoot" then
         if rewardContext.seenGodLootCount(rewardCtx, requirement) < requirement.minDistinct then
-            return requirement
+            return requirementPayload(requirement, rewardCtx, ctx, event)
         end
         return nil
     elseif requirement.kind == "previousRoomExitCount" then
-        return previousRoomExitCountInvalid(requirement, rewardCtx, ctx)
+        if previousRoomExitCountInvalid(requirement, rewardCtx, ctx) ~= nil then
+            return requirementPayload(requirement, rewardCtx, ctx, event)
+        end
+        return nil
     elseif requirement.kind == "minRoomHistorySpacing" then
-        return minRoomHistorySpacingInvalid(requirement, rewardCtx, ctx, event)
+        if minRoomHistorySpacingInvalid(requirement, rewardCtx, ctx, event) ~= nil then
+            return requirementPayload(requirement, rewardCtx, ctx, event)
+        end
+        return nil
     elseif requirement.kind == "minRunEncounterDepth" then
-        return minRunEncounterDepthInvalid(requirement, ctx)
+        if minRunEncounterDepthInvalid(requirement, ctx) ~= nil then
+            return requirementPayload(requirement, rewardCtx, ctx, event)
+        end
+        return nil
     elseif requirement.kind == "devotionSourcesInPriorGodLoot" then
-        return devotionSourcesInPriorGodLootInvalid(requirement, rewardCtx, event)
+        if devotionSourcesInPriorGodLootInvalid(requirement, rewardCtx, event) ~= nil then
+            return requirementPayload(requirement, rewardCtx, ctx, event)
+        end
+        return nil
     end
 
     local count = rewardContext.counterValue(rewardCtx, requirement.counter, requirement.scope, ctx.biomeKey)
     if requirement.kind == "maxCount" then
         if count >= requirement.max then
-            return requirement
+            return requirementPayload(requirement, rewardCtx, ctx, event)
         end
     elseif requirement.kind == "minPriorCount" then
         if count < requirement.min then
-            return requirement
+            return requirementPayload(requirement, rewardCtx, ctx, event)
         end
     elseif requirement.kind == "phase" then
         for _, phase in ipairs(requirement.phases or EMPTY_LIST) do
@@ -305,7 +354,7 @@ local function requirementInvalid(requirement, rewardCtx, ctx, event)
                 return nil
             end
         end
-        return requirement
+        return requirementPayload(requirement, rewardCtx, ctx, event)
     end
     return nil
 end
@@ -371,6 +420,7 @@ local function duplicateRewardTypeConstraintInvalid(constraint, event)
             return {
                 code = constraint.code or "duplicate_reward_type",
                 message = constraint.message or (rewardLabel(event.rewardType) .. " is already planned in this reward group"),
+                relatedEvents = { other },
             }
         end
     end
@@ -404,6 +454,7 @@ local function duplicateBoonSourceConstraintInvalid(constraint, event)
             return {
                 code = constraint.code or "duplicate_boon_source",
                 message = constraint.message or "Boon sources must be different",
+                relatedEvents = { other },
             }
         end
     end
@@ -439,9 +490,11 @@ local function rewardRowGroupInvalid(rewardCtx, event)
         if not allow[event.rewardType]
             and rewardContext.rewardRowGroupHasRewardType(rewardCtx, group.key, event.rewardType)
         then
+            local occurrence = rewardContext.rewardRowGroupRewardTypeOccurrence(rewardCtx, group.key, event.rewardType)
             return {
                 code = "duplicate_reward_type",
                 message = rewardLabel(event.rewardType) .. " is already planned in this reward group",
+                relatedOccurrences = occurrence and { occurrence } or nil,
             }
         end
     end
@@ -452,9 +505,11 @@ local function rewardRowGroupInvalid(rewardCtx, event)
         and event.boonSource ~= ""
         and rewardContext.rewardRowGroupHasBoonSource(rewardCtx, group.key, event.boonSource)
     then
+        local occurrence = rewardContext.rewardRowGroupBoonSourceOccurrence(rewardCtx, group.key, event.boonSource)
         return {
             code = "duplicate_boon_source",
             message = "Boon source is already planned in this reward group",
+            relatedOccurrences = occurrence and { occurrence } or nil,
         }
     end
     return nil
@@ -524,7 +579,7 @@ local function validateBatch(context, result, seenInvalids, rewardCtx, ctx, batc
         local event = batch.events[index]
         local invalid = eventInvalid(rewardCtx, ctx, event)
         if invalid ~= nil then
-            local selectedInvalid = addInvalid(context, result, seenInvalids, ctx, event, invalid.code, invalid.message)
+            local selectedInvalid = addInvalid(context, result, seenInvalids, ctx, event, invalid)
             storeSelectedInvalid(decision, selectedInvalid)
             return selectedInvalid
         end
@@ -577,7 +632,7 @@ local function validateAfterRewardRowGroupEntry(context, result, seenInvalids, r
     if invalid == nil then
         return nil
     end
-    local selectedInvalid = addInvalid(context, result, seenInvalids, entry.ctx, entry.event, invalid.code, invalid.message)
+    local selectedInvalid = addInvalid(context, result, seenInvalids, entry.ctx, entry.event, invalid)
     storeSelectedInvalid(decision, selectedInvalid)
     return selectedInvalid
 end

@@ -114,6 +114,30 @@ local function decisionForAddress(result, biomeKey, rowIndex, rewardAddress)
     return byRow and byRow[rewardAddress or "row"] or nil
 end
 
+local function setInvalidState(states, value)
+    states = states or {}
+    routeValueStates.set(states, value, INVALID_VALUE_STATE)
+    return states
+end
+
+local function applyInvalidMarkerStates(result, biomeKey, rowIndex, rewardAddress, controlAlias, states)
+    rewardAddress = rewardAddress or "row"
+    for _, invalid in ipairs(result.invalidRows or EMPTY_LIST) do
+        if invalid.biomeKey == biomeKey and invalid.rowIndex == rowIndex then
+            for _, target in ipairs(invalid.valueTargets or EMPTY_LIST) do
+                if target.address == rewardAddress
+                    and target.controlAlias == controlAlias
+                    and target.value ~= nil
+                    and target.value ~= ""
+                then
+                    states = setInvalidState(states, target.value)
+                end
+            end
+        end
+    end
+    return states
+end
+
 local function buildCandidateValueStates(rewardLegalityEngine, decision, rewardAddress, control)
     if rewardLegalityEngine == nil or rewardLegalityEngine.candidateInvalid == nil or decision == nil then
         return nil
@@ -131,8 +155,7 @@ local function buildCandidateValueStates(rewardLegalityEngine, decision, rewardA
         if event ~= nil
             and rewardLegalityEngine.candidateInvalid(rewardCtx, decision.ctx, event) ~= nil
         then
-            states = states or {}
-            states[value] = INVALID_VALUE_STATE
+            states = setInvalidState(states, value)
         end
     end
     return states
@@ -276,6 +299,7 @@ function rewards.create(opts)
 
         local decision = decisionForAddress(result, biomeKey, rowIndex, rewardAddress)
         local states = buildCandidateValueStates(rewardLegalityEngine, decision, rewardAddress, control)
+        states = applyInvalidMarkerStates(result, biomeKey, rowIndex, rewardAddress, controlAlias, states)
         storeControlValueStates(result, biomeKey, rowIndex, rewardAddress, controlAlias, states)
         return states
     end

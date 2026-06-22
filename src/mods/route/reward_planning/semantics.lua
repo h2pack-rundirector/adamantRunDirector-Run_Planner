@@ -626,6 +626,64 @@ function semantics.eventsForItem(item, row, out)
     return events
 end
 
+function semantics.valueTargetsForEvent(event, out)
+    local targets = out or {}
+    clearList(targets)
+
+    local item = event.item
+    local rewards = item.rewards or EMPTY_LIST
+    local address = item.address or "row"
+    local sourceIndex = event.sourceIndex
+
+    if event.rewardType == "Devotion" then
+        if item.rewardKind == "devotionPair" then
+            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(1), value = event.devotionSourceA }
+            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(2), value = event.devotionSourceB }
+        elseif item.rewardKind == "roomStore" then
+            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(1), value = "Devotion" }
+            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(3), value = event.devotionSourceA }
+            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(4), value = event.devotionSourceB }
+        elseif item.rewardKind == "majorMinor" then
+            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(2), value = "Devotion" }
+            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(5), value = event.devotionSourceA }
+            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(6), value = event.devotionSourceB }
+        end
+        return targets
+    end
+
+    if item.rewardKind == "boonSource" then
+        targets[#targets + 1] = { address = address, controlAlias = rewardAlias(1), value = event.boonSource }
+    elseif item.rewardKind == "roomStore" then
+        targets[#targets + 1] = { address = address, controlAlias = rewardAlias(1), value = event.rewardType }
+        if event.boonSource ~= nil then
+            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(2), value = event.boonSource }
+        end
+    elseif item.rewardKind == "majorMinor" then
+        if rewards[1] == "Major" then
+            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(2), value = event.rewardType }
+            if event.boonSource ~= nil then
+                targets[#targets + 1] = { address = address, controlAlias = rewardAlias(3), value = event.boonSource }
+            end
+        elseif rewards[1] == "Minor" then
+            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(4), value = event.rewardType }
+        end
+    elseif item.rewardKind == "shop" and sourceIndex ~= nil then
+        targets[#targets + 1] = { address = address, controlAlias = rewardAlias(sourceIndex), value = event.rewardType }
+        if event.boonSource ~= nil then
+            targets[#targets + 1] = { address = address, controlAlias = lootAlias(sourceIndex), value = event.boonSource }
+        end
+    elseif item.rewardKind == "fieldsCages" and sourceIndex ~= nil then
+        targets[#targets + 1] = { address = address, controlAlias = rewardAlias(sourceIndex), value = event.rewardType }
+        if event.boonSource ~= nil then
+            targets[#targets + 1] = { address = address, controlAlias = lootAlias(sourceIndex), value = event.boonSource }
+        end
+    elseif item.rewardKind == "fixedReward" then
+        targets[#targets + 1] = { address = address, controlAlias = rewardAlias(1), value = event.rewardType }
+    end
+
+    return targets
+end
+
 function semantics.eventsForRow(row, rewardItems, out, itemScratch)
     local events = out or {}
     clearList(events)

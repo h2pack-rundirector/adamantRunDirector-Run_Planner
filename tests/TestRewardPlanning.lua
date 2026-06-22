@@ -534,6 +534,93 @@ function TestRunPlannerRewardPlanning.testRouteContextMarksInvalidRewardCandidat
     lu.assertIs(states, routeContext:rewardValueStates("Underworld", "F", 1, "row", "Reward1Key", control))
 end
 
+function TestRunPlannerRewardPlanning.testRouteContextMarksRelatedRewardParticipantValue()
+    local control = rewardCandidateControl("rewardType", {
+        "",
+        "SpellDrop",
+        "MaxHealthDrop",
+    })
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "SpellDrop"),
+            routeRewardRow(2, "SpellDrop"),
+        }),
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 2)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(overview.invalidRows[1].markerKind, "primary")
+    lu.assertEquals(overview.invalidRows[1].code, "spell_drop_limit")
+    lu.assertEquals(overview.invalidRows[2].rowIndex, 1)
+    lu.assertEquals(overview.invalidRows[2].markerKind, "related")
+    lu.assertEquals(overview.invalidRows[2].code, "spell_drop_limit")
+
+    local priorStates = routeContext:rewardValueStates("Underworld", "F", 1, "row", "Reward1Key", control)
+    local invalidStates = routeContext:rewardValueStates("Underworld", "F", 2, "row", "Reward1Key", control)
+
+    lu.assertEquals(priorStates.SpellDrop, valueStates.INVALID)
+    lu.assertEquals(invalidStates.SpellDrop, valueStates.INVALID)
+    lu.assertNil(priorStates.MaxHealthDrop)
+    lu.assertNil(invalidStates.MaxHealthDrop)
+end
+
+function TestRunPlannerRewardPlanning.testRouteContextMarksRelatedMultiSourceRewardParticipantValue()
+    local constraint = {
+        kind = "uniqueRewardTypes",
+        sourceIndices = { 1, 2 },
+        code = "duplicate_reward_type",
+        message = "Fields cage rewards cannot duplicate non-boon rewards",
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "H" },
+    }, {
+        RouteH = fakeRouteControlSnapshot("RouteH", {
+            routeRewardRow(1, "Cages", {
+                rewardKind = "fieldsCages",
+                rewards = { "MaxHealthDrop", "MaxHealthDrop" },
+                rewardSourceCount = 2,
+                rewardConstraints = { constraint },
+            }),
+        }),
+    })
+    local firstControl = rewardCandidateControl("rewardType", {
+        "",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+    }, "Reward1Key")
+    firstControl.sourceIndex = 1
+    local secondControl = rewardCandidateControl("rewardType", {
+        "",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+    }, "Reward2Key")
+    secondControl.sourceIndex = 2
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 2)
+    lu.assertEquals(overview.invalidRows[1].address, "cage:2")
+    lu.assertEquals(overview.invalidRows[2].address, "cage:1")
+
+    local firstStates = routeContext:rewardValueStates("Underworld", "H", 1, "row", "Reward1Key", firstControl)
+    local secondStates = routeContext:rewardValueStates("Underworld", "H", 1, "row", "Reward2Key", secondControl)
+
+    lu.assertEquals(firstStates.MaxHealthDrop, valueStates.INVALID)
+    lu.assertEquals(secondStates.MaxHealthDrop, valueStates.INVALID)
+    lu.assertNil(firstStates.MaxManaDrop)
+    lu.assertNil(secondStates.MaxManaDrop)
+end
+
 function TestRunPlannerRewardPlanning.testRouteContextAllowsCandidatesAfterRequiredPriorReward()
     local control = rewardCandidateControl("rewardType", {
         "",
@@ -1534,7 +1621,7 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesDevotionBeforeF
     local overview = routeContext:overview("Underworld")
 
     lu.assertFalse(overview.valid)
-    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(#overview.invalidRows, 2)
     lu.assertEquals(overview.invalidRows[1].biomeKey, "G")
     lu.assertEquals(overview.invalidRows[1].rowIndex, 12)
     lu.assertEquals(overview.invalidRows[1].code, "devotion_spacing")
@@ -1635,7 +1722,7 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesDuplicateSpellD
     local overview = routeContext:overview("Underworld")
 
     lu.assertFalse(overview.valid)
-    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(#overview.invalidRows, 2)
     lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
     lu.assertEquals(overview.invalidRows[1].code, "spell_drop_limit")
 end
@@ -1657,7 +1744,7 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesSpellAfterPendi
     local overview = routeContext:overview("Underworld")
 
     lu.assertFalse(overview.valid)
-    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(#overview.invalidRows, 2)
     lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
     lu.assertEquals(overview.invalidRows[1].code, "spell_shop_conflict")
 end
@@ -1723,7 +1810,7 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesTalentAfterPrev
     local overview = routeContext:overview("Underworld")
 
     lu.assertFalse(overview.valid)
-    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(#overview.invalidRows, 2)
     lu.assertEquals(overview.invalidRows[1].rowIndex, 3)
     lu.assertEquals(overview.invalidRows[1].code, "talent_shop_conflict")
 end
@@ -1767,7 +1854,7 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesHermesAfterPend
     local overview = routeContext:overview("Underworld")
 
     lu.assertFalse(overview.valid)
-    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(#overview.invalidRows, 2)
     lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
     lu.assertEquals(overview.invalidRows[1].code, "hermes_shop_conflict")
 end
@@ -1882,7 +1969,7 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesHermesBiomeAndR
     local overview = routeContext:overview("Underworld")
 
     lu.assertFalse(overview.valid)
-    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(#overview.invalidRows, 2)
     lu.assertEquals(overview.invalidRows[1].biomeKey, "F")
     lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
     lu.assertEquals(overview.invalidRows[1].code, "hermes_biome_limit")
@@ -1908,7 +1995,7 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesEarlySecondWeap
     local overview = routeContext:overview("Underworld")
 
     lu.assertFalse(overview.valid)
-    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(#overview.invalidRows, 2)
     lu.assertEquals(overview.invalidRows[1].biomeKey, "G")
     lu.assertEquals(overview.invalidRows[1].code, "weapon_upgrade_late_requirement")
 end
@@ -1953,7 +2040,7 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesWeaponUpgradeAf
     local overview = routeContext:overview("Underworld")
 
     lu.assertFalse(overview.valid)
-    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(#overview.invalidRows, 2)
     lu.assertEquals(overview.invalidRows[1].biomeKey, "H")
     lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
     lu.assertEquals(overview.invalidRows[1].code, "weapon_upgrade_shop_conflict")
@@ -2003,7 +2090,7 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesThirdWeaponUpgr
     local overview = routeContext:overview("Underworld")
 
     lu.assertFalse(overview.valid)
-    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(#overview.invalidRows, 2)
     lu.assertEquals(overview.invalidRows[1].biomeKey, "I")
     lu.assertEquals(overview.invalidRows[1].code, "weapon_upgrade_run_limit")
 end

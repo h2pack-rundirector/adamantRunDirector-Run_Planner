@@ -122,6 +122,12 @@ local function appendFirstInvalid(invalidRows, invalid)
     end
 end
 
+local function appendInvalidRows(invalidRows, source)
+    for _, invalid in ipairs(source or EMPTY_LIST) do
+        appendInvalidRow(invalidRows, invalid)
+    end
+end
+
 local function rewardBoundaryForInvalid(invalid)
     if invalid == nil then
         return nil
@@ -406,8 +412,12 @@ function runContext.create(opts)
         self.snapshotBuilding = previousSnapshotBuilding
 
         if self:isLayerConfigured(route.key, "rewards") then
-            local rewardInvalid = self:rewardLegality(route.key, rewardBoundaryForInvalid(routeLocalInvalid)).invalidRows[1]
-            appendFirstInvalid(invalidRows, rewardInvalid or routeLocalInvalid)
+            local rewardInvalidRows = self:rewardLegality(route.key, rewardBoundaryForInvalid(routeLocalInvalid)).invalidRows
+            if rewardInvalidRows[1] ~= nil then
+                appendInvalidRows(invalidRows, rewardInvalidRows)
+            else
+                appendFirstInvalid(invalidRows, routeLocalInvalid)
+            end
         else
             appendFirstInvalid(invalidRows, routeLocalInvalid)
         end
