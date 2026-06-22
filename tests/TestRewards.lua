@@ -413,6 +413,13 @@ function TestRunPlannerRewards.testConditionsBlockTalentAfterShopTalent()
         },
         code = "talent_shop_conflict",
         message = "Path of Stars cannot be planned after a shop Path of Stars offer",
+        relatedParticipants = {
+            {
+                kind = "event",
+                source = "pendingOffer",
+                select = "last",
+            },
+        },
     })
 end
 
@@ -431,6 +438,13 @@ function TestRunPlannerRewards.testConditionsBlockRoomHammerAfterShopHammer()
         },
         code = "weapon_upgrade_shop_conflict",
         message = "Hammer cannot be planned after a shop Hammer offer",
+        relatedParticipants = {
+            {
+                kind = "event",
+                source = "pendingOffer",
+                select = "last",
+            },
+        },
     })
 end
 

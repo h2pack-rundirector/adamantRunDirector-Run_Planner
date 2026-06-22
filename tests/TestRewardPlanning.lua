@@ -33,6 +33,86 @@ local function rewardCandidateControl(kind, values, alias)
     }
 end
 
+function TestRunPlannerRewardPlanning.testRewardContextStoresCounterOccurrenceAndPendingProvenance()
+    local rewardContext = testImport("mods/route/reward_planning/context.lua")
+    local ctx = rewardContext.create()
+    local rowContext = {
+        biomeKey = "F",
+        roomHistoryOrdinal = 4,
+    }
+    local spellEvent = {
+        rewardType = "SpellDrop",
+    }
+    local shopEvent = {
+        rewardType = "WeaponUpgradeDrop",
+    }
+    local laterSpellEvent = {
+        rewardType = "SpellDrop",
+    }
+
+    rewardContext.applyCounts(ctx, {
+        {
+            key = "spell",
+            scope = "route",
+        },
+        {
+            key = "spell",
+            scope = "biome",
+        },
+    }, rowContext, spellEvent)
+    rewardContext.storeRewardOccurrence(ctx, rowContext, spellEvent)
+    rewardContext.stagePendingEvent(ctx, rowContext, shopEvent)
+    rewardContext.activateStagedPending(ctx)
+
+    lu.assertEquals(rewardContext.counterValue(ctx, "spell", "route", "F"), 1)
+    lu.assertEquals(rewardContext.counterValue(ctx, "spell", "biome", "F"), 1)
+    lu.assertIs(rewardContext.counterProducerEvent(ctx, "spell", "route", "F"), spellEvent)
+    lu.assertIs(rewardContext.counterProducerEvent(ctx, "spell", "biome", "F"), spellEvent)
+    lu.assertEquals(rewardContext.lastRewardRoomHistoryOrdinal(ctx, "SpellDrop"), 4)
+    lu.assertIs(rewardContext.lastRewardOccurrenceEvent(ctx, "SpellDrop"), spellEvent)
+    lu.assertTrue(rewardContext.hasPendingOffer(ctx, "WeaponUpgradeDrop"))
+    lu.assertIs(rewardContext.pendingOfferEvent(ctx, "WeaponUpgradeDrop"), shopEvent)
+
+    local snapshot = rewardContext.snapshot(ctx)
+    rewardContext.applyCounts(ctx, {
+        {
+            key = "spell",
+            scope = "route",
+        },
+    }, rowContext, laterSpellEvent)
+
+    lu.assertIs(rewardContext.counterProducerEvent(ctx, "spell", "route", "F"), laterSpellEvent)
+    lu.assertIs(rewardContext.counterProducerEvent(snapshot, "spell", "route", "F"), spellEvent)
+    lu.assertIs(rewardContext.lastRewardOccurrenceEvent(snapshot, "SpellDrop"), spellEvent)
+    lu.assertIs(rewardContext.pendingOfferEvent(snapshot, "WeaponUpgradeDrop"), shopEvent)
+end
+
+function TestRunPlannerRewardPlanning.testRewardContextStoresRowGroupProvenance()
+    local rewardContext = testImport("mods/route/reward_planning/context.lua")
+    local ctx = rewardContext.create()
+    local group = {
+        key = "N_HubPylons",
+    }
+    local boonEvent = {
+        rewardType = "Boon",
+        boonSource = "ZeusUpgrade",
+        item = {
+            rewardRowGroup = group,
+        },
+    }
+
+    rewardContext.storeRewardRowGroupEvent(ctx, boonEvent)
+
+    lu.assertTrue(rewardContext.rewardRowGroupHasRewardType(ctx, "N_HubPylons", "Boon"))
+    lu.assertTrue(rewardContext.rewardRowGroupHasBoonSource(ctx, "N_HubPylons", "ZeusUpgrade"))
+    lu.assertIs(rewardContext.rewardRowGroupRewardTypeEvent(ctx, "N_HubPylons", "Boon"), boonEvent)
+    lu.assertIs(rewardContext.rewardRowGroupBoonSourceEvent(ctx, "N_HubPylons", "ZeusUpgrade"), boonEvent)
+
+    local snapshot = rewardContext.snapshot(ctx)
+    lu.assertIs(rewardContext.rewardRowGroupRewardTypeEvent(snapshot, "N_HubPylons", "Boon"), boonEvent)
+    lu.assertIs(rewardContext.rewardRowGroupBoonSourceEvent(snapshot, "N_HubPylons", "ZeusUpgrade"), boonEvent)
+end
+
 function TestRunPlannerRewardPlanning.testRewardItemsNormalizeRowRewardMetadata()
     local rewardItems = testImport("mods/route/reward_planning/items.lua")
     local row = {

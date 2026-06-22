@@ -15,10 +15,34 @@ local function copyMap(source)
     return copy
 end
 
+local function copyList(source)
+    local copy = {}
+    for index, value in ipairs(source or EMPTY_LIST) do
+        copy[index] = value
+    end
+    return copy
+end
+
+local function copyListMap(source)
+    local copy = {}
+    for key, value in pairs(source or {}) do
+        copy[key] = copyList(value)
+    end
+    return copy
+end
+
 local function copyNestedMap(source)
     local copy = {}
     for key, value in pairs(source or {}) do
         copy[key] = copyMap(value)
+    end
+    return copy
+end
+
+local function copyNestedListMap(source)
+    local copy = {}
+    for key, value in pairs(source or {}) do
+        copy[key] = copyListMap(value)
     end
     return copy
 end
@@ -55,11 +79,50 @@ local function biomeCounters(context, biomeKey)
     return counters
 end
 
+local function biomeCounterEvents(context, biomeKey)
+    local events = context.biomeCounterEvents[biomeKey]
+    if events == nil then
+        events = {}
+        context.biomeCounterEvents[biomeKey] = events
+    end
+    return events
+end
+
 local function countersForScope(context, scope, biomeKey)
     if scope == "biome" then
         return biomeCounters(context, biomeKey)
     end
     return context.routeCounters
+end
+
+local function counterEventsForScope(context, scope, biomeKey)
+    if scope == "biome" then
+        return biomeCounterEvents(context, biomeKey)
+    end
+    return context.routeCounterEvents
+end
+
+local function appendCounterEvent(context, counterKey, scope, biomeKey, event)
+    if event == nil then
+        return
+    end
+    local eventsByCounter = counterEventsForScope(context, scope, biomeKey)
+    local events = eventsByCounter[counterKey]
+    if events == nil then
+        events = {}
+        eventsByCounter[counterKey] = events
+    end
+    events[#events + 1] = event
+end
+
+local function selectedEvent(events, select)
+    if events == nil then
+        return nil
+    end
+    if select == "first" then
+        return events[1]
+    end
+    return events[#events]
 end
 
 local function storeGodLootValue(context, lootName)
@@ -72,8 +135,11 @@ function rewardContext.create()
     return {
         routeCounters = {},
         biomeCounters = {},
+        routeCounterEvents = {},
+        biomeCounterEvents = {},
         godLootSeen = {},
         lastRewardRoomHistoryOrdinal = {},
+        lastRewardEvents = {},
         activeRewardRowGroup = nil,
         pendingOffers = {},
         pendingEntries = {},
@@ -87,12 +153,15 @@ function rewardContext.snapshot(context)
     return {
         routeCounters = copyMap(context and context.routeCounters),
         biomeCounters = copyNestedMap(context and context.biomeCounters),
+        routeCounterEvents = copyListMap(context and context.routeCounterEvents),
+        biomeCounterEvents = copyNestedListMap(context and context.biomeCounterEvents),
         godLootSeen = copyMap(context and context.godLootSeen),
         lastRewardRoomHistoryOrdinal = copyMap(context and context.lastRewardRoomHistoryOrdinal),
+        lastRewardEvents = copyMap(context and context.lastRewardEvents),
         activeRewardRowGroup = copyRowGroupState(context and context.activeRewardRowGroup),
-        pendingOffers = copyMap(context and context.pendingOffers),
+        pendingOffers = copyListMap(context and context.pendingOffers),
         pendingEntries = copyPendingEntries(context and context.pendingEntries),
-        stagedPendingOffers = copyMap(context and context.stagedPendingOffers),
+        stagedPendingOffers = copyListMap(context and context.stagedPendingOffers),
         stagedPendingEntries = copyPendingEntries(context and context.stagedPendingEntries),
         previousRows = copyMap(context and context.previousRows),
     }
@@ -102,19 +171,25 @@ function rewardContext.counterValue(context, counterKey, scope, biomeKey)
     return countersForScope(context, scope, biomeKey)[counterKey] or 0
 end
 
-function rewardContext.incrementCounter(context, counterKey, scope, biomeKey)
+function rewardContext.incrementCounter(context, counterKey, scope, biomeKey, event)
     local counters = countersForScope(context, scope, biomeKey)
     counters[counterKey] = (counters[counterKey] or 0) + 1
+    appendCounterEvent(context, counterKey, scope, biomeKey, event)
 end
 
-function rewardContext.applyCount(context, count, rowContext)
-    rewardContext.incrementCounter(context, count.key, count.scope, rowContext.biomeKey)
+function rewardContext.applyCount(context, count, rowContext, event)
+    rewardContext.incrementCounter(context, count.key, count.scope, rowContext.biomeKey, event)
 end
 
-function rewardContext.applyCounts(context, counts, rowContext)
+function rewardContext.applyCounts(context, counts, rowContext, event)
     for _, count in ipairs(counts or EMPTY_LIST) do
-        rewardContext.applyCount(context, count, rowContext)
+        rewardContext.applyCount(context, count, rowContext, event)
     end
+end
+
+function rewardContext.counterProducerEvent(context, counterKey, scope, biomeKey, select)
+    local events = counterEventsForScope(context, scope, biomeKey)[counterKey]
+    return selectedEvent(events, select)
 end
 
 function rewardContext.seenGodLootCount(context, requirement)
@@ -136,11 +211,19 @@ function rewardContext.previousRow(context, biomeKey)
 end
 
 function rewardContext.hasPendingOffer(context, rewardType)
-    return context.pendingOffers[rewardType] == true
+    return context.pendingOffers[rewardType] ~= nil
+end
+
+function rewardContext.pendingOfferEvent(context, rewardType, select)
+    return selectedEvent(context.pendingOffers[rewardType], select)
 end
 
 function rewardContext.lastRewardRoomHistoryOrdinal(context, rewardType)
     return context.lastRewardRoomHistoryOrdinal[rewardType]
+end
+
+function rewardContext.lastRewardOccurrenceEvent(context, rewardType)
+    return context.lastRewardEvents[rewardType]
 end
 
 function rewardContext.storeEventGodLoot(context, event)
@@ -161,6 +244,7 @@ end
 function rewardContext.storeRewardOccurrence(context, rowContext, event)
     if event.rewardType ~= nil and rowContext.roomHistoryOrdinal ~= nil then
         context.lastRewardRoomHistoryOrdinal[event.rewardType] = rowContext.roomHistoryOrdinal
+        context.lastRewardEvents[event.rewardType] = event
     end
 end
 
@@ -209,9 +293,25 @@ function rewardContext.rewardRowGroupHasRewardType(context, groupKey, rewardType
     return state ~= nil and state.key == groupKey and state.seenRewardTypes[rewardType] ~= nil
 end
 
+function rewardContext.rewardRowGroupRewardTypeEvent(context, groupKey, rewardType)
+    local state = context.activeRewardRowGroup
+    if state == nil or state.key ~= groupKey then
+        return nil
+    end
+    return state.seenRewardTypes[rewardType]
+end
+
 function rewardContext.rewardRowGroupHasBoonSource(context, groupKey, boonSource)
     local state = context.activeRewardRowGroup
     return state ~= nil and state.key == groupKey and state.seenBoonSources[boonSource] ~= nil
+end
+
+function rewardContext.rewardRowGroupBoonSourceEvent(context, groupKey, boonSource)
+    local state = context.activeRewardRowGroup
+    if state == nil or state.key ~= groupKey then
+        return nil
+    end
+    return state.seenBoonSources[boonSource]
 end
 
 function rewardContext.storeRewardRowGroupEvent(context, event)
@@ -222,10 +322,10 @@ function rewardContext.storeRewardRowGroupEvent(context, event)
 
     local state = rewardContext.beginRewardRowGroup(context, group)
     if event.rewardType ~= nil and event.rewardType ~= "" then
-        state.seenRewardTypes[event.rewardType] = true
+        state.seenRewardTypes[event.rewardType] = event
     end
     if event.rewardType == "Boon" and event.boonSource ~= nil and event.boonSource ~= "" then
-        state.seenBoonSources[event.boonSource] = true
+        state.seenBoonSources[event.boonSource] = event
     end
 end
 
@@ -272,7 +372,12 @@ function rewardContext.stagePendingEvent(context, rowContext, event)
         ctx = rowContext,
         event = event,
     }
-    context.stagedPendingOffers[event.rewardType] = true
+    local offers = context.stagedPendingOffers[event.rewardType]
+    if offers == nil then
+        offers = {}
+        context.stagedPendingOffers[event.rewardType] = offers
+    end
+    offers[#offers + 1] = event
 end
 
 function rewardContext.clearPending(context)
@@ -301,8 +406,8 @@ function rewardContext.activateStagedPending(context)
     for index = #context.pendingEntries, 1, -1 do
         context.pendingEntries[index] = nil
     end
-    for rewardType in pairs(context.stagedPendingOffers) do
-        context.pendingOffers[rewardType] = true
+    for rewardType, events in pairs(context.stagedPendingOffers) do
+        context.pendingOffers[rewardType] = events
     end
     for index, entry in ipairs(context.stagedPendingEntries) do
         context.pendingEntries[index] = entry

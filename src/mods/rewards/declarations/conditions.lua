@@ -17,6 +17,13 @@ return {
                 max = 1,
                 code = "devotion_biome_limit",
                 message = "Trial can only be planned once per biome",
+                relatedParticipants = {
+                    {
+                        kind = "event",
+                        source = "counterProducer",
+                        select = "last",
+                    },
+                },
             },
             {
                 kind = "priorDistinctGodLoot",
@@ -54,6 +61,13 @@ return {
                 min = 15,
                 code = "devotion_spacing",
                 message = "Trial requires 15 rooms since the previous Trial",
+                relatedParticipants = {
+                    {
+                        kind = "event",
+                        source = "lastOccurrence",
+                        select = "last",
+                    },
+                },
             },
             {
                 kind = "devotionSourcesInPriorGodLoot",
@@ -80,6 +94,13 @@ return {
                 max = 1,
                 code = "spell_drop_limit",
                 message = "Selene's Gift is already planned earlier in this route",
+                relatedParticipants = {
+                    {
+                        kind = "event",
+                        source = "counterProducer",
+                        select = "last",
+                    },
+                },
             },
         },
     },
@@ -118,6 +139,13 @@ return {
                 },
                 code = "spell_shop_conflict",
                 message = "Selene's Gift cannot be planned after a shop Selene's Gift offer",
+                relatedParticipants = {
+                    {
+                        kind = "event",
+                        source = "pendingOffer",
+                        select = "last",
+                    },
+                },
             },
         },
     },
@@ -135,6 +163,13 @@ return {
                 },
                 code = "talent_shop_conflict",
                 message = "Path of Stars cannot be planned after a shop Path of Stars offer",
+                relatedParticipants = {
+                    {
+                        kind = "event",
+                        source = "pendingOffer",
+                        select = "last",
+                    },
+                },
             },
         },
     },
@@ -151,6 +186,13 @@ return {
                 },
                 code = "hermes_shop_conflict",
                 message = "Hermes cannot be planned after a shop Hermes offer",
+                relatedParticipants = {
+                    {
+                        kind = "event",
+                        source = "pendingOffer",
+                        select = "last",
+                    },
+                },
             },
         },
     },
@@ -177,6 +219,13 @@ return {
                 max = 1,
                 code = "hermes_biome_limit",
                 message = "Hermes can only be planned once per biome",
+                relatedParticipants = {
+                    {
+                        kind = "event",
+                        source = "counterProducer",
+                        select = "last",
+                    },
+                },
             },
             {
                 kind = "maxCount",
@@ -185,6 +234,13 @@ return {
                 max = 2,
                 code = "hermes_run_limit",
                 message = "Hermes can only be planned twice per route",
+                relatedParticipants = {
+                    {
+                        kind = "event",
+                        source = "counterProducer",
+                        select = "last",
+                    },
+                },
             },
         },
     },
@@ -200,6 +256,13 @@ return {
                 },
                 code = "weapon_upgrade_shop_conflict",
                 message = "Hammer cannot be planned after a shop Hammer offer",
+                relatedParticipants = {
+                    {
+                        kind = "event",
+                        source = "pendingOffer",
+                        select = "last",
+                    },
+                },
             },
         },
     },
@@ -222,6 +285,13 @@ return {
                 max = 2,
                 code = "weapon_upgrade_run_limit",
                 message = "Only two Hammers can be planned in one route",
+                relatedParticipants = {
+                    {
+                        kind = "event",
+                        source = "counterProducer",
+                        select = "last",
+                    },
+                },
             },
             {
                 kind = "phase",
@@ -240,6 +310,13 @@ return {
                 },
                 code = "weapon_upgrade_late_requirement",
                 message = "The second Hammer cannot be planned before the third biome",
+                relatedParticipants = {
+                    {
+                        kind = "event",
+                        source = "counterProducer",
+                        select = "last",
+                    },
+                },
             },
         },
     },

@@ -510,7 +510,7 @@ local function applyEventEffects(rewardCtx, ctx, event)
     if rules ~= nil then
         for _, rule in ipairs(rules) do
             if ruleApplies(rule, event) then
-                rewardContext.applyCounts(rewardCtx, rule.countsAs, ctx)
+                rewardContext.applyCounts(rewardCtx, rule.countsAs, ctx, event)
             end
         end
     end
