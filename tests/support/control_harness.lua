@@ -481,6 +481,7 @@ local function routeRewardRow(rowIndex, rewardType, opts)
         invalidCode = opts.invalidCode,
         invalidReason = opts.invalidReason,
         locationLabel = opts.locationLabel,
+        rewardConstraints = opts.rewardConstraints,
         rewardRowGroup = opts.rewardRowGroup,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
         biomeEncounterDepthCostMin = opts.biomeEncounterDepthCostMin or opts.biomeEncounterDepthCost or 1,
@@ -526,6 +527,30 @@ local function rewardLegalityRouteContext(route, controls, opts)
             return controls[controlName]
         end,
     })
+end
+
+local function attachSingleBiomeRouteContext(control, routeKey, biomeKey, opts)
+    opts = opts or {}
+    routeKey = routeKey or "TestRoute"
+    biomeKey = biomeKey or control:biomeKey()
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = routeKey,
+                label = opts.label or routeKey,
+                biomes = { biomeKey },
+            },
+        }),
+        biomes = opts.biomes or {},
+        controlResolver = function(controlName)
+            if controlName == control:name() then
+                return control
+            end
+            return nil
+        end,
+    })
+    control:setRouteContext(routeContext, routeKey)
+    return routeContext
 end
 
 local function fakeTimelineBiome()
@@ -625,8 +650,9 @@ return {
     buildThessalyRuntime = buildThessalyRuntime,
     routeRewardRow = routeRewardRow,
     fakeRouteControlSnapshot = fakeRouteControlSnapshot,
-    rewardLegalityRouteContext = rewardLegalityRouteContext,
-    fakeTimelineBiome = fakeTimelineBiome,
+rewardLegalityRouteContext = rewardLegalityRouteContext,
+attachSingleBiomeRouteContext = attachSingleBiomeRouteContext,
+fakeTimelineBiome = fakeTimelineBiome,
     devotionRewardRow = devotionRewardRow,
     boonRewardRow = boonRewardRow,
     firstValidDevotionRows = firstValidDevotionRows,

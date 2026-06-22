@@ -251,6 +251,18 @@ function rewardContext.stageAfterRewardRowGroupEvent(context, rowContext, event)
     }
 end
 
+function rewardContext.stageAfterRewardRowGroupItem(context, rowContext, row, item)
+    local state = context.activeRewardRowGroup
+    if state == nil then
+        return
+    end
+    state.afterEntries[#state.afterEntries + 1] = {
+        ctx = rowContext,
+        row = row,
+        item = item,
+    }
+end
+
 function rewardContext.hasPendingEntries(context)
     return context.pendingEntries[1] ~= nil
 end

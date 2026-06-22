@@ -1,5 +1,6 @@
 return function(importer, deps)
     local layout = importer("mods/biomes/declarations/n_ephyra_layout.lua")(importer, deps)
+    local rewardLayout = importer("mods/biomes/declarations/n_ephyra_rewards.lua")(importer, deps)
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules
@@ -79,17 +80,7 @@ return function(importer, deps)
             storyRoomsByKey = layout.storyRoomsByKey,
             hubDoorRooms = layout.hubDoorRooms,
             subroomRewardStores = layout.subroomRewardStores,
-            rewardRowGroup = {
-                key = "N_HubPylons",
-                effectTiming = "afterGroup",
-                constraints = {
-                    uniqueRewardTypes = {
-                        allow = {
-                            Boon = true,
-                        },
-                    },
-                },
-            },
+            rewardRowGroup = rewardLayout.hubPylons,
             minibossAvailability = {
                 mode = "oneOf",
                 rooms = { "N_MiniBoss01", "N_MiniBoss02" },

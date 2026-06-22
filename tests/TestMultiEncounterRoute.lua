@@ -13,6 +13,7 @@ local fakeRows = h.fakeRows
 local routeFields = h.routeFields
 local routeUiFields = h.routeUiFields
 local buildThessalyRuntime = h.buildThessalyRuntime
+local attachSingleBiomeRouteContext = h.attachSingleBiomeRouteContext
 
 -- luacheck: globals TestRunPlannerMultiEncounterRoute
 TestRunPlannerMultiEncounterRoute = {}
@@ -396,6 +397,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterInvalidatesDuplicat
             Reward2Key = "ZeusUpgrade",
         },
     }), instance)
+    attachSingleBiomeRouteContext(control, "Surface", "O")
     local snapshot = control:buildSnapshot()
 
     lu.assertFalse(snapshot.valid)

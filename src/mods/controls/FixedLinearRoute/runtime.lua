@@ -35,19 +35,6 @@ local function rewardSurface(role, option)
     return rewardSystem.surfaceFor(rewardContext(role, option))
 end
 
-local function rewardValidation(surface, rewardRows, rowIndex)
-    if rewardSystem == nil or rewardSystem.validate == nil then
-        return nil
-    end
-    if surface == nil
-        or surface.uniqueValueGroups == nil
-        or surface.uniqueValueGroups[1] == nil
-    then
-        return nil
-    end
-    return rewardSystem.validate(surface, rewardSystem.fields(rewardRows, rowIndex))
-end
-
 local function routeRewardValidation(instance, rowIndex)
     if instance.routeContext ~= nil and instance.routeContext.rewardRowValidation ~= nil then
         return instance.routeContext:rewardRowValidation(instance.routeKey, instance.biomeKey, rowIndex)
@@ -157,8 +144,6 @@ function runtime.create(fields, instance)
     end
 
     function control:rowValidation(rowIndex)
-        local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
-        local _, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
         local validation = data.validateRow(instance, routeRows, rowIndex)
         if not validation.valid then
             return validation
@@ -167,12 +152,7 @@ function runtime.create(fields, instance)
             return validation
         end
 
-        local surface = rewardSurface(role, option)
-        local rewardInvalid = rewardValidation(surface, fields.Rewards, rowIndex)
-        if rewardInvalid ~= nil and not rewardInvalid.valid then
-            return rewardInvalid
-        end
-        rewardInvalid = routeRewardValidation(instance, rowIndex)
+        local rewardInvalid = routeRewardValidation(instance, rowIndex)
         if rewardInvalid ~= nil and not rewardInvalid.valid then
             return rewardInvalid
         end
@@ -237,6 +217,7 @@ function runtime.create(fields, instance)
             rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
             rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
             rewardGeneration = surface and surface.context and surface.context.rewardGeneration or nil,
+            rewardConstraints = surface and surface.rewardConstraints or nil,
             rewardPicks = rewardsConfigured
                 and rewardSystem
                 and rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex))

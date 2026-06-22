@@ -413,6 +413,11 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesTalentRewardsBe
     lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 1).rewardType, "TalentDrop")
     lu.assertNil(routeContext:rewardRowValidation("Underworld", "F", 2))
     lu.assertNil(routeContext:rewardRowValidation("Underworld", "F", 4))
+
+    local decision = routeContext:rewardLegality("Underworld").decisionsByBiomeRowAddress.F[1].row
+    lu.assertEquals(decision.address, "row")
+    lu.assertEquals(decision.selectedEvents[1].rewardType, "TalentDrop")
+    lu.assertEquals(decision.selectedInvalid.code, "talent_requires_spell")
 end
 
 function TestRunPlannerRewardPlanning.testRouteContextMarksInvalidRewardCandidates()
@@ -866,6 +871,191 @@ function TestRunPlannerRewardPlanning.testRewardRowGroupDoesNotLetEarlierRowsSat
     lu.assertEquals(invalid.code, "talent_requires_spell")
 end
 
+function TestRunPlannerRewardPlanning.testSameSurfaceConstraintRejectsDuplicateDevotionGods()
+    local constraint = {
+        kind = "uniqueBoonSource",
+        code = "duplicate_devotion_god",
+        message = "Trial gods must be different",
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "Devotion", {
+                rewardKind = "devotionPair",
+                rewards = { "ZeusUpgrade", "ZeusUpgrade" },
+                rewardConstraints = { constraint },
+            }),
+        }),
+    })
+
+    local invalid = routeContext:overview("Underworld").invalidRows[1]
+
+    lu.assertEquals(invalid.rowIndex, 1)
+    lu.assertEquals(invalid.rewardType, "Devotion")
+    lu.assertEquals(invalid.code, "duplicate_devotion_god")
+end
+
+function TestRunPlannerRewardPlanning.testSameSurfaceConstraintColorsDuplicateDevotionGodCandidate()
+    local constraint = {
+        kind = "uniqueBoonSource",
+        code = "duplicate_devotion_god",
+        message = "Trial gods must be different",
+    }
+    local control = rewardCandidateControl("boonSource", {
+        "",
+        "ZeusUpgrade",
+        "HeraUpgrade",
+    }, "Reward2Key")
+    local rows = firstValidDevotionRows()
+    rows[2] = boonRewardRow(2, "HeraUpgrade")
+    rows[9] = routeRewardRow(9, "Devotion", {
+        rewardKind = "devotionPair",
+        rewards = { "ZeusUpgrade", "HeraUpgrade" },
+        rewardConstraints = { constraint },
+    })
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", rows),
+    })
+
+    local states = routeContext:rewardValueStates("Underworld", "F", 9, "row", "Reward2Key", control)
+
+    lu.assertEquals(states.ZeusUpgrade, valueStates.INVALID)
+    lu.assertNil(states.HeraUpgrade)
+end
+
+function TestRunPlannerRewardPlanning.testSameSurfaceConstraintRejectsLinkedShopOfferDuplicates()
+    local constraint = {
+        kind = "uniqueRewardTypes",
+        sourceIndices = { 1, 2 },
+        code = "duplicate_shop_group_option",
+        message = "Offers 1 and 2 share one vanilla shop group and cannot duplicate the same reward",
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "Q" },
+    }, {
+        RouteQ = fakeRouteControlSnapshot("RouteQ", {
+            routeRewardRow(1, "RandomLoot", {
+                rewardKind = "shop",
+                rewards = { "RandomLoot", "RandomLoot" },
+                rewardConstraints = { constraint },
+            }),
+        }),
+    })
+
+    local invalid = routeContext:overview("Surface").invalidRows[1]
+
+    lu.assertEquals(invalid.rowIndex, 1)
+    lu.assertEquals(invalid.address, "shop:2")
+    lu.assertEquals(invalid.code, "duplicate_shop_group_option")
+end
+
+function TestRunPlannerRewardPlanning.testSameSurfaceConstraintColorsLinkedShopOfferCandidates()
+    local constraint = {
+        kind = "uniqueRewardTypes",
+        sourceIndices = { 1, 2 },
+        code = "duplicate_shop_group_option",
+        message = "Offers 1 and 2 share one vanilla shop group and cannot duplicate the same reward",
+    }
+    local control = rewardCandidateControl("shopOption", {
+        "",
+        "RandomLoot",
+        "BoostedRandomLoot",
+    }, "Reward2Key")
+    control.rowIndex = 2
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "Q" },
+    }, {
+        RouteQ = fakeRouteControlSnapshot("RouteQ", {
+            routeRewardRow(1, "RandomLoot", {
+                rewardKind = "shop",
+                rewards = { "RandomLoot", "BoostedRandomLoot" },
+                rewardConstraints = { constraint },
+            }),
+        }),
+    })
+
+    local states = routeContext:rewardValueStates("Surface", "Q", 1, "row", "Reward2Key", control)
+
+    lu.assertEquals(states.RandomLoot, valueStates.INVALID)
+    lu.assertNil(states.BoostedRandomLoot)
+end
+
+function TestRunPlannerRewardPlanning.testSameSurfaceConstraintColorsFieldsCageDuplicateCandidates()
+    local constraints = {
+        {
+            kind = "uniqueRewardTypes",
+            sourceIndices = { 1, 2 },
+            allow = {
+                Boon = true,
+            },
+            code = "duplicate_reward_type",
+            message = "Fields cage rewards cannot duplicate non-boon rewards",
+        },
+        {
+            kind = "uniqueBoonSource",
+            sourceIndices = { 1, 2 },
+            code = "duplicate_boon_source",
+            message = "Fields cage boon sources must be different",
+        },
+    }
+    local rows = {
+        routeRewardRow(1, "Cages", {
+            rewardKind = "fieldsCages",
+            rewards = { "MaxHealthDrop", "MaxManaDrop" },
+            rewardLoot = { "", "" },
+            rewardSourceCount = 2,
+            rewardConstraints = constraints,
+        }),
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "H" },
+    }, {
+        RouteH = fakeRouteControlSnapshot("RouteH", rows),
+    })
+    local rewardControl = rewardCandidateControl("rewardType", {
+        "",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+    }, "Reward2Key")
+    rewardControl.sourceIndex = 2
+    local sourceControl = rewardCandidateControl("boonSource", {
+        "",
+        "ZeusUpgrade",
+        "HeraUpgrade",
+    }, "Reward2LootKey")
+    sourceControl.sourceIndex = 2
+
+    local rewardStates = routeContext:rewardValueStates("Underworld", "H", 1, "row", "Reward2Key", rewardControl)
+    lu.assertEquals(rewardStates.MaxHealthDrop, valueStates.INVALID)
+    lu.assertNil(rewardStates.MaxManaDrop)
+
+    rows[1] = routeRewardRow(1, "Cages", {
+        rewardKind = "fieldsCages",
+        rewards = { "Boon", "Boon" },
+        rewardLoot = { "ZeusUpgrade", "HeraUpgrade" },
+        rewardSourceCount = 2,
+        rewardConstraints = constraints,
+    })
+    routeContext:markDirty("Underworld", "H")
+
+    local sourceStates = routeContext:rewardValueStates("Underworld", "H", 1, "row", "Reward2LootKey", sourceControl)
+    lu.assertEquals(sourceStates.ZeusUpgrade, valueStates.INVALID)
+    lu.assertNil(sourceStates.HeraUpgrade)
+end
+
 function TestRunPlannerRewardPlanning.testRewardRowGroupEffectsApplyAfterGroupCloses()
     local group = {
         key = "TestBatch",
@@ -919,6 +1109,69 @@ function TestRunPlannerRewardPlanning.testSideRoomCandidateStatesUsePostRewardGr
     })
 
     lu.assertTrue(routeContext:overview("Surface").valid)
+    local decision = routeContext:rewardLegality("Surface").decisionsByBiomeRowAddress.N[1]["side:1"]
+    lu.assertEquals(decision.address, "side:1")
+    lu.assertEquals(decision.selectedEvents[1].rewardType, "MinorTalentDrop")
+    lu.assertEquals(decision.rewardCtxBeforeDecision.routeCounters.spell, 1)
+    lu.assertNil(decision.selectedInvalid)
+    lu.assertNil(routeContext:rewardValueStates("Surface", "N", 1, "side:1", "Reward1Key", control))
+
+    rows[1] = pylonRow("MaxHealthDrop")
+    routeContext:markDirty("Surface", "N")
+
+    local states = routeContext:rewardValueStates("Surface", "N", 1, "side:1", "Reward1Key", control)
+    decision = routeContext:rewardLegality("Surface").decisionsByBiomeRowAddress.N[1]["side:1"]
+
+    lu.assertEquals(states.MinorTalentDrop, valueStates.INVALID)
+    lu.assertEquals(decision.selectedInvalid.code, "talent_requires_spell")
+
+    rows[1] = pylonRow("SpellDrop")
+    routeContext:markDirty("Surface", "N")
+
+    lu.assertTrue(routeContext:overview("Surface").valid)
+    decision = routeContext:rewardLegality("Surface").decisionsByBiomeRowAddress.N[1]["side:1"]
+    lu.assertEquals(decision.rewardCtxBeforeDecision.routeCounters.spell, 1)
+    lu.assertNil(decision.selectedInvalid)
+    lu.assertNil(routeContext:rewardValueStates("Surface", "N", 1, "side:1", "Reward1Key", control))
+end
+
+function TestRunPlannerRewardPlanning.testBlankSideRoomCandidatesUsePostRewardGroupContext()
+    local group = {
+        key = "N_HubPylons",
+    }
+    local control = rewardCandidateControl("rewardType", {
+        "",
+        "MinorTalentDrop",
+    })
+    local function pylonRow(primaryReward)
+        local row = routeRewardRow(1, primaryReward, {
+            rewardRowGroup = group,
+        })
+        row.sideRooms = {
+            {
+                sideIndex = 1,
+                rewardKind = "roomStore",
+                rewards = { "" },
+                rewardPicks = {},
+            },
+        }
+        return row
+    end
+    local rows = {
+        pylonRow("SpellDrop"),
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N" },
+    }, {
+        RouteN = fakeRouteControlSnapshot("RouteN", rows),
+    })
+
+    lu.assertTrue(routeContext:overview("Surface").valid)
+    local decision = routeContext:rewardLegality("Surface").decisionsByBiomeRowAddress.N[1]["side:1"]
+    lu.assertEquals(decision.rewardCtxBeforeDecision.routeCounters.spell, 1)
+    lu.assertEquals(decision.selectedEvents, {})
     lu.assertNil(routeContext:rewardValueStates("Surface", "N", 1, "side:1", "Reward1Key", control))
 
     rows[1] = pylonRow("MaxHealthDrop")
@@ -927,12 +1180,6 @@ function TestRunPlannerRewardPlanning.testSideRoomCandidateStatesUsePostRewardGr
     local states = routeContext:rewardValueStates("Surface", "N", 1, "side:1", "Reward1Key", control)
 
     lu.assertEquals(states.MinorTalentDrop, valueStates.INVALID)
-
-    rows[1] = pylonRow("SpellDrop")
-    routeContext:markDirty("Surface", "N")
-
-    lu.assertTrue(routeContext:overview("Surface").valid)
-    lu.assertNil(routeContext:rewardValueStates("Surface", "N", 1, "side:1", "Reward1Key", control))
 end
 
 function TestRunPlannerRewardPlanning.testRouteContextInvalidatesDevotionBeforeSevenRunEncounters()

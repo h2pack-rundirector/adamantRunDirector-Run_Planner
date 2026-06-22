@@ -1,5 +1,6 @@
 local deps = ... or {}
 local common = deps.common or import("mods/rewards/surfaces/common.lua")
+local constraints = deps.constraints or import("mods/rewards/declarations/constraints.lua")
 local storage = common.storage
 
 local forcedReward = {}
@@ -11,16 +12,7 @@ function forcedReward.create(definitions, context)
             kind = "devotionPair",
             context = context,
             fixedRewardType = "Devotion",
-            uniqueValueGroups = {
-                {
-                    aliases = {
-                        storage.rewardAlias(1),
-                        storage.rewardAlias(2),
-                    },
-                    code = "duplicate_devotion_god",
-                    message = "Trial gods must be different",
-                },
-            },
+            rewardConstraints = constraints.devotionPair(),
             controls = {
                 common.dropdown(storage.rewardAlias(1), "lootAName", "God A", values, labels, {
                     kind = "boonSource",

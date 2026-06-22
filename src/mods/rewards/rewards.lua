@@ -32,14 +32,12 @@ function rewardSystem.create(opts)
     opts = opts or {}
 
     local storage = import("mods/rewards/storage.lua")
-    local valueStates = opts.valueStates or import("mods/route/value_states.lua")
     local dropdownValues = opts.dropdownValues or import("mods/ui/dropdown_values.lua")
     local surfaceRegistry = import("mods/rewards/surfaces/registry.lua").create(
         opts.definitions or import("mods/rewards/declarations/definitions.lua")
     )
     local runtime = import("mods/rewards/runtime.lua", nil, {
         catalog = surfaceRegistry,
-        valueStates = valueStates,
     })
     local ui = import("mods/rewards/ui.lua", nil, {
         runtime = runtime,
@@ -61,7 +59,6 @@ function rewardSystem.create(opts)
         hasControls = runtime.hasControls,
         snapshot = runtime.snapshot,
         surfaceFor = runtime.surfaceFor,
-        validate = runtime.validate,
 
         godLootOptions = surfaceRegistry.godLootOptions,
         routeValueStatesForControl = routeValueStatesForControl,

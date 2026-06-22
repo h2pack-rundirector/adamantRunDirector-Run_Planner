@@ -119,13 +119,10 @@ local function shopReward(shopProfile, opts)
     local reward = {
         kind = "shop",
         shopProfile = shopProfile,
+        rewardGeneration = opts.rewardGeneration or {
+            effectTiming = "afterNextRow",
+        },
     }
-    if opts.uniqueOfferGroups ~= nil then
-        reward.uniqueOfferGroups = opts.uniqueOfferGroups
-    end
-    if opts.rewardGeneration ~= nil then
-        reward.rewardGeneration = opts.rewardGeneration
-    end
     return reward
 end
 
@@ -607,18 +604,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
     lu.assertEquals(#qPreboss.branches, 1)
     lu.assertEquals(qPreboss.branches[1].key, "Shop")
     lu.assertEquals(qPreboss.branches[1].label, "Preboss Shop")
-    lu.assertEquals(qPreboss.branches[1].reward, shopReward("Q_WorldShop", {
-        rewardGeneration = {
-            effectTiming = "afterNextRow",
-        },
-        uniqueOfferGroups = {
-            {
-                slots = { "Group1Offer1", "Group1Offer2" },
-                code = "duplicate_shop_group_option",
-                message = "Offers 1 and 2 share one vanilla shop group and cannot duplicate the same reward",
-            },
-        },
-    }))
+    lu.assertEquals(qPreboss.branches[1].reward, shopReward("Q_WorldShop"))
 
     local oPreboss = biomes.lookup.O.slotLayout.special[7]
     lu.assertEquals(oPreboss.roomKey, "O_PreBoss01")

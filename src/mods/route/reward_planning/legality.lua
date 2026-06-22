@@ -39,12 +39,13 @@ local function compileRules(rules)
 end
 
 local compiledRulesByTarget = compileRules(conditions)
+local constraintEventScratch = {}
 
 local function newResult()
     return {
         invalidRows = {},
         byBiomeRow = {},
-        candidateRows = {},
+        decisionsByBiomeRowAddress = {},
         valueStatesByBiomeRow = {},
     }
 end
@@ -59,50 +60,74 @@ local function invalidRowKey(biomeKey, rowIndex, code, address)
         .. tostring(address or "")
 end
 
-local function candidateRowsForBiome(result, biomeKey)
-    local byBiome = result.candidateRows[biomeKey]
+local function decisionsForBiome(result, biomeKey)
+    local byBiome = result.decisionsByBiomeRowAddress[biomeKey]
     if byBiome == nil then
         byBiome = {}
-        result.candidateRows[biomeKey] = byBiome
+        result.decisionsByBiomeRowAddress[biomeKey] = byBiome
     end
     return byBiome
 end
 
-local function candidateRowFor(result, rewardCtx, ctx, row)
-    if row == nil or row.valid == false then
+local function decisionsForRow(result, biomeKey, rowIndex)
+    local byBiome = decisionsForBiome(result, biomeKey)
+    local byRow = byBiome[rowIndex]
+    if byRow == nil then
+        byRow = {}
+        byBiome[rowIndex] = byRow
+    end
+    return byRow
+end
+
+local function decisionForItem(result, rewardCtx, ctx, row, item)
+    local address = item and item.address or nil
+    if row == nil or address == nil then
         return nil
     end
 
-    local byBiome = candidateRowsForBiome(result, ctx.biomeKey)
-    local candidateRow = byBiome[row.rowIndex]
-    if candidateRow == nil then
-        candidateRow = {
-            rewardCtx = rewardContext.snapshot(rewardCtx),
-            ctx = ctx,
+    local byRow = decisionsForRow(result, ctx.biomeKey, row.rowIndex)
+    local decision = byRow[address]
+    if decision == nil then
+        decision = {
+            biomeKey = ctx.biomeKey,
+            rowIndex = row.rowIndex,
+            address = address,
             row = row,
+            item = item,
+            ctx = ctx,
+            rewardCtxBeforeDecision = rewardContext.snapshot(rewardCtx),
+            selectedEvents = {},
+            selectedInvalid = nil,
         }
-        byBiome[row.rowIndex] = candidateRow
+        byRow[address] = decision
     end
-    return candidateRow
+    return decision
 end
 
-local function storeCandidateEventContext(result, rewardCtx, ctx, event)
-    local row = event and event.row or nil
-    local address = event and event.address or nil
-    if row == nil or address == nil then
-        return
-    end
+local function decisionForEvent(result, rewardCtx, ctx, event)
+    return decisionForItem(result, rewardCtx, ctx, event and event.row or nil, event and event.item or nil)
+end
 
-    local candidateRow = candidateRowFor(result, rewardCtx, ctx, row)
-    if candidateRow == nil then
-        return
+local function recordSelectedEvent(result, rewardCtx, ctx, event)
+    local decision = decisionForEvent(result, rewardCtx, ctx, event)
+    if decision ~= nil then
+        decision.selectedEvents[#decision.selectedEvents + 1] = event
     end
-    local byAddress = candidateRow.rewardCtxByAddress
-    if byAddress == nil then
-        byAddress = {}
-        candidateRow.rewardCtxByAddress = byAddress
+    return decision
+end
+
+local function recordSelectedBatch(result, rewardCtx, ctx, batch)
+    local decision = decisionForItem(result, rewardCtx, ctx, batch and batch.row or nil, batch and batch.item or nil)
+    for index = batch.firstEventIndex, batch.lastEventIndex do
+        decision = recordSelectedEvent(result, rewardCtx, ctx, batch.events[index]) or decision
     end
-    byAddress[address] = rewardContext.snapshot(rewardCtx)
+    return decision
+end
+
+local function storeSelectedInvalid(decision, invalid)
+    if decision ~= nil and decision.selectedInvalid == nil then
+        decision.selectedInvalid = invalid
+    end
 end
 
 local function addInvalid(context, result, seenInvalids, ctx, event, code, message)
@@ -298,6 +323,103 @@ local function duplicateBoonSourceConstraint(group)
     return rewardRowGroupConstraints(group).uniqueBoonSource
 end
 
+local function constraintAppliesToEvent(constraint, event)
+    local sourceIndices = constraint and constraint.sourceIndices or nil
+    if sourceIndices == nil or sourceIndices[1] == nil then
+        return true
+    end
+    for _, sourceIndex in ipairs(sourceIndices) do
+        if sourceIndex == event.sourceIndex then
+            return true
+        end
+    end
+    return false
+end
+
+local function priorConstraintEvent(constraint, event, other)
+    if other == nil or other.address == event.address or not constraintAppliesToEvent(constraint, other) then
+        return false
+    end
+    if event.sourceIndex ~= nil and other.sourceIndex ~= nil then
+        return other.sourceIndex < event.sourceIndex
+    end
+    return false
+end
+
+local function rewardConstraintEvents(event)
+    semantics.eventsForItem(event.item, event.row, constraintEventScratch)
+    return constraintEventScratch
+end
+
+local function duplicateRewardTypeConstraintInvalid(constraint, event)
+    if event.rewardType == nil or event.rewardType == "" or not constraintAppliesToEvent(constraint, event) then
+        return nil
+    end
+    local allow = constraint.allow or EMPTY_LIST
+    if allow[event.rewardType] then
+        return nil
+    end
+    for _, other in ipairs(rewardConstraintEvents(event)) do
+        if priorConstraintEvent(constraint, event, other) and other.rewardType == event.rewardType then
+            return {
+                code = constraint.code or "duplicate_reward_type",
+                message = constraint.message or (rewardLabel(event.rewardType) .. " is already planned in this reward group"),
+            }
+        end
+    end
+    return nil
+end
+
+local function duplicateBoonSourceConstraintInvalid(constraint, event)
+    if not constraintAppliesToEvent(constraint, event) then
+        return nil
+    end
+    if event.rewardType == "Devotion"
+        and event.devotionSourceA ~= nil
+        and event.devotionSourceA ~= ""
+        and event.devotionSourceA == event.devotionSourceB
+    then
+        return {
+            code = constraint.code or "duplicate_boon_source",
+            message = constraint.message or "Boon sources must be different",
+        }
+    end
+
+    if event.boonSource == nil or event.boonSource == "" then
+        return nil
+    end
+    for _, other in ipairs(rewardConstraintEvents(event)) do
+        if priorConstraintEvent(constraint, event, other)
+            and other.boonSource ~= nil
+            and other.boonSource ~= ""
+            and other.boonSource == event.boonSource
+        then
+            return {
+                code = constraint.code or "duplicate_boon_source",
+                message = constraint.message or "Boon sources must be different",
+            }
+        end
+    end
+    return nil
+end
+
+local function rewardConstraintInvalid(event)
+    for _, constraint in ipairs(event and event.item and event.item.rewardConstraints or EMPTY_LIST) do
+        if constraint.kind == "uniqueRewardTypes" then
+            local invalid = duplicateRewardTypeConstraintInvalid(constraint, event)
+            if invalid ~= nil then
+                return invalid
+            end
+        elseif constraint.kind == "uniqueBoonSource" then
+            local invalid = duplicateBoonSourceConstraintInvalid(constraint, event)
+            if invalid ~= nil then
+                return invalid
+            end
+        end
+    end
+    return nil
+end
+
 local function rewardRowGroupInvalid(rewardCtx, event)
     local group = event and event.item and event.item.rewardRowGroup or nil
     if group == nil or group.key == nil or event.rewardType == nil or event.rewardType == "" then
@@ -350,6 +472,11 @@ local function ruleInvalid(rule, rewardCtx, ctx, event)
 end
 
 local function eventInvalid(rewardCtx, ctx, event)
+    local localInvalid = rewardConstraintInvalid(event)
+    if localInvalid ~= nil then
+        return localInvalid
+    end
+
     local groupInvalid = rewardRowGroupInvalid(rewardCtx, event)
     if groupInvalid ~= nil then
         return groupInvalid
@@ -385,11 +512,14 @@ local function applyEventEffects(rewardCtx, ctx, event)
 end
 
 local function validateBatch(context, result, seenInvalids, rewardCtx, ctx, batch)
+    local decision = recordSelectedBatch(result, rewardCtx, ctx, batch)
     for index = batch.firstEventIndex, batch.lastEventIndex do
         local event = batch.events[index]
         local invalid = eventInvalid(rewardCtx, ctx, event)
         if invalid ~= nil then
-            return addInvalid(context, result, seenInvalids, ctx, event, invalid.code, invalid.message)
+            local selectedInvalid = addInvalid(context, result, seenInvalids, ctx, event, invalid.code, invalid.message)
+            storeSelectedInvalid(decision, selectedInvalid)
+            return selectedInvalid
         end
     end
     return nil
@@ -414,6 +544,10 @@ local function promotePendingEffects(rewardCtx)
 end
 
 local function stageBatchAfterRewardRowGroup(rewardCtx, ctx, batch)
+    if batch.firstEventIndex > batch.lastEventIndex then
+        rewardContext.stageAfterRewardRowGroupItem(rewardCtx, ctx, batch.row, batch.item)
+        return
+    end
     for index = batch.firstEventIndex, batch.lastEventIndex do
         rewardContext.stageAfterRewardRowGroupEvent(rewardCtx, ctx, batch.events[index])
     end
@@ -426,12 +560,19 @@ local function applyRewardRowGroupEffects(rewardCtx)
 end
 
 local function validateAfterRewardRowGroupEntry(context, result, seenInvalids, rewardCtx, entry)
-    storeCandidateEventContext(result, rewardCtx, entry.ctx, entry.event)
+    if entry.event == nil then
+        decisionForItem(result, rewardCtx, entry.ctx, entry.row, entry.item)
+        return nil
+    end
+
+    local decision = recordSelectedEvent(result, rewardCtx, entry.ctx, entry.event)
     local invalid = eventInvalid(rewardCtx, entry.ctx, entry.event)
     if invalid == nil then
         return nil
     end
-    return addInvalid(context, result, seenInvalids, entry.ctx, entry.event, invalid.code, invalid.message)
+    local selectedInvalid = addInvalid(context, result, seenInvalids, entry.ctx, entry.event, invalid.code, invalid.message)
+    storeSelectedInvalid(decision, selectedInvalid)
+    return selectedInvalid
 end
 
 local function closeRewardRowGroup(context, result, seenInvalids, rewardCtx)
@@ -446,7 +587,9 @@ local function closeRewardRowGroup(context, result, seenInvalids, rewardCtx)
             rewardContext.clearRewardRowGroup(rewardCtx)
             return invalid
         end
-        applyEventEffects(rewardCtx, entry.ctx, entry.event)
+        if entry.event ~= nil then
+            applyEventEffects(rewardCtx, entry.ctx, entry.event)
+        end
     end
     rewardContext.clearRewardRowGroup(rewardCtx)
     return nil
@@ -475,10 +618,6 @@ end
 
 function rewardLegality.beginRoute()
     return rewardContext.create()
-end
-
-function rewardLegality.snapshotContext(rewardCtx)
-    return rewardContext.snapshot(rewardCtx)
 end
 
 function rewardLegality.candidateInvalid(rewardCtx, ctx, event)

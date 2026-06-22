@@ -71,13 +71,6 @@ local function qSummitShopContext()
     return {
         kind = "shop",
         shopProfile = "Q_WorldShop",
-        uniqueOfferGroups = {
-            {
-                slots = { "Group1Offer1", "Group1Offer2" },
-                code = "duplicate_shop_group_option",
-                message = "Offers 1 and 2 share one vanilla shop group and cannot duplicate the same reward",
-            },
-        },
     }
 end
 
@@ -568,10 +561,17 @@ function TestRunPlannerRewards.testCatalogNormalizesFieldsCageSurface()
     lu.assertEquals(composite.controls[2].alias, "Reward1LootKey")
     lu.assertEquals(composite.controls[3].key, "Cage2")
     lu.assertEquals(composite.controls[5].key, "Cage3")
-    lu.assertEquals(composite.uniqueValueGroups[1].allowDuplicateValues, {
+    lu.assertEquals(composite.rewardConstraints[1].kind, "uniqueRewardTypes")
+    lu.assertEquals(composite.rewardConstraints[1].sourceIndices, {
+        1,
+        2,
+        3,
+    })
+    lu.assertEquals(composite.rewardConstraints[1].allow, {
         Boon = true,
     })
-    lu.assertEquals(composite.uniqueValueGroups[2].code, "duplicate_boon_source")
+    lu.assertEquals(composite.rewardConstraints[2].kind, "uniqueBoonSource")
+    lu.assertEquals(composite.rewardConstraints[2].code, "duplicate_boon_source")
 end
 
 function TestRunPlannerRewards.testCatalogNormalizesMajorMinorSurface()
@@ -672,17 +672,8 @@ function TestRunPlannerRewards.testCatalogOptInDevotionForMajorMinorSurface()
         },
     })
     lu.assertEquals(surface.controls[6].key, "lootBName")
-    lu.assertEquals(surface.uniqueValueGroups[1], {
-        aliases = {
-            "Reward5Key",
-            "Reward6Key",
-        },
-        visibleWhen = {
-            all = {
-                { alias = "Reward1Key", value = "Major" },
-                { alias = "Reward2Key", value = "Devotion" },
-            },
-        },
+    lu.assertEquals(surface.rewardConstraints[1], {
+        kind = "uniqueBoonSource",
         code = "duplicate_devotion_god",
         message = "Trial gods must be different",
     })
@@ -729,11 +720,8 @@ function TestRunPlannerRewards.testCatalogSplitsDevotionPairAcrossRows()
     lu.assertEquals(surface.controls[2].key, "lootBName")
     lu.assertEquals(surface.controls[2].label, "God B")
     lu.assertEquals(surface.controls[2].rowIndex, 2)
-    lu.assertEquals(surface.uniqueValueGroups[1], {
-        aliases = {
-            "Reward1Key",
-            "Reward2Key",
-        },
+    lu.assertEquals(surface.rewardConstraints[1], {
+        kind = "uniqueBoonSource",
         code = "duplicate_devotion_god",
         message = "Trial gods must be different",
     })
@@ -908,185 +896,19 @@ function TestRunPlannerRewards.testRuntimeSnapshotsShopBoonSourcePicks()
     })
 end
 
-function TestRunPlannerRewards.testRuntimeInvalidatesLinkedShopOfferDuplicates()
+function TestRunPlannerRewards.testCatalogDeclaresLinkedShopOfferConstraints()
     local runtime = loadRuntime()
     local surface = runtime.surfaceFor(qSummitShopContext())
 
-    lu.assertEquals(surface.uniqueValueGroups[1].aliases, {
-        "Reward1Key",
-        "Reward2Key",
-    })
-
-    lu.assertTrue(runtime.validate(surface, fakeFields({
-        Reward1Key = "RandomLoot",
-        Reward2Key = "BoostedRandomLoot",
-    })).valid)
-    lu.assertTrue(runtime.validate(surface, fakeFields({
-        Reward1Key = "RandomLoot",
-        Reward2Key = "",
-    })).valid)
-
-    local validation = runtime.validate(surface, fakeFields({
-        Reward1Key = "RandomLoot",
-        Reward2Key = "RandomLoot",
-    }))
-    lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "duplicate_shop_group_option")
-    lu.assertEquals(validation.aliases, {
-        "Reward1Key",
-        "Reward2Key",
-    })
-end
-
-function TestRunPlannerRewards.testRuntimeInvalidatesDuplicateDevotionGods()
-    local runtime = loadRuntime()
-    local surface = runtime.surfaceFor({
-        kind = "forcedReward",
-        rewardType = "Devotion",
-    })
-
-    lu.assertTrue(runtime.validate(surface, fakeFields({
-        Reward1Key = "ZeusUpgrade",
-        Reward2Key = "HeraUpgrade",
-    })).valid)
-
-    local validation = runtime.validate(surface, fakeFields({
-        Reward1Key = "ZeusUpgrade",
-        Reward2Key = "ZeusUpgrade",
-    }))
-
-    lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "duplicate_devotion_god")
-    lu.assertEquals(validation.message, "Trial gods must be different")
-    lu.assertEquals(validation.aliases, {
-        "Reward1Key",
-        "Reward2Key",
-    })
-end
-
-function TestRunPlannerRewards.testRuntimeIgnoresHiddenDevotionGodDuplicates()
-    local runtime = loadRuntime()
-    local surface = runtime.surfaceFor({
-        kind = "roomStore",
-        rewardStore = "RunProgress",
-    })
-
-    lu.assertTrue(runtime.validate(surface, fakeFields({
-        Reward1Key = "Boon",
-        Reward3Key = "ZeusUpgrade",
-        Reward4Key = "ZeusUpgrade",
-    })).valid)
-    lu.assertFalse(runtime.validate(surface, fakeFields({
-        Reward1Key = "Devotion",
-        Reward3Key = "ZeusUpgrade",
-        Reward4Key = "ZeusUpgrade",
-    })).valid)
-end
-
-function TestRunPlannerRewards.testRuntimeStatesOnlyLaterLinkedShopDuplicateCandidates()
-    local runtime = loadRuntime()
-    local surface = runtime.surfaceFor(qSummitShopContext())
-    local fields = fakeFields({
-        Reward1Key = "RandomLoot",
-        Reward2Key = "RandomLoot",
-    })
-    local scratch = {}
-
-    lu.assertNil(runtime.valueStates(surface, fields, controlByKey(surface, "Group1Offer1"), scratch))
-    lu.assertEquals(scratch, {})
-
-    local states = runtime.valueStates(surface, fields, controlByKey(surface, "Group1Offer2"), scratch)
-
-    lu.assertIs(states, scratch)
-    lu.assertEquals(states.RandomLoot, 2)
-    lu.assertNil(states.BoostedRandomLoot)
-end
-
-function TestRunPlannerRewards.testRuntimeStatesOnlySecondDevotionGodDuplicateCandidates()
-    local runtime = loadRuntime()
-    local surface = runtime.surfaceFor({
-        kind = "forcedReward",
-        rewardType = "Devotion",
-    })
-    local fields = fakeFields({
-        Reward1Key = "ZeusUpgrade",
-        Reward2Key = "ZeusUpgrade",
-    })
-    local scratch = {}
-
-    lu.assertNil(runtime.valueStates(surface, fields, controlByKey(surface, "lootAName"), scratch))
-    lu.assertEquals(scratch, {})
-
-    local states = runtime.valueStates(surface, fields, controlByKey(surface, "lootBName"), scratch)
-
-    lu.assertIs(states, scratch)
-    lu.assertEquals(states.ZeusUpgrade, 2)
-    lu.assertNil(states.HeraUpgrade)
-end
-
-function TestRunPlannerRewards.testRuntimeStatesFieldsCageDuplicateCandidates()
-    local runtime = loadRuntime()
-    local surface = runtime.surfaceFor({
-        kind = "fieldsCages",
-        rewardStore = "RunProgress",
-        sourceCount = 3,
-    })
-    local scratch = {}
-
-    local rewardStates = runtime.valueStates(surface, fakeFields({
-        Reward1Key = "MaxHealthDrop",
-        Reward2Key = "MaxHealthDrop",
-    }), controlByKey(surface, "Cage2"), scratch, { sourceCount = 2 })
-
-    lu.assertIs(rewardStates, scratch)
-    lu.assertEquals(rewardStates.MaxHealthDrop, 2)
-
-    lu.assertNil(runtime.valueStates(surface, fakeFields({
-        Reward1Key = "Boon",
-        Reward2Key = "Boon",
-    }), controlByKey(surface, "Cage2"), scratch, { sourceCount = 2 }))
-    lu.assertEquals(scratch, {})
-
-    local boonSourceStates = runtime.valueStates(surface, fakeFields({
-        Reward1Key = "Boon",
-        Reward1LootKey = "ZeusUpgrade",
-        Reward2Key = "Boon",
-        Reward2LootKey = "ZeusUpgrade",
-    }), controlByKey(surface, "Cage2Loot"), scratch, { sourceCount = 2 })
-
-    lu.assertIs(boonSourceStates, scratch)
-    lu.assertEquals(boonSourceStates.ZeusUpgrade, 2)
-end
-
-function TestRunPlannerRewards.testUiAppliesLinkedShopDuplicateValueColors()
-    local ui, runtime = loadUi()
-    local surface = runtime.surfaceFor(qSummitShopContext())
-    local captured = {}
-    local draw = {
-        imgui = {
-            GetCursorPosX = function()
-                return 0
-            end,
-            AlignTextToFramePadding = function() end,
-            Text = function() end,
-            SameLine = function() end,
-            SetCursorPosX = function() end,
+    lu.assertEquals(surface.rewardConstraints[1], {
+        kind = "uniqueRewardTypes",
+        sourceIndices = {
+            1,
+            2,
         },
-        widgets = {
-            dropdown = function(field, opts)
-                captured[field.alias] = opts
-                return false
-            end,
-        },
-    }
-
-    ui.draw(draw, surface, drawableFields({
-        Reward1Key = "RandomLoot",
-        Reward2Key = "RandomLoot",
-    }), {})
-
-    lu.assertNil(captured.Reward1Key.valueColors)
-    lu.assertEquals(captured.Reward2Key.valueColors.RandomLoot, { 1.0, 0.22, 0.16, 1.0 })
+        code = "duplicate_shop_group_option",
+        message = "Offers 1 and 2 share one vanilla shop group and cannot duplicate the same reward",
+    })
 end
 
 function TestRunPlannerRewards.testUiPassesRewardContextToExternalValueStates()

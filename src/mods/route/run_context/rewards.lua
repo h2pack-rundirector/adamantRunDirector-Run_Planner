@@ -27,7 +27,7 @@ local function newRewardLegalityResult()
     return {
         invalidRows = {},
         byBiomeRow = {},
-        candidateRows = {},
+        decisionsByBiomeRowAddress = {},
         valueStatesByBiomeRow = {},
     }
 end
@@ -63,25 +63,6 @@ local function rewardRowContext(rowContext, routeControlName)
         biomeEncounterDepthMin = rowContext.biomeEncounterDepthMin,
         biomeEncounterDepthMax = rowContext.biomeEncounterDepthMax,
     }
-end
-
-local function itemForAddress(row, rewardAddress)
-    rewardAddress = rewardAddress or "row"
-    for _, item in ipairs(row and row.rewardItems or EMPTY_LIST) do
-        if item.address == rewardAddress then
-            return item
-        end
-    end
-    return nil
-end
-
-local function candidateRowsForBiome(result, biomeKey)
-    local byBiome = result.candidateRows[biomeKey]
-    if byBiome == nil then
-        byBiome = {}
-        result.candidateRows[biomeKey] = byBiome
-    end
-    return byBiome
 end
 
 local function valueStatesForBiome(result, biomeKey)
@@ -127,50 +108,28 @@ local function storeControlValueStates(result, biomeKey, rowIndex, rewardAddress
     valueStatesForAddress(result, biomeKey, rowIndex, rewardAddress)[controlAlias] = states or NO_VALUE_STATES
 end
 
-local function storeCandidateRow(result, rewardLegalityEngine, rewardCtx, ctx, row)
-    if row == nil or row.valid == false or rewardLegalityEngine.snapshotContext == nil then
-        return
-    end
-    candidateRowsForBiome(result, ctx.biomeKey)[row.rowIndex] = {
-        rewardCtx = rewardLegalityEngine.snapshotContext(rewardCtx),
-        ctx = ctx,
-        row = row,
-    }
+local function decisionForAddress(result, biomeKey, rowIndex, rewardAddress)
+    local byBiome = result.decisionsByBiomeRowAddress[biomeKey]
+    local byRow = byBiome and byBiome[rowIndex] or nil
+    return byRow and byRow[rewardAddress or "row"] or nil
 end
 
-local function candidateItem(row, rewardAddress, control)
-    if control == nil then
+local function buildCandidateValueStates(rewardLegalityEngine, decision, rewardAddress, control)
+    if rewardLegalityEngine == nil or rewardLegalityEngine.candidateInvalid == nil or decision == nil then
         return nil
     end
 
-    local item = itemForAddress(row, rewardAddress)
-    if item ~= nil then
-        return item
-    end
-    if rewardAddress ~= "row" then
-        return nil
-    end
-    return itemForAddress(row, "row")
-end
-
-local function buildCandidateValueStates(rewardLegalityEngine, candidateRow, rewardAddress, control)
-    if rewardLegalityEngine == nil or rewardLegalityEngine.candidateInvalid == nil or candidateRow == nil then
-        return nil
-    end
-
-    local item = candidateItem(candidateRow.row, rewardAddress, control)
+    local item = control ~= nil and decision.item or nil
     if item == nil then
         return nil
     end
 
-    local itemRewardCtx = candidateRow.rewardCtxByAddress
-        and candidateRow.rewardCtxByAddress[rewardAddress or item.address or "row"]
-        or candidateRow.rewardCtx
+    local rewardCtx = decision.rewardCtxBeforeDecision
     local states = nil
     for _, value in ipairs(control and control.values or EMPTY_LIST) do
-        local event = semantics.candidateEventForControl(candidateRow.row, item, control, value, rewardAddress)
+        local event = semantics.candidateEventForControl(decision.row, item, control, value, rewardAddress or decision.address)
         if event ~= nil
-            and rewardLegalityEngine.candidateInvalid(itemRewardCtx, candidateRow.ctx, event) ~= nil
+            and rewardLegalityEngine.candidateInvalid(rewardCtx, decision.ctx, event) ~= nil
         then
             states = states or {}
             states[value] = INVALID_VALUE_STATE
@@ -221,8 +180,6 @@ local function evaluateRouteLegality(context, routeKey, opts)
                     return
                 end
             end
-            storeCandidateRow(result, rewardLegalityEngine, rewardCtx, ctx, rowContext.row)
-
             local invalid = rewardLegalityEngine.evaluateRow(
                 context,
                 result,
@@ -317,8 +274,8 @@ function rewards.create(opts)
             return cached
         end
 
-        local candidateRow = result.candidateRows[biomeKey] and result.candidateRows[biomeKey][rowIndex] or nil
-        local states = buildCandidateValueStates(rewardLegalityEngine, candidateRow, rewardAddress, control)
+        local decision = decisionForAddress(result, biomeKey, rowIndex, rewardAddress)
+        local states = buildCandidateValueStates(rewardLegalityEngine, decision, rewardAddress, control)
         storeControlValueStates(result, biomeKey, rowIndex, rewardAddress, controlAlias, states)
         return states
     end

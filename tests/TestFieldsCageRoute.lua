@@ -7,6 +7,7 @@ local loadFieldsCageData = h.loadFieldsCageData
 local hasValue = h.hasValue
 local fakeRows = h.fakeRows
 local routeFields = h.routeFields
+local attachSingleBiomeRouteContext = h.attachSingleBiomeRouteContext
 local valueStates = dofile("src/mods/route/value_states.lua")
 
 -- luacheck: globals TestRunPlannerFieldsCageRoute
@@ -249,6 +250,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCagePolicyRejectsDuplicateBoonS
                 Reward3Key = "HermesUpgrade",
             },
         }), instance)
+    attachSingleBiomeRouteContext(control, "Underworld", "H")
     local snapshot = control:buildSnapshot()
 
     lu.assertFalse(snapshot.valid)
@@ -277,6 +279,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimePolicyRejectsDuplica
             },
         })
     local runtimeControl = template.createRuntime(fields, instance)
+    attachSingleBiomeRouteContext(runtimeControl, "Underworld", "H")
 
     local row = runtimeControl:rowSnapshot(2)
     lu.assertFalse(row.valid)

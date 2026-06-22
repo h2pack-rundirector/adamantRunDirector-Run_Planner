@@ -7,6 +7,7 @@ local loadFixedLinearData = h.loadFixedLinearData
 local hasValue = h.hasValue
 local fakeRows = h.fakeRows
 local routeFields = h.routeFields
+local attachSingleBiomeRouteContext = h.attachSingleBiomeRouteContext
 local valueStates = dofile("src/mods/route/value_states.lua")
 
 -- luacheck: globals TestRunPlannerFixedLinearRoute
@@ -149,6 +150,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearQShopSharedOfferGroupInva
             Reward2Key = "RandomLoot",
         },
     }), instance)
+    attachSingleBiomeRouteContext(control, "Surface", "Q")
     local snapshot = control:buildSnapshot()
 
     lu.assertFalse(snapshot.valid)

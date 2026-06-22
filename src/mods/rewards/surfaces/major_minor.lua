@@ -1,5 +1,6 @@
 local deps = ... or {}
 local common = deps.common or import("mods/rewards/surfaces/common.lua")
+local constraints = deps.constraints or import("mods/rewards/declarations/constraints.lua")
 local storage = common.storage
 
 local majorMinor = {}
@@ -44,22 +45,7 @@ function majorMinor.create(definitions, context)
         context = context,
         majorRewardStore = majorRewardStore,
         minorRewardStore = minorRewardStore,
-        uniqueValueGroups = {
-            {
-                aliases = {
-                    storage.rewardAlias(5),
-                    storage.rewardAlias(6),
-                },
-                visibleWhen = {
-                    all = {
-                        { alias = storage.rewardAlias(1), value = common.MAJOR_VALUE },
-                        { alias = storage.rewardAlias(2), value = "Devotion" },
-                    },
-                },
-                code = "duplicate_devotion_god",
-                message = "Trial gods must be different",
-            },
-        },
+        rewardConstraints = constraints.devotionPair(),
         controls = {
             common.dropdown(storage.rewardAlias(1), "rewardClass", "Reward", rewardClassValues, rewardClassLabels, {
                 kind = "rewardClass",

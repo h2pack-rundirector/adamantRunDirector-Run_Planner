@@ -1,6 +1,11 @@
 return function(importer)
 local routeRules = importer("mods/biomes/declaration_rules.lua")
+local rewardConstraints = importer("mods/rewards/declarations/constraints.lua")
 local rewards = {}
+
+local DEFAULT_SHOP_REWARD_GENERATION = {
+    effectTiming = "afterNextRow",
+}
 
 local function copyList(items)
     local copy = {}
@@ -16,21 +21,6 @@ local function indexByKey(items)
         lookup[item.key] = item
     end
     return lookup
-end
-
-local function copyUniqueOfferGroups(context, groups)
-    if groups == nil then
-        return
-    end
-    local copiedGroups = {}
-    for groupIndex, group in ipairs(groups) do
-        copiedGroups[groupIndex] = {
-            slots = copyList(group.slots),
-            code = group.code,
-            message = group.message,
-        }
-    end
-    context.uniqueOfferGroups = copiedGroups
 end
 
 local function copyRewardGeneration(context, generation)
@@ -112,9 +102,17 @@ function rewards.shop(shopProfile, opts)
         kind = "shop",
         shopProfile = shopProfile,
     }
-    copyUniqueOfferGroups(context, opts.uniqueOfferGroups)
-    copyRewardGeneration(context, opts.rewardGeneration)
+    copyRewardGeneration(context, opts.rewardGeneration or DEFAULT_SHOP_REWARD_GENERATION)
     return context
+end
+
+function rewards.rewardRowGroup(groupKey, opts)
+    opts = opts or {}
+    return {
+        key = groupKey,
+        effectTiming = opts.effectTiming,
+        constraints = rewardConstraints.rewardRowGroup(groupKey),
+    }
 end
 
 function rewards.fieldsCages(opts)

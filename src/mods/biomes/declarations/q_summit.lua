@@ -1,6 +1,5 @@
 return function(importer, deps)
     local layout = importer("mods/biomes/declarations/q_summit_layout.lua")
-    local rewardLayout = importer("mods/biomes/declarations/q_summit_rewards.lua")(importer, deps)
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules
@@ -42,7 +41,7 @@ return function(importer, deps)
                         {
                             key = "Shop",
                             label = "Preboss Shop",
-                            reward = rewardLayout.prebossShop,
+                            reward = rewards.shop("Q_WorldShop"),
                         },
                     },
                 },

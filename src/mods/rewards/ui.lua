@@ -67,58 +67,6 @@ local function drawGroupedRowStart(imgui, startX, header, reserveHeaderColumn)
     end
 end
 
-local function clearMap(map)
-    for key in pairs(map) do
-        map[key] = nil
-    end
-end
-
-local function memberAlias(member)
-    if type(member) == "table" then
-        return member.alias
-    end
-    return member
-end
-
-local function groupMembers(group)
-    if group.members ~= nil then
-        return group.members
-    end
-    return group.aliases or {}
-end
-
-local function localValueStates(surface, fields, control, opts)
-    if runtime == nil or runtime.valueStates == nil then
-        return nil
-    end
-    local uniqueValueGroups = surface and surface.uniqueValueGroups
-    if uniqueValueGroups == nil or uniqueValueGroups[1] == nil then
-        return nil
-    end
-    local controlAlias = control.alias
-    local participates = false
-    for _, group in ipairs(uniqueValueGroups) do
-        for _, member in ipairs(groupMembers(group)) do
-            if memberAlias(member) == controlAlias then
-                participates = true
-                break
-            end
-        end
-        if participates then
-            break
-        end
-    end
-    if not participates then
-        return nil
-    end
-    local states = control._localValueStates
-    if states == nil then
-        states = {}
-        control._localValueStates = states
-    end
-    return runtime.valueStates(surface, fields, control, states, opts)
-end
-
 local function externalValueStates(fields, control, opts)
     if opts == nil or opts.valueStatesForControl == nil then
         return nil
@@ -126,30 +74,7 @@ local function externalValueStates(fields, control, opts)
     return opts.valueStatesForControl(control, fields, fields.rewardContext)
 end
 
-local function combineValueStates(control, first, second)
-    if first == nil then
-        return second
-    elseif second == nil then
-        return first
-    end
-
-    local states = control._combinedValueStates
-    if states == nil then
-        states = {}
-        control._combinedValueStates = states
-    else
-        clearMap(states)
-    end
-    for key, value in pairs(first) do
-        states[key] = value
-    end
-    for key, value in pairs(second) do
-        states[key] = value
-    end
-    return states
-end
-
-local function drawControl(draw, surface, fields, control, opts)
+local function drawControl(draw, fields, control, opts)
     local field = fields:get(control.alias)
     local drawOpts = control.drawOpts
     if opts ~= nil
@@ -165,11 +90,7 @@ local function drawControl(draw, surface, fields, control, opts)
     then
         drawOpts = opts.godSource:godSourceDrawOpts(drawOpts, field:read())
     end
-    local valueStates = combineValueStates(
-        control,
-        externalValueStates(fields, control, opts),
-        localValueStates(surface, fields, control, opts)
-    )
+    local valueStates = externalValueStates(fields, control, opts)
     drawOpts = dropdownValues.decorate(control, drawOpts, valueStates)
     local changed = draw.widgets.dropdown(field, drawOpts)
     if changed and opts ~= nil and opts.onControlChanged ~= nil then
@@ -210,7 +131,7 @@ local function drawGroupedControls(draw, surface, fields, opts)
             else
                 imgui.SameLine()
             end
-            changed = drawControl(draw, surface, fields, control, opts) or changed
+            changed = drawControl(draw, fields, control, opts) or changed
             drew = true
         end
     end
@@ -237,7 +158,7 @@ function ui.draw(draw, surface, fields, opts)
             if drew then
                 imgui.SameLine()
             end
-            changed = drawControl(draw, surface, fields, control, opts) or changed
+            changed = drawControl(draw, fields, control, opts) or changed
             drew = true
         end
     end

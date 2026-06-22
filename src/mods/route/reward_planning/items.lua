@@ -8,6 +8,7 @@ local REWARD_SOURCE_FIELDS = {
     "fixedRewardType",
     "rewardSourceCount",
     "rewardGeneration",
+    "rewardConstraints",
     "rewardRowGroup",
 }
 
@@ -81,6 +82,7 @@ local function appendItem(items, row, source, address, sourceKind, sourceIndex)
         rewardStore = source.rewardStore,
         rewardSourceCount = source.rewardSourceCount,
         rewardGeneration = source.rewardGeneration,
+        rewardConstraints = source.rewardConstraints,
         rewardRowGroup = source.rewardRowGroup,
         valid = source.valid,
     }

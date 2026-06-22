@@ -35,17 +35,11 @@ local function rewardSurface(role, option)
     return rewardSystem.surfaceFor(rewardContext(role, option))
 end
 
-local function rewardValidation(surface, rewardRows, rowIndex, opts)
-    if rewardSystem == nil or rewardSystem.validate == nil then
-        return nil
+local function routeRewardValidation(instance, rowIndex)
+    if instance.routeContext ~= nil and instance.routeContext.rewardRowValidation ~= nil then
+        return instance.routeContext:rewardRowValidation(instance.routeKey, instance.biomeKey, rowIndex)
     end
-    if surface == nil
-        or surface.uniqueValueGroups == nil
-        or surface.uniqueValueGroups[1] == nil
-    then
-        return nil
-    end
-    return rewardSystem.validate(surface, rewardSystem.fields(rewardRows, rowIndex), opts)
+    return nil
 end
 
 local function prewarmRewardSurface(role, option)
@@ -185,10 +179,7 @@ function runtime.create(fields, instance)
             return validation
         end
 
-        local surface = self:rewardSurface(rowIndex)
-        local rewardInvalid = rewardValidation(surface, fields.Rewards, rowIndex, {
-            sourceCount = self:rewardSourceCount(rowIndex),
-        })
+        local rewardInvalid = routeRewardValidation(instance, rowIndex)
         if rewardInvalid ~= nil and not rewardInvalid.valid then
             return rewardInvalid
         end
@@ -258,6 +249,7 @@ function runtime.create(fields, instance)
             rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
             rewardSourceCount = sourceCount,
             rewardGeneration = surface and surface.context and surface.context.rewardGeneration or nil,
+            rewardConstraints = surface and surface.rewardConstraints or nil,
             rewardPicks = rewardsConfigured
                 and rewardSystem
                 and rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex), {

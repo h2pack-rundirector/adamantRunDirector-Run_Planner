@@ -1,5 +1,6 @@
 local deps = ... or {}
 local common = deps.common or import("mods/rewards/surfaces/common.lua")
+local rewardConstraints = deps.constraints or import("mods/rewards/declarations/constraints.lua")
 local storage = common.storage
 
 local shopSurface = {}
@@ -9,37 +10,39 @@ local SHOP_BOON_SOURCE_VALUES = {
     BoostedRandomLoot = true,
 }
 
-local function uniqueValueGroups(shop, context, aliasBySlotKey)
-    local groups = {}
-    for _, group in ipairs(context.uniqueOfferGroups or shop.uniqueOfferGroups or {}) do
-        local aliases = {}
+local function resolveRewardConstraints(context, sourceIndexBySlotKey)
+    local constraints = {}
+    for _, group in ipairs(rewardConstraints.shopProfile(context.shopProfile)) do
+        local sourceIndices = {}
         for _, slotKey in ipairs(group.slots or {}) do
-            local alias = aliasBySlotKey[slotKey]
-            if alias ~= nil then
-                aliases[#aliases + 1] = alias
+            local sourceIndex = sourceIndexBySlotKey[slotKey]
+            if sourceIndex ~= nil then
+                sourceIndices[#sourceIndices + 1] = sourceIndex
             end
         end
-        if aliases[2] ~= nil then
-            groups[#groups + 1] = {
-                aliases = aliases,
+        if sourceIndices[2] ~= nil then
+            constraints[#constraints + 1] = {
+                kind = group.kind or "uniqueRewardTypes",
+                sourceIndices = sourceIndices,
+                allow = group.allow,
                 code = group.code,
                 message = group.message,
             }
         end
     end
-    return groups
+    return constraints
 end
 
 function shopSurface.create(definitions, context)
     local shop = definitions.shops[context.shopProfile] or {}
     local controls = {}
     local godValues, godLabels = common.godSourceOptions(definitions)
-    local aliasBySlotKey = {}
+    local sourceIndexBySlotKey = {}
 
     for index, slot in ipairs(shop.slots or {}) do
         local rewardAlias = storage.rewardAlias(index)
         local lootAlias = storage.lootAlias(index)
-        aliasBySlotKey[slot.key] = rewardAlias
+        sourceIndexBySlotKey[slot.key] = index
         local options = slot.options or common.bundleOptions(definitions, slot.bundle)
         local values, labels = common.uniqueNames(options, nil, nil, function(name)
             return common.rewardOptionLabel(definitions, name)
@@ -88,7 +91,7 @@ function shopSurface.create(definitions, context)
         context = context,
         shopProfile = context.shopProfile,
         rowHeader = "Reward",
-        uniqueValueGroups = uniqueValueGroups(shop, context, aliasBySlotKey),
+        rewardConstraints = resolveRewardConstraints(context, sourceIndexBySlotKey),
         controls = controls,
     }
 end

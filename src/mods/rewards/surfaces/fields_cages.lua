@@ -1,37 +1,13 @@
 local deps = ... or {}
 local roomStore = deps.roomStore or import("mods/rewards/surfaces/room_store.lua", nil, {
     common = deps.common,
+    constraints = deps.constraints,
 })
 local common = deps.common or import("mods/rewards/surfaces/common.lua")
+local constraints = deps.constraints or import("mods/rewards/declarations/constraints.lua")
 local storage = common.storage
 
 local fieldsCages = {}
-
-local function sourceMembers(sourceCount, aliasFor)
-    local members = {}
-    for sourceIndex = 1, sourceCount do
-        members[#members + 1] = {
-            alias = aliasFor(sourceIndex),
-            sourceIndex = sourceIndex,
-        }
-    end
-    return members
-end
-
-local function boonSourceMembers(sourceCount)
-    local members = {}
-    for sourceIndex = 1, sourceCount do
-        members[#members + 1] = {
-            alias = storage.lootAlias(sourceIndex),
-            sourceIndex = sourceIndex,
-            visibleWhen = {
-                alias = storage.rewardAlias(sourceIndex),
-                value = "Boon",
-            },
-        }
-    end
-    return members
-end
 
 function fieldsCages.create(definitions, context)
     local sourceCount = math.floor(tonumber(context.sourceCount) or 0)
@@ -87,21 +63,7 @@ function fieldsCages.create(definitions, context)
         context = context,
         rewardStore = rewardStore,
         sourceCount = sourceCount,
-        uniqueValueGroups = {
-            {
-                members = sourceMembers(sourceCount, storage.rewardAlias),
-                allowDuplicateValues = {
-                    Boon = true,
-                },
-                code = "duplicate_reward_type",
-                message = "Fields cage rewards cannot duplicate non-boon rewards",
-            },
-            {
-                members = boonSourceMembers(sourceCount),
-                code = "duplicate_boon_source",
-                message = "Fields cage boon sources must be different",
-            },
-        },
+        rewardConstraints = constraints.fieldsCages(sourceCount),
         controls = controls,
     }
 end

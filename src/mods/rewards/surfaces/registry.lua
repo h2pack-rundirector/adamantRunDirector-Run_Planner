@@ -1,24 +1,30 @@
 local surfaces = {}
 
 local common = import("mods/rewards/surfaces/common.lua")
+local constraints = import("mods/rewards/declarations/constraints.lua")
 local roomStore = import("mods/rewards/surfaces/room_store.lua", nil, {
     common = common,
+    constraints = constraints,
 })
 local majorMinor = import("mods/rewards/surfaces/major_minor.lua", nil, {
     common = common,
+    constraints = constraints,
 })
 local builders = {
     fieldsCages = import("mods/rewards/surfaces/fields_cages.lua", nil, {
         common = common,
+        constraints = constraints,
         roomStore = roomStore,
     }),
     forcedReward = import("mods/rewards/surfaces/forced_reward.lua", nil, {
         common = common,
+        constraints = constraints,
     }),
     majorMinor = majorMinor,
     roomStore = roomStore,
     shop = import("mods/rewards/surfaces/shop.lua", nil, {
         common = common,
+        constraints = constraints,
     }),
 }
 

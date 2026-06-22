@@ -84,6 +84,14 @@ local function fieldsCageAddressLabel(_, index)
     return "Cage " .. tostring(index) .. " Reward"
 end
 
+local function rewardAlias(index)
+    return "Reward" .. tostring(index) .. "Key"
+end
+
+local function lootAlias(index)
+    return "Reward" .. tostring(index) .. "LootKey"
+end
+
 local function sourceForFieldsCageReward(item, index, rewardType)
     if rewardType ~= "Boon" then
         return nil
@@ -252,7 +260,17 @@ function semantics.hasBannedValue(item, banned)
     return false
 end
 
-local function newEvent(row, item, rewardType, address, addressLabel, boonSource, devotionSourceA, devotionSourceB)
+local function newEvent(
+    row,
+    item,
+    rewardType,
+    address,
+    addressLabel,
+    boonSource,
+    devotionSourceA,
+    devotionSourceB,
+    sourceIndex
+)
     if rewardType == nil or rewardType == "" then
         return nil
     end
@@ -264,6 +282,7 @@ local function newEvent(row, item, rewardType, address, addressLabel, boonSource
         address = address,
         addressLabel = addressLabel,
         rowLabel = item and item.rowLabel or nil,
+        sourceIndex = sourceIndex,
     }
     if boonSource ~= nil and boonSource ~= "" then
         event.boonSource = boonSource
@@ -277,8 +296,29 @@ local function newEvent(row, item, rewardType, address, addressLabel, boonSource
     return event
 end
 
-local function appendEvent(events, row, item, rewardType, address, addressLabel, boonSource, devotionSourceA, devotionSourceB)
-    local event = newEvent(row, item, rewardType, address, addressLabel, boonSource, devotionSourceA, devotionSourceB)
+local function appendEvent(
+    events,
+    row,
+    item,
+    rewardType,
+    address,
+    addressLabel,
+    boonSource,
+    devotionSourceA,
+    devotionSourceB,
+    sourceIndex
+)
+    local event = newEvent(
+        row,
+        item,
+        rewardType,
+        address,
+        addressLabel,
+        boonSource,
+        devotionSourceA,
+        devotionSourceB,
+        sourceIndex
+    )
     if event == nil then
         return nil
     end
@@ -298,6 +338,110 @@ end
 
 local function candidateSourceIndex(control)
     return math.floor(tonumber(control and (control.sourceIndex or control.rowIndex) or 0) or 0)
+end
+
+local function candidateDevotionSourceOverrides(item, control, value)
+    local rewards = item.rewards or EMPTY_LIST
+    local alias = control and control.alias or nil
+    if item.rewardKind == "devotionPair" then
+        if alias == rewardAlias(1) then
+            return value, pickValue(item, "lootBName") or rewards[2]
+        elseif alias == rewardAlias(2) then
+            return pickValue(item, "lootAName") or rewards[1], value
+        end
+    elseif item.rewardKind == "roomStore" and rewards[1] == "Devotion" then
+        if alias == rewardAlias(3) then
+            return value, pickValue(item, "lootBName") or rewards[4]
+        elseif alias == rewardAlias(4) then
+            return pickValue(item, "lootAName") or rewards[3], value
+        end
+    elseif item.rewardKind == "majorMinor"
+        and rewards[1] == "Major"
+        and rewards[2] == "Devotion"
+    then
+        if alias == rewardAlias(5) then
+            return value, pickValue(item, "lootBName") or rewards[6]
+        elseif alias == rewardAlias(6) then
+            return pickValue(item, "lootAName") or rewards[5], value
+        end
+    end
+    return nil, nil
+end
+
+local function candidateBoonSourceRewardType(item, control)
+    local rewards = item.rewards or EMPTY_LIST
+    local alias = control and control.alias or nil
+    local sourceIndex = candidateSourceIndex(control)
+    if item.rewardKind == "boonSource" and alias == rewardAlias(1) then
+        return "Boon"
+    elseif item.rewardKind == "roomStore" and rewards[1] == "Boon" and alias == rewardAlias(2) then
+        return "Boon"
+    elseif item.rewardKind == "majorMinor"
+        and rewards[1] == "Major"
+        and rewards[2] == "Boon"
+        and alias == rewardAlias(3)
+    then
+        return "Boon"
+    elseif item.rewardKind == "shop" and sourceIndex > 0 and alias == lootAlias(sourceIndex) then
+        local rewardType = rewards[sourceIndex]
+        if SHOP_BOON_SOURCE_REWARDS[rewardType] then
+            return rewardType
+        end
+    elseif item.rewardKind == "fieldsCages" and sourceIndex > 0 and alias == lootAlias(sourceIndex) then
+        if rewards[sourceIndex] == "Boon" then
+            return "Boon"
+        end
+    end
+    return nil
+end
+
+local function candidateEventForBoonSourceControl(row, item, control, value, rewardAddress)
+    local sourceIndex = candidateSourceIndex(control)
+    local baseAddress = rewardAddress or item.address
+    local devotionSourceA, devotionSourceB = candidateDevotionSourceOverrides(item, control, value)
+    if devotionSourceA ~= nil or devotionSourceB ~= nil then
+        return newEvent(
+            row,
+            item,
+            "Devotion",
+            baseAddress,
+            item.sourceLabel,
+            nil,
+            devotionSourceA,
+            devotionSourceB
+        )
+    end
+
+    local rewardType = candidateBoonSourceRewardType(item, control)
+    if rewardType == nil then
+        return nil
+    end
+    if item.rewardKind == "shop" and sourceIndex > 0 then
+        return newEvent(
+            row,
+            item,
+            rewardType,
+            shopAddress(baseAddress, sourceIndex),
+            shopAddressLabel(item, sourceIndex),
+            value,
+            nil,
+            nil,
+            sourceIndex
+        )
+    elseif item.rewardKind == "fieldsCages" and sourceIndex > 0 then
+        return newEvent(
+            row,
+            item,
+            rewardType,
+            fieldsCageAddress(baseAddress, sourceIndex),
+            fieldsCageAddressLabel(item, sourceIndex),
+            value,
+            nil,
+            nil,
+            sourceIndex
+        )
+    end
+    return newEvent(row, item, rewardType, baseAddress, item.sourceLabel, value)
 end
 
 local function candidateBoonSource(item, rewardType, sourceIndex)
@@ -343,6 +487,10 @@ function semantics.candidateEventForControl(row, item, control, value, rewardAdd
         return nil
     end
 
+    if control ~= nil and control.kind == "boonSource" then
+        return candidateEventForBoonSourceControl(row, item, control, value, rewardAddress)
+    end
+
     local rewardType = candidateRewardType(control, value)
     if rewardType == nil then
         return nil
@@ -357,7 +505,10 @@ function semantics.candidateEventForControl(row, item, control, value, rewardAdd
             rewardType,
             shopAddress(baseAddress, sourceIndex),
             shopAddressLabel(item, sourceIndex),
-            sourceForShopReward(item, sourceIndex, rewardType)
+            sourceForShopReward(item, sourceIndex, rewardType),
+            nil,
+            nil,
+            sourceIndex
         )
     elseif item.rewardKind == "fieldsCages" and sourceIndex > 0 then
         return newEvent(
@@ -366,7 +517,10 @@ function semantics.candidateEventForControl(row, item, control, value, rewardAdd
             rewardType,
             fieldsCageAddress(baseAddress, sourceIndex),
             fieldsCageAddressLabel(item, sourceIndex),
-            candidateBoonSource(item, rewardType, sourceIndex)
+            candidateBoonSource(item, rewardType, sourceIndex),
+            nil,
+            nil,
+            sourceIndex
         )
     end
 
@@ -398,7 +552,10 @@ function semantics.eventsForItem(item, row, out)
                 rewardType,
                 shopAddress(item.address, index),
                 shopAddressLabel(item, index),
-                sourceForShopReward(item, index, rewardType)
+                sourceForShopReward(item, index, rewardType),
+                nil,
+                nil,
+                index
             )
         end
         return events
@@ -412,7 +569,10 @@ function semantics.eventsForItem(item, row, out)
                 rewardType,
                 fieldsCageAddress(item.address, index),
                 fieldsCageAddressLabel(item, index),
-                sourceForFieldsCageReward(item, index, rewardType)
+                sourceForFieldsCageReward(item, index, rewardType),
+                nil,
+                nil,
+                index
             )
         end
         return events
@@ -484,16 +644,14 @@ function semantics.batchesForRow(row, rewardItems, out, itemScratch, eventScratc
     for _, item in ipairs(rewardItems.collect(row, itemScratch)) do
         local firstEventIndex = #events + 1
         semantics.eventsForItem(item, row, events)
-        if events[firstEventIndex] ~= nil then
-            batches[#batches + 1] = {
-                row = row,
-                item = item,
-                effectTiming = effectTimingForItem(item),
-                events = events,
-                firstEventIndex = firstEventIndex,
-                lastEventIndex = #events,
-            }
-        end
+        batches[#batches + 1] = {
+            row = row,
+            item = item,
+            effectTiming = effectTimingForItem(item),
+            events = events,
+            firstEventIndex = firstEventIndex,
+            lastEventIndex = #events,
+        }
     end
     return batches
 end

@@ -9,6 +9,7 @@ local fakeRows = h.fakeRows
 local routeFields = h.routeFields
 local routeUiFields = h.routeUiFields
 local noOpDraw = h.noOpDraw
+local attachSingleBiomeRouteContext = h.attachSingleBiomeRouteContext
 
 -- luacheck: globals TestRunPlannerClockworkGoalRoute
 TestRunPlannerClockworkGoalRoute = {}
@@ -218,6 +219,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalInvalidatesDuplicateT
             Reward4Key = "ZeusUpgrade",
         },
     }), instance)
+    attachSingleBiomeRouteContext(control, "Underworld", "I")
     local snapshot = control:buildSnapshot()
 
     lu.assertFalse(snapshot.valid)
