@@ -41,6 +41,12 @@ end
 local compiledRulesByTarget = compileRules(conditions)
 local constraintEventScratch = {}
 
+local function clearList(list)
+    for index = #list, 1, -1 do
+        list[index] = nil
+    end
+end
+
 local function newResult()
     return {
         invalidRows = {},
@@ -347,6 +353,7 @@ local function priorConstraintEvent(constraint, event, other)
 end
 
 local function rewardConstraintEvents(event)
+    clearList(constraintEventScratch)
     semantics.eventsForItem(event.item, event.row, constraintEventScratch)
     return constraintEventScratch
 end

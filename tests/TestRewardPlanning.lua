@@ -748,6 +748,33 @@ function TestRunPlannerRewardPlanning.testRewardRowGroupRejectsDuplicateRewardTy
     lu.assertEquals(invalid.code, "duplicate_reward_type")
 end
 
+function TestRunPlannerRewardPlanning.testRewardRowGroupRefreshesSelectedValidityAfterDuplicateChanges()
+    local group = {
+        key = "TestBatch",
+        constraints = {
+            uniqueRewardTypes = {},
+        },
+    }
+    local rows = {
+        routeRewardRow(1, "MaxHealthDropBig", { rewardRowGroup = group }),
+        routeRewardRow(2, "MaxHealthDropBig", { rewardRowGroup = group }),
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N" },
+    }, {
+        RouteN = fakeRouteControlSnapshot("RouteN", rows),
+    })
+
+    lu.assertEquals(routeContext:overview("Surface").invalidRows[1].code, "duplicate_reward_type")
+
+    rows[2] = routeRewardRow(2, "MaxManaDropBig", { rewardRowGroup = group })
+    routeContext:markDirty("Surface", "N")
+
+    lu.assertTrue(routeContext:overview("Surface").valid)
+end
+
 function TestRunPlannerRewardPlanning.testRewardRowGroupAllowsConfiguredDuplicateRewardTypes()
     local group = {
         key = "TestBatch",
@@ -991,6 +1018,49 @@ function TestRunPlannerRewardPlanning.testSameSurfaceConstraintColorsLinkedShopO
     lu.assertNil(states.BoostedRandomLoot)
 end
 
+function TestRunPlannerRewardPlanning.testShopConstraintsRefreshAfterDuplicateOfferChanges()
+    local constraint = {
+        kind = "uniqueRewardTypes",
+        sourceIndices = { 1, 2 },
+        code = "duplicate_shop_group_option",
+        message = "Offers 1 and 2 share one vanilla shop group and cannot duplicate the same reward",
+    }
+    local control = rewardCandidateControl("shopOption", {
+        "",
+        "RandomLoot",
+        "BoostedRandomLoot",
+    }, "Reward2Key")
+    control.rowIndex = 2
+    local rows = {
+        routeRewardRow(1, "RandomLoot", {
+            rewardKind = "shop",
+            rewards = { "RandomLoot", "RandomLoot" },
+            rewardConstraints = { constraint },
+        }),
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "Q" },
+    }, {
+        RouteQ = fakeRouteControlSnapshot("RouteQ", rows),
+    })
+
+    lu.assertEquals(routeContext:overview("Surface").invalidRows[1].code, "duplicate_shop_group_option")
+
+    rows[1] = routeRewardRow(1, "RandomLoot", {
+        rewardKind = "shop",
+        rewards = { "RandomLoot", "BoostedRandomLoot" },
+        rewardConstraints = { constraint },
+    })
+    routeContext:markDirty("Surface", "Q")
+
+    lu.assertTrue(routeContext:overview("Surface").valid)
+    local states = routeContext:rewardValueStates("Surface", "Q", 1, "row", "Reward2Key", control)
+    lu.assertEquals(states.RandomLoot, valueStates.INVALID)
+    lu.assertNil(states.BoostedRandomLoot)
+end
+
 function TestRunPlannerRewardPlanning.testSameSurfaceConstraintColorsFieldsCageDuplicateCandidates()
     local constraints = {
         {
@@ -1054,6 +1124,62 @@ function TestRunPlannerRewardPlanning.testSameSurfaceConstraintColorsFieldsCageD
     local sourceStates = routeContext:rewardValueStates("Underworld", "H", 1, "row", "Reward2LootKey", sourceControl)
     lu.assertEquals(sourceStates.ZeusUpgrade, valueStates.INVALID)
     lu.assertNil(sourceStates.HeraUpgrade)
+end
+
+function TestRunPlannerRewardPlanning.testFieldsCageConstraintsIgnorePriorScratchAfterRewardChanges()
+    local constraints = {
+        {
+            kind = "uniqueRewardTypes",
+            sourceIndices = { 1, 2 },
+            allow = {
+                Boon = true,
+            },
+            code = "duplicate_reward_type",
+            message = "Fields cage rewards cannot duplicate non-boon rewards",
+        },
+        {
+            kind = "uniqueBoonSource",
+            sourceIndices = { 1, 2 },
+            code = "duplicate_boon_source",
+            message = "Fields cage boon sources must be different",
+        },
+    }
+    local rows = {
+        routeRewardRow(1, "Cages", {
+            rewardKind = "fieldsCages",
+            rewards = { "Boon", "Boon" },
+            rewardLoot = { "DemeterUpgrade", "DemeterUpgrade" },
+            rewardSourceCount = 2,
+            rewardConstraints = constraints,
+        }),
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "H" },
+    }, {
+        RouteH = fakeRouteControlSnapshot("RouteH", rows),
+    })
+    local sourceControl = rewardCandidateControl("boonSource", {
+        "",
+        "DemeterUpgrade",
+        "ZeusUpgrade",
+    }, "Reward2LootKey")
+    sourceControl.sourceIndex = 2
+
+    lu.assertEquals(routeContext:overview("Underworld").invalidRows[1].code, "duplicate_boon_source")
+
+    rows[1] = routeRewardRow(1, "Cages", {
+        rewardKind = "fieldsCages",
+        rewards = { "RoomMoneyDrop", "Boon" },
+        rewardLoot = { "DemeterUpgrade", "DemeterUpgrade" },
+        rewardSourceCount = 2,
+        rewardConstraints = constraints,
+    })
+    routeContext:markDirty("Underworld", "H")
+
+    lu.assertTrue(routeContext:overview("Underworld").valid)
+    lu.assertNil(routeContext:rewardValueStates("Underworld", "H", 1, "row", "Reward2LootKey", sourceControl))
 end
 
 function TestRunPlannerRewardPlanning.testRewardRowGroupEffectsApplyAfterGroupCloses()
