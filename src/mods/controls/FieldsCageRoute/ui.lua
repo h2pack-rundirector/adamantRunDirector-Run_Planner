@@ -25,7 +25,7 @@ local rooms = import("mods/controls/FieldsCageRoute/views/rooms.lua", nil, {
     data = data,
     resetRewardDetails = resetRewardDetails,
     resetRowDetails = resetRowDetails,
-    dropdownValues = deps.dropdownValues,
+    decorations = deps.decorations,
 })
 local rewards = import("mods/controls/FieldsCageRoute/views/rewards.lua", nil, {
     data = data,
@@ -34,7 +34,7 @@ local rewards = import("mods/controls/FieldsCageRoute/views/rewards.lua", nil, {
 local planner = import("mods/controls/FieldsCageRoute/views/planner.lua", nil, {
     rooms = rooms,
     rewards = rewards,
-    tabStatus = deps.tabStatus,
+    decorations = deps.decorations,
 })
 
 function ui.create(fields, instance)

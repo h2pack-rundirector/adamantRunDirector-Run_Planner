@@ -1,37 +1,8 @@
 local routeStatus = {}
+local deps = ... or {}
+local decorations = deps.decorations
 
 local ROUTE_MESSAGE_COLUMN_X = 165
-local INVALID_COLOR = { 1.0, 0.24, 0.16, 1.0 }
-local VALID_COLOR = { 0.35, 0.9, 0.45, 1.0 }
-local textColoredMode
-
-local function drawColoredText(imgui, color, text)
-    if imgui.TextColored == nil or textColoredMode == "none" then
-        imgui.Text(text)
-        return
-    end
-
-    if textColoredMode == "rgba" then
-        imgui.TextColored(color[1], color[2], color[3], color[4], text)
-        return
-    elseif textColoredMode == "table" then
-        imgui.TextColored(color, text)
-        return
-    end
-
-    local ok = pcall(imgui.TextColored, color[1], color[2], color[3], color[4], text)
-    if ok then
-        textColoredMode = "rgba"
-        return
-    end
-    ok = pcall(imgui.TextColored, color, text)
-    if ok then
-        textColoredMode = "table"
-        return
-    end
-    textColoredMode = "none"
-    imgui.Text(text)
-end
 
 local function firstInvalidMessage(routeSnapshot)
     local invalidRows = routeSnapshot and routeSnapshot.invalidRows or nil
@@ -53,12 +24,13 @@ function routeStatus.drawRouteStatus(draw, routeSnapshot)
     local status = valid and "Valid" or "Invalid"
     local text = label .. " " .. status .. (message ~= nil and ":" or "")
     local imgui = draw.imgui
-    drawColoredText(imgui, valid and VALID_COLOR or INVALID_COLOR, text)
+    local invalidColor = decorations.invalidColor()
+    decorations.drawColoredText(imgui, valid and decorations.validColor() or invalidColor, text)
 
     if message ~= nil then
         imgui.SameLine()
         imgui.SetCursorPosX(ROUTE_MESSAGE_COLUMN_X)
-        drawColoredText(imgui, INVALID_COLOR, message)
+        decorations.drawColoredText(imgui, invalidColor, message)
     end
 end
 

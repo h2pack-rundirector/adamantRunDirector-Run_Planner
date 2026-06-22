@@ -21,12 +21,33 @@ local measureAllocKb = h.measureAllocKb
 -- luacheck: globals TestRunPlannerRouteUi
 TestRunPlannerRouteUi = {}
 
+local function loadValueStates()
+    return dofile("src/mods/route/value_states.lua")
+end
+
+local function loadDecorations()
+    local chunk = assert(loadfile("src/mods/ui/decorations.lua"))
+    return chunk({
+        valueStates = loadValueStates(),
+    })
+end
+
+local function loadRouteStatus()
+    local chunk = assert(loadfile("src/mods/ui/route_status.lua"))
+    return chunk({
+        decorations = loadDecorations(),
+    })
+end
+
 function TestRunPlannerRouteUi.testRouteStatusDrawsFirstInvalidMessage()
-    local routeStatus = dofile("src/mods/ui/route_status.lua")
+    local routeStatus = loadRouteStatus()
     local rendered = {}
     local draw = {
         imgui = {
             Text = function(text)
+                rendered[#rendered + 1] = text
+            end,
+            TextColored = function(_, _, _, _, text)
                 rendered[#rendered + 1] = text
             end,
             SameLine = function()
@@ -213,8 +234,8 @@ function TestRunPlannerRouteUi.testRouteUiHidesTabsForDisabledLayers()
     })
 end
 
-function TestRunPlannerRouteUi.testTabStatusNavInvalidScansAllRowsAndPrefersControlOwnership()
-    local tabStatus = dofile("src/mods/ui/tab_status.lua")
+function TestRunPlannerRouteUi.testDecorationsNavInvalidScansAllRowsAndPrefersControlOwnership()
+    local decorations = loadDecorations()
     local snapshot = {
         valid = false,
         invalidRows = {
@@ -231,11 +252,11 @@ function TestRunPlannerRouteUi.testTabStatusNavInvalidScansAllRowsAndPrefersCont
         },
     }
 
-    lu.assertTrue(tabStatus.navTabInvalid(snapshot, {
+    lu.assertTrue(decorations.navTabInvalid(snapshot, {
         key = "F",
         controlNames = { "RouteF" },
     }))
-    lu.assertTrue(tabStatus.navTabInvalid(snapshot, {
+    lu.assertTrue(decorations.navTabInvalid(snapshot, {
         key = "NPCs",
         controlNames = { "RouteNpcsUnderworld" },
     }))
@@ -339,8 +360,8 @@ function TestRunPlannerRouteUi.testRouteUiColorsInvalidRouteAndRegionTabs()
     lu.assertEquals(capturedTabs[3].color, { 1.0, 0.24, 0.16, 1.0 })
 end
 
-function TestRunPlannerRouteUi.testTabStatusClassifiesAllPlannerInvalids()
-    local tabStatus = dofile("src/mods/ui/tab_status.lua")
+function TestRunPlannerRouteUi.testDecorationsClassifyAllPlannerInvalids()
+    local decorations = loadDecorations()
     local control = {
         name = function()
             return "RouteN"
@@ -372,9 +393,9 @@ function TestRunPlannerRouteUi.testTabStatusClassifiesAllPlannerInvalids()
         },
     }
 
-    lu.assertFalse(tabStatus.plannerTabInvalid(control, "rooms", instance))
-    lu.assertTrue(tabStatus.plannerTabInvalid(control, "rewards", instance))
-    lu.assertTrue(tabStatus.plannerTabInvalid(control, "sideRooms", instance))
+    lu.assertFalse(decorations.plannerTabInvalid(control, "rooms", instance))
+    lu.assertTrue(decorations.plannerTabInvalid(control, "rewards", instance))
+    lu.assertTrue(decorations.plannerTabInvalid(control, "sideRooms", instance))
 end
 
 function TestRunPlannerRouteUi.testRouteTemplateViewsSupportNoOpUiTraversal()

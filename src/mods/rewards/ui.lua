@@ -1,6 +1,6 @@
 local deps = ... or {}
 local runtime = deps.runtime
-local dropdownValues = deps.dropdownValues
+local decorations = deps.decorations
 
 local ui = {}
 
@@ -91,7 +91,7 @@ local function drawControl(draw, fields, control, opts)
         drawOpts = opts.godSource:godSourceDrawOpts(drawOpts, field:read())
     end
     local valueStates = externalValueStates(fields, control, opts)
-    drawOpts = dropdownValues.decorate(control, drawOpts, valueStates)
+    drawOpts = decorations.decorateDropdown(control, drawOpts, valueStates)
     local changed = draw.widgets.dropdown(field, drawOpts)
     if changed and opts ~= nil and opts.onControlChanged ~= nil then
         opts.onControlChanged(control, fields, fields.rewardContext)

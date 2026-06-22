@@ -5,6 +5,7 @@ function data.loadControlTemplates(route, importer)
     return importer("mods/controls/templates.lua", nil, {
         route = route,
         rewards = route.rewards,
+        decorations = importer("mods/ui/decorations.lua"),
     })
 end
 

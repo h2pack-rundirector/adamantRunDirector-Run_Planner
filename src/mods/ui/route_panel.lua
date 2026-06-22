@@ -22,18 +22,12 @@ local function fallbackRouteDefinitions(routeControlTabs)
     }
 end
 
-local function beginTabItem(tabStatus, imgui, label, invalid)
-    if tabStatus ~= nil and tabStatus.beginTabItem ~= nil then
-        return tabStatus.beginTabItem(imgui, label, invalid)
-    end
-    return imgui.BeginTabItem(label)
+local function beginTabItem(decorations, imgui, label, invalid)
+    return decorations.beginTabItem(imgui, label, invalid)
 end
 
 local function routeSnapshot(routeContext, routeKey)
-    if routeContext ~= nil and routeContext.overview ~= nil then
-        return routeContext:overview(routeKey)
-    end
-    return nil
+    return routeContext:overview(routeKey)
 end
 
 function routePanel.create(deps)
@@ -50,7 +44,7 @@ function routePanel.create(deps)
     local featureDefinitions = deps.features or (deps.catalog and deps.catalog.features) or {}
     local routeContextFactory = deps.routeContext
     local routeStatus = deps.routeStatus
-    local tabStatus = deps.tabStatus
+    local decorations = deps.decorations
     local activeRouteContext
     local activeRouteTabs = {}
     local routeAllTabs = {}
@@ -91,10 +85,6 @@ function routePanel.create(deps)
     end
 
     local function beginRouteContext(ctx)
-        if routeContextFactory == nil then
-            return nil
-        end
-
         if activeRouteContext == nil then
             activeRouteContext = routeContextFactory.create({
                 routes = routeDefinitions,
@@ -111,9 +101,6 @@ function routePanel.create(deps)
         if tab.layer == nil then
             return true
         end
-        if routeContext == nil or routeContext.isLayerConfigured == nil then
-            return true
-        end
         return routeContext:isLayerConfigured(region, tab.layer) ~= false
     end
 
@@ -127,9 +114,7 @@ function routePanel.create(deps)
         clearList(visibleTabs)
         for _, tab in ipairs(routeAllTabs[region] or EMPTY_LIST) do
             if tabLayerConfigured(routeContext, region, tab) then
-                if tabStatus ~= nil and tabStatus.setNavTabInvalid ~= nil then
-                    tabStatus.setNavTabInvalid(tab, tabStatus.navTabInvalid(snapshot, tab))
-                end
+                decorations.setNavTabInvalid(tab, decorations.navTabInvalid(snapshot, tab))
                 visibleTabs[#visibleTabs + 1] = tab
             end
         end
@@ -172,9 +157,7 @@ function routePanel.create(deps)
                 imgui.Spacing()
             end
             local control = ctx.controls.get(controlName)
-            if routeContext ~= nil then
-                routeContext:bindControl(control, region)
-            end
+            routeContext:bindControl(control, region)
             draw.control(control, "planner")
         end
         imgui.EndChild()
@@ -189,10 +172,8 @@ function routePanel.create(deps)
         for _, route in ipairs(routeDefinitions.ordered or EMPTY_LIST) do
             if routeNavOpts[route.key] ~= nil then
                 local snapshot = routeSnapshot(routeContext, route.key)
-                local invalid = tabStatus ~= nil
-                    and tabStatus.routeTabInvalid ~= nil
-                    and tabStatus.routeTabInvalid(snapshot)
-                local opened = beginTabItem(tabStatus, imgui, route.label or route.key, invalid)
+                local invalid = decorations.routeTabInvalid(snapshot)
+                local opened = beginTabItem(decorations, imgui, route.label or route.key, invalid)
                 if opened then
                     drawRegionTab(ctx, route.key, "RunPlanner" .. tostring(route.key), routeContext)
                     imgui.EndTabItem()
@@ -204,10 +185,6 @@ function routePanel.create(deps)
     end
 
     local function drawRouteOverview(draw, routeContext)
-        if routeStatus == nil or routeContext == nil then
-            return
-        end
-
         local drewStatus = false
         for _, route in ipairs(routeDefinitions.ordered or EMPTY_LIST) do
             routeStatus.drawRouteStatus(draw, routeSnapshot(routeContext, route.key))

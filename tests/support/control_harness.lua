@@ -405,6 +405,8 @@ local function noOpDraw()
     for _, name in ipairs({
         "AlignTextToFramePadding",
         "Text",
+        "TextColored",
+        "TextWrapped",
         "SameLine",
         "SetCursorPosX",
         "Spacing",

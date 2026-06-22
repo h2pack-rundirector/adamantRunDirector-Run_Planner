@@ -3,10 +3,12 @@ local ui = {}
 local deps = ... or {}
 local routePanelFactory = deps.routePanel
     or import("mods/ui/route_panel.lua")
+local decorations = deps.decorations
+    or import("mods/ui/decorations.lua")
 local routeStatus = deps.routeStatus
-    or import("mods/ui/route_status.lua")
-local tabStatus = deps.tabStatus
-    or import("mods/ui/tab_status.lua")
+    or import("mods/ui/route_status.lua", nil, {
+        decorations = decorations,
+    })
 local routePanel = routePanelFactory.create({
     catalog = deps.catalog,
     routes = deps.routes,
@@ -16,7 +18,7 @@ local routePanel = routePanelFactory.create({
     routeContext = deps.routeContext,
     routeControlTabs = deps.routeControlTabs,
     routeStatus = routeStatus,
-    tabStatus = tabStatus,
+    decorations = decorations,
 })
 
 function ui.drawTab(_, ctx)

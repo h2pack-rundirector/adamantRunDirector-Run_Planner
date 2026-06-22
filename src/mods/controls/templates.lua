@@ -1,6 +1,7 @@
 local deps = ... or {}
 local route = deps.route
 local rewards = deps.rewards or (route and route.rewards) or nil
+local decorations = deps.decorations
 
 local godData = deps.godData or import("mods/data/gods.lua")
 
@@ -8,32 +9,27 @@ return {
     ClockworkGoalRoute = import("mods/controls/ClockworkGoalRoute/ClockworkGoalRoute.lua", nil, {
         route = route,
         rewards = rewards,
-        dropdownValues = deps.dropdownValues,
-        tabStatus = deps.tabStatus,
+        decorations = decorations,
     }),
     FieldsCageRoute = import("mods/controls/FieldsCageRoute/FieldsCageRoute.lua", nil, {
         route = route,
         rewards = rewards,
-        dropdownValues = deps.dropdownValues,
-        tabStatus = deps.tabStatus,
+        decorations = decorations,
     }),
     FixedLinearRoute = import("mods/controls/FixedLinearRoute/FixedLinearRoute.lua", nil, {
         route = route,
         rewards = rewards,
-        dropdownValues = deps.dropdownValues,
-        tabStatus = deps.tabStatus,
+        decorations = decorations,
     }),
     HubPylonRoute = import("mods/controls/HubPylonRoute/HubPylonRoute.lua", nil, {
         route = route,
         rewards = rewards,
-        dropdownValues = deps.dropdownValues,
-        tabStatus = deps.tabStatus,
+        decorations = decorations,
     }),
     MultiEncounterFixedRoute = import("mods/controls/MultiEncounterFixedRoute/MultiEncounterFixedRoute.lua", nil, {
         route = route,
         rewards = rewards,
-        dropdownValues = deps.dropdownValues,
-        tabStatus = deps.tabStatus,
+        decorations = decorations,
     }),
     RouteNpcs = import("mods/controls/RouteNpcs/RouteNpcs.lua", nil, {
         route = route,
@@ -43,5 +39,6 @@ return {
     }),
     RouteGlobal = import("mods/controls/RouteGlobal/RouteGlobal.lua", nil, {
         gods = godData,
+        decorations = decorations,
     }),
 }

@@ -2,6 +2,7 @@
 
 local deps = ...
 local godData = deps.gods
+local decorations = deps.decorations
 
 local RouteGlobal = {}
 
@@ -339,36 +340,12 @@ function RouteGlobal.createUi(fields, instance)
     return control
 end
 
-local function pushTextColor(imgui, color)
-    if imgui.PushStyleColor == nil or color == nil then
-        return false
-    end
-
-    local textEnum = imgui.ImGuiCol and imgui.ImGuiCol.Text or 0
-    imgui.PushStyleColor(textEnum, color[1], color[2], color[3], color[4] or 1)
-    return true
-end
-
-local function popTextColor(imgui, pushed)
-    if pushed and imgui.PopStyleColor ~= nil then
-        imgui.PopStyleColor()
-    end
-end
-
 local function drawDisabledText(draw, text)
-    local pushed = pushTextColor(draw.imgui, DISABLED_TEXT_COLOR)
-    draw.imgui.Text(text)
-    popTextColor(draw.imgui, pushed)
+    decorations.drawText(draw.imgui, DISABLED_TEXT_COLOR, text)
 end
 
 local function drawPolicyNote(draw, text)
-    local pushed = pushTextColor(draw.imgui, DISABLED_TEXT_COLOR)
-    if draw.imgui.TextWrapped ~= nil then
-        draw.imgui.TextWrapped(text)
-    else
-        draw.imgui.Text(text)
-    end
-    popTextColor(draw.imgui, pushed)
+    decorations.drawWrappedText(draw.imgui, DISABLED_TEXT_COLOR, text)
 end
 
 local function drawDisabledCheckbox(draw, visibleLabel, label, current)
@@ -386,9 +363,7 @@ end
 local function drawGodCheckbox(draw, control, god)
     local field = control:godPoolField()
     local current = field:readAlias(god.key) == true
-    local pushed = pushTextColor(draw.imgui, god.color)
-    local nextValue, changed = draw.imgui.Checkbox(god.drawLabel, current)
-    popTextColor(draw.imgui, pushed)
+    local nextValue, changed = decorations.checkboxWithTextColor(draw.imgui, god.drawLabel, current, god.color)
     if changed then
         field:writeAlias(god.key, nextValue == true)
         control:invalidateGodSource()

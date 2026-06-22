@@ -48,7 +48,7 @@ local rooms = import("mods/controls/HubPylonRoute/views/rooms.lua", nil, {
     resetAllSideRoomDetails = resetAllSideRoomDetails,
     resetRewardDetails = resetRewardDetails,
     resetRowDetails = resetRowDetails,
-    dropdownValues = deps.dropdownValues,
+    decorations = deps.decorations,
 })
 local rewards = import("mods/controls/HubPylonRoute/views/rewards.lua", nil, {
     rewards = deps.rewards,
@@ -62,7 +62,7 @@ local planner = import("mods/controls/HubPylonRoute/views/planner.lua", nil, {
     rooms = rooms,
     rewards = rewards,
     sideRooms = sideRooms,
-    tabStatus = deps.tabStatus,
+    decorations = deps.decorations,
 })
 
 function ui.create(fields, instance)
