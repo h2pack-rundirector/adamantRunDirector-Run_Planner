@@ -367,8 +367,8 @@ template:
   internals such as requirements, timeline, row engine, run context, and
   reward-planning services.
 - `mods/rewards/declarations/` owns static reward declarations: curated
-  planner-facing reward definitions, reward legality conditions, and
-  multi-offer uniqueness groups. These declarations are intentionally
+  planner-facing reward definitions and reward legality conditions. These
+  declarations are intentionally
   explicit instead of pretending to fully evaluate vanilla
   `RewardStoreData`/`StoreData` requirements.
 - `mods/rewards/rewards.lua` is the reward subsystem entry point threaded into
@@ -908,6 +908,9 @@ except for rooms reserved for future planned picks.
   of a one-of group instead of allowing the vanilla coin flip to discard it.
 - Normal combat rooms can contain fixed side-room doors. These side rooms are
   children of the selected combat map, not additional pylon picks.
+- Planned pylon row rewards participate in `hub.rewardRowGroup`. This models
+  the hub's persistent door-offer reward set as one reward phase: pylon rewards
+  validate against the same prior context, then apply after the group closes.
 
 Side-room identity is `parent combat room + door id`, not only `N_SubXX`,
 because the same subroom template can appear behind multiple parent rooms.

@@ -5,8 +5,6 @@ local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
 local rewardItems = deps.rewardItems
-local rewardOfferGroups = deps.rewardOfferGroups
-local rewardOfferRules = deps.rewardOfferRules
 local invalidLocations = deps.invalidLocations
 
 local runtime = {}
@@ -171,44 +169,6 @@ local function appendInvalidRow(invalidRows, seenInvalids, invalid)
     invalidRows[#invalidRows + 1] = invalid
 end
 
-local function collectPylonRewardItems(rows)
-    local items = {}
-    local rowItems = {}
-    for _, row in ipairs(rows or {}) do
-        if row ~= nil and row.valid and row.slotKind == "biomeRow" then
-            for _, item in ipairs(rewardItems.collectBySource(row, "row", rowItems)) do
-                items[#items + 1] = item
-            end
-        end
-    end
-    return items
-end
-
-local function applyOfferGroups(instance, rows, invalidRows, seenInvalids)
-    if rewardOfferRules == nil or rewardOfferGroups == nil then
-        return
-    end
-
-    local groupKey = instance.biome
-        and instance.biome.hub
-        and instance.biome.hub.offerGroup
-    local group = rewardOfferRules.groupForScope(rewardOfferGroups, groupKey, "biome.pylonRows")
-    if group == nil then
-        return
-    end
-
-    for _, invalid in ipairs(rewardOfferRules.validateOffer(group, collectPylonRewardItems(rows))) do
-        local row = rows[invalid.rowIndex]
-        if row ~= nil and row.valid then
-            row.valid = false
-            row.invalidCode = invalid.code
-            row.invalidReason = invalid.message
-        end
-        invalid.locationLabel = invalid.locationLabel or invalidLocations.biomeRow(instance, row, "Rewards")
-        appendInvalidRow(invalidRows, seenInvalids, invalid)
-    end
-end
-
 local function sideRoomSnapshots(instance, fields, routeRows, rowIndex, rewardsConfigured)
     local sideRooms = {}
     for sideIndex = 1, data.sideDoorCountForRow(instance, routeRows, rowIndex) do
@@ -365,6 +325,11 @@ function runtime.create(fields, instance)
             hubDoorId = option and option.hubDoorId or slot.hubDoorId,
             sideDoors = option and option.sideDoors or slot.sideDoors,
             sideRooms = sideRoomSnapshots(instance, fields, routeRows, rowIndex, rewardsConfigured),
+            rewardRowGroup = slot.kind == "biomeRow"
+                and instance.biome
+                and instance.biome.hub
+                and instance.biome.hub.rewardRowGroup
+                or nil,
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,
@@ -397,9 +362,6 @@ function runtime.create(fields, instance)
                     message = row.invalidReason,
                 })
             end
-        end
-        if self:rewardsConfigured() then
-        applyOfferGroups(instance, rows, invalidRows, seenInvalids)
         end
         self:endReadPass()
         return {

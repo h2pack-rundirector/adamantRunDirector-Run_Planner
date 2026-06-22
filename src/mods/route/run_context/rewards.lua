@@ -262,6 +262,20 @@ local function evaluateRouteLegality(context, routeKey, opts)
             end
 
             local ctx = rewardRowContext(rowContext, routeControlName)
+            if rewardLegalityEngine.prepareRow ~= nil then
+                local invalid = rewardLegalityEngine.prepareRow(
+                    context,
+                    result,
+                    rewardCtx,
+                    ctx,
+                    rowContext.row,
+                    scratch
+                )
+                if opts.stopAfterFirstInvalid and invalid ~= nil then
+                    stopped = true
+                    return
+                end
+            end
             storeCandidateRow(result, rewardLegalityEngine, rewardCtx, ctx, rowContext.row)
 
             local invalid = rewardLegalityEngine.evaluateRow(
@@ -277,6 +291,9 @@ local function evaluateRouteLegality(context, routeKey, opts)
             end
         end,
     })
+    if not stopped and rewardLegalityEngine.finishRoute ~= nil then
+        rewardLegalityEngine.finishRoute(context, result, rewardCtx, scratch)
+    end
     return result
 end
 

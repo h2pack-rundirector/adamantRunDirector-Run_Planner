@@ -63,7 +63,7 @@ Room fields still matter before reward-specific rules:
 - `previouslyChosenRewards` blocks duplicate reward names unless the reward
   entry has `AllowDuplicates = true`.
 
-Planner status: partially represented in bundles and reward offer groups.
+Planner status: partially represented in bundles and reward row groups.
 
 Recommended model: keep structural filters in bundle/surface declarations, then
 run a route reward validator over the selected rewards. Dynamic reward legality

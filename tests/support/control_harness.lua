@@ -481,6 +481,7 @@ local function routeRewardRow(rowIndex, rewardType, opts)
         invalidCode = opts.invalidCode,
         invalidReason = opts.invalidReason,
         locationLabel = opts.locationLabel,
+        rewardRowGroup = opts.rewardRowGroup,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
         biomeEncounterDepthCostMin = opts.biomeEncounterDepthCostMin or opts.biomeEncounterDepthCost or 1,
         biomeEncounterDepthCostMax = opts.biomeEncounterDepthCostMax or opts.biomeEncounterDepthCost or 1,

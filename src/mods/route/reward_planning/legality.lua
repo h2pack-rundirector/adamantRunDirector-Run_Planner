@@ -219,6 +219,58 @@ local function requirementInvalid(requirement, rewardCtx, ctx, event)
     return nil
 end
 
+local function rewardLabel(value)
+    if value == "Boon" then
+        return "Boon"
+    end
+    return tostring(value)
+end
+
+local function rewardRowGroupConstraints(group)
+    return group and group.constraints or EMPTY_LIST
+end
+
+local function duplicateRewardTypesConstraint(group)
+    return rewardRowGroupConstraints(group).uniqueRewardTypes
+end
+
+local function duplicateBoonSourceConstraint(group)
+    return rewardRowGroupConstraints(group).uniqueBoonSource
+end
+
+local function rewardRowGroupInvalid(rewardCtx, event)
+    local group = event and event.item and event.item.rewardRowGroup or nil
+    if group == nil or group.key == nil or event.rewardType == nil or event.rewardType == "" then
+        return nil
+    end
+
+    local uniqueRewardTypes = duplicateRewardTypesConstraint(group)
+    if uniqueRewardTypes ~= nil then
+        local allow = uniqueRewardTypes.allow or EMPTY_LIST
+        if not allow[event.rewardType]
+            and rewardContext.rewardRowGroupHasRewardType(rewardCtx, group.key, event.rewardType)
+        then
+            return {
+                code = "duplicate_reward_type",
+                message = rewardLabel(event.rewardType) .. " is already planned in this reward group",
+            }
+        end
+    end
+
+    if duplicateBoonSourceConstraint(group)
+        and event.rewardType == "Boon"
+        and event.boonSource ~= nil
+        and event.boonSource ~= ""
+        and rewardContext.rewardRowGroupHasBoonSource(rewardCtx, group.key, event.boonSource)
+    then
+        return {
+            code = "duplicate_boon_source",
+            message = "Boon source is already planned in this reward group",
+        }
+    end
+    return nil
+end
+
 local function ruleApplies(rule, event)
     local lookup = rule.appliesToRewardKindLookup
     if lookup == nil then
@@ -238,6 +290,11 @@ local function ruleInvalid(rule, rewardCtx, ctx, event)
 end
 
 local function eventInvalid(rewardCtx, ctx, event)
+    local groupInvalid = rewardRowGroupInvalid(rewardCtx, event)
+    if groupInvalid ~= nil then
+        return groupInvalid
+    end
+
     local rules = compiledRulesByTarget[event.rewardType]
     if rules == nil then
         return nil
@@ -296,6 +353,61 @@ local function promotePendingEffects(rewardCtx)
     end)
 end
 
+local function stageBatchAfterRewardRowGroup(rewardCtx, ctx, batch)
+    for index = batch.firstEventIndex, batch.lastEventIndex do
+        rewardContext.stageAfterRewardRowGroupEvent(rewardCtx, ctx, batch.events[index])
+    end
+end
+
+local function applyRewardRowGroupEffects(rewardCtx)
+    for _, entry in ipairs(rewardContext.activeRewardRowGroupPendingEntries(rewardCtx)) do
+        applyEventEffects(rewardCtx, entry.ctx, entry.event)
+    end
+end
+
+local function validateAfterRewardRowGroupEntry(context, result, seenInvalids, rewardCtx, entry)
+    local invalid = eventInvalid(rewardCtx, entry.ctx, entry.event)
+    if invalid == nil then
+        return nil
+    end
+    return addInvalid(context, result, seenInvalids, entry.ctx, entry.event, invalid.code, invalid.message)
+end
+
+local function closeRewardRowGroup(context, result, seenInvalids, rewardCtx)
+    if rewardContext.activeRewardRowGroupKey(rewardCtx) == nil then
+        return nil
+    end
+
+    applyRewardRowGroupEffects(rewardCtx)
+    for _, entry in ipairs(rewardContext.activeRewardRowGroupAfterEntries(rewardCtx)) do
+        local invalid = validateAfterRewardRowGroupEntry(context, result, seenInvalids, rewardCtx, entry)
+        if invalid ~= nil then
+            rewardContext.clearRewardRowGroup(rewardCtx)
+            return invalid
+        end
+        applyEventEffects(rewardCtx, entry.ctx, entry.event)
+    end
+    rewardContext.clearRewardRowGroup(rewardCtx)
+    return nil
+end
+
+local function rowRewardGroup(row, itemScratch)
+    for _, item in ipairs(rowRewardItems.collect(row, itemScratch)) do
+        local group = item.rewardRowGroup
+        if group ~= nil and group.key ~= nil then
+            return group
+        end
+    end
+    return nil
+end
+
+local function ensureLegalityScratch(scratch)
+    scratch = scratch or {}
+    scratch.seenInvalids = scratch.seenInvalids or {}
+    scratch.groupItems = scratch.groupItems or {}
+    return scratch
+end
+
 function rewardLegality.emptyResult()
     return newResult()
 end
@@ -312,6 +424,22 @@ function rewardLegality.candidateInvalid(rewardCtx, ctx, event)
     return eventInvalid(rewardCtx, ctx, event)
 end
 
+function rewardLegality.prepareRow(context, result, rewardCtx, _ctx, row, scratch)
+    scratch = ensureLegalityScratch(scratch)
+    local group = rowRewardGroup(row, scratch.groupItems)
+    local activeGroupKey = rewardContext.activeRewardRowGroupKey(rewardCtx)
+    local rowGroupKey = group and group.key or nil
+    if activeGroupKey ~= nil and activeGroupKey ~= rowGroupKey then
+        return closeRewardRowGroup(context, result, scratch.seenInvalids, rewardCtx)
+    end
+    return nil
+end
+
+function rewardLegality.finishRoute(context, result, rewardCtx, scratch)
+    scratch = ensureLegalityScratch(scratch)
+    return closeRewardRowGroup(context, result, scratch.seenInvalids, rewardCtx)
+end
+
 function rewardLegality.evaluateRow(context, result, rewardCtx, ctx, row, scratch)
     if row == nil or row.valid == false then
         rewardContext.clearPending(rewardCtx)
@@ -320,26 +448,42 @@ function rewardLegality.evaluateRow(context, result, rewardCtx, ctx, row, scratc
     end
     local promotePendingAfterRow = rewardContext.hasPendingEntries(rewardCtx)
 
-    scratch = scratch or {}
+    scratch = ensureLegalityScratch(scratch)
     local batches = scratch.batches or {}
     local events = scratch.events or {}
     local rewardItemScratch = scratch.rewardItems or {}
-    local seenInvalids = scratch.seenInvalids or {}
     scratch.batches = batches
     scratch.events = events
     scratch.rewardItems = rewardItemScratch
-    scratch.seenInvalids = seenInvalids
 
     collectRewardBatches(row, batches, rewardItemScratch, events)
     for _, batch in ipairs(batches) do
-        local invalid = validateBatch(context, result, seenInvalids, rewardCtx, ctx, batch)
-        if invalid ~= nil then
-            return invalid
-        end
-        if batch.effectTiming == "afterNextRow" then
-            stagePendingBatch(rewardCtx, ctx, batch)
+        local group = batch.item and batch.item.rewardRowGroup or nil
+        if group ~= nil and group.key ~= nil then
+            rewardContext.beginRewardRowGroup(rewardCtx, group)
+        elseif rewardContext.activeRewardRowGroupKey(rewardCtx) ~= nil then
+            stageBatchAfterRewardRowGroup(rewardCtx, ctx, batch)
         else
-            applyBatchEffects(rewardCtx, ctx, batch)
+            local invalid = validateBatch(context, result, scratch.seenInvalids, rewardCtx, ctx, batch)
+            if invalid ~= nil then
+                return invalid
+            end
+        end
+        if group ~= nil and group.key ~= nil then
+            local invalid = validateBatch(context, result, scratch.seenInvalids, rewardCtx, ctx, batch)
+            if invalid ~= nil then
+                return invalid
+            end
+            for index = batch.firstEventIndex, batch.lastEventIndex do
+                rewardContext.storeRewardRowGroupEvent(rewardCtx, batch.events[index])
+                rewardContext.stageRewardRowGroupEvent(rewardCtx, ctx, batch.events[index])
+            end
+        elseif rewardContext.activeRewardRowGroupKey(rewardCtx) == nil then
+            if batch.effectTiming == "afterNextRow" then
+                stagePendingBatch(rewardCtx, ctx, batch)
+            else
+                applyBatchEffects(rewardCtx, ctx, batch)
+            end
         end
     end
     if promotePendingAfterRow then

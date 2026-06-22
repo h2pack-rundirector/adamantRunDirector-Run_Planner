@@ -5,11 +5,31 @@ local rewardItemBySource = h.rewardItemBySource
 local loadCatalog = h.loadCatalog
 local loadHubPylonTemplate = h.loadHubPylonTemplate
 local loadHubPylonData = h.loadHubPylonData
+local loadRunContext = h.loadRunContext
+local routeDefinitions = h.routeDefinitions
 local fakeRows = h.fakeRows
 local routeFields = h.routeFields
 
 -- luacheck: globals TestRunPlannerHubPylonRoute
 TestRunPlannerHubPylonRoute = {}
+
+local function surfaceRouteContext(control)
+    return loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Surface",
+                label = "Surface",
+                biomes = { "N" },
+            },
+        }),
+        controlResolver = function(controlName)
+            if controlName == "RouteN" then
+                return control
+            end
+            return nil
+        end,
+    })
+end
 
 function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
     local catalog = loadCatalog()
@@ -52,6 +72,17 @@ function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
         "N_MiniBoss02",
     })
     lu.assertEquals(instance.maxSideDoorCount, 3)
+    lu.assertEquals(instance.biome.hub.rewardRowGroup, {
+        key = "N_HubPylons",
+        effectTiming = "afterGroup",
+        constraints = {
+            uniqueRewardTypes = {
+                allow = {
+                    Boon = true,
+                },
+            },
+        },
+    })
     lu.assertEquals(instance.sideRoomModeValues, {
         "",
         "Disabled",
@@ -278,8 +309,12 @@ function TestRunPlannerHubPylonRoute.testHubPylonPolicyAllowsDuplicateBoonSource
                 Reward2Key = "ZeusUpgrade",
             },
         }), instance)
+    local routeContext = surfaceRouteContext(control)
+    control:setRouteContext(routeContext, "Surface")
+    local overview = routeContext:overview("Surface")
     local snapshot = control:buildSnapshot()
 
+    lu.assertTrue(overview.valid)
     lu.assertTrue(snapshot.valid)
     lu.assertFalse(snapshot.disabled)
     lu.assertEquals(#snapshot.invalidRows, 0)
@@ -287,7 +322,7 @@ function TestRunPlannerHubPylonRoute.testHubPylonPolicyAllowsDuplicateBoonSource
     lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardPicks[2].value, "ZeusUpgrade")
 end
 
-function TestRunPlannerHubPylonRoute.testHubPylonPolicyRejectsDuplicateNonBoonRewards()
+function TestRunPlannerHubPylonRoute.testHubPylonRewardRowGroupRejectsDuplicateNonBoonRewards()
     local catalog = loadCatalog()
     local template = loadHubPylonTemplate()
     local instance = template.prepare({
@@ -295,28 +330,33 @@ function TestRunPlannerHubPylonRoute.testHubPylonPolicyRejectsDuplicateNonBoonRe
         biome = catalog.lookup.N,
     })
     local rowData = {
-            {},
-            {},
-            {},
-            {
-                RoleKey = "Combat",
-                OptionKey = "N_Combat12",
-                Reward1Key = "MaxHealthDropBig",
-            },
-            {
-                RoleKey = "Combat",
-                OptionKey = "N_Combat13",
-                Reward1Key = "MaxHealthDropBig",
-            },
-        }
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat12",
+            Reward1Key = "MaxHealthDropBig",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat13",
+            Reward1Key = "MaxHealthDropBig",
+        },
+    }
     local control = template.createRuntime(routeFields(rowData), instance)
+    local routeContext = surfaceRouteContext(control)
+    control:setRouteContext(routeContext, "Surface")
+    local overview = routeContext:overview("Surface")
     local snapshot = control:buildSnapshot()
 
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 5)
+    lu.assertEquals(overview.invalidRows[1].code, "duplicate_reward_type")
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
     lu.assertEquals(#snapshot.invalidRows, 1)
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
     lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_reward_type")
     lu.assertEquals(snapshot.rows[5].invalidCode, "duplicate_reward_type")
-
 end

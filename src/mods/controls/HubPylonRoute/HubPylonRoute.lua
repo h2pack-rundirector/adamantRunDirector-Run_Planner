@@ -5,8 +5,6 @@ local runtime = import("mods/controls/HubPylonRoute/runtime.lua", nil, {
     common = deps.route.common,
     rewards = deps.rewards,
     rewardItems = deps.route.rewardItems,
-    rewardOfferGroups = deps.route.rewardOfferGroups,
-    rewardOfferRules = deps.route.rewardOfferRules,
     invalidLocations = deps.route.invalidLocations,
 })
 local ui = import("mods/controls/HubPylonRoute/ui.lua", nil, {

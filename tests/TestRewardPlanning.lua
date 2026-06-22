@@ -681,6 +681,146 @@ function TestRunPlannerRewardPlanning.testFieldsCageRewardsDoNotSatisfySameBatch
     lu.assertEquals(invalid.code, "talent_requires_spell")
 end
 
+function TestRunPlannerRewardPlanning.testRewardRowGroupRejectsDuplicateRewardTypesAcrossRows()
+    local group = {
+        key = "TestBatch",
+        constraints = {
+            uniqueRewardTypes = {
+                allow = {
+                    Boon = true,
+                },
+            },
+        },
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N" },
+    }, {
+        RouteN = fakeRouteControlSnapshot("RouteN", {
+            routeRewardRow(1, "MaxHealthDropBig", { rewardRowGroup = group }),
+            routeRewardRow(2, "MaxHealthDropBig", { rewardRowGroup = group }),
+        }),
+    }, {
+        biomes = {
+            N = { label = "Ephyra" },
+        },
+    })
+
+    local invalid = routeContext:overview("Surface").invalidRows[1]
+
+    lu.assertEquals(invalid.biomeKey, "N")
+    lu.assertEquals(invalid.rowIndex, 2)
+    lu.assertEquals(invalid.rewardType, "MaxHealthDropBig")
+    lu.assertEquals(invalid.locationLabel, "Ephyra Depth 2 Rewards")
+    lu.assertEquals(invalid.code, "duplicate_reward_type")
+end
+
+function TestRunPlannerRewardPlanning.testRewardRowGroupAllowsConfiguredDuplicateRewardTypes()
+    local group = {
+        key = "TestBatch",
+        constraints = {
+            uniqueRewardTypes = {
+                allow = {
+                    Boon = true,
+                },
+            },
+        },
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N" },
+    }, {
+        RouteN = fakeRouteControlSnapshot("RouteN", {
+            routeRewardRow(1, "Boon", {
+                rewardRowGroup = group,
+                rewardPicks = {
+                    { kind = "boonSource", value = "ZeusUpgrade" },
+                },
+            }),
+            routeRewardRow(2, "Boon", {
+                rewardRowGroup = group,
+                rewardPicks = {
+                    { kind = "boonSource", value = "ZeusUpgrade" },
+                },
+            }),
+        }),
+    })
+
+    lu.assertTrue(routeContext:overview("Surface").valid)
+end
+
+function TestRunPlannerRewardPlanning.testRewardRowGroupMarksDuplicateRewardCandidatesInvalid()
+    local group = {
+        key = "TestBatch",
+        constraints = {
+            uniqueRewardTypes = {},
+        },
+    }
+    local control = rewardCandidateControl("rewardType", {
+        "",
+        "MaxHealthDropBig",
+        "MaxManaDropBig",
+    })
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N" },
+    }, {
+        RouteN = fakeRouteControlSnapshot("RouteN", {
+            routeRewardRow(1, "MaxHealthDropBig", { rewardRowGroup = group }),
+            routeRewardRow(2, "MaxManaDropBig", { rewardRowGroup = group }),
+        }),
+    })
+
+    local states = routeContext:rewardValueStates("Surface", "N", 2, "row", "Reward1Key", control)
+
+    lu.assertEquals(states.MaxHealthDropBig, valueStates.INVALID)
+    lu.assertNil(states.MaxManaDropBig)
+end
+
+function TestRunPlannerRewardPlanning.testRewardRowGroupDoesNotLetEarlierRowsSatisfyLaterRows()
+    local group = {
+        key = "TestBatch",
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N" },
+    }, {
+        RouteN = fakeRouteControlSnapshot("RouteN", {
+            routeRewardRow(1, "SpellDrop", { rewardRowGroup = group }),
+            routeRewardRow(2, "TalentBigDrop", { rewardRowGroup = group }),
+        }),
+    })
+
+    local invalid = routeContext:overview("Surface").invalidRows[1]
+
+    lu.assertEquals(invalid.rowIndex, 2)
+    lu.assertEquals(invalid.rewardType, "TalentBigDrop")
+    lu.assertEquals(invalid.code, "talent_requires_spell")
+end
+
+function TestRunPlannerRewardPlanning.testRewardRowGroupEffectsApplyAfterGroupCloses()
+    local group = {
+        key = "TestBatch",
+    }
+    local routeContext = rewardLegalityRouteContext({
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N" },
+    }, {
+        RouteN = fakeRouteControlSnapshot("RouteN", {
+            routeRewardRow(1, "SpellDrop", { rewardRowGroup = group }),
+            routeRewardRow(2, "MaxHealthDropBig", { rewardRowGroup = group }),
+            routeRewardRow(3, "TalentBigDrop"),
+        }),
+    })
+
+    lu.assertTrue(routeContext:overview("Surface").valid)
+end
+
 function TestRunPlannerRewardPlanning.testRouteContextInvalidatesDevotionBeforeSevenRunEncounters()
     local routeContext = rewardLegalityRouteContext({
         key = "Underworld",

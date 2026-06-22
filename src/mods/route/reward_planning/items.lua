@@ -8,6 +8,7 @@ local REWARD_SOURCE_FIELDS = {
     "fixedRewardType",
     "rewardSourceCount",
     "rewardGeneration",
+    "rewardRowGroup",
 }
 
 local function clearList(list)
@@ -80,6 +81,7 @@ local function appendItem(items, row, source, address, sourceKind, sourceIndex)
         rewardStore = source.rewardStore,
         rewardSourceCount = source.rewardSourceCount,
         rewardGeneration = source.rewardGeneration,
+        rewardRowGroup = source.rewardRowGroup,
         valid = source.valid,
     }
 end

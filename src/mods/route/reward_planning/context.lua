@@ -34,6 +34,18 @@ local function copyPendingEntries(source)
     return copy
 end
 
+local function copyRowGroupState(state)
+    if state == nil then
+        return nil
+    end
+    return {
+        key = state.key,
+        group = state.group,
+        seenRewardTypes = copyMap(state.seenRewardTypes),
+        seenBoonSources = copyMap(state.seenBoonSources),
+    }
+end
+
 local function biomeCounters(context, biomeKey)
     local counters = context.biomeCounters[biomeKey]
     if counters == nil then
@@ -62,6 +74,7 @@ function rewardContext.create()
         biomeCounters = {},
         godLootSeen = {},
         lastRewardRoomHistoryOrdinal = {},
+        activeRewardRowGroup = nil,
         pendingOffers = {},
         pendingEntries = {},
         stagedPendingOffers = {},
@@ -76,6 +89,7 @@ function rewardContext.snapshot(context)
         biomeCounters = copyNestedMap(context and context.biomeCounters),
         godLootSeen = copyMap(context and context.godLootSeen),
         lastRewardRoomHistoryOrdinal = copyMap(context and context.lastRewardRoomHistoryOrdinal),
+        activeRewardRowGroup = copyRowGroupState(context and context.activeRewardRowGroup),
         pendingOffers = copyMap(context and context.pendingOffers),
         pendingEntries = copyPendingEntries(context and context.pendingEntries),
         stagedPendingOffers = copyMap(context and context.stagedPendingOffers),
@@ -144,6 +158,93 @@ function rewardContext.storeRewardOccurrence(context, rowContext, event)
     if event.rewardType ~= nil and rowContext.roomHistoryOrdinal ~= nil then
         context.lastRewardRoomHistoryOrdinal[event.rewardType] = rowContext.roomHistoryOrdinal
     end
+end
+
+function rewardContext.activeRewardRowGroupKey(context)
+    return context.activeRewardRowGroup and context.activeRewardRowGroup.key or nil
+end
+
+function rewardContext.beginRewardRowGroup(context, group)
+    if group == nil or group.key == nil then
+        return nil
+    end
+
+    local state = context.activeRewardRowGroup
+    if state ~= nil and state.key == group.key then
+        return state
+    end
+
+    state = {
+        key = group.key,
+        group = group,
+        seenRewardTypes = {},
+        seenBoonSources = {},
+        pendingEntries = {},
+        afterEntries = {},
+    }
+    context.activeRewardRowGroup = state
+    return state
+end
+
+function rewardContext.activeRewardRowGroupPendingEntries(context)
+    local state = context.activeRewardRowGroup
+    return state and state.pendingEntries or EMPTY_LIST
+end
+
+function rewardContext.activeRewardRowGroupAfterEntries(context)
+    local state = context.activeRewardRowGroup
+    return state and state.afterEntries or EMPTY_LIST
+end
+
+function rewardContext.clearRewardRowGroup(context)
+    context.activeRewardRowGroup = nil
+end
+
+function rewardContext.rewardRowGroupHasRewardType(context, groupKey, rewardType)
+    local state = context.activeRewardRowGroup
+    return state ~= nil and state.key == groupKey and state.seenRewardTypes[rewardType] ~= nil
+end
+
+function rewardContext.rewardRowGroupHasBoonSource(context, groupKey, boonSource)
+    local state = context.activeRewardRowGroup
+    return state ~= nil and state.key == groupKey and state.seenBoonSources[boonSource] ~= nil
+end
+
+function rewardContext.storeRewardRowGroupEvent(context, event)
+    local group = event and event.item and event.item.rewardRowGroup or nil
+    if group == nil or group.key == nil then
+        return
+    end
+
+    local state = rewardContext.beginRewardRowGroup(context, group)
+    if event.rewardType ~= nil and event.rewardType ~= "" then
+        state.seenRewardTypes[event.rewardType] = true
+    end
+    if event.rewardType == "Boon" and event.boonSource ~= nil and event.boonSource ~= "" then
+        state.seenBoonSources[event.boonSource] = true
+    end
+end
+
+function rewardContext.stageRewardRowGroupEvent(context, rowContext, event)
+    local state = context.activeRewardRowGroup
+    if state == nil then
+        return
+    end
+    state.pendingEntries[#state.pendingEntries + 1] = {
+        ctx = rowContext,
+        event = event,
+    }
+end
+
+function rewardContext.stageAfterRewardRowGroupEvent(context, rowContext, event)
+    local state = context.activeRewardRowGroup
+    if state == nil then
+        return
+    end
+    state.afterEntries[#state.afterEntries + 1] = {
+        ctx = rowContext,
+        event = event,
+    }
 end
 
 function rewardContext.hasPendingEntries(context)

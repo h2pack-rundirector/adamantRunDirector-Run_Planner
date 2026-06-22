@@ -15,9 +15,6 @@ local function createRewardPlanning(invalidLocations)
         rewardItems = rewardItems,
         rewardSemantics = rewardSemantics,
         rewardLegality = rewardLegality,
-        rewardOfferRules = import("mods/route/reward_planning/offer_rules.lua", nil, {
-            semantics = rewardSemantics,
-        }),
     }
 end
 
@@ -63,8 +60,6 @@ function routeFactory.create(opts)
         rewards = rewards,
         rewardItems = planning.rewardItems,
         rewardSemantics = planning.rewardSemantics,
-        rewardOfferGroups = import("mods/rewards/declarations/offer_groups.lua"),
-        rewardOfferRules = planning.rewardOfferRules,
         rewardLegality = planning.rewardLegality,
     }
     route.runContext = import("mods/route/run_context.lua", nil, {

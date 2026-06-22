@@ -79,7 +79,17 @@ return function(importer, deps)
             storyRoomsByKey = layout.storyRoomsByKey,
             hubDoorRooms = layout.hubDoorRooms,
             subroomRewardStores = layout.subroomRewardStores,
-            offerGroup = "N_HubPylons",
+            rewardRowGroup = {
+                key = "N_HubPylons",
+                effectTiming = "afterGroup",
+                constraints = {
+                    uniqueRewardTypes = {
+                        allow = {
+                            Boon = true,
+                        },
+                    },
+                },
+            },
             minibossAvailability = {
                 mode = "oneOf",
                 rooms = { "N_MiniBoss01", "N_MiniBoss02" },
