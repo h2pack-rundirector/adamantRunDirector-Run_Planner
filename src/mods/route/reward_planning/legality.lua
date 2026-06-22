@@ -682,7 +682,7 @@ function rewardLegality.evaluateRow(context, result, rewardCtx, ctx, row, scratc
                 return invalid
             end
             for index = batch.firstEventIndex, batch.lastEventIndex do
-                rewardContext.storeRewardRowGroupEvent(rewardCtx, batch.events[index])
+                rewardContext.storeRewardRowGroupOccurrence(rewardCtx, ctx, batch.events[index])
                 rewardContext.stageRewardRowGroupEvent(rewardCtx, ctx, batch.events[index])
             end
         elseif rewardContext.activeRewardRowGroupKey(rewardCtx) == nil then

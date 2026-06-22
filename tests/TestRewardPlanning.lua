@@ -66,12 +66,16 @@ function TestRunPlannerRewardPlanning.testRewardContextStoresCounterOccurrenceAn
 
     lu.assertEquals(rewardContext.counterValue(ctx, "spell", "route", "F"), 1)
     lu.assertEquals(rewardContext.counterValue(ctx, "spell", "biome", "F"), 1)
-    lu.assertIs(rewardContext.counterProducerEvent(ctx, "spell", "route", "F"), spellEvent)
-    lu.assertIs(rewardContext.counterProducerEvent(ctx, "spell", "biome", "F"), spellEvent)
+    lu.assertIs(rewardContext.counterProducerOccurrence(ctx, "spell", "route", "F").ctx, rowContext)
+    lu.assertIs(rewardContext.counterProducerOccurrence(ctx, "spell", "route", "F").event, spellEvent)
+    lu.assertIs(rewardContext.counterProducerOccurrence(ctx, "spell", "biome", "F").ctx, rowContext)
+    lu.assertIs(rewardContext.counterProducerOccurrence(ctx, "spell", "biome", "F").event, spellEvent)
     lu.assertEquals(rewardContext.lastRewardRoomHistoryOrdinal(ctx, "SpellDrop"), 4)
-    lu.assertIs(rewardContext.lastRewardOccurrenceEvent(ctx, "SpellDrop"), spellEvent)
+    lu.assertIs(rewardContext.lastRewardOccurrence(ctx, "SpellDrop").ctx, rowContext)
+    lu.assertIs(rewardContext.lastRewardOccurrence(ctx, "SpellDrop").event, spellEvent)
     lu.assertTrue(rewardContext.hasPendingOffer(ctx, "WeaponUpgradeDrop"))
-    lu.assertIs(rewardContext.pendingOfferEvent(ctx, "WeaponUpgradeDrop"), shopEvent)
+    lu.assertIs(rewardContext.pendingOfferOccurrence(ctx, "WeaponUpgradeDrop").ctx, rowContext)
+    lu.assertIs(rewardContext.pendingOfferOccurrence(ctx, "WeaponUpgradeDrop").event, shopEvent)
 
     local snapshot = rewardContext.snapshot(ctx)
     rewardContext.applyCounts(ctx, {
@@ -81,10 +85,10 @@ function TestRunPlannerRewardPlanning.testRewardContextStoresCounterOccurrenceAn
         },
     }, rowContext, laterSpellEvent)
 
-    lu.assertIs(rewardContext.counterProducerEvent(ctx, "spell", "route", "F"), laterSpellEvent)
-    lu.assertIs(rewardContext.counterProducerEvent(snapshot, "spell", "route", "F"), spellEvent)
-    lu.assertIs(rewardContext.lastRewardOccurrenceEvent(snapshot, "SpellDrop"), spellEvent)
-    lu.assertIs(rewardContext.pendingOfferEvent(snapshot, "WeaponUpgradeDrop"), shopEvent)
+    lu.assertIs(rewardContext.counterProducerOccurrence(ctx, "spell", "route", "F").event, laterSpellEvent)
+    lu.assertIs(rewardContext.counterProducerOccurrence(snapshot, "spell", "route", "F").event, spellEvent)
+    lu.assertIs(rewardContext.lastRewardOccurrence(snapshot, "SpellDrop").event, spellEvent)
+    lu.assertIs(rewardContext.pendingOfferOccurrence(snapshot, "WeaponUpgradeDrop").event, shopEvent)
 end
 
 function TestRunPlannerRewardPlanning.testRewardContextStoresRowGroupProvenance()
@@ -101,16 +105,23 @@ function TestRunPlannerRewardPlanning.testRewardContextStoresRowGroupProvenance(
         },
     }
 
-    rewardContext.storeRewardRowGroupEvent(ctx, boonEvent)
+    local rowContext = {
+        biomeKey = "N",
+        roomHistoryOrdinal = 8,
+    }
+
+    rewardContext.storeRewardRowGroupOccurrence(ctx, rowContext, boonEvent)
 
     lu.assertTrue(rewardContext.rewardRowGroupHasRewardType(ctx, "N_HubPylons", "Boon"))
     lu.assertTrue(rewardContext.rewardRowGroupHasBoonSource(ctx, "N_HubPylons", "ZeusUpgrade"))
-    lu.assertIs(rewardContext.rewardRowGroupRewardTypeEvent(ctx, "N_HubPylons", "Boon"), boonEvent)
-    lu.assertIs(rewardContext.rewardRowGroupBoonSourceEvent(ctx, "N_HubPylons", "ZeusUpgrade"), boonEvent)
+    lu.assertIs(rewardContext.rewardRowGroupRewardTypeOccurrence(ctx, "N_HubPylons", "Boon").ctx, rowContext)
+    lu.assertIs(rewardContext.rewardRowGroupRewardTypeOccurrence(ctx, "N_HubPylons", "Boon").event, boonEvent)
+    lu.assertIs(rewardContext.rewardRowGroupBoonSourceOccurrence(ctx, "N_HubPylons", "ZeusUpgrade").ctx, rowContext)
+    lu.assertIs(rewardContext.rewardRowGroupBoonSourceOccurrence(ctx, "N_HubPylons", "ZeusUpgrade").event, boonEvent)
 
     local snapshot = rewardContext.snapshot(ctx)
-    lu.assertIs(rewardContext.rewardRowGroupRewardTypeEvent(snapshot, "N_HubPylons", "Boon"), boonEvent)
-    lu.assertIs(rewardContext.rewardRowGroupBoonSourceEvent(snapshot, "N_HubPylons", "ZeusUpgrade"), boonEvent)
+    lu.assertIs(rewardContext.rewardRowGroupRewardTypeOccurrence(snapshot, "N_HubPylons", "Boon").event, boonEvent)
+    lu.assertIs(rewardContext.rewardRowGroupBoonSourceOccurrence(snapshot, "N_HubPylons", "ZeusUpgrade").event, boonEvent)
 end
 
 function TestRunPlannerRewardPlanning.testRewardItemsNormalizeRowRewardMetadata()
