@@ -33,6 +33,7 @@ local rewards = import("mods/controls/FixedLinearRoute/views/rewards.lua", nil, 
 local planner = import("mods/controls/FixedLinearRoute/views/planner.lua", nil, {
     rooms = rooms,
     rewards = rewards,
+    tabStatus = deps.tabStatus,
 })
 
 function ui.create(fields, instance)

@@ -3,11 +3,19 @@
 local deps = ...
 local rooms = deps.rooms
 local rewards = deps.rewards
+local tabStatus = deps.tabStatus
 
 local planner = {}
 
 local function rewardsConfigured(control)
     return control.rewardsConfigured == nil or control:rewardsConfigured()
+end
+
+local function beginTabItem(imgui, label, control, instance, tabKey)
+    if tabStatus ~= nil and tabStatus.beginPlannerTabItem ~= nil then
+        return tabStatus.beginPlannerTabItem(imgui, label, control, instance, tabKey)
+    end
+    return imgui.BeginTabItem(label)
 end
 
 function planner.draw(draw, control, instance)
@@ -17,11 +25,11 @@ function planner.draw(draw, control, instance)
         rooms.draw(draw, control, instance)
         return
     end
-    if imgui.BeginTabItem("Rooms") then
+    if beginTabItem(imgui, "Rooms", control, instance, "rooms") then
         rooms.draw(draw, control, instance)
         imgui.EndTabItem()
     end
-    if rewardsConfigured(control) and imgui.BeginTabItem("Rewards") then
+    if rewardsConfigured(control) and beginTabItem(imgui, "Rewards", control, instance, "rewards") then
         rewards.draw(draw, control, instance)
         imgui.EndTabItem()
     end

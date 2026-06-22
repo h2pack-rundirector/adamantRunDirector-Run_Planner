@@ -34,6 +34,7 @@ local rewards = import("mods/controls/FieldsCageRoute/views/rewards.lua", nil, {
 local planner = import("mods/controls/FieldsCageRoute/views/planner.lua", nil, {
     rooms = rooms,
     rewards = rewards,
+    tabStatus = deps.tabStatus,
 })
 
 function ui.create(fields, instance)

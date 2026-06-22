@@ -34,6 +34,7 @@ local rewards = import("mods/controls/ClockworkGoalRoute/views/rewards.lua", nil
 local planner = import("mods/controls/ClockworkGoalRoute/views/planner.lua", nil, {
     rooms = rooms,
     rewards = rewards,
+    tabStatus = deps.tabStatus,
 })
 
 function ui.create(fields, instance)

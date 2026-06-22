@@ -208,9 +208,173 @@ function TestRunPlannerRouteUi.testRouteUiHidesTabsForDisabledLayers()
     })
 
     lu.assertEquals(capturedTabs, {
-        { key = "Global", label = "Global" },
-        { key = "F", label = "Erebus" },
+        { key = "Global", label = "Global", controlNames = { "RouteGlobalUnderworld" } },
+        { key = "F", label = "Erebus", controlNames = { "RouteF" } },
     })
+end
+
+function TestRunPlannerRouteUi.testTabStatusNavInvalidScansAllRowsAndPrefersControlOwnership()
+    local tabStatus = dofile("src/mods/ui/tab_status.lua")
+    local snapshot = {
+        valid = false,
+        invalidRows = {
+            {
+                controlName = "RouteNpcsUnderworld",
+                biomeKey = "F",
+                message = "NPC conflict",
+            },
+            {
+                controlName = "RouteF",
+                biomeKey = "F",
+                message = "Biome conflict",
+            },
+        },
+    }
+
+    lu.assertTrue(tabStatus.navTabInvalid(snapshot, {
+        key = "F",
+        controlNames = { "RouteF" },
+    }))
+    lu.assertTrue(tabStatus.navTabInvalid(snapshot, {
+        key = "NPCs",
+        controlNames = { "RouteNpcsUnderworld" },
+    }))
+end
+
+function TestRunPlannerRouteUi.testRouteUiColorsInvalidRouteAndRegionTabs()
+    local routeUi
+    local capturedTabs
+    local pushedColors = {}
+    local firstInvalid = {
+        controlName = "RouteF",
+        biomeKey = "F",
+        message = "Invalid route",
+    }
+    local secondInvalid = {
+        controlName = "RouteG",
+        biomeKey = "G",
+        message = "Second invalid route",
+    }
+    local routeContext = {
+        beginPass = function()
+        end,
+        bindControl = function(_, control)
+            return control
+        end,
+        overview = function(_, routeKey)
+            return {
+                routeKey = routeKey,
+                valid = false,
+                invalidRows = { firstInvalid, secondInvalid },
+            }
+        end,
+        isLayerConfigured = function()
+            return true
+        end,
+    }
+
+    withTestImport(function()
+        routeUi = testImport("mods/ui.lua", nil, {
+            routes = routeDefinitions({
+                {
+                    key = "Underworld",
+                    label = "Underworld",
+                    biomes = { "F", "G" },
+                },
+            }),
+            routeControlTabs = {
+                Underworld = {
+                    { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
+                    { key = "F", label = "Erebus", controlName = "RouteF" },
+                    { key = "G", label = "Oceanus", controlName = "RouteG" },
+                },
+            },
+            routeContext = {
+                create = function()
+                    return routeContext
+                end,
+            },
+            routeStatus = {
+                drawRouteStatus = function()
+                end,
+            },
+        })
+    end)
+
+    local draw = noOpDraw()
+    draw.imgui.BeginTabBar = function()
+        return true
+    end
+    draw.imgui.BeginTabItem = function(label)
+        return label == "Underworld"
+    end
+    draw.imgui.PushStyleColor = function(_, red, green, blue, alpha)
+        pushedColors[#pushedColors + 1] = { red, green, blue, alpha }
+    end
+    draw.imgui.BeginChild = function()
+    end
+    draw.imgui.EndChild = function()
+    end
+    draw.nav = {
+        verticalTabs = function(opts)
+            capturedTabs = opts.tabs
+            return opts.tabs[2] and opts.tabs[2].key or nil
+        end,
+    }
+    draw.control = function()
+    end
+
+    routeUi.drawTab(nil, {
+        draw = draw,
+        controls = {
+            get = function()
+                return {}
+            end,
+        },
+    })
+
+    lu.assertEquals(pushedColors[1], { 1.0, 0.24, 0.16, 1.0 })
+    lu.assertNil(capturedTabs[1].color)
+    lu.assertEquals(capturedTabs[2].color, { 1.0, 0.24, 0.16, 1.0 })
+    lu.assertEquals(capturedTabs[3].color, { 1.0, 0.24, 0.16, 1.0 })
+end
+
+function TestRunPlannerRouteUi.testTabStatusClassifiesAllPlannerInvalids()
+    local tabStatus = dofile("src/mods/ui/tab_status.lua")
+    local control = {
+        name = function()
+            return "RouteN"
+        end,
+    }
+    local instance = {
+        routeKey = "Surface",
+        biomeKey = "N",
+        routeContext = {
+            overview = function()
+                return {
+                    valid = false,
+                    invalidRows = {
+                        {
+                            controlName = "RouteN",
+                            biomeKey = "N",
+                            address = "row",
+                            rewardType = "TalentDrop",
+                        },
+                        {
+                            controlName = "RouteN",
+                            biomeKey = "N",
+                            address = "side:1",
+                            rewardType = "MinorTalentDrop",
+                        },
+                    },
+                }
+            end,
+        },
+    }
+
+    lu.assertFalse(tabStatus.plannerTabInvalid(control, "rooms", instance))
+    lu.assertTrue(tabStatus.plannerTabInvalid(control, "rewards", instance))
+    lu.assertTrue(tabStatus.plannerTabInvalid(control, "sideRooms", instance))
 end
 
 function TestRunPlannerRouteUi.testRouteTemplateViewsSupportNoOpUiTraversal()

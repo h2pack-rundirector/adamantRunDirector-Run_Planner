@@ -45,6 +45,7 @@ local rewards = import("mods/controls/MultiEncounterFixedRoute/views/rewards.lua
 local planner = import("mods/controls/MultiEncounterFixedRoute/views/planner.lua", nil, {
     rooms = rooms,
     rewards = rewards,
+    tabStatus = deps.tabStatus,
 })
 
 function ui.create(fields, instance)

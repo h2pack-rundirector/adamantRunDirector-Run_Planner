@@ -12,6 +12,7 @@ local ui = import("mods/controls/MultiEncounterFixedRoute/ui.lua", nil, {
     rewards = deps.rewards,
     runtime = runtime,
     dropdownValues = deps.dropdownValues,
+    tabStatus = deps.tabStatus,
 })
 
 return {

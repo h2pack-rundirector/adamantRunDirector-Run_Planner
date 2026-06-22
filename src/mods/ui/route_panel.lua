@@ -22,6 +22,20 @@ local function fallbackRouteDefinitions(routeControlTabs)
     }
 end
 
+local function beginTabItem(tabStatus, imgui, label, invalid)
+    if tabStatus ~= nil and tabStatus.beginTabItem ~= nil then
+        return tabStatus.beginTabItem(imgui, label, invalid)
+    end
+    return imgui.BeginTabItem(label)
+end
+
+local function routeSnapshot(routeContext, routeKey)
+    if routeContext ~= nil and routeContext.overview ~= nil then
+        return routeContext:overview(routeKey)
+    end
+    return nil
+end
+
 function routePanel.create(deps)
     deps = deps or {}
 
@@ -36,6 +50,7 @@ function routePanel.create(deps)
     local featureDefinitions = deps.features or (deps.catalog and deps.catalog.features) or {}
     local routeContextFactory = deps.routeContext
     local routeStatus = deps.routeStatus
+    local tabStatus = deps.tabStatus
     local activeRouteContext
     local activeRouteTabs = {}
     local routeAllTabs = {}
@@ -52,12 +67,14 @@ function routePanel.create(deps)
             local visibleTabs = {}
             local controls = {}
             for _, entry in ipairs(entries) do
+                local controlNames = entry.controlNames or { entry.controlName }
                 tabs[#tabs + 1] = {
                     key = entry.key,
                     label = entry.label,
                     layer = entry.layer,
+                    controlNames = controlNames,
                 }
-                controls[entry.key] = entry.controlNames or { entry.controlName }
+                controls[entry.key] = controlNames
             end
             routeAllTabs[region] = tabs
             routeVisibleTabs[region] = visibleTabs
@@ -106,9 +123,13 @@ function routePanel.create(deps)
             return nil
         end
 
+        local snapshot = routeSnapshot(routeContext, region)
         clearList(visibleTabs)
         for _, tab in ipairs(routeAllTabs[region] or EMPTY_LIST) do
             if tabLayerConfigured(routeContext, region, tab) then
+                if tabStatus ~= nil and tabStatus.setNavTabInvalid ~= nil then
+                    tabStatus.setNavTabInvalid(tab, tabStatus.navTabInvalid(snapshot, tab))
+                end
                 visibleTabs[#visibleTabs + 1] = tab
             end
         end
@@ -166,9 +187,16 @@ function routePanel.create(deps)
         end
 
         for _, route in ipairs(routeDefinitions.ordered or EMPTY_LIST) do
-            if routeNavOpts[route.key] ~= nil and imgui.BeginTabItem(route.label or route.key) then
-                drawRegionTab(ctx, route.key, "RunPlanner" .. tostring(route.key), routeContext)
-                imgui.EndTabItem()
+            if routeNavOpts[route.key] ~= nil then
+                local snapshot = routeSnapshot(routeContext, route.key)
+                local invalid = tabStatus ~= nil
+                    and tabStatus.routeTabInvalid ~= nil
+                    and tabStatus.routeTabInvalid(snapshot)
+                local opened = beginTabItem(tabStatus, imgui, route.label or route.key, invalid)
+                if opened then
+                    drawRegionTab(ctx, route.key, "RunPlanner" .. tostring(route.key), routeContext)
+                    imgui.EndTabItem()
+                end
             end
         end
 
@@ -182,7 +210,7 @@ function routePanel.create(deps)
 
         local drewStatus = false
         for _, route in ipairs(routeDefinitions.ordered or EMPTY_LIST) do
-            routeStatus.drawRouteStatus(draw, routeContext:overview(route.key))
+            routeStatus.drawRouteStatus(draw, routeSnapshot(routeContext, route.key))
             drewStatus = true
         end
         if drewStatus then

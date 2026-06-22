@@ -5,6 +5,8 @@ local routePanelFactory = deps.routePanel
     or import("mods/ui/route_panel.lua")
 local routeStatus = deps.routeStatus
     or import("mods/ui/route_status.lua")
+local tabStatus = deps.tabStatus
+    or import("mods/ui/tab_status.lua")
 local routePanel = routePanelFactory.create({
     catalog = deps.catalog,
     routes = deps.routes,
@@ -14,6 +16,7 @@ local routePanel = routePanelFactory.create({
     routeContext = deps.routeContext,
     routeControlTabs = deps.routeControlTabs,
     routeStatus = routeStatus,
+    tabStatus = tabStatus,
 })
 
 function ui.drawTab(_, ctx)

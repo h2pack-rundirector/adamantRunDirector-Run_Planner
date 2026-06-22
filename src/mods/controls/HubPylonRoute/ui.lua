@@ -62,6 +62,7 @@ local planner = import("mods/controls/HubPylonRoute/views/planner.lua", nil, {
     rooms = rooms,
     rewards = rewards,
     sideRooms = sideRooms,
+    tabStatus = deps.tabStatus,
 })
 
 function ui.create(fields, instance)

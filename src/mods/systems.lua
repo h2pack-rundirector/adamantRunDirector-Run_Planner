@@ -7,12 +7,18 @@ local function createRewards()
     })
 end
 
+local function createTabStatus()
+    return import("mods/ui/tab_status.lua")
+end
+
 local function createControlTemplates(route)
+    local tabStatus = createTabStatus()
     return import("mods/controls/templates.lua", nil, {
         route = route,
         rewards = route.rewards,
         godData = import("mods/data/gods.lua"),
         dropdownValues = import("mods/ui/dropdown_values.lua"),
+        tabStatus = tabStatus,
     })
 end
 
@@ -36,6 +42,7 @@ local function createUi(catalog, route, routeControlTabs)
         catalog = catalog,
         routeContext = route.runContext,
         routeControlTabs = routeControlTabs,
+        tabStatus = createTabStatus(),
     })
 end
 
