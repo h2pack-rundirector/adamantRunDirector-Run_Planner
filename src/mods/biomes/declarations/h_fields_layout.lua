@@ -60,42 +60,6 @@ layout.bridgeRoom = option("H_Bridge01", "Echo", {
     maxAppearancesThisBiome = 1,
 })
 
-layout.bridge = {
-    roomKey = "H_Bridge01",
-    defaultPick = "Vanilla",
-    roomOptions = { layout.bridgeRoom },
-    rewardModes = {
-        {
-            key = "Vanilla",
-            label = "Vanilla",
-        },
-        {
-            key = "Shop",
-            label = "Shop",
-            forcedReward = "Shop",
-            encounter = "BridgeShop",
-        },
-        {
-            key = "Story",
-            label = "Echo",
-            forcedReward = "Story",
-            encounter = "Story_Echo_01",
-            availability = {
-                requiresPriorFieldsBoss = true,
-            },
-        },
-        {
-            key = "Nemesis",
-            label = "Nemesis",
-            forcedReward = "Story",
-            encounter = "BridgeNemesisRandomEvent",
-            availability = {
-                requiresPriorFieldsBridgeRooms = 6,
-            },
-        },
-    },
-}
-
 layout.cageRewardPolicy = {
     key = "H_FieldsCageRewards",
     label = "Fields Cage Rewards",

@@ -144,15 +144,6 @@ local function fieldsCagesReward(rewardStore, opts)
     return reward
 end
 
-local function fieldsBridgeReward()
-    return {
-        kind = "fieldsBridge",
-        storyReward = "Story",
-        shopReward = "Shop",
-        shopProfile = "WorldShop",
-    }
-end
-
 function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
     local data = dofile("src/mods/data.lua")
     local biomes = data.loadBiomes(testImport)
@@ -710,7 +701,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
         eligibleRewardTypes = { "Boon" },
     }))
     lu.assertEquals(biomes.lookup.H.rolesByKey.Miniboss.routeRules, oneShotRouteRules())
-    lu.assertEquals(biomes.lookup.H.rolesByKey.Bridge.reward, fieldsBridgeReward())
+    lu.assertEquals(biomes.lookup.H.rolesByKey.Bridge.reward, noneReward())
 
     lu.assertEquals(biomes.lookup.I.rolesByKey.Goal.mapOptions[1].key, "I_Combat01")
     lu.assertEquals(biomes.lookup.I.rolesByKey.Goal.reward, forcedReward("ClockworkGoal"))
@@ -946,11 +937,8 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
     lu.assertEquals(fields.fields.minibossRoomsByKey.H_MiniBoss01.encounter, "MiniBossVampire")
     lu.assertEquals(fields.fields.minibossRoomsByKey.H_MiniBoss02.encounter, "MiniBossLamia")
 
-    lu.assertEquals(fields.fields.bridge.roomKey, "H_Bridge01")
-    lu.assertEquals(fields.fields.bridge.roomOptions[1].availability.biomeDepthCache, { exact = 3 })
-    lu.assertEquals(fields.fields.bridge.rewardModes[2].key, "Shop")
-    lu.assertEquals(fields.fields.bridge.rewardModes[3].key, "Story")
-    lu.assertEquals(fields.fields.bridge.rewardModes[4].key, "Nemesis")
+    lu.assertEquals(fields.rolesByKey.Bridge.roomOptions[1].key, "H_Bridge01")
+    lu.assertEquals(fields.rolesByKey.Bridge.roomOptions[1].availability.biomeDepthCache, { exact = 3 })
 
     local cagePolicy = fields.fields.cageRewardPolicy
     lu.assertEquals(cagePolicy.rewardStore, "RunProgress")

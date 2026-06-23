@@ -131,15 +131,6 @@ function rewards.fieldsCages(opts)
     return context
 end
 
-function rewards.fieldsBridge()
-    return {
-        kind = "fieldsBridge",
-        storyReward = "Story",
-        shopReward = "Shop",
-        shopProfile = "WorldShop",
-    }
-end
-
 function rewards.rewardTypeMetadata()
     local ordered = {
         {

@@ -56,7 +56,6 @@ return function(importer, deps)
             combatRoomsByKey = layout.combatRoomsByKey,
             minibossRooms = layout.minibossRooms,
             minibossRoomsByKey = layout.minibossRoomsByKey,
-            bridge = layout.bridge,
             cageRewardPolicy = layout.cageRewardPolicy,
         },
         roles = {
@@ -87,7 +86,7 @@ return function(importer, deps)
                 key = "Bridge",
                 label = "Echo",
                 roomOptions = { layout.bridgeRoom },
-                reward = rewards.fieldsBridge(),
+                reward = rewards.none(),
                 biomeEncounterDepthCost = 0,
                 reserve = true,
             },
