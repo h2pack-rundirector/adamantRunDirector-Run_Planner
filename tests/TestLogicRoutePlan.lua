@@ -464,6 +464,7 @@ function TestRunPlannerLogicRoutePlan.testLogicAttachDefinesCacheAndHooks()
     local hookedSelectFieldsDoorCageCount = false
     local hookedChooseAvailableNHubDoors = false
     local hookedCheckNSubRoomDoorUnavailable = false
+    local hookedChooseEncounter = false
     logic.attach({
         cache = {
             define = function(defs)
@@ -486,6 +487,8 @@ function TestRunPlannerLogicRoutePlan.testLogicAttachDefinesCacheAndHooks()
                     hookedChooseAvailableNHubDoors = true
                 elseif name == "CheckN_SubRoomDoorUnavailable" then
                     hookedCheckNSubRoomDoorUnavailable = true
+                elseif name == "ChooseEncounter" then
+                    hookedChooseEncounter = true
                 end
             end,
         },
@@ -499,4 +502,5 @@ function TestRunPlannerLogicRoutePlan.testLogicAttachDefinesCacheAndHooks()
     lu.assertTrue(hookedSelectFieldsDoorCageCount)
     lu.assertTrue(hookedChooseAvailableNHubDoors)
     lu.assertTrue(hookedCheckNSubRoomDoorUnavailable)
+    lu.assertTrue(hookedChooseEncounter)
 end

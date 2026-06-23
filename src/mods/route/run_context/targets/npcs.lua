@@ -185,6 +185,7 @@ function npcTargets.buildTargets(context, routeKey)
                                 routeOrdinal = rowContext.routeOrdinal,
                                 roomHistoryOrdinal = rowContext.roomHistoryOrdinal,
                                 runDepthCache = rowContext.runDepthCache,
+                                roomKey = row.roomKey,
                                 variantKey = variantKey(variant),
                                 variantLabel = variant.label or variant.key or variant.encounterName,
                                 encounterName = variant.encounterName,
