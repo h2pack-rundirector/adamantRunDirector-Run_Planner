@@ -101,7 +101,7 @@ local function prebossContext()
             },
             {
                 address = "prebossReward",
-                label = "Preboss Reward",
+                label = "Free Reward",
                 kind = "roomStore",
                 rewardStore = "RunProgress",
                 ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
@@ -587,7 +587,7 @@ function TestRunPlannerRewards.testCatalogBuildsCompositePrebossRewardSurface()
     lu.assertEquals(surface.controls[2].rewardAddress, "prebossShop")
     lu.assertEquals(surface.controls[5].alias, "Reward4Key")
     lu.assertEquals(surface.controls[5].key, "rewardType")
-    lu.assertEquals(surface.controls[5].label, "Preboss Reward")
+    lu.assertEquals(surface.controls[5].label, "Free Reward")
     lu.assertEquals(surface.controls[5].rewardAddress, "prebossReward")
     lu.assertEquals(surface.controls[5].values, {
         "",

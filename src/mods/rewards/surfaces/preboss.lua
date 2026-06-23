@@ -119,7 +119,7 @@ local function appendPrebossRewardControls(definitions, offer, controls, godValu
     controls[#controls + 1] = common.dropdown(
         rewardAlias,
         "rewardType",
-        "Preboss Reward",
+        "Free Reward",
         rewardValues,
         rewardLabels,
         {

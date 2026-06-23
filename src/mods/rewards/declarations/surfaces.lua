@@ -117,7 +117,7 @@ function rewards.preboss(shopProfile, rewardStore, opts)
     opts = opts or {}
     local roomOffer = {
         address = "prebossReward",
-        label = "Preboss Reward",
+        label = "Free Reward",
         kind = "roomStore",
         rewardStore = rewardStore,
         rewardAliasStart = 4,

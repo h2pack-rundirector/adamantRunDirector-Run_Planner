@@ -33,7 +33,7 @@ local function prebossRewardOffers()
         },
         {
             address = "prebossReward",
-            label = "Preboss Reward",
+            label = "Free Reward",
             kind = "roomStore",
             rewardStore = "RunProgress",
             ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
