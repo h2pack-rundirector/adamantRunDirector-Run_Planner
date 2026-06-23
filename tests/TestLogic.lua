@@ -117,6 +117,14 @@ local function loadRoomRouting(routePlan, game)
     })
 end
 
+local function loadRewardRouting(routePlan, game)
+    return testImport("mods/logic/reward_routing.lua", nil, {
+        routePlan = routePlan,
+        runState = testImport("mods/logic/run_state.lua"),
+        game = game,
+    })
+end
+
 local function logsContain(logs, text)
     for _, line in ipairs(logs) do
         if line:find(text, 1, true) ~= nil then
@@ -451,6 +459,125 @@ function TestRunPlannerLogic.testRoutePlanCompilesRuntimeExecutionPlan()
     lu.assertEquals(primaryRewardItem(biome.plannedByRowIndex[1]).rewards[2], "ZeusUpgrade")
     lu.assertEquals(primaryRewardItem(biome.plannedByRowIndex[1]).picks[1].value, "ZeusUpgrade")
     lu.assertEquals(biome.plannedByRowIndex[3].features.chaos, true)
+end
+
+function TestRunPlannerLogic.testRewardRoutingLogsPlannedRewardChoice()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local logs = {}
+    local rewardRouting = loadRewardRouting(routePlan, {
+        print = function(text)
+            logs[#logs + 1] = text
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = plannedBiomeSnapshot("F", "fixedLinear", {
+            {
+                rowIndex = 3,
+                routeOrdinal = 2,
+                biomeDepthCache = 1,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "F_Combat01",
+                roleKey = "Combat",
+                optionKey = "F_Combat01",
+                valid = true,
+                rewardKind = "roomStore",
+                rewards = { "Boon", "ZeusUpgrade" },
+                rewardLoot = { "ZeusUpgrade" },
+            },
+        }),
+    })
+    local currentRun = {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+        BiomeDepthCache = 1,
+    }
+    routePlan.refresh(catalog, runtime, currentRun, {
+        StartingBiome = "F",
+    })
+
+    local baseCalled = false
+    local rewardType = rewardRouting.chooseRoomReward(runtime, function(run, room, rewardStoreName, previouslyChosenRewards, args)
+        baseCalled = true
+        lu.assertIs(run, currentRun)
+        lu.assertEquals(room.Name, "F_Combat01")
+        lu.assertEquals(rewardStoreName, "RunProgress")
+        lu.assertEquals(previouslyChosenRewards[1].RewardType, "MaxHealthDrop")
+        lu.assertEquals(args.Marker, "test")
+        return "Boon"
+    end, currentRun, {
+        Name = "F_Combat01",
+        RoomSetName = "F",
+    }, "RunProgress", {
+        {
+            RewardType = "MaxHealthDrop",
+        },
+    }, {
+        Marker = "test",
+    })
+
+    lu.assertTrue(baseCalled)
+    lu.assertEquals(rewardType, "Boon")
+    lu.assertTrue(logsContain(logs, "choose set=F room=F_Combat01"))
+    lu.assertTrue(logsContain(logs, "row=3"))
+    lu.assertTrue(logsContain(logs, "Boon,ZeusUpgrade"))
+    lu.assertTrue(logsContain(logs, "actual=Boon"))
+end
+
+function TestRunPlannerLogic.testRewardRoutingLogsSetupRewardContext()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local logs = {}
+    local rewardRouting = loadRewardRouting(routePlan, {
+        print = function(text)
+            logs[#logs + 1] = text
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = plannedBiomeSnapshot("F", "fixedLinear", {
+            {
+                rowIndex = 3,
+                routeOrdinal = 2,
+                biomeDepthCache = 1,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "F_Combat01",
+                roleKey = "Combat",
+                optionKey = "F_Combat01",
+                valid = true,
+                rewardKind = "roomStore",
+                rewards = { "Boon", "ZeusUpgrade" },
+                rewardLoot = { "ZeusUpgrade" },
+            },
+        }),
+    })
+    local currentRun = {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+        BiomeDepthCache = 1,
+    }
+    local room = {
+        Name = "F_Combat01",
+        RoomSetName = "F",
+        ChosenRewardType = "Boon",
+    }
+    routePlan.refresh(catalog, runtime, currentRun, {
+        StartingBiome = "F",
+    })
+
+    local result = rewardRouting.setupRoomReward(runtime, function()
+        room.ForceLootName = "ZeusUpgrade"
+        return "base-result"
+    end, currentRun, room, {}, {})
+
+    lu.assertEquals(result, "base-result")
+    lu.assertTrue(logsContain(logs, "setup set=F room=F_Combat01"))
+    lu.assertTrue(logsContain(logs, "row=3"))
+    lu.assertTrue(logsContain(logs, "chosen=Boon"))
+    lu.assertTrue(logsContain(logs, "loot=ZeusUpgrade"))
 end
 
 function TestRunPlannerLogic.testExecutionPlanPreservesDisabledNpcRows()

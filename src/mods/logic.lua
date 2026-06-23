@@ -4,6 +4,7 @@ local logic = {}
 local catalog = deps and deps.catalog or nil
 local routePlan = deps and deps.routePlan or nil
 local roomRouting = deps and deps.roomRouting or nil
+local rewardRouting = deps and deps.rewardRouting or nil
 
 function logic.defineCache(moduleRef)
     routePlan.defineCache(moduleRef)
@@ -12,6 +13,7 @@ end
 function logic.registerHooks(moduleRef)
     routePlan.registerHooks(moduleRef, catalog)
     roomRouting.registerHooks(moduleRef, catalog)
+    rewardRouting.registerHooks(moduleRef, catalog)
 end
 
 function logic.attach(moduleRef)
