@@ -4,6 +4,7 @@ local deps = ...
 local data = deps.data
 local rewardSystem = deps.rewards
 local runtime = deps.runtime
+local optionChanges = import("mods/controls/room_option_changes.lua")
 
 local ui = {}
 
@@ -33,8 +34,6 @@ end
 
 local rooms = import("mods/controls/MultiEncounterFixedRoute/views/rooms.lua", nil, {
     data = data,
-    resetEncounterRewardDetails = resetEncounterRewardDetails,
-    resetRewardDetails = resetRewardDetails,
     resetRowDetails = resetRowDetails,
     decorations = deps.decorations,
 })
@@ -67,6 +66,10 @@ function ui.create(fields, instance)
 
     function control:encounterRewardField(encounterRewardRowIndex, rowAlias)
         return fields.EncounterRewards:get(encounterRewardRowIndex, rowAlias)
+    end
+
+    function control:onRoomOptionChanged(rowIndex, previousOptionKey)
+        optionChanges.resetRewardsIfContextChanged(self, resetRewardDetails, rowIndex, previousOptionKey)
     end
 
     function control:resetRow(rowIndex)

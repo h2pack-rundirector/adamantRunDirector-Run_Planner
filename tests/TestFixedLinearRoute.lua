@@ -7,11 +7,25 @@ local loadFixedLinearData = h.loadFixedLinearData
 local hasValue = h.hasValue
 local fakeRows = h.fakeRows
 local routeFields = h.routeFields
+local routeUiFields = h.routeUiFields
+local noOpDraw = h.noOpDraw
 local attachSingleBiomeRouteContext = h.attachSingleBiomeRouteContext
 local valueStates = dofile("src/mods/route/value_states.lua")
 
 -- luacheck: globals TestRunPlannerFixedLinearRoute
 TestRunPlannerFixedLinearRoute = {}
+
+local function drawRoomsWithOptionChange(template, control, instance, nextOptionKey)
+    local draw = noOpDraw()
+    draw.widgets.dropdown = function(field, opts)
+        if hasValue(opts.values or {}, nextOptionKey) then
+            field:write(nextOptionKey)
+            return true
+        end
+        return false
+    end
+    template.views.rooms(draw, control, instance)
+end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     local catalog = loadCatalog()
@@ -244,6 +258,52 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearPrebossRowUsesFixedRoomCh
     lu.assertEquals(roleKey, "Preboss")
     lu.assertEquals(role.label, "Preboss")
     lu.assertTrue(data.validateRow(instance, rows, 12).valid)
+end
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearPreservesRewardsWhenRoomOptionKeepsSurface()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(2, "RoleKey"):write("Combat")
+    fields.Rooms:get(2, "OptionKey"):write("F_Combat02")
+    fields.Rewards:get(2, "Reward1Key"):write("Major")
+    fields.Rewards:get(2, "Reward2Key"):write("MaxHealthDrop")
+    local control = template.createUi(fields, instance)
+
+    drawRoomsWithOptionChange(template, control, instance, "F_Combat03")
+
+    lu.assertEquals(fields.Rooms:read(2, "OptionKey"), "F_Combat03")
+    lu.assertEquals(fields.Rewards:read(2, "Reward1Key"), "Major")
+    lu.assertEquals(fields.Rewards:read(2, "Reward2Key"), "MaxHealthDrop")
+end
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearResetsRewardsWhenRoomOptionChangesSurface()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(2, "RoleKey"):write("Combat")
+    fields.Rooms:get(2, "OptionKey"):write("F_Combat05")
+    fields.Rewards:get(2, "Reward1Key"):write("Major")
+    fields.Rewards:get(2, "Reward2Key"):write("Devotion")
+    fields.Rewards:get(2, "Reward5Key"):write("ZeusUpgrade")
+    fields.Rewards:get(2, "Reward6Key"):write("ApolloUpgrade")
+    local control = template.createUi(fields, instance)
+
+    drawRoomsWithOptionChange(template, control, instance, "F_Combat01")
+
+    lu.assertEquals(fields.Rooms:read(2, "OptionKey"), "F_Combat01")
+    lu.assertNil(fields.Rewards:read(2, "Reward1Key"))
+    lu.assertNil(fields.Rewards:read(2, "Reward2Key"))
+    lu.assertNil(fields.Rewards:read(2, "Reward5Key"))
+    lu.assertNil(fields.Rewards:read(2, "Reward6Key"))
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeBuildsValidatedSnapshot()

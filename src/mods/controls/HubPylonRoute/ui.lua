@@ -5,6 +5,7 @@ local data = deps.data
 local rewardSystem = deps.rewards
 local runtime = deps.runtime
 local sideRoomProbability = deps.sideRoomProbability
+local optionChanges = import("mods/controls/room_option_changes.lua")
 
 local ui = {}
 
@@ -46,8 +47,6 @@ end
 
 local rooms = import("mods/controls/HubPylonRoute/views/rooms.lua", nil, {
     data = data,
-    resetAllSideRoomDetails = resetAllSideRoomDetails,
-    resetRewardDetails = resetRewardDetails,
     resetRowDetails = resetRowDetails,
     decorations = deps.decorations,
 })
@@ -89,6 +88,13 @@ function ui.create(fields, instance)
 
     function control:sideRewardField(sideRowIndex, rowAlias)
         return fields.SideRewards:get(sideRowIndex, rowAlias)
+    end
+
+    function control:onRoomOptionChanged(rowIndex, previousOptionKey)
+        optionChanges.resetRewardsIfContextChanged(self, resetRewardDetails, rowIndex, previousOptionKey)
+        if (previousOptionKey or "") ~= (fields.Rooms:read(rowIndex, "OptionKey") or "") then
+            resetAllSideRoomDetails(fields, instance, rowIndex)
+        end
     end
 
     function control:resetRow(rowIndex)

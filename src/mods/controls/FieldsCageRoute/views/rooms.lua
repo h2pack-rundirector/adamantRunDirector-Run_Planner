@@ -2,7 +2,6 @@
 
 local deps = ...
 local data = deps.data
-local resetRewardDetails = deps.resetRewardDetails
 local resetRowDetails = deps.resetRowDetails
 local decorations = deps.decorations
 
@@ -133,10 +132,11 @@ local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey, co
 
     draw.imgui.SameLine()
     draw.imgui.SetCursorPosX(columnX or OPTION_COLUMN_X)
-    return draw.widgets.dropdown(
+    local changed = draw.widgets.dropdown(
         control:roomField(rowIndex, "OptionKey"),
         optionOpts
     )
+    return changed, storedOptionKey
 end
 
 local function drawCageCountDropdown(draw, control, instance, rowIndex, roleKey)
@@ -169,9 +169,10 @@ local function drawRoomRow(draw, control, instance, rowIndex)
 
     drawRouteRowHeader(imgui, slot)
     if data.isFixedIdentityRow(instance, rowIndex) then
-        if drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey, ROLE_COLUMN_X) then
-            resetRewardDetails(control:fields(), rowIndex)
+        local changed, previousOptionKey = drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey, ROLE_COLUMN_X)
+        if changed then
             control:invalidateReadPass()
+            control:onRoomOptionChanged(rowIndex, previousOptionKey)
         end
     else
         local roleField = control:roomField(rowIndex, "RoleKey")
@@ -182,9 +183,10 @@ local function drawRoomRow(draw, control, instance, rowIndex)
             control:invalidateReadPass()
             currentRoleKey = data.readRoleKey(instance, control:routeRows(), rowIndex)
         end
-        if drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey) then
-            resetRewardDetails(control:fields(), rowIndex)
+        local changed, previousOptionKey = drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey)
+        if changed then
             control:invalidateReadPass()
+            control:onRoomOptionChanged(rowIndex, previousOptionKey)
         end
         if drawCageCountDropdown(draw, control, instance, rowIndex, currentRoleKey) then
             control:invalidateReadPass()
