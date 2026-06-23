@@ -142,6 +142,7 @@ function common.dropdown(alias, key, label, values, labels, opts)
         controlWidth = controlWidth,
         drawOpts = drawOpts,
         sourceIndex = opts.sourceIndex,
+        rewardAddress = opts.rewardAddress,
         visibleWhen = opts.visibleWhen,
     }
     if label == "Reward" then

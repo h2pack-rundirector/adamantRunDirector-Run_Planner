@@ -33,8 +33,8 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageStorageMatchesFieldsRouteRo
     lu.assertEquals(instance.routeSlots[2].label, "Pick 1")
     lu.assertEquals(instance.routeSlots[5].routeOrdinal, 4)
     lu.assertEquals(instance.routeSlots[5].label, "Pick 4")
-    lu.assertEquals(instance.routeSlots[6].kind, "fixedAfterRoute")
-    lu.assertEquals(instance.routeSlots[6].label, "Preboss Shop")
+    lu.assertEquals(instance.routeSlots[6].kind, "preboss")
+    lu.assertEquals(instance.routeSlots[6].label, "Preboss")
     lu.assertEquals(instance.routeSlots[6].roomKey, "H_PreBoss01")
     lu.assertEquals(instance.routeSlots[6].roleKey, "Preboss")
     lu.assertEquals(instance.roleValues, {
@@ -173,11 +173,13 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnaps
     lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardKind, "boonSource")
     lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardPicks[1].value, "ZeusUpgrade")
 
-    lu.assertEquals(snapshot.rows[6].slotKind, "fixedAfterRoute")
-    lu.assertEquals(snapshot.rows[6].slotLabel, "Preboss Shop")
+    lu.assertEquals(snapshot.rows[6].slotKind, "preboss")
+    lu.assertEquals(snapshot.rows[6].slotLabel, "Preboss")
     lu.assertEquals(snapshot.rows[6].roomKey, "H_PreBoss01")
     lu.assertEquals(snapshot.rows[6].roleKey, "Preboss")
     lu.assertEquals(primaryRewardItem(snapshot.rows[6]).rewardKind, "shop")
+    lu.assertEquals(snapshot.rows[6].rewardItems[2].address, "prebossReward")
+    lu.assertEquals(snapshot.rows[6].rewardItems[2].rewardKind, "roomStore")
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeInvalidatesCageCountAboveMapCapacity()

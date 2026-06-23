@@ -33,6 +33,54 @@ local function rewardCandidateControl(kind, values, alias)
     }
 end
 
+local function prebossRewardOffers()
+    local choiceGroup = {
+        key = "prebossChoice",
+        effectTiming = "sameChoiceUnion",
+    }
+    return {
+        {
+            address = "prebossShop",
+            label = "Shop",
+            kind = "shop",
+            shopProfile = "WorldShop",
+            rewardAliasStart = 1,
+            rewardAliasCount = 3,
+            rewardGeneration = {
+                effectTiming = "afterNextRow",
+            },
+            rewardChoiceGroup = choiceGroup,
+        },
+        {
+            address = "prebossReward",
+            label = "Preboss Reward",
+            kind = "roomStore",
+            rewardStore = "RunProgress",
+            ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
+            rewardAliasStart = 4,
+            rewardAliasCount = 2,
+            rewardChoiceGroup = choiceGroup,
+        },
+    }
+end
+
+local function prebossRewardRow(rowIndex, rewards)
+    return {
+        rowIndex = rowIndex,
+        routeOrdinal = rowIndex,
+        slotLabel = "Preboss",
+        roleKey = "Preboss",
+        valid = true,
+        rewardKind = "preboss",
+        rewardOffers = prebossRewardOffers(),
+        rewards = rewards,
+        rewardPicks = {},
+        biomeEncounterDepthCost = 0,
+        biomeEncounterDepthCostMin = 0,
+        biomeEncounterDepthCostMax = 0,
+    }
+end
+
 function TestRunPlannerRewardPlanning.testRewardContextStoresCounterOccurrenceAndPendingProvenance()
     local rewardContext = testImport("mods/route/reward_planning/context.lua")
     local ctx = rewardContext.create()
@@ -170,6 +218,97 @@ function TestRunPlannerRewardPlanning.testRewardItemsNormalizeRowRewardMetadata(
     lu.assertIs(rewardItems.collect(row, scratch), scratch)
     lu.assertEquals(#scratch, 3)
     lu.assertEquals(scratch[3].address, "encounter:3")
+end
+
+function TestRunPlannerRewardPlanning.testRewardItemsSplitCompositePrebossRewards()
+    local rewardItems = testImport("mods/route/reward_planning/items.lua")
+    local row = {
+        rowIndex = 12,
+        routeOrdinal = 11,
+        slotLabel = "Preboss",
+        rewardKind = "preboss",
+        rewardOffers = prebossRewardOffers(),
+        rewards = {
+            "RandomLoot",
+            "ArmorBoost",
+            "SpellDrop",
+            "Boon",
+            "ZeusUpgrade",
+        },
+        rewardLoot = {
+            "DemeterUpgrade",
+        },
+        rewardPicks = {
+            { key = "Boon", kind = "shopOption", alias = "Reward1Key", value = "RandomLoot" },
+            { key = "BoonLoot", kind = "boonSource", alias = "Reward1LootKey", value = "DemeterUpgrade" },
+            { key = "rewardType", kind = "rewardType", alias = "Reward4Key", value = "Boon" },
+            { key = "boonSource", kind = "boonSource", alias = "Reward5Key", value = "ZeusUpgrade" },
+        },
+    }
+
+    rewardItems.attach(row)
+
+    lu.assertEquals(#row.rewardItems, 2)
+    lu.assertEquals(row.rewardItems[1].address, "prebossShop")
+    lu.assertEquals(row.rewardItems[1].rewardKind, "shop")
+    lu.assertEquals(row.rewardItems[1].rewards[1], "RandomLoot")
+    lu.assertEquals(row.rewardItems[1].rewardLoot[1], "DemeterUpgrade")
+    lu.assertEquals(#row.rewardItems[1].rewardPicks, 2)
+    lu.assertEquals(row.rewardItems[1].rewardChoiceGroup, {
+        key = "prebossChoice",
+        effectTiming = "sameChoiceUnion",
+    })
+    lu.assertEquals(row.rewardItems[2].address, "prebossReward")
+    lu.assertEquals(row.rewardItems[2].rewardKind, "roomStore")
+    lu.assertEquals(row.rewardItems[2].rewards, {
+        "Boon",
+        "ZeusUpgrade",
+    })
+    lu.assertEquals(row.rewardItems[2].rewardAliasOffset, 3)
+    lu.assertEquals(row.rewardItems[2].rewardStore, "RunProgress")
+    lu.assertEquals(#row.rewardItems[2].rewardPicks, 2)
+    lu.assertEquals(row.rewardItems[2].rewardChoiceGroup, {
+        key = "prebossChoice",
+        effectTiming = "sameChoiceUnion",
+    })
+end
+
+function TestRunPlannerRewardPlanning.testPrebossRewardMarkersUseShiftedAliases()
+    local rewardItems = testImport("mods/route/reward_planning/items.lua")
+    local semantics = testImport("mods/route/reward_planning/semantics.lua")
+    local row = {
+        rowIndex = 12,
+        routeOrdinal = 11,
+        slotLabel = "Preboss",
+        rewardKind = "preboss",
+        rewardOffers = prebossRewardOffers(),
+        rewards = {
+            "RandomLoot",
+            "ArmorBoost",
+            "SpellDrop",
+            "Boon",
+            "ZeusUpgrade",
+        },
+        rewardPicks = {
+            { key = "rewardType", kind = "rewardType", alias = "Reward4Key", value = "Boon" },
+            { key = "boonSource", kind = "boonSource", alias = "Reward5Key", value = "ZeusUpgrade" },
+        },
+    }
+
+    rewardItems.attach(row)
+    local events = semantics.eventsForItem(row.rewardItems[2], row, {})
+    local targets = semantics.valueTargetsForEvent(events[1], {})
+
+    lu.assertEquals(targets[1], {
+        address = "prebossReward",
+        controlAlias = "Reward4Key",
+        value = "Boon",
+    })
+    lu.assertEquals(targets[2], {
+        address = "prebossReward",
+        controlAlias = "Reward5Key",
+        value = "ZeusUpgrade",
+    })
 end
 
 function TestRunPlannerRewardPlanning.testRouteSnapshotsTreatRewardsAsVanillaWhenRewardsAreNotConfigured()
@@ -509,6 +648,47 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesTalentRewardsBe
     lu.assertEquals(decision.address, "row")
     lu.assertEquals(decision.selectedEvents[1].rewardType, "TalentDrop")
     lu.assertEquals(decision.selectedInvalid.code, "talent_requires_spell")
+end
+
+function TestRunPlannerRewardPlanning.testPrebossSiblingRewardsApplyDedupedUnionDownstream()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G", "H" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            prebossRewardRow(11, {
+                nil,
+                "WeaponUpgradeDrop",
+                nil,
+                "WeaponUpgrade",
+            }),
+        }),
+        RouteG = fakeRouteControlSnapshot("RouteG", {}),
+        RouteH = fakeRouteControlSnapshot("RouteH", {
+            routeRewardRow(1, "WeaponUpgrade", {
+                slotLabel = "Depth 1",
+            }),
+            routeRewardRow(2, "WeaponUpgrade", {
+                slotLabel = "Depth 2",
+            }),
+        }),
+    }, {
+        biomes = {
+            F = { label = "Erebus" },
+            G = { label = "Oceanus" },
+            H = { label = "Fields" },
+        },
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertNil(routeContext:rewardRowValidation("Underworld", "F", 11))
+    lu.assertNil(routeContext:rewardRowValidation("Underworld", "H", 1))
+    lu.assertEquals(routeContext:rewardRowValidation("Underworld", "H", 2).code, "weapon_upgrade_run_limit")
+    lu.assertEquals(overview.invalidRows[1].biomeKey, "H")
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 2)
 end
 
 function TestRunPlannerRewardPlanning.testRouteContextMarksInvalidRewardCandidates()

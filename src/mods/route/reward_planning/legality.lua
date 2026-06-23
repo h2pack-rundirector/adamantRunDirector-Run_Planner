@@ -47,6 +47,12 @@ local function clearList(list)
     end
 end
 
+local function clearMap(map)
+    for key in pairs(map) do
+        map[key] = nil
+    end
+end
+
 local function newResult()
     return {
         invalidRows = {},
@@ -560,17 +566,40 @@ local function eventInvalid(rewardCtx, ctx, event)
     return nil
 end
 
-local function applyEventEffects(rewardCtx, ctx, event)
+local function countDedupeKey(count, ctx)
+    local scope = count.scope or "route"
+    local biomeKey = scope == "biome" and ctx.biomeKey or ""
+    return tostring(scope) .. ":" .. tostring(count.key) .. ":" .. tostring(biomeKey)
+end
+
+local function applyEventEffectsWithDedupe(rewardCtx, ctx, event, seenCounts, seenOccurrences)
     local rules = compiledRulesByTarget[event.rewardType]
     if rules ~= nil then
         for _, rule in ipairs(rules) do
             if ruleApplies(rule, event) then
-                rewardContext.applyCounts(rewardCtx, rule.countsAs, ctx, event)
+                for _, count in ipairs(rule.countsAs or EMPTY_LIST) do
+                    local dedupeKey = countDedupeKey(count, ctx)
+                    if seenCounts == nil or not seenCounts[dedupeKey] then
+                        rewardContext.applyCount(rewardCtx, count, ctx, event)
+                        if seenCounts ~= nil then
+                            seenCounts[dedupeKey] = true
+                        end
+                    end
+                end
             end
         end
     end
     rewardContext.storeEventGodLoot(rewardCtx, event)
-    rewardContext.storeRewardOccurrence(rewardCtx, ctx, event)
+    if seenOccurrences == nil or not seenOccurrences[event.rewardType] then
+        rewardContext.storeRewardOccurrence(rewardCtx, ctx, event)
+        if seenOccurrences ~= nil then
+            seenOccurrences[event.rewardType] = true
+        end
+    end
+end
+
+local function applyEventEffects(rewardCtx, ctx, event)
+    applyEventEffectsWithDedupe(rewardCtx, ctx, event)
 end
 
 local function validateBatch(context, result, seenInvalids, rewardCtx, ctx, batch)
@@ -590,6 +619,38 @@ end
 local function applyBatchEffects(rewardCtx, ctx, batch)
     for index = batch.firstEventIndex, batch.lastEventIndex do
         applyEventEffects(rewardCtx, ctx, batch.events[index])
+    end
+end
+
+local function choiceGroupKey(batch)
+    local group = batch and batch.item and batch.item.rewardChoiceGroup or nil
+    if group == nil or group.effectTiming ~= "sameChoiceUnion" then
+        return nil
+    end
+    return group.key
+end
+
+local function validateChoiceGroup(context, result, seenInvalids, rewardCtx, ctx, batches, groupKey)
+    for _, batch in ipairs(batches) do
+        if choiceGroupKey(batch) == groupKey then
+            local invalid = validateBatch(context, result, seenInvalids, rewardCtx, ctx, batch)
+            if invalid ~= nil then
+                return invalid
+            end
+        end
+    end
+    return nil
+end
+
+local function applyChoiceGroupUnionEffects(rewardCtx, ctx, batches, groupKey, seenCounts, seenOccurrences)
+    clearMap(seenCounts)
+    clearMap(seenOccurrences)
+    for _, batch in ipairs(batches) do
+        if choiceGroupKey(batch) == groupKey then
+            for index = batch.firstEventIndex, batch.lastEventIndex do
+                applyEventEffectsWithDedupe(rewardCtx, ctx, batch.events[index], seenCounts, seenOccurrences)
+            end
+        end
     end
 end
 
@@ -671,6 +732,9 @@ local function ensureLegalityScratch(scratch)
     scratch = scratch or {}
     scratch.seenInvalids = scratch.seenInvalids or {}
     scratch.groupItems = scratch.groupItems or {}
+    scratch.choiceGroups = scratch.choiceGroups or {}
+    scratch.choiceGroupSeenCounts = scratch.choiceGroupSeenCounts or {}
+    scratch.choiceGroupSeenOccurrences = scratch.choiceGroupSeenOccurrences or {}
     return scratch
 end
 
@@ -714,14 +778,35 @@ function rewardLegality.evaluateRow(context, result, rewardCtx, ctx, row, scratc
     local batches = scratch.batches or {}
     local events = scratch.events or {}
     local rewardItemScratch = scratch.rewardItems or {}
+    local processedChoiceGroups = scratch.choiceGroups
     scratch.batches = batches
     scratch.events = events
     scratch.rewardItems = rewardItemScratch
+    clearMap(processedChoiceGroups)
 
     collectRewardBatches(row, batches, rewardItemScratch, events)
     for _, batch in ipairs(batches) do
+        local choiceKey = choiceGroupKey(batch)
         local group = batch.item and batch.item.rewardRowGroup or nil
-        if group ~= nil and group.key ~= nil then
+        local handledChoiceGroup = false
+        if choiceKey ~= nil then
+            handledChoiceGroup = true
+            if not processedChoiceGroups[choiceKey] then
+                local invalid = validateChoiceGroup(context, result, scratch.seenInvalids, rewardCtx, ctx, batches, choiceKey)
+                if invalid ~= nil then
+                    return invalid
+                end
+                applyChoiceGroupUnionEffects(
+                    rewardCtx,
+                    ctx,
+                    batches,
+                    choiceKey,
+                    scratch.choiceGroupSeenCounts,
+                    scratch.choiceGroupSeenOccurrences
+                )
+                processedChoiceGroups[choiceKey] = true
+            end
+        elseif group ~= nil and group.key ~= nil then
             rewardContext.beginRewardRowGroup(rewardCtx, group)
         elseif rewardContext.activeRewardRowGroupKey(rewardCtx) ~= nil then
             stageBatchAfterRewardRowGroup(rewardCtx, ctx, batch)
@@ -731,20 +816,22 @@ function rewardLegality.evaluateRow(context, result, rewardCtx, ctx, row, scratc
                 return invalid
             end
         end
-        if group ~= nil and group.key ~= nil then
-            local invalid = validateBatch(context, result, scratch.seenInvalids, rewardCtx, ctx, batch)
-            if invalid ~= nil then
-                return invalid
-            end
-            for index = batch.firstEventIndex, batch.lastEventIndex do
-                rewardContext.storeRewardRowGroupOccurrence(rewardCtx, ctx, batch.events[index])
-                rewardContext.stageRewardRowGroupEvent(rewardCtx, ctx, batch.events[index])
-            end
-        elseif rewardContext.activeRewardRowGroupKey(rewardCtx) == nil then
-            if batch.effectTiming == "afterNextRow" then
-                stagePendingBatch(rewardCtx, ctx, batch)
-            else
-                applyBatchEffects(rewardCtx, ctx, batch)
+        if not handledChoiceGroup then
+            if group ~= nil and group.key ~= nil then
+                local invalid = validateBatch(context, result, scratch.seenInvalids, rewardCtx, ctx, batch)
+                if invalid ~= nil then
+                    return invalid
+                end
+                for index = batch.firstEventIndex, batch.lastEventIndex do
+                    rewardContext.storeRewardRowGroupOccurrence(rewardCtx, ctx, batch.events[index])
+                    rewardContext.stageRewardRowGroupEvent(rewardCtx, ctx, batch.events[index])
+                end
+            elseif rewardContext.activeRewardRowGroupKey(rewardCtx) == nil then
+                if batch.effectTiming == "afterNextRow" then
+                    stagePendingBatch(rewardCtx, ctx, batch)
+                else
+                    applyBatchEffects(rewardCtx, ctx, batch)
+                end
             end
         end
     end

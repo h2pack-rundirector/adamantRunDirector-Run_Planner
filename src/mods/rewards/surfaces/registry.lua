@@ -21,6 +21,10 @@ local builders = {
         constraints = constraints,
     }),
     majorMinor = majorMinor,
+    preboss = import("mods/rewards/surfaces/preboss.lua", nil, {
+        common = common,
+        constraints = constraints,
+    }),
     roomStore = roomStore,
     shop = import("mods/rewards/surfaces/shop.lua", nil, {
         common = common,

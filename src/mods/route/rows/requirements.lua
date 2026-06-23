@@ -147,9 +147,6 @@ function requirements.prepareSlots(slots)
         if slot.role ~= nil then
             requirements.prepareRole(slot.role)
         end
-        for _, branch in ipairs(slot.branches or EMPTY_LIST) do
-            requirements.prepareContext(branch.reward)
-        end
     end
 end
 

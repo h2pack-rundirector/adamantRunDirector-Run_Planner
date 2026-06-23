@@ -126,6 +126,40 @@ local function shopReward(shopProfile, opts)
     return reward
 end
 
+local function prebossReward(shopProfile)
+    local choiceGroup = {
+        key = "prebossChoice",
+        effectTiming = "sameChoiceUnion",
+    }
+    return {
+        kind = "preboss",
+        offers = {
+            {
+                address = "prebossShop",
+                label = "Shop",
+                kind = "shop",
+                shopProfile = shopProfile,
+                rewardAliasStart = 1,
+                rewardAliasCount = 3,
+                rewardGeneration = {
+                    effectTiming = "afterNextRow",
+                },
+                rewardChoiceGroup = choiceGroup,
+            },
+            {
+                address = "prebossReward",
+                label = "Preboss Reward",
+                kind = "roomStore",
+                rewardStore = "RunProgress",
+                ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
+                rewardAliasStart = 4,
+                rewardAliasCount = 2,
+                rewardChoiceGroup = choiceGroup,
+            },
+        },
+    }
+end
+
 local function fieldsCagesReward(rewardStore, opts)
     opts = opts or {}
     local reward = {
@@ -438,7 +472,6 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
         Q_MiniBoss05 = 1,
     })
 
-    lu.assertNil(biomes.lookup.F.slotLayout.special[11].branches[1].biomeEncounterDepthCost)
     lu.assertEquals(biomes.lookup.F.slotLayout.special[11].biomeEncounterDepthCost, 0)
 
     local thessalyPolicy = biomes.lookup.O.combatEncounterPolicy.countControl.options
@@ -555,12 +588,9 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
     local fPreboss = biomes.lookup.F.slotLayout.special[11]
     lu.assertEquals(fPreboss.roomKey, "F_PreBoss01")
     lu.assertEquals(fPreboss.biomeDepthCache, 10)
-    lu.assertEquals(fPreboss.branches[1].key, "Shop")
-    lu.assertEquals(fPreboss.branches[1].label, "Preboss Shop")
-    lu.assertEquals(fPreboss.branches[1].reward, shopReward("WorldShop"))
-    lu.assertEquals(fPreboss.branches[2].key, "MajorReward")
-    lu.assertEquals(fPreboss.branches[2].label, "Preboss Room")
-    lu.assertEquals(fPreboss.branches[2].reward, roomStoreReward("PreBossRunProgress"))
+    lu.assertEquals(fPreboss.key, "Preboss")
+    lu.assertEquals(fPreboss.label, "Preboss")
+    lu.assertEquals(fPreboss.reward, prebossReward("WorldShop"))
 
     local gIntro = biomes.lookup.G.slotLayout.entry
     lu.assertEquals(gIntro.kind, "intro")
@@ -570,15 +600,16 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
 
     local gPreboss = biomes.lookup.G.slotLayout.special[8]
     lu.assertEquals(gPreboss.roomKey, "G_PreBoss01")
-    lu.assertEquals(gPreboss.branches[1].label, "Preboss Shop")
-    lu.assertEquals(gPreboss.branches[2].label, "Preboss Room")
-    lu.assertEquals(gPreboss.branches[1].reward, shopReward("WorldShop"))
-    lu.assertEquals(gPreboss.branches[2].reward, roomStoreReward("PreBossRunProgress"))
+    lu.assertEquals(gPreboss.label, "Preboss")
+    lu.assertEquals(gPreboss.reward, prebossReward("WorldShop"))
 
     lu.assertEquals(biomes.lookup.H.slotLayout.fixedBeforeRoute[1].roomKey, "H_Intro")
     lu.assertEquals(biomes.lookup.H.slotLayout.fixedBeforeRoute[1].reward, noneReward())
-    lu.assertEquals(biomes.lookup.H.slotLayout.fixedAfterRoute[1].roomKey, "H_PreBoss01")
-    lu.assertEquals(biomes.lookup.H.slotLayout.fixedAfterRoute[1].reward, shopReward("WorldShop"))
+    local hPreboss = biomes.lookup.H.slotLayout.fixedAfterRoute[1]
+    lu.assertEquals(hPreboss.kind, "preboss")
+    lu.assertEquals(hPreboss.roomKey, "H_PreBoss01")
+    lu.assertEquals(hPreboss.label, "Preboss")
+    lu.assertEquals(hPreboss.reward, prebossReward("WorldShop"))
 
     local oIntro = biomes.lookup.O.slotLayout.entry
     lu.assertEquals(oIntro.kind, "intro")
@@ -594,10 +625,8 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
 
     local pPreboss = biomes.lookup.P.slotLayout.special[9]
     lu.assertEquals(pPreboss.roomKey, "P_PreBoss01")
-    lu.assertEquals(pPreboss.branches[1].label, "Preboss Shop")
-    lu.assertEquals(pPreboss.branches[2].label, "Preboss Room")
-    lu.assertEquals(pPreboss.branches[1].reward, shopReward("WorldShop"))
-    lu.assertEquals(pPreboss.branches[2].reward, roomStoreReward("PreBossRunProgress"))
+    lu.assertEquals(pPreboss.label, "Preboss")
+    lu.assertEquals(pPreboss.reward, prebossReward("WorldShop"))
 
     local qIntro = biomes.lookup.Q.slotLayout.entry
     lu.assertEquals(qIntro.kind, "intro")
@@ -607,17 +636,15 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
 
     local qPreboss = biomes.lookup.Q.slotLayout.special[7]
     lu.assertEquals(qPreboss.roomKey, "Q_PreBoss01")
-    lu.assertEquals(#qPreboss.branches, 1)
-    lu.assertEquals(qPreboss.branches[1].key, "Shop")
-    lu.assertEquals(qPreboss.branches[1].label, "Preboss Shop")
-    lu.assertEquals(qPreboss.branches[1].reward, shopReward("Q_WorldShop"))
+    lu.assertEquals(qPreboss.key, "Preboss")
+    lu.assertEquals(qPreboss.label, "Preboss Shop")
+    lu.assertEquals(qPreboss.reward, shopReward("Q_WorldShop"))
 
     local oPreboss = biomes.lookup.O.slotLayout.special[7]
     lu.assertEquals(oPreboss.roomKey, "O_PreBoss01")
-    lu.assertEquals(#oPreboss.branches, 1)
-    lu.assertEquals(oPreboss.branches[1].key, "Shop")
-    lu.assertEquals(oPreboss.branches[1].label, "Preboss Shop")
-    lu.assertEquals(oPreboss.branches[1].reward, shopReward("WorldShop"))
+    lu.assertEquals(oPreboss.key, "Preboss")
+    lu.assertEquals(oPreboss.label, "Preboss Shop")
+    lu.assertEquals(oPreboss.reward, shopReward("WorldShop"))
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()

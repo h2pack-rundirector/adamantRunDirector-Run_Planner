@@ -46,21 +46,14 @@ return function(importer, deps)
                 },
                 [11] = {
                     kind = "preboss",
+                    key = "Preboss",
+                    label = "Preboss",
                     roomKey = layout.prebossRoom.key,
                     biomeDepthCache = 10,
                     biomeEncounterDepthCost = 0,
-                    branches = {
-                        {
-                            key = "Shop",
-                            label = "Preboss Shop",
-                            reward = rewards.shop("WorldShop"),
-                        },
-                        {
-                            key = "MajorReward",
-                            label = "Preboss Room",
-                            reward = rewards.roomStore("PreBossRunProgress"),
-                        },
-                    },
+                    reward = rewards.preboss("WorldShop", "RunProgress", {
+                        ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
+                    }),
                 },
             },
         },

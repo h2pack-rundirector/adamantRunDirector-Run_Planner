@@ -56,9 +56,6 @@ local function prewarmRewardSurfaces(instance)
     end
     for _, slot in ipairs(instance.routeSlots or {}) do
         prewarmRewardSurface(slot.role)
-        for _, branch in ipairs(slot.branches or {}) do
-            prewarmRewardSurface(branch)
-        end
     end
 end
 
@@ -229,7 +226,7 @@ function runtime.create(fields, instance)
             slotKind = slot.kind or "biomeRow",
             isBiomeEntry = slot.isBiomeEntry == true,
             roomKey = selectedRoomKey(slot, option),
-            branchKey = slot.branchKey,
+            roomOfferCount = slot.roomOfferCount,
             slotLabel = slot.label,
             roomHistoryCost = context.roomHistoryCost,
             roomHistoryIdentity = slot.roomHistoryIdentity,
@@ -245,6 +242,8 @@ function runtime.create(fields, instance)
             rewards = rewardsConfigured and rewardSystem.readRewards(fields.Rewards, rowIndex) or EMPTY_LIST,
             rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
             rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
+            rewardStore = surface and surface.rewardStore or nil,
+            rewardOffers = surface and surface.offers or nil,
             rewardGeneration = surface and surface.context and surface.context.rewardGeneration or nil,
             rewardConstraints = surface and surface.rewardConstraints or nil,
             rewardPicks = rewardsConfigured

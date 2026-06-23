@@ -435,7 +435,7 @@ local function devotionSourcesForItem(item, rewardType)
     return nil, nil
 end
 
-local function rewardStoreForItem(item, rewardType)
+local function rewardStoreForItem(item, _rewardType)
     if item.kind == "majorMinor" then
         local branch = rewardValue(item, 1)
         if branch == "Major" then

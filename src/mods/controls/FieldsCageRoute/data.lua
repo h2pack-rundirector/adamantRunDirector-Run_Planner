@@ -56,6 +56,7 @@ local function buildFixedSlot(instance, entry, section)
         isBiomeEntry = entry.isBiomeEntry == true,
         label = entry.label or entry.key,
         roomKey = entry.roomKey,
+        roomOfferCount = entry.roomOfferCount or common.rewardOfferCount(entry.reward),
         roleKey = role.key,
         role = role,
         locked = entry.locked,

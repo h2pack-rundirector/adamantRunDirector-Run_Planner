@@ -53,6 +53,8 @@ local function compactRewardItem(item)
         rewardStore = item.rewardStore,
         rewardSourceCount = item.rewardSourceCount,
         valid = item.valid,
+        rewardChoiceGroup = item.rewardChoiceGroup,
+        rewardAliasOffset = item.rewardAliasOffset,
     }
 end
 
@@ -127,8 +129,8 @@ local function compactRoomRow(row)
         slotKind = row.slotKind,
         isBiomeEntry = row.isBiomeEntry == true,
         roomKey = row.roomKey,
+        roomOfferCount = row.roomOfferCount,
         hubDoorId = row.hubDoorId,
-        branchKey = row.branchKey,
         roleKey = row.roleKey,
         optionKey = row.optionKey,
         variantKey = row.variantKey,
@@ -153,10 +155,7 @@ local function biomeDepthCacheBucket(biome, biomeDepthCache)
             rows = {},
             byRowIndex = {},
             byRoomKey = {},
-            byBranchKey = {},
-            branchKeys = {},
             primary = nil,
-            branchGroup = false,
         }
         biome.plannedByBiomeDepthCache[biomeDepthCache] = bucket
     end
@@ -171,10 +170,7 @@ local function routableBiomeDepthCacheBucket(biome, biomeDepthCache)
             rows = {},
             byRowIndex = {},
             byRoomKey = {},
-            byBranchKey = {},
-            branchKeys = {},
             primary = nil,
-            branchGroup = false,
         }
         biome.plannedRoutableByBiomeDepthCache[biomeDepthCache] = bucket
     end
@@ -188,8 +184,6 @@ local function roomBucket(biome, roomKey)
             roomKey = roomKey,
             rows = {},
             byRowIndex = {},
-            byBranchKey = {},
-            branchKeys = {},
             primary = nil,
         }
         biome.plannedByRoomKey[roomKey] = bucket
@@ -205,24 +199,11 @@ local function routeOrdinalRoomBucket(bucket, roomKey)
             roomKey = roomKey,
             rows = {},
             byRowIndex = {},
-            byBranchKey = {},
-            branchKeys = {},
             primary = nil,
         }
         bucket.byRoomKey[roomKey] = room
     end
     return room
-end
-
-local function addBranch(bucket, planned)
-    local branchKey = planned.branchKey
-    if branchKey == nil or branchKey == "" then
-        return
-    end
-    if bucket.byBranchKey[branchKey] == nil then
-        bucket.branchKeys[#bucket.branchKeys + 1] = branchKey
-    end
-    bucket.byBranchKey[branchKey] = planned
 end
 
 local function addPlannedToBucket(bucket, planned)
@@ -231,10 +212,6 @@ local function addPlannedToBucket(bucket, planned)
     end
     bucket.rows[#bucket.rows + 1] = planned
     bucket.byRowIndex[planned.rowIndex] = planned
-    addBranch(bucket, planned)
-    if #bucket.rows > 1 or planned.branchKey ~= nil then
-        bucket.branchGroup = true
-    end
 end
 
 local function reservationBucket(globalReservations, roomKey)
@@ -259,7 +236,6 @@ local function addGlobalReservation(globalReservations, biomeKey, planned)
         biomeDepthCache = planned.biomeDepthCache,
         roomKey = planned.roomKey,
         slotKind = planned.slotKind,
-        branchKey = planned.branchKey,
         roleKey = planned.roleKey,
         optionKey = planned.optionKey,
     }

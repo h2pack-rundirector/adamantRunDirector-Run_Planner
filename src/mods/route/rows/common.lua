@@ -111,6 +111,14 @@ function common.rewardContext(role, option)
     return role and role.reward or nil
 end
 
+function common.rewardOfferCount(reward)
+    local count = #(reward and reward.offers or {})
+    if count > 0 then
+        return count
+    end
+    return nil
+end
+
 function common.isOnlyEligible(values, expected)
     if values == nil or values[1] == nil then
         return false

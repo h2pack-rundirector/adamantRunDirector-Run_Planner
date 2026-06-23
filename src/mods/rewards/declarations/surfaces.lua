@@ -7,6 +7,13 @@ local DEFAULT_SHOP_REWARD_GENERATION = {
     effectTiming = "afterNextRow",
 }
 
+local function prebossChoiceGroup()
+    return {
+        key = "prebossChoice",
+        effectTiming = "sameChoiceUnion",
+    }
+end
+
 local function copyList(items)
     local copy = {}
     for index, item in ipairs(items or {}) do
@@ -104,6 +111,42 @@ function rewards.shop(shopProfile, opts)
     }
     copyRewardGeneration(context, opts.rewardGeneration or DEFAULT_SHOP_REWARD_GENERATION)
     return context
+end
+
+function rewards.preboss(shopProfile, rewardStore, opts)
+    opts = opts or {}
+    local roomOffer = {
+        address = "prebossReward",
+        label = "Preboss Reward",
+        kind = "roomStore",
+        rewardStore = rewardStore,
+        rewardAliasStart = 4,
+        rewardAliasCount = 2,
+        rewardChoiceGroup = prebossChoiceGroup(),
+    }
+    if opts.eligibleRewardTypes ~= nil then
+        roomOffer.eligibleRewardTypes = copyList(opts.eligibleRewardTypes)
+    end
+    if opts.ineligibleRewardTypes ~= nil then
+        roomOffer.ineligibleRewardTypes = copyList(opts.ineligibleRewardTypes)
+    end
+
+    return {
+        kind = "preboss",
+        offers = {
+            {
+                address = "prebossShop",
+                label = "Shop",
+                kind = "shop",
+                shopProfile = shopProfile,
+                rewardAliasStart = 1,
+                rewardAliasCount = 3,
+                rewardGeneration = DEFAULT_SHOP_REWARD_GENERATION,
+                rewardChoiceGroup = prebossChoiceGroup(),
+            },
+            roomOffer,
+        },
+    }
 end
 
 function rewards.rewardRowGroup(groupKey, opts)

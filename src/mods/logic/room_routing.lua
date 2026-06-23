@@ -121,7 +121,6 @@ local function rowSummary(biomeKey, row)
         .. " room=" .. fieldValue(row.roomKey)
         .. " role=" .. fieldValue(row.roleKey)
         .. " option=" .. fieldValue(row.optionKey)
-        .. " branch=" .. fieldValue(row.branchKey)
         .. " variant=" .. fieldValue(row.variantKey)
         .. " biomeDepthCache=" .. fieldValue(row.biomeDepthCache)
         .. " biomeDepthCacheCost=" .. fieldValue(row.biomeDepthCacheCost)
@@ -207,15 +206,15 @@ local function isFixedDepthRoomPlan(biomeKey, biomePlan)
         and FIXED_DEPTH_ROOM_ADAPTERS[biomePlan.adapter] == true
 end
 
-local function plannedRoomLimit(bucket, roomKey)
+local function plannedRoomLimit(bucket)
     if bucket == nil then
         return 0
     end
-    local roomBucket = bucket.byRoomKey and bucket.byRoomKey[roomKey] or nil
-    if roomBucket ~= nil and bucket.branchGroup then
-        return #roomBucket.rows
+    local count = math.floor(tonumber(bucket.primary and bucket.primary.roomOfferCount) or 1)
+    if count < 1 then
+        return 1
     end
-    return 1
+    return count
 end
 
 local function offeredRoomName(door)

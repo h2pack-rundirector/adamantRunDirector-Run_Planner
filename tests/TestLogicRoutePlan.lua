@@ -13,6 +13,37 @@ local loadRoutePlan = harness.loadRoutePlan
 local invalidBiomeSnapshot = harness.invalidBiomeSnapshot
 local runtimeForCatalog = harness.runtimeForCatalog
 
+local function prebossRewardOffers()
+    local choiceGroup = {
+        key = "prebossChoice",
+        effectTiming = "sameChoiceUnion",
+    }
+    return {
+        {
+            address = "prebossShop",
+            label = "Shop",
+            kind = "shop",
+            shopProfile = "WorldShop",
+            rewardAliasStart = 1,
+            rewardAliasCount = 3,
+            rewardGeneration = {
+                effectTiming = "afterNextRow",
+            },
+            rewardChoiceGroup = choiceGroup,
+        },
+        {
+            address = "prebossReward",
+            label = "Preboss Reward",
+            kind = "roomStore",
+            rewardStore = "RunProgress",
+            ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
+            rewardAliasStart = 4,
+            rewardAliasCount = 2,
+            rewardChoiceGroup = choiceGroup,
+        },
+    }
+end
+
 function TestRunPlannerLogicRoutePlan.testRoutePlanSelectsUnderworldForErebusStart()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
@@ -256,7 +287,7 @@ function TestRunPlannerLogicRoutePlan.testExecutionPlanPreservesDisabledNpcRows(
     lu.assertNil(plan.npcs.bySlotKey.Nemesis)
 end
 
-function TestRunPlannerLogicRoutePlan.testRoutePlanKeepsPrebossBranchesAtSharedRouteOrdinal()
+function TestRunPlannerLogicRoutePlan.testRoutePlanKeepsCompositePrebossRewardsOnOneRoom()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local runtime = runtimeForCatalog(routePlan, catalog, {
@@ -268,33 +299,21 @@ function TestRunPlannerLogicRoutePlan.testRoutePlanKeepsPrebossBranchesAtSharedR
             disabled = false,
             invalidRows = {},
             rows = {
-            {
-                rowIndex = 12,
-                routeOrdinal = 11,
-                biomeDepthCache = 10,
-                biomeDepthCacheCost = 0,
-                slotKind = "preboss",
+                {
+                    rowIndex = 12,
+                    routeOrdinal = 11,
+                    biomeDepthCache = 10,
+                    biomeDepthCacheCost = 0,
+                    slotKind = "preboss",
                     roomKey = "F_PreBoss01",
-                    branchKey = "Shop",
-                    roleKey = "Shop",
+                    roomOfferCount = 2,
+                    roleKey = "Preboss",
                     optionKey = "",
                     valid = true,
-                    rewardKind = "roomStore",
-                    rewards = { "Shop" },
-                },
-            {
-                rowIndex = 13,
-                routeOrdinal = 11,
-                biomeDepthCache = 10,
-                biomeDepthCacheCost = 0,
-                slotKind = "preboss",
-                    roomKey = "F_PreBoss01",
-                    branchKey = "MajorReward",
-                    roleKey = "MajorReward",
-                    optionKey = "",
-                    valid = true,
-                    rewardKind = "roomStore",
-                    rewards = { "Boon" },
+                    rewardKind = "preboss",
+                    rewardOffers = prebossRewardOffers(),
+                    rewards = { "RandomLoot", "ArmorBoost", "SpellDrop", "Boon", "ZeusUpgrade" },
+                    rewardLoot = { "DemeterUpgrade" },
                 },
             },
         },
@@ -313,16 +332,25 @@ function TestRunPlannerLogicRoutePlan.testRoutePlanKeepsPrebossBranchesAtSharedR
     local room = depthBucket.byRoomKey.F_PreBoss01
     local reservation = plan.executionPlan.reservedRoomKeys.F_PreBoss01
 
-    lu.assertEquals(#depthBucket.rows, 2)
-    lu.assertTrue(depthBucket.branchGroup)
-    lu.assertEquals(depthBucket.primary.branchKey, "Shop")
-    lu.assertEquals(depthBucket.byBranchKey.Shop.rowIndex, 12)
-    lu.assertEquals(depthBucket.byBranchKey.MajorReward.rowIndex, 13)
-    lu.assertEquals(#room.rows, 2)
-    lu.assertEquals(primaryRewardItem(room.byBranchKey.MajorReward).rewards[1], "Boon")
-    lu.assertEquals(#biome.plannedByRoomKey.F_PreBoss01.rows, 2)
-    lu.assertEquals(#reservation.entries, 2)
-    lu.assertEquals(reservation.entries[2].branchKey, "MajorReward")
+    lu.assertEquals(#depthBucket.rows, 1)
+    lu.assertEquals(depthBucket.primary.roleKey, "Preboss")
+    lu.assertEquals(depthBucket.primary.roomOfferCount, 2)
+    lu.assertEquals(#room.rows, 1)
+    lu.assertEquals(primaryRewardItem(room.primary).kind, "shop")
+    lu.assertEquals(primaryRewardItem(room.primary).rewardChoiceGroup, {
+        key = "prebossChoice",
+        effectTiming = "sameChoiceUnion",
+    })
+    lu.assertEquals(room.primary.rewardItems[2].address, "prebossReward")
+    lu.assertEquals(room.primary.rewardItems[2].kind, "roomStore")
+    lu.assertEquals(room.primary.rewardItems[2].rewards[1], "Boon")
+    lu.assertEquals(room.primary.rewardItems[2].rewards[2], "ZeusUpgrade")
+    lu.assertEquals(room.primary.rewardItems[2].rewardChoiceGroup, {
+        key = "prebossChoice",
+        effectTiming = "sameChoiceUnion",
+    })
+    lu.assertEquals(#biome.plannedByRoomKey.F_PreBoss01.rows, 1)
+    lu.assertEquals(#reservation.entries, 1)
 end
 
 function TestRunPlannerLogicRoutePlan.testRoutePlanDefersDreamDive()

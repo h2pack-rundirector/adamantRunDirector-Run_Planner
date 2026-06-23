@@ -95,7 +95,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterStorageMatchesThess
     lu.assertEquals(instance.routeSlots[8].routeOrdinal, 7)
     lu.assertEquals(instance.routeSlots[8].kind, "preboss")
     lu.assertEquals(instance.routeSlots[8].label, "Preboss Shop")
-    lu.assertEquals(instance.routeSlots[8].branchKey, "Shop")
+    lu.assertEquals(instance.routeSlots[8].roleKey, "Preboss")
     lu.assertEquals(instance.roleValues, {
         "Vanilla",
         "Combat",
@@ -412,8 +412,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
 
     lu.assertEquals(snapshot.rows[8].slotKind, "preboss")
     lu.assertEquals(snapshot.rows[8].roomKey, "O_PreBoss01")
-    lu.assertEquals(snapshot.rows[8].branchKey, "Shop")
-    lu.assertEquals(snapshot.rows[8].roleKey, "Shop")
+    lu.assertEquals(snapshot.rows[8].roleKey, "Preboss")
     lu.assertEquals(snapshot.rows[8].role.label, "Preboss Shop")
     lu.assertEquals(primaryRewardItem(snapshot.rows[8]).rewardKind, "shop")
 end

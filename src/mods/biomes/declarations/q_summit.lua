@@ -35,15 +35,11 @@ return function(importer, deps)
             special = {
                 [7] = {
                     kind = "preboss",
+                    key = "Preboss",
+                    label = "Preboss Shop",
                     roomKey = layout.prebossRoom.key,
                     biomeEncounterDepthCost = 0,
-                    branches = {
-                        {
-                            key = "Shop",
-                            label = "Preboss Shop",
-                            reward = rewards.shop("Q_WorldShop"),
-                        },
-                    },
+                    reward = rewards.shop("Q_WorldShop"),
                 },
             },
         },

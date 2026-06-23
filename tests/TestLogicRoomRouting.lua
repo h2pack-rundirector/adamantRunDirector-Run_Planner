@@ -146,7 +146,7 @@ function TestRunPlannerLogicRoomRouting.testRoomRoutingDoesNotDuplicateNormalPla
     lu.assertEquals(args.ExcludedNames.F_Story01, true)
 end
 
-function TestRunPlannerLogicRoomRouting.testRoomRoutingAllowsSharedPrebossBranchRoom()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingForcesPlannedPrebossRoom()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan, {
@@ -163,19 +163,8 @@ function TestRunPlannerLogicRoomRouting.testRoomRoutingAllowsSharedPrebossBranch
                 biomeDepthCacheCost = 0,
                 slotKind = "preboss",
                 roomKey = "F_PreBoss01",
-                branchKey = "Shop",
-                roleKey = "Shop",
-                valid = true,
-            },
-            {
-                rowIndex = 13,
-                routeOrdinal = 11,
-                biomeDepthCache = 10,
-                biomeDepthCacheCost = 0,
-                slotKind = "preboss",
-                roomKey = "F_PreBoss01",
-                branchKey = "MajorReward",
-                roleKey = "MajorReward",
+                roomOfferCount = 2,
+                roleKey = "Preboss",
                 valid = true,
             },
         }),

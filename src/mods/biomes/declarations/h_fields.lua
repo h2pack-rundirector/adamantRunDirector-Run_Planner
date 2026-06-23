@@ -38,10 +38,13 @@ return function(importer, deps)
             },
             fixedAfterRoute = {
                 {
+                    kind = "preboss",
                     key = "Preboss",
-                    label = "Preboss Shop",
+                    label = "Preboss",
                     roomKey = layout.prebossRoom.key,
-                    reward = rewards.shop("WorldShop"),
+                    reward = rewards.preboss("WorldShop", "RunProgress", {
+                        ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
+                    }),
                     biomeEncounterDepthCost = 0,
                 },
             },

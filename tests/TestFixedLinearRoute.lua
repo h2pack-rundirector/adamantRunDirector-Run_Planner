@@ -22,7 +22,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     })
     local storage = template.storage(instance)
 
-    lu.assertEquals(instance.routeRowCount, 13)
+    lu.assertEquals(instance.routeRowCount, 12)
     lu.assertEquals(instance.routeSlots[1].routeOrdinal, 0)
     lu.assertEquals(instance.routeSlots[1].kind, "opening")
     lu.assertEquals(instance.routeSlots[1].label, "Opening")
@@ -35,21 +35,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(instance.routeSlots[12].routeOrdinal, 11)
     lu.assertEquals(instance.routeSlots[12].biomeDepthCacheCost, 0)
     lu.assertEquals(instance.routeSlots[12].kind, "preboss")
-    lu.assertEquals(instance.routeSlots[12].label, "Preboss Shop")
-    lu.assertEquals(instance.routeSlots[12].branchKey, "Shop")
+    lu.assertEquals(instance.routeSlots[12].label, "Preboss")
+    lu.assertEquals(instance.routeSlots[12].roleKey, "Preboss")
     lu.assertEquals(instance.routeSlots[12].roomHistoryCost, 1)
-    lu.assertEquals(instance.routeSlots[12].branchValues, {
-        "Shop",
-    })
-    lu.assertEquals(instance.routeSlots[13].routeOrdinal, 11)
-    lu.assertEquals(instance.routeSlots[13].biomeDepthCacheCost, 0)
-    lu.assertEquals(instance.routeSlots[13].kind, "preboss")
-    lu.assertEquals(instance.routeSlots[13].label, "Preboss Room")
-    lu.assertEquals(instance.routeSlots[13].branchKey, "MajorReward")
-    lu.assertEquals(instance.routeSlots[13].roomHistoryCost, 0)
-    lu.assertEquals(instance.routeSlots[13].branchValues, {
-        "MajorReward",
-    })
     lu.assertEquals(instance.roleValues, {
         "Vanilla",
         "Combat",
@@ -66,18 +54,18 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(#storage, 2)
     lu.assertEquals(storage[1].key, "Rooms")
     lu.assertEquals(storage[1].type, "table")
-    lu.assertEquals(storage[1].minRows, 13)
-    lu.assertEquals(storage[1].defaultRows, 13)
-    lu.assertEquals(storage[1].maxRows, 13)
+    lu.assertEquals(storage[1].minRows, 12)
+    lu.assertEquals(storage[1].defaultRows, 12)
+    lu.assertEquals(storage[1].maxRows, 12)
     lu.assertEquals(storage[1].row[1].key, "RoleKey")
     lu.assertEquals(storage[1].row[1].default, "")
     lu.assertEquals(storage[1].row[2].key, "OptionKey")
     lu.assertEquals(storage[1].row[3].key, "VariantKey")
     lu.assertEquals(storage[2].key, "Rewards")
     lu.assertEquals(storage[2].type, "table")
-    lu.assertEquals(storage[2].minRows, 13)
-    lu.assertEquals(storage[2].defaultRows, 13)
-    lu.assertEquals(storage[2].maxRows, 13)
+    lu.assertEquals(storage[2].minRows, 12)
+    lu.assertEquals(storage[2].defaultRows, 12)
+    lu.assertEquals(storage[2].maxRows, 12)
     lu.assertEquals(storage[2].row[1].key, "Reward1Key")
     lu.assertEquals(storage[2].row[6].key, "Reward6Key")
     lu.assertEquals(storage[2].row[7].key, "Reward1LootKey")
@@ -144,8 +132,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearEntryMetadataRendersIntro
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
     local cases = {
-        { key = "G", name = "RouteG", rowCount = 10, introRoom = "G_Intro", prebossRow = 9 },
-        { key = "P", name = "RouteP", rowCount = 11, introRoom = "P_Intro", prebossRow = 10 },
+        { key = "G", name = "RouteG", rowCount = 9, introRoom = "G_Intro", prebossRow = 9 },
+        { key = "P", name = "RouteP", rowCount = 10, introRoom = "P_Intro", prebossRow = 10 },
         { key = "Q", name = "RouteQ", rowCount = 8, introRoom = "Q_Intro", prebossRow = 8 },
     }
 
@@ -234,7 +222,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearOpeningRowUsesFixedRoomCh
     lu.assertTrue(data.validateRow(instance, rows, 1).valid)
 end
 
-function TestRunPlannerFixedLinearRoute.testFixedLinearPrebossRowsUseBranchChoices()
+function TestRunPlannerFixedLinearRoute.testFixedLinearPrebossRowUsesFixedRoomChoice()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
     local instance = data.prepare({
@@ -246,26 +234,16 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearPrebossRowsUseBranchChoic
 
     data.fillRoleValues(instance, rows, 12, values)
     lu.assertEquals(values, {
-        "Shop",
+        "Preboss",
     })
 
-    data.fillOptionValues(instance, rows, 12, "Shop", values)
+    data.fillOptionValues(instance, rows, 12, "Preboss", values)
     lu.assertEquals(values, {})
 
-    local roleKey, branch = data.resolveRole(instance, rows, 12)
-    lu.assertEquals(roleKey, "Shop")
-    lu.assertEquals(branch.label, "Preboss Shop")
+    local roleKey, role = data.resolveRole(instance, rows, 12)
+    lu.assertEquals(roleKey, "Preboss")
+    lu.assertEquals(role.label, "Preboss")
     lu.assertTrue(data.validateRow(instance, rows, 12).valid)
-
-    data.fillRoleValues(instance, rows, 13, values)
-    lu.assertEquals(values, {
-        "MajorReward",
-    })
-
-    roleKey, branch = data.resolveRole(instance, rows, 13)
-    lu.assertEquals(roleKey, "MajorReward")
-    lu.assertEquals(branch.label, "Preboss Room")
-    lu.assertTrue(data.validateRow(instance, rows, 13).valid)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeBuildsValidatedSnapshot()
@@ -354,7 +332,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeBuildsValidatedSna
     lu.assertNil(snapshot.rows[5].option)
 end
 
-function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeSnapshotsPrebossBranchRows()
+function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeSnapshotsPrebossRow()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
     local instance = template.prepare({
@@ -381,8 +359,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeSnapshotsPrebossBr
     lu.assertEquals(snapshot.rows[8].routeOrdinal, 7)
     lu.assertEquals(snapshot.rows[8].slotKind, "preboss")
     lu.assertEquals(snapshot.rows[8].roomKey, "Q_PreBoss01")
-    lu.assertEquals(snapshot.rows[8].branchKey, "Shop")
-    lu.assertEquals(snapshot.rows[8].roleKey, "Shop")
+    lu.assertEquals(snapshot.rows[8].roleKey, "Preboss")
     lu.assertEquals(snapshot.rows[8].role.label, "Preboss Shop")
     lu.assertTrue(snapshot.rows[8].valid)
     lu.assertEquals(primaryRewardItem(snapshot.rows[8]).rewardKind, "shop")

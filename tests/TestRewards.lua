@@ -79,6 +79,40 @@ local function qSummitShopContext()
     }
 end
 
+local function prebossContext()
+    local choiceGroup = {
+        key = "prebossChoice",
+        effectTiming = "sameChoiceUnion",
+    }
+    return {
+        kind = "preboss",
+        offers = {
+            {
+                address = "prebossShop",
+                label = "Shop",
+                kind = "shop",
+                shopProfile = "WorldShop",
+                rewardAliasStart = 1,
+                rewardAliasCount = 3,
+                rewardGeneration = {
+                    effectTiming = "afterNextRow",
+                },
+                rewardChoiceGroup = choiceGroup,
+            },
+            {
+                address = "prebossReward",
+                label = "Preboss Reward",
+                kind = "roomStore",
+                rewardStore = "RunProgress",
+                ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
+                rewardAliasStart = 4,
+                rewardAliasCount = 2,
+                rewardChoiceGroup = choiceGroup,
+            },
+        },
+    }
+end
+
 local function fakeFields(values)
     return {
         read = function(_, alias)
@@ -510,22 +544,6 @@ function TestRunPlannerRewards.testCatalogNormalizesSpecializedRewardBundles()
         "SpellDrop",
     })
 
-    local preboss = catalog:surfaceFor({
-        kind = "roomStore",
-        rewardStore = "PreBossRunProgress",
-    })
-    lu.assertEquals(preboss.controls[1].values, {
-        "",
-        "Boon",
-        "HermesUpgrade",
-        "WeaponUpgrade",
-        "MaxHealthDrop",
-        "MaxManaDrop",
-        "StackUpgrade",
-        "SpellDrop",
-        "TalentDrop",
-    })
-
     local easyHub = catalog:surfaceFor({
         kind = "roomStore",
         rewardStore = "EasyHubRewards",
@@ -550,6 +568,42 @@ function TestRunPlannerRewards.testCatalogNormalizesSpecializedRewardBundles()
         "StackUpgradeTriple",
         "TalentBigDrop",
         "RoomMoneyTripleDrop",
+    })
+end
+
+function TestRunPlannerRewards.testCatalogBuildsCompositePrebossRewardSurface()
+    local catalog = loadCatalog()
+    local surface = catalog:surfaceFor(prebossContext())
+
+    lu.assertEquals(surface.kind, "preboss")
+    lu.assertEquals(#surface.offers, 2)
+    lu.assertEquals(surface.offers[1].address, "prebossShop")
+    lu.assertEquals(surface.offers[2].address, "prebossReward")
+    lu.assertEquals(#surface.controls, 6)
+    lu.assertEquals(surface.controls[1].alias, "Reward1Key")
+    lu.assertEquals(surface.controls[1].key, "Boon")
+    lu.assertEquals(surface.controls[1].rewardAddress, "prebossShop")
+    lu.assertEquals(surface.controls[2].alias, "Reward1LootKey")
+    lu.assertEquals(surface.controls[2].rewardAddress, "prebossShop")
+    lu.assertEquals(surface.controls[5].alias, "Reward4Key")
+    lu.assertEquals(surface.controls[5].key, "rewardType")
+    lu.assertEquals(surface.controls[5].label, "Preboss Reward")
+    lu.assertEquals(surface.controls[5].rewardAddress, "prebossReward")
+    lu.assertEquals(surface.controls[5].values, {
+        "",
+        "Boon",
+        "HermesUpgrade",
+        "WeaponUpgrade",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+        "StackUpgrade",
+        "SpellDrop",
+        "TalentDrop",
+    })
+    lu.assertEquals(surface.controls[6].alias, "Reward5Key")
+    lu.assertEquals(surface.controls[6].visibleWhen, {
+        alias = "Reward4Key",
+        value = "Boon",
     })
 end
 

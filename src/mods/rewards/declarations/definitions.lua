@@ -106,18 +106,6 @@ definitions.bundles = {
             "SpellDrop",
         },
     },
-    PreBossRunProgress = {
-        options = {
-            "Boon",
-            "HermesUpgrade",
-            "WeaponUpgrade",
-            "MaxHealthDrop",
-            "MaxManaDrop",
-            "StackUpgrade",
-            "SpellDrop",
-            "TalentDrop",
-        },
-    },
     MetaProgress = {
         label = "Minor",
         options = {

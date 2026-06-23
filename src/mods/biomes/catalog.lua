@@ -25,7 +25,7 @@ end
 function biomes.load(importer)
     importer = importer or defaultImporter
 
-    local rewards = importer("mods/biomes/reward_contexts.lua")(importer)
+    local rewards = importer("mods/rewards/declarations/surfaces.lua")(importer)
     local gods = importer("mods/data/gods.lua")
     local npcs = importer("mods/npcs/definitions.lua")
     local features = importer("mods/features/definitions.lua")

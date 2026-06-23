@@ -6,7 +6,6 @@ local rowEngine = deps.rowEngine
 
 local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
-local addChoice = common.addChoice
 local buildOptionChoices = common.buildOptionChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
@@ -36,10 +35,6 @@ local function isFixedIdentitySlot(slot)
     return isPrebossSlot(slot) or isFixedRoleSlot(slot)
 end
 
-local function firstBranchKey(slot)
-    return slot and (slot.branchKey or (slot.branchValues and slot.branchValues[1])) or ""
-end
-
 local function buildFixedRoleSlot(instance, ordinal, special)
     local kind = special.kind
     local roomOptions = shallowCopyList(special.roomOptions)
@@ -63,6 +58,7 @@ local function buildFixedRoleSlot(instance, ordinal, special)
         isBiomeEntry = special.isBiomeEntry == true,
         label = special.label or role.label,
         roomKey = special.roomKey,
+        roomOfferCount = special.roomOfferCount or common.rewardOfferCount(special.reward),
         roleKey = role.key,
         role = role,
     }, {
@@ -130,41 +126,9 @@ local function buildRouteSlots(instance)
     end
     table.sort(specialOrdinals)
     for _, ordinal in ipairs(specialOrdinals) do
-        local special = slotLayout.special[ordinal]
-        for _, branch in ipairs(special.branches or {}) do
-            local branches = { branch }
-            local rowIndex = #instance.routeSlots + 1
-            local slot = applySlotDepthContext({
-                rowIndex = rowIndex,
-                routeOrdinal = ordinal,
-                kind = "preboss",
-                isBiomeEntry = special.isBiomeEntry == true,
-                label = branch.label or special.label or (routeRowLabel(slotLayout, ordinal, "Depth") .. " Preboss"),
-                roomKey = special.roomKey,
-                branchKey = branch.key,
-                branch = branch,
-                branches = branches,
-                branchesByKey = buildLookup(branches),
-                branchValues = {},
-                branchLabels = {},
-            }, {
-                biomeDepthCache = special.biomeDepthCache,
-                biomeDepthCacheCost = fixedBiomeDepthCacheCost(slotLayout, special),
-                biomeEncounterDepthCost = special.biomeEncounterDepthCost,
-            })
-            addChoice(slot.branchValues, slot.branchLabels, branch.key, branch.label)
-            instance.routeSlots[rowIndex] = slot
-        end
+        buildFixedRoleSlot(instance, ordinal, slotLayout.special[ordinal])
     end
     instance.routeRowCount = #instance.routeSlots
-end
-
-local function addBranchLabels(instance)
-    for _, slot in ipairs(instance.routeSlots or {}) do
-        for _, branch in ipairs(slot.branches or {}) do
-            instance.roleLabels[branch.key] = branch.label or branch.key
-        end
-    end
 end
 
 local function variantStorageKey(policy, option)
@@ -317,9 +281,6 @@ local adapter = {
         if isFixedRoleSlot(slot) then
             return slot.roleKey
         end
-        if isPrebossSlot(slot) then
-            return firstBranchKey(slot)
-        end
         return defaultReadRoleKey(instance, rows, rowIndex, slot)
     end,
 
@@ -330,9 +291,6 @@ local adapter = {
             end
             return nil
         end
-        if isPrebossSlot(slot) then
-            return slot.branchesByKey[roleKey]
-        end
         return defaultRoleForRow(instance, rowIndex, roleKey, slot)
     end,
 
@@ -340,21 +298,12 @@ local adapter = {
         if isFixedRoleSlot(slot) then
             return roleKey == slot.roleKey
         end
-        if isPrebossSlot(slot) then
-            return slot.branchesByKey[roleKey] ~= nil
-        end
         return nil
     end,
 
     fillRoleValuesForSlot = function(_, _, _, slot, values)
         if isFixedRoleSlot(slot) then
             values[#values + 1] = slot.roleKey
-            return true
-        end
-        if isPrebossSlot(slot) then
-            for _, branchKey in ipairs(slot.branchValues or {}) do
-                values[#values + 1] = branchKey
-            end
             return true
         end
         return false
@@ -414,7 +363,6 @@ function data.prepare(instance)
     prepareVariantChoiceCache(instance)
     prepareEncounterRewardRows(instance)
     data.buildRoleChoices(instance)
-    addBranchLabels(instance)
     data.prepareSlots(instance)
     return instance
 end

@@ -2,11 +2,13 @@ local rewardSystem = {}
 
 local function rewardValueStatesForControl(instance, surfaceControl, rewardFields, sourceContext)
     if instance.routeContext ~= nil and instance.routeContext.rewardValueStates ~= nil then
+        local rewardAddress = surfaceControl and surfaceControl.rewardAddress
+            or sourceContext and sourceContext.address
         return instance.routeContext:rewardValueStates(
             instance.routeKey,
             instance.biomeKey,
             sourceContext and sourceContext.rowIndex,
-            sourceContext and sourceContext.address,
+            rewardAddress,
             surfaceControl and surfaceControl.alias,
             surfaceControl,
             rewardFields,

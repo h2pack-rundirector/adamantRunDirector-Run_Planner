@@ -92,6 +92,10 @@ local function lootAlias(index)
     return "Reward" .. tostring(index) .. "LootKey"
 end
 
+local function rewardAliasForItem(item, index)
+    return rewardAlias((item and item.rewardAliasOffset or 0) + index)
+end
+
 local function sourceForFieldsCageReward(item, index, rewardType)
     if rewardType ~= "Boon" then
         return nil
@@ -350,9 +354,9 @@ local function candidateDevotionSourceOverrides(item, control, value)
             return pickValue(item, "lootAName") or rewards[1], value
         end
     elseif item.rewardKind == "roomStore" and rewards[1] == "Devotion" then
-        if alias == rewardAlias(3) then
+        if alias == rewardAliasForItem(item, 3) then
             return value, pickValue(item, "lootBName") or rewards[4]
-        elseif alias == rewardAlias(4) then
+        elseif alias == rewardAliasForItem(item, 4) then
             return pickValue(item, "lootAName") or rewards[3], value
         end
     elseif item.rewardKind == "majorMinor"
@@ -374,7 +378,7 @@ local function candidateBoonSourceRewardType(item, control)
     local sourceIndex = candidateSourceIndex(control)
     if item.rewardKind == "boonSource" and alias == rewardAlias(1) then
         return "Boon"
-    elseif item.rewardKind == "roomStore" and rewards[1] == "Boon" and alias == rewardAlias(2) then
+    elseif item.rewardKind == "roomStore" and rewards[1] == "Boon" and alias == rewardAliasForItem(item, 2) then
         return "Boon"
     elseif item.rewardKind == "majorMinor"
         and rewards[1] == "Major"
@@ -640,9 +644,17 @@ function semantics.valueTargetsForEvent(event, out)
             targets[#targets + 1] = { address = address, controlAlias = rewardAlias(1), value = event.devotionSourceA }
             targets[#targets + 1] = { address = address, controlAlias = rewardAlias(2), value = event.devotionSourceB }
         elseif item.rewardKind == "roomStore" then
-            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(1), value = "Devotion" }
-            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(3), value = event.devotionSourceA }
-            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(4), value = event.devotionSourceB }
+            targets[#targets + 1] = { address = address, controlAlias = rewardAliasForItem(item, 1), value = "Devotion" }
+            targets[#targets + 1] = {
+                address = address,
+                controlAlias = rewardAliasForItem(item, 3),
+                value = event.devotionSourceA,
+            }
+            targets[#targets + 1] = {
+                address = address,
+                controlAlias = rewardAliasForItem(item, 4),
+                value = event.devotionSourceB,
+            }
         elseif item.rewardKind == "majorMinor" then
             targets[#targets + 1] = { address = address, controlAlias = rewardAlias(2), value = "Devotion" }
             targets[#targets + 1] = { address = address, controlAlias = rewardAlias(5), value = event.devotionSourceA }
@@ -654,9 +666,9 @@ function semantics.valueTargetsForEvent(event, out)
     if item.rewardKind == "boonSource" then
         targets[#targets + 1] = { address = address, controlAlias = rewardAlias(1), value = event.boonSource }
     elseif item.rewardKind == "roomStore" then
-        targets[#targets + 1] = { address = address, controlAlias = rewardAlias(1), value = event.rewardType }
+        targets[#targets + 1] = { address = address, controlAlias = rewardAliasForItem(item, 1), value = event.rewardType }
         if event.boonSource ~= nil then
-            targets[#targets + 1] = { address = address, controlAlias = rewardAlias(2), value = event.boonSource }
+            targets[#targets + 1] = { address = address, controlAlias = rewardAliasForItem(item, 2), value = event.boonSource }
         end
     elseif item.rewardKind == "majorMinor" then
         if rewards[1] == "Major" then

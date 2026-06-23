@@ -10,6 +10,9 @@ local REWARD_SOURCE_FIELDS = {
     "rewardGeneration",
     "rewardConstraints",
     "rewardRowGroup",
+    "rewardChoiceGroup",
+    "rewardAliasOffset",
+    "rewardOffers",
 }
 
 local function clearList(list)
@@ -61,6 +64,55 @@ local function defaultSourceLabel(source, sourceKind, sourceIndex)
     return "Rewards"
 end
 
+local function copyRewardPick(pick)
+    return {
+        key = pick.key,
+        kind = pick.kind,
+        alias = pick.alias,
+        storageAlias = pick.storageAlias,
+        value = pick.value,
+        rewardStore = pick.rewardStore,
+    }
+end
+
+local function pickIndex(pick)
+    local alias = pick and pick.alias or ""
+    return math.floor(tonumber(string.match(alias, "^Reward(%d+)")) or 0)
+end
+
+local function picksForIndexRange(picks, minIndex, maxIndex)
+    local selected = {}
+    for _, pick in ipairs(picks or EMPTY_LIST) do
+        local index = pickIndex(pick)
+        if index >= minIndex and index <= maxIndex then
+            selected[#selected + 1] = copyRewardPick(pick)
+        end
+    end
+    return selected
+end
+
+local function offerEndIndex(offer)
+    return offer.rewardAliasStart + offer.rewardAliasCount - 1
+end
+
+local function shopRewards(source, offer)
+    local rewards = {}
+    local rewardLoot = {}
+    for index = 1, offer.rewardAliasCount do
+        local sourceIndex = offer.rewardAliasStart + index - 1
+        rewards[index] = source.rewards and source.rewards[sourceIndex] or nil
+        rewardLoot[index] = source.rewardLoot and source.rewardLoot[sourceIndex] or nil
+    end
+    return rewards, rewardLoot
+end
+
+local function roomStoreRewardValues(source, offer)
+    return {
+        source.rewards and source.rewards[offer.rewardAliasStart] or nil,
+        source.rewards and source.rewards[offer.rewardAliasStart + 1] or nil,
+    }
+end
+
 local function appendItem(items, row, source, address, sourceKind, sourceIndex)
     if source == nil then
         return
@@ -84,12 +136,69 @@ local function appendItem(items, row, source, address, sourceKind, sourceIndex)
         rewardGeneration = source.rewardGeneration,
         rewardConstraints = source.rewardConstraints,
         rewardRowGroup = source.rewardRowGroup,
+        rewardChoiceGroup = source.rewardChoiceGroup,
+        rewardAliasOffset = source.rewardAliasOffset,
+        rewardOffers = source.rewardOffers,
         valid = source.valid,
     }
 end
 
+local function appendPrebossShopItem(items, row, source, offer, sourceKind, sourceIndex)
+    local rewards, rewardLoot = shopRewards(source, offer)
+    items[#items + 1] = {
+        address = offer.address,
+        sourceLabel = offer.label,
+        sourceKind = sourceKind,
+        sourceIndex = sourceIndex,
+        rowLabel = row and row.slotLabel or source.slotLabel,
+        rowIndex = row and row.rowIndex or source.rowIndex,
+        routeOrdinal = row and row.routeOrdinal or source.routeOrdinal,
+        rewardKind = "shop",
+        rewards = rewards,
+        rewardLoot = rewardLoot,
+        rewardPicks = picksForIndexRange(source.rewardPicks, offer.rewardAliasStart, offerEndIndex(offer)),
+        rewardGeneration = offer.rewardGeneration,
+        rewardConstraints = source.rewardConstraints,
+        rewardChoiceGroup = offer.rewardChoiceGroup,
+        valid = source.valid,
+    }
+end
+
+local function appendPrebossRoomStoreItem(items, row, source, offer, sourceKind, sourceIndex)
+    items[#items + 1] = {
+        address = offer.address,
+        sourceLabel = offer.label,
+        sourceKind = sourceKind,
+        sourceIndex = sourceIndex,
+        rowLabel = row and row.slotLabel or source.slotLabel,
+        rowIndex = row and row.rowIndex or source.rowIndex,
+        routeOrdinal = row and row.routeOrdinal or source.routeOrdinal,
+        rewardKind = "roomStore",
+        rewards = roomStoreRewardValues(source, offer),
+        rewardPicks = picksForIndexRange(source.rewardPicks, offer.rewardAliasStart, offerEndIndex(offer)),
+        rewardStore = offer.rewardStore,
+        rewardChoiceGroup = offer.rewardChoiceGroup,
+        rewardAliasOffset = offer.rewardAliasStart - 1,
+        valid = source.valid,
+    }
+end
+
+local function appendPrebossItems(items, row, source, sourceKind, sourceIndex)
+    for _, offer in ipairs(source.rewardOffers or EMPTY_LIST) do
+        if offer.kind == "shop" then
+            appendPrebossShopItem(items, row, source, offer, sourceKind, sourceIndex)
+        elseif offer.kind == "roomStore" then
+            appendPrebossRoomStoreItem(items, row, source, offer, sourceKind, sourceIndex)
+        end
+    end
+end
+
 local function collectFromRow(row, items)
-    appendItem(items, row, row, "row", "row")
+    if row ~= nil and row.rewardKind == "preboss" then
+        appendPrebossItems(items, row, row, "row", "row")
+    else
+        appendItem(items, row, row, "row", "row")
+    end
 
     for _, sideRoom in ipairs(row and row.sideRooms or EMPTY_LIST) do
         appendItem(items, row, sideRoom, "side:" .. tostring(sideRoom.sideIndex or ""), "side", sideRoom.sideIndex)
