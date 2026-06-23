@@ -198,6 +198,49 @@ function TestRunPlannerRewards.testDropdownValueDecoratorMapsSemanticStates()
     lu.assertEquals(decorated.valueColors.D, { 1.0, 0.78, 0.18, 1.0 })
 end
 
+function TestRunPlannerRewards.testDropdownValueDecoratorGatesEnrichmentColors()
+    local valueStates = loadValueStates()
+    local decorations = loadDecorations()
+    local owner = {}
+    local baseOpts = {
+        values = { "A", "B" },
+    }
+    local enrichmentColors = {
+        A = { 0.1, 0.7, 1.0, 1.0 },
+        B = { 0.6, 0.2, 0.9, 1.0 },
+    }
+    local validRouteContext = {
+        canUseEnrichmentColors = function(_, routeKey)
+            return routeKey == "Route"
+        end,
+    }
+    local invalidRouteContext = {
+        canUseEnrichmentColors = function()
+            return false
+        end,
+    }
+
+    local validRoute = decorations.decorateDropdown(owner, baseOpts, {
+        B = valueStates.INVALID,
+    }, {
+        routeContext = validRouteContext,
+        routeKey = "Route",
+        enrichmentValueColors = enrichmentColors,
+    })
+    lu.assertEquals(validRoute.valueColors.A, { 0.1, 0.7, 1.0, 1.0 })
+    lu.assertEquals(validRoute.valueColors.B, { 1.0, 0.22, 0.16, 1.0 })
+
+    local invalidRoute = decorations.decorateDropdown(owner, baseOpts, {
+        B = valueStates.INVALID,
+    }, {
+        routeContext = invalidRouteContext,
+        routeKey = "Route",
+        enrichmentValueColors = enrichmentColors,
+    })
+    lu.assertNil(invalidRoute.valueColors.A)
+    lu.assertEquals(invalidRoute.valueColors.B, { 1.0, 0.22, 0.16, 1.0 })
+end
+
 function TestRunPlannerRewards.testSemanticsDecodeRewardTypesAndSources()
     local semantics = loadSemantics()
 

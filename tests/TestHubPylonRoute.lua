@@ -9,6 +9,8 @@ local loadRunContext = h.loadRunContext
 local routeDefinitions = h.routeDefinitions
 local fakeRows = h.fakeRows
 local routeFields = h.routeFields
+local routeUiFields = h.routeUiFields
+local noOpDraw = h.noOpDraw
 
 -- luacheck: globals TestRunPlannerHubPylonRoute
 TestRunPlannerHubPylonRoute = {}
@@ -362,6 +364,72 @@ function TestRunPlannerHubPylonRoute.testHubPylonPolicyAllowsDuplicateBoonSource
     lu.assertEquals(#snapshot.invalidRows, 0)
     lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardPicks[2].value, "ZeusUpgrade")
     lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardPicks[2].value, "ZeusUpgrade")
+end
+
+local function renderHubPylonRoomDropdowns(control, instance, template)
+    local draw = noOpDraw()
+    local dropdowns = {}
+    draw.widgets.dropdown = function(_, opts)
+        dropdowns[#dropdowns + 1] = opts
+        return false
+    end
+
+    template.views.rooms(draw, control, instance)
+    return dropdowns
+end
+
+local function findDropdownWithValue(dropdowns, value)
+    for _, opts in ipairs(dropdowns or {}) do
+        for _, candidate in ipairs(opts.values or {}) do
+            if candidate == value then
+                return opts
+            end
+        end
+    end
+    return nil
+end
+
+local function routeContextWithEnrichment(enabled)
+    return {
+        canUseEnrichmentColors = function()
+            return enabled == true
+        end,
+        blockingHorizon = function()
+            return nil
+        end,
+        isRouteBiomeInactive = function()
+            return false
+        end,
+    }
+end
+
+function TestRunPlannerHubPylonRoute.testHubPylonRoomDropdownUsesEphyraEnrichmentColors()
+    local catalog = loadCatalog()
+    local template = loadHubPylonTemplate()
+    local instance = template.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(4, "RoleKey"):write("Combat")
+
+    local control = template.createUi(fields, instance)
+    control:setRouteContext(routeContextWithEnrichment(true), "Surface")
+
+    local dropdowns = renderHubPylonRoomDropdowns(control, instance, template)
+    local combatOpts = findDropdownWithValue(dropdowns, "N_Combat06")
+
+    lu.assertNotNil(combatOpts)
+    lu.assertEquals(combatOpts.valueColors.N_Combat06, { 0.25, 0.85, 1.0, 1.0 })
+    lu.assertEquals(combatOpts.valueColors.N_Combat05, { 0.35, 0.9, 0.45, 1.0 })
+
+    control:setRouteContext(routeContextWithEnrichment(false), "Surface")
+
+    local disabledDropdowns = renderHubPylonRoomDropdowns(control, instance, template)
+    local disabledCombatOpts = findDropdownWithValue(disabledDropdowns, "N_Combat06")
+
+    lu.assertNotNil(disabledCombatOpts)
+    lu.assertNil(disabledCombatOpts.valueColors)
 end
 
 function TestRunPlannerHubPylonRoute.testHubPylonRewardRowGroupRejectsDuplicateNonBoonRewards()

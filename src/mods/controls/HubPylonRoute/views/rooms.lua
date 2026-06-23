@@ -52,6 +52,29 @@ local function optionOptsByRole(control, rowIndex)
     return optsByRole
 end
 
+local function optionDecorateOptsByRole(control, rowIndex)
+    control._optionDecorateOptsByRow = control._optionDecorateOptsByRow or {}
+    local optsByRole = control._optionDecorateOptsByRow[rowIndex]
+    if optsByRole == nil then
+        optsByRole = {}
+        control._optionDecorateOptsByRow[rowIndex] = optsByRole
+    end
+    return optsByRole
+end
+
+local function optionDecorateOpts(control, instance, rowIndex, roleKey)
+    local optsByRole = optionDecorateOptsByRole(control, rowIndex)
+    local opts = optsByRole[roleKey]
+    if opts == nil then
+        opts = {}
+        optsByRole[roleKey] = opts
+    end
+    opts.routeContext = instance.routeContext
+    opts.routeKey = instance.routeKey
+    opts.enrichmentValueColors = data.optionEnrichmentColorsForRole(instance, roleKey)
+    return opts
+end
+
 local function getOptionOpts(control, instance, rowIndex, roleKey)
     local optsByRole = optionOptsByRole(control, rowIndex)
     local opts = optsByRole[roleKey]
@@ -63,7 +86,12 @@ local function getOptionOpts(control, instance, rowIndex, roleKey)
     end
     local rows = control:routeRows()
     opts.values = data.optionValuesForRow(instance, rows, rowIndex, roleKey)
-    return decorations.decorateDropdown(opts, opts, data.optionValueStatesForRow(instance, rows, rowIndex, roleKey))
+    return decorations.decorateDropdown(
+        opts,
+        opts,
+        data.optionValueStatesForRow(instance, rows, rowIndex, roleKey),
+        optionDecorateOpts(control, instance, rowIndex, roleKey)
+    )
 end
 
 local function optionLabelAddsInformation(role, option)

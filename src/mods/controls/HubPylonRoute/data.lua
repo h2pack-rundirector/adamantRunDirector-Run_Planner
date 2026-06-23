@@ -134,6 +134,22 @@ local function addSideRoomModeChoices(instance)
     end
 end
 
+local function buildOptionEnrichmentColors(instance)
+    instance.optionEnrichmentColorsByRole = {}
+    for _, role in ipairs(instance.roles or {}) do
+        local colors
+        for _, option in ipairs(data.optionListForRole(role)) do
+            if option.enrichmentColor ~= nil then
+                colors = colors or {}
+                colors[option.key] = option.enrichmentColor
+            end
+        end
+        if colors ~= nil then
+            instance.optionEnrichmentColorsByRole[role.key] = colors
+        end
+    end
+end
+
 local function buildSideRoomRows()
     return {
         {
@@ -215,6 +231,7 @@ function data.prepare(instance)
     timeline.applyRouteSlots(instance)
     prepareSideRoomRows(instance)
     data.buildRoleChoices(instance)
+    buildOptionEnrichmentColors(instance)
     addFixedRoleLabels(instance)
     data.prepareSlots(instance)
     return instance
@@ -302,6 +319,10 @@ function data.sideDoorCountForRow(instance, rows, rowIndex)
     local roleKey = data.resolveRole(instance, rows, rowIndex)
     local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
     return option and #(option.sideDoors or {}) or 0
+end
+
+function data.optionEnrichmentColorsForRole(instance, roleKey)
+    return instance.optionEnrichmentColorsByRole[roleKey]
 end
 
 return data

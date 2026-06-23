@@ -389,6 +389,30 @@ function TestRunPlannerRouteUi.testRouteContextExposesRouteBlockingHorizon()
     lu.assertTrue(routeContext:isRouteBiomeInactive("Underworld", "G"))
     lu.assertTrue(routeContext:isLayerInactive("Underworld", "npcs"))
     lu.assertTrue(routeContext:isLayerInactive("Underworld", "features"))
+    lu.assertFalse(routeContext:canUseEnrichmentColors("Underworld"))
+end
+
+function TestRunPlannerRouteUi.testRouteContextAllowsEnrichmentColorsOnlyForValidRoutes()
+    local controls = {
+        RouteGlobalUnderworld = fakeLayerConfig(),
+        RouteF = fakeSnapshotControl(validRouteSnapshot("RouteF")),
+    }
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        controlResolver = function(controlName)
+            return controls[controlName]
+        end,
+    })
+
+    routeContext:beginPass()
+    lu.assertTrue(routeContext:overview("Underworld").valid)
+    lu.assertTrue(routeContext:canUseEnrichmentColors("Underworld"))
 end
 
 function TestRunPlannerRouteUi.testRoutePositionOrdersBiomeTabAndRow()

@@ -582,6 +582,11 @@ function runContext.create(opts)
         return status == nil or status.canDecorate ~= false
     end
 
+    function context:canUseEnrichmentColors(routeKey)
+        local snapshot = self:overview(routeKey)
+        return snapshot ~= nil and snapshot.valid == true
+    end
+
     function context:isLayerInactive(routeKey, layer)
         return layerInactive(self:blockingHorizon(routeKey), layer)
     end

@@ -169,6 +169,41 @@ local function mergedMap(owner, cacheKey, base, overlay)
     return target
 end
 
+local function enrichmentValueColors(opts)
+    if opts == nil or opts.enrichmentValueColors == nil then
+        return nil
+    end
+    local routeContext = opts.routeContext
+    if routeContext == nil or routeContext.canUseEnrichmentColors == nil then
+        return nil
+    end
+    if not routeContext:canUseEnrichmentColors(opts.routeKey) then
+        return nil
+    end
+    return opts.enrichmentValueColors
+end
+
+local function mergedValueColors(owner, baseOpts, enrichmentColors, valueColors)
+    local colors = baseOpts and baseOpts.valueColors or nil
+    if enrichmentColors ~= nil then
+        colors = mergedMap(
+            owner,
+            "_decoratedDropdownMergedEnrichmentValueColors",
+            colors,
+            enrichmentColors
+        )
+    end
+    if valueColors ~= nil then
+        colors = mergedMap(
+            owner,
+            "_decoratedDropdownMergedValueColors",
+            colors,
+            valueColors
+        )
+    end
+    return colors
+end
+
 function decorations.invalidColor()
     return INVALID_COLOR
 end
@@ -327,24 +362,21 @@ function decorations.routeRowInactive(allInactive, inactiveBoundary, slot, tabKe
 end
 
 function decorations.decorateDropdown(owner, baseOpts, states, opts)
-    if states == nil then
+    local enrichmentColors = enrichmentValueColors(opts)
+    if states == nil and enrichmentColors == nil then
         return baseOpts
     end
 
     local valueColors = fillValueColors(owner, states, opts)
     local visibleValues = fillVisibleValues(owner, states)
-    if valueColors == nil and visibleValues == nil then
+    if valueColors == nil and visibleValues == nil and enrichmentColors == nil then
         return baseOpts
     end
 
     local target = decoratedOpts(owner, baseOpts)
-    if valueColors ~= nil then
-        target.valueColors = mergedMap(
-            owner,
-            "_decoratedDropdownMergedValueColors",
-            baseOpts and baseOpts.valueColors or nil,
-            valueColors
-        )
+    local colors = mergedValueColors(owner, baseOpts, enrichmentColors, valueColors)
+    if colors ~= nil then
+        target.valueColors = colors
     end
     if visibleValues ~= nil then
         target.visibleValues = mergedMap(
