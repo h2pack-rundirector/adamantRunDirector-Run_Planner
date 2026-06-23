@@ -281,6 +281,24 @@ local function plannedRewardItem(row, address)
     return nil
 end
 
+local function plannedDefaultRewardItem(row)
+    local item = plannedRewardItem(row)
+    if item ~= nil then
+        return item
+    end
+
+    for _, candidate in ipairs(row and row.rewardItems or EMPTY_LIST) do
+        if candidate.valid ~= false
+            and candidate.address == "prebossReward"
+            and candidate.kind ~= "none"
+            and candidate.kind ~= "vanilla"
+        then
+            return candidate
+        end
+    end
+    return nil
+end
+
 local function rewardListEmpty(rewards)
     return rewards == nil or rewards[1] == nil
 end
@@ -399,7 +417,7 @@ local function plannedRewardItemForCall(row, context, currentRun, room, previous
         return nil
     end
 
-    return plannedRewardItem(row)
+    return plannedDefaultRewardItem(row)
 end
 
 local function boonSourceForItem(item, rewardType)
@@ -526,7 +544,7 @@ local function plannedNextReward(runtime, currentRun)
         and biomePlan.plannedRoutableByBiomeDepthCache[runState.biomeDepthCache(currentRun)]
         or nil
     local row = bucket and bucket.primary or nil
-    local item = plannedRewardItem(row)
+    local item = plannedDefaultRewardItem(row)
     local rewardType = rewardTypeForItem(item)
     if rewardType == nil or rewardType == "" then
         return nil, row, {

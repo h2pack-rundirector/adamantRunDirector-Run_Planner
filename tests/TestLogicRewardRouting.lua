@@ -12,6 +12,40 @@ local logsContain = harness.logsContain
 local plannedBiomeSnapshot = harness.plannedBiomeSnapshot
 local runtimeForCatalog = harness.runtimeForCatalog
 
+local function prebossRewardOffers()
+    local choiceGroup = {
+        key = "prebossChoice",
+        effectTiming = "sameChoiceUnion",
+    }
+    return {
+        {
+            address = "prebossShop",
+            label = "Shop",
+            kind = "shop",
+            shopProfile = "WorldShop",
+            rewardAliasStart = 1,
+            rewardAliasCount = 3,
+            rewardGeneration = {
+                effectTiming = "afterNextRow",
+            },
+            rewardChoiceGroup = choiceGroup,
+        },
+        {
+            address = "prebossReward",
+            label = "Free Reward",
+            kind = "roomStore",
+            rewardStore = "RunProgress",
+            ineligibleRewardTypes = {
+                "Devotion",
+                "RoomMoneyDrop",
+            },
+            rewardAliasStart = 4,
+            rewardAliasCount = 2,
+            rewardChoiceGroup = choiceGroup,
+        },
+    }
+end
+
 function TestRunPlannerLogicRewardRouting.testRewardRoutingLogsPlannedRewardChoice()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
@@ -446,6 +480,171 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingPrioritizesLinearRewa
     lu.assertEquals(rewardType, "WeaponUpgrade")
     lu.assertEquals(currentRun.RewardPriorities[1], "Boon")
     lu.assertNil(currentRun.RewardPriorities[2])
+end
+
+function TestRunPlannerLogicRewardRouting.testRewardRoutingForcesCompositePrebossRoomReward()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local rewardRouting = loadRewardRouting(routePlan, {
+        print = function()
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = plannedBiomeSnapshot("F", "fixedLinear", {
+            {
+                rowIndex = 12,
+                routeOrdinal = 11,
+                biomeDepthCache = 10,
+                biomeDepthCacheCost = 0,
+                slotKind = "preboss",
+                roomKey = "F_PreBoss01",
+                roleKey = "Preboss",
+                optionKey = "F_PreBoss01",
+                valid = true,
+                rewardKind = "preboss",
+                rewardOffers = prebossRewardOffers(),
+                rewards = {
+                    "RandomLoot",
+                    "ArmorBoost",
+                    "StackUpgrade",
+                    "Boon",
+                    "ZeusUpgrade",
+                },
+                rewardLoot = {
+                    "DemeterUpgrade",
+                },
+                rewardPicks = {
+                    {
+                        key = "Boon",
+                        kind = "shopOption",
+                        alias = "Reward1Key",
+                        value = "RandomLoot",
+                    },
+                    {
+                        key = "BoonLoot",
+                        kind = "boonSource",
+                        alias = "Reward1LootKey",
+                        value = "DemeterUpgrade",
+                    },
+                    {
+                        key = "rewardType",
+                        kind = "rewardType",
+                        alias = "Reward4Key",
+                        value = "Boon",
+                        rewardStore = "RunProgress",
+                    },
+                    {
+                        key = "boonSource",
+                        kind = "boonSource",
+                        alias = "Reward5Key",
+                        value = "ZeusUpgrade",
+                    },
+                },
+            },
+        }),
+    })
+    local currentRun = {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+        BiomeDepthCache = 10,
+        RewardPriorities = {
+            "WeaponUpgrade",
+        },
+    }
+    local room = {
+        Name = "F_PreBoss01",
+        RoomSetName = "F",
+    }
+    routePlan.refresh(catalog, runtime, currentRun, {
+        StartingBiome = "F",
+    })
+
+    local rewardType = rewardRouting.chooseRoomReward(runtime, function()
+        lu.assertEquals(currentRun.RewardPriorities[1], "Boon")
+        lu.assertEquals(currentRun.RewardPriorities[2], "WeaponUpgrade")
+        return "Boon"
+    end, currentRun, room, "RunProgress", {}, {})
+
+    lu.assertEquals(rewardType, "Boon")
+    lu.assertEquals(room.ForceLootName, "ZeusUpgrade")
+    lu.assertEquals(currentRun.RewardPriorities[1], "WeaponUpgrade")
+    lu.assertNil(currentRun.RewardPriorities[2])
+end
+
+function TestRunPlannerLogicRewardRouting.testRewardRoutingDoesNotForcePrebossShopOfferAsRoomReward()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local rewardRouting = loadRewardRouting(routePlan, {
+        print = function()
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        F = plannedBiomeSnapshot("F", "fixedLinear", {
+            {
+                rowIndex = 12,
+                routeOrdinal = 11,
+                biomeDepthCache = 10,
+                biomeDepthCacheCost = 0,
+                slotKind = "preboss",
+                roomKey = "F_PreBoss01",
+                roleKey = "Preboss",
+                optionKey = "F_PreBoss01",
+                valid = true,
+                rewardKind = "preboss",
+                rewardOffers = prebossRewardOffers(),
+                rewards = {
+                    "RandomLoot",
+                    "ArmorBoost",
+                    "StackUpgrade",
+                    "",
+                    "",
+                },
+                rewardLoot = {
+                    "DemeterUpgrade",
+                },
+                rewardPicks = {
+                    {
+                        key = "Boon",
+                        kind = "shopOption",
+                        alias = "Reward1Key",
+                        value = "RandomLoot",
+                    },
+                    {
+                        key = "BoonLoot",
+                        kind = "boonSource",
+                        alias = "Reward1LootKey",
+                        value = "DemeterUpgrade",
+                    },
+                },
+            },
+        }),
+    })
+    local currentRun = {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+        BiomeDepthCache = 10,
+        RewardPriorities = {
+            "WeaponUpgrade",
+        },
+    }
+    local room = {
+        Name = "F_PreBoss01",
+        RoomSetName = "F",
+    }
+    routePlan.refresh(catalog, runtime, currentRun, {
+        StartingBiome = "F",
+    })
+
+    local rewardType = rewardRouting.chooseRoomReward(runtime, function()
+        lu.assertEquals(currentRun.RewardPriorities[1], "WeaponUpgrade")
+        return "MaxHealthDrop"
+    end, currentRun, room, "RunProgress", {}, {})
+
+    lu.assertEquals(rewardType, "MaxHealthDrop")
+    lu.assertNil(room.ForceLootName)
+    lu.assertEquals(currentRun.RewardPriorities[1], "WeaponUpgrade")
 end
 
 function TestRunPlannerLogicRewardRouting.testRewardRoutingForcesLinearBoonSource()
