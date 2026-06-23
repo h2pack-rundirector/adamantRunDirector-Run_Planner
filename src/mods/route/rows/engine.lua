@@ -132,6 +132,14 @@ function rowEngine.create(adapter)
         return common.layerConfigured(instance and instance.routeContext, instance and instance.routeKey, layer)
     end
 
+    local function routeGeneration(instance)
+        local routeContext = instance and instance.routeContext or nil
+        if routeContext ~= nil and routeContext.routeGeneration ~= nil then
+            return routeContext:routeGeneration(instance.routeKey)
+        end
+        return nil
+    end
+
     local function isRoleAllowed(instance, rows, rowIndex, roleKey, role)
         if not isRoleLayerConfigured(instance, role) then
             return false
@@ -1108,7 +1116,7 @@ function rowEngine.create(adapter)
     end
 
     function data.beginReadPass(instance)
-        readCache.begin(instance)
+        readCache.begin(instance, routeGeneration(instance))
     end
 
     function data.invalidateReadPass(instance)

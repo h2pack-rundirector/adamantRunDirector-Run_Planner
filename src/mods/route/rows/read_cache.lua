@@ -53,17 +53,18 @@ function readCache.nestedRecord(bucket, rowIndex, key)
     return record
 end
 
-function readCache.begin(instance)
+function readCache.begin(instance, externalGeneration)
     local cache = ensure(instance)
     cache.active = true
-    cache.pass = cache.pass + 1
+    if externalGeneration ~= nil and cache.externalGeneration ~= externalGeneration then
+        cache.externalGeneration = externalGeneration
+        cache.pass = cache.pass + 1
+    end
 end
 
 function readCache.invalidate(instance)
-    local cache = readCache.active(instance)
-    if cache ~= nil then
-        cache.pass = cache.pass + 1
-    end
+    local cache = ensure(instance)
+    cache.pass = cache.pass + 1
 end
 
 function readCache.finish(instance)

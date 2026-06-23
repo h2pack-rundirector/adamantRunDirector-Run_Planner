@@ -17,6 +17,7 @@ local routeUiFields = h.routeUiFields
 local noOpDraw = h.noOpDraw
 local createUiControl = h.createUiControl
 local measureAllocKb = h.measureAllocKb
+local measureCpuMs = h.measureCpuMs
 
 -- luacheck: globals TestRunPlannerRouteUi
 TestRunPlannerRouteUi = {}
@@ -907,6 +908,146 @@ function TestRunPlannerRouteUi.testRouteTemplateViewAllocationsStayBounded()
     )
 end
 
+function TestRunPlannerRouteUi.testRouteTemplateViewCpuStaysBounded()
+    local catalog = loadCatalog()
+    local draw = noOpDraw()
+    local iterations = 1000
+    local cases = {
+        {
+            key = "F",
+            template = loadFixedLinearTemplate(),
+            budgets = { rooms = 600, rewards = 500 },
+        },
+        {
+            key = "G",
+            template = loadFixedLinearTemplate(),
+            budgets = { rooms = 600, rewards = 500 },
+        },
+        {
+            key = "H",
+            template = loadFieldsCageTemplate(),
+            budgets = { rooms = 600, rewards = 500 },
+        },
+        {
+            key = "I",
+            template = loadClockworkGoalTemplate(),
+            budgets = { rooms = 600, rewards = 500 },
+        },
+        {
+            key = "N",
+            template = loadHubPylonTemplate(),
+            budgets = { rooms = 600, rewards = 500, sideRooms = 250 },
+        },
+        {
+            key = "O",
+            template = loadMultiEncounterTemplate(),
+            budgets = { rooms = 600, rewards = 500 },
+        },
+        {
+            key = "P",
+            template = loadFixedLinearTemplate(),
+            budgets = { rooms = 600, rewards = 500 },
+        },
+        {
+            key = "Q",
+            template = loadFixedLinearTemplate(),
+            budgets = { rooms = 600, rewards = 500 },
+        },
+    }
+
+    for _, case in ipairs(cases) do
+        local control, instance = createUiControl(case.template, catalog.lookup[case.key], "Route" .. case.key)
+        for viewName, budgetMs in pairs(case.budgets) do
+            local view = case.template.views[viewName]
+            local elapsedMs = measureCpuMs(iterations, function()
+                view(draw, control, instance)
+            end)
+
+            lu.assertTrue(
+                elapsedMs < budgetMs,
+                string.format(
+                    "Route%s %s traversal took %.1f ms across %d no-op draws; budget %.1f ms",
+                    case.key,
+                    viewName,
+                    elapsedMs,
+                    iterations,
+                    budgetMs
+                )
+            )
+        end
+    end
+
+    local routeGlobalTemplate = loadRouteGlobalTemplate()
+    local routeGlobalInstance = routeGlobalTemplate.prepare({
+        name = "RouteGlobalUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        gods = catalog.gods,
+    })
+    local routeGlobalFields = routeUiFields(routeGlobalTemplate.storage(routeGlobalInstance))
+    routeGlobalFields.ConfigureRewards:write(false)
+    local routeGlobalControl = routeGlobalTemplate.createUi(routeGlobalFields, routeGlobalInstance)
+    local elapsedMs = measureCpuMs(iterations, function()
+        routeGlobalTemplate.views.planner(draw, routeGlobalControl, routeGlobalInstance)
+    end)
+    lu.assertTrue(
+        elapsedMs < 150,
+        string.format(
+            "RouteGlobal traversal took %.1f ms across %d no-op draws; budget %.1f ms",
+            elapsedMs,
+            iterations,
+            150
+        )
+    )
+
+    local routeNpcsTemplate = loadRouteNpcsTemplate()
+    local routeNpcsInstance = routeNpcsTemplate.prepare({
+        name = "RouteNpcsUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        npcs = catalog.npcs,
+        biomeLookup = catalog.lookup,
+    })
+    local routeNpcsControl = routeNpcsTemplate.createUi(
+        routeUiFields(routeNpcsTemplate.storage(routeNpcsInstance)),
+        routeNpcsInstance
+    )
+    elapsedMs = measureCpuMs(iterations, function()
+        routeNpcsTemplate.views.planner(draw, routeNpcsControl, routeNpcsInstance)
+    end)
+    lu.assertTrue(
+        elapsedMs < 250,
+        string.format(
+            "RouteNpcs traversal took %.1f ms across %d no-op draws; budget %.1f ms",
+            elapsedMs,
+            iterations,
+            250
+        )
+    )
+
+    local routeFeaturesTemplate = loadRouteFeaturesTemplate()
+    local routeFeaturesInstance = routeFeaturesTemplate.prepare({
+        name = "RouteFeatureChaosGateUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        feature = catalog.features.byKey.ChaosGate,
+        biomeLookup = catalog.lookup,
+    })
+    local routeFeaturesControl = routeFeaturesTemplate.createUi(
+        routeUiFields(routeFeaturesTemplate.storage(routeFeaturesInstance)),
+        routeFeaturesInstance
+    )
+    elapsedMs = measureCpuMs(iterations, function()
+        routeFeaturesTemplate.views.planner(draw, routeFeaturesControl, routeFeaturesInstance)
+    end)
+    lu.assertTrue(
+        elapsedMs < 150,
+        string.format(
+            "RouteFeatures traversal took %.1f ms across %d no-op draws; budget %.1f ms",
+            elapsedMs,
+            iterations,
+            150
+        )
+    )
+end
+
 function TestRunPlannerRouteUi.testRouteOverviewRebuildsOnlyWhenDirty()
     local readsByControl = {}
     local routeContext = loadRunContext().create({
@@ -967,4 +1108,36 @@ function TestRunPlannerRouteUi.testRouteOverviewRebuildsOnlyWhenDirty()
     lu.assertTrue(routeContext:overview("RouteB").valid)
     lu.assertEquals(readsByControl.RouteF, 3)
     lu.assertEquals(readsByControl.RouteG, 5)
+end
+
+function TestRunPlannerRouteUi.testRouteDirtyGenerationTracksRouteInvalidation()
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "RouteA",
+                label = "Route A",
+                biomes = { "F", "G" },
+            },
+            {
+                key = "RouteB",
+                label = "Route B",
+                biomes = { "G" },
+            },
+        }),
+    })
+
+    lu.assertEquals(routeContext:routeGeneration("RouteA"), 0)
+    lu.assertEquals(routeContext:routeGeneration("RouteB"), 0)
+
+    routeContext:markDirty("RouteA")
+    lu.assertEquals(routeContext:routeGeneration("RouteA"), 1)
+    lu.assertEquals(routeContext:routeGeneration("RouteB"), 0)
+
+    routeContext:markDirty(nil, "G")
+    lu.assertEquals(routeContext:routeGeneration("RouteA"), 2)
+    lu.assertEquals(routeContext:routeGeneration("RouteB"), 1)
+
+    routeContext:markAllDirty()
+    lu.assertEquals(routeContext:routeGeneration("RouteA"), 3)
+    lu.assertEquals(routeContext:routeGeneration("RouteB"), 2)
 end

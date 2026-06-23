@@ -63,6 +63,10 @@ local function routeOverviewState(context, routeKey)
     return state
 end
 
+local function bumpRouteGeneration(context, routeKey)
+    context.generationByRoute[routeKey] = (context.generationByRoute[routeKey] or 0) + 1
+end
+
 local function routeNpcTargetsState(context, routeKey)
     local state = context.npcTargetsByRoute[routeKey]
     if state == nil then
@@ -229,6 +233,7 @@ function runContext.create(opts)
         featureTargetsByRoute = {},
         rewardLegalityByRoute = {},
         godSourceByRoute = {},
+        generationByRoute = {},
     }
     context.rewardState = routeRewards.create({
         rewardLegality = opts.rewardLegality,
@@ -262,6 +267,7 @@ function runContext.create(opts)
     function context:markAllDirty()
         for _, route in ipairs(self.routes.ordered or EMPTY_LIST) do
             routeOverviewState(self, route.key).dirty = true
+            bumpRouteGeneration(self, route.key)
         end
         clearMap(self.snapshotByRoute)
         clearMap(self.npcTargetsByRoute)
@@ -274,6 +280,7 @@ function runContext.create(opts)
         for routeKey, routeInfos in pairs(self.routeInfoByRoute) do
             if routeInfos[biomeKey] ~= nil then
                 routeOverviewState(self, routeKey).dirty = true
+                bumpRouteGeneration(self, routeKey)
                 self.snapshotByRoute[routeKey] = nil
                 self.npcTargetsByRoute[routeKey] = nil
                 self.featureTargetsByRoute[routeKey] = nil
@@ -289,6 +296,7 @@ function runContext.create(opts)
     function context:markDirty(routeKey, biomeKey)
         if routeKey ~= nil then
             routeOverviewState(self, routeKey).dirty = true
+            bumpRouteGeneration(self, routeKey)
             self.snapshotByRoute[routeKey] = nil
             self.npcTargetsByRoute[routeKey] = nil
             self.featureTargetsByRoute[routeKey] = nil
@@ -300,6 +308,10 @@ function runContext.create(opts)
             return
         end
         self:markAllDirty()
+    end
+
+    function context:routeGeneration(routeKey)
+        return self.generationByRoute[routeKey] or 0
     end
 
     function context:controlForBiome(routeKey, biomeKey)

@@ -459,6 +459,16 @@ local function measureAllocKb(iterations, callback)
     return after - before
 end
 
+local function measureCpuMs(iterations, callback)
+    callback()
+    collectgarbage("collect")
+    local before = os.clock()
+    for _ = 1, iterations do
+        callback()
+    end
+    return (os.clock() - before) * 1000
+end
+
 local function buildThessalyRuntime(rows)
     local catalog = loadCatalog()
     local template = loadMultiEncounterTemplate()
@@ -656,6 +666,7 @@ return {
     noOpDraw = noOpDraw,
     createUiControl = createUiControl,
     measureAllocKb = measureAllocKb,
+    measureCpuMs = measureCpuMs,
     buildThessalyRuntime = buildThessalyRuntime,
     routeRewardRow = routeRewardRow,
     fakeRouteControlSnapshot = fakeRouteControlSnapshot,
