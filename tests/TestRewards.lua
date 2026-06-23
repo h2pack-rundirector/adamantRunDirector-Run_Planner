@@ -540,7 +540,8 @@ function TestRunPlannerRewards.testCatalogNormalizesSpecializedRewardBundles()
 
     local clockwork = catalog:surfaceFor({
         kind = "roomStore",
-        rewardStore = "ClockworkExtensionRewards",
+        rewardStore = "TartarusRewards",
+        ineligibleRewardTypes = { "Boon" },
     })
     lu.assertEquals(clockwork.controls[1].values, {
         "",

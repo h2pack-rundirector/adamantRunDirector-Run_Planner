@@ -3,6 +3,7 @@ local rewards = deps.rewards
 local layout = {}
 
 local WELL_SHOP_FEATURES = { wellShop = true }
+local COMBAT_REWARD = rewards.roomStore("TartarusRewards", { ineligibleRewardTypes = { "Boon" } })
 
 local function combatLabel(roomKey)
     return "Combat " .. string.sub(roomKey, -2)
@@ -16,7 +17,7 @@ local function combatRoom(roomKey, exitCount, opts)
         exitCount = exitCount,
         supportsExtensionChoice = exitCount > 1,
         features = opts.features or WELL_SHOP_FEATURES,
-        reward = opts.reward or rewards.roomStore("ClockworkExtensionRewards"),
+        reward = opts.reward or COMBAT_REWARD,
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
     }

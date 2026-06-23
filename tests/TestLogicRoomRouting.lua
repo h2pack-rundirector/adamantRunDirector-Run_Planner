@@ -1,697 +1,19 @@
 local lu = require("luaunit")
+local harness = require("tests.support.logic_harness")
 
--- luacheck: globals TestRunPlannerLogic
-TestRunPlannerLogic = {}
+-- luacheck: globals TestRunPlannerLogicRoomRouting
+TestRunPlannerLogicRoomRouting = {}
 
-local function testImport(path, _, deps)
-    local chunk = assert(loadfile("src/" .. path))
-    return chunk(deps)
-end
+local loadCatalog = harness.loadCatalog
+local loadRoutePlan = harness.loadRoutePlan
+local loadRoomRouting = harness.loadRoomRouting
+local logsContain = harness.logsContain
+local availableDoorCount = harness.availableDoorCount
+local plannedBiomeSnapshot = harness.plannedBiomeSnapshot
+local runtimeForCatalog = harness.runtimeForCatalog
+local withCurrentRun = harness.withCurrentRun
 
-local function withTestImport(callback)
-    local previousImport = _G.import
-    _G.import = testImport
-    local ok, err = pcall(callback)
-    _G.import = previousImport
-    if not ok then
-        error(err, 0)
-    end
-end
-
-local function normalizeRewardRows(rows)
-    local rewardItems = testImport("mods/route/reward_planning/items.lua")
-    for _, row in ipairs(rows or {}) do
-        if row.biomeEncounterDepthCost == nil
-            and row.biomeEncounterDepthCostMin == nil
-            and row.biomeEncounterDepthCostMax == nil
-        then
-            row.biomeEncounterDepthCost = 1
-        end
-        if row.biomeEncounterDepthCostMin == nil or row.biomeEncounterDepthCostMax == nil then
-            if type(row.biomeEncounterDepthCost) == "table" then
-                row.biomeEncounterDepthCostMin = row.biomeEncounterDepthCost.min
-                row.biomeEncounterDepthCostMax = row.biomeEncounterDepthCost.max
-            else
-                row.biomeEncounterDepthCostMin = row.biomeEncounterDepthCost
-                row.biomeEncounterDepthCostMax = row.biomeEncounterDepthCost
-            end
-        end
-        rewardItems.attach(row)
-    end
-    return rows
-end
-
-local function primaryRewardItem(row)
-    return row and row.rewardItems and row.rewardItems[1] or nil
-end
-
-local function loadCatalog()
-    local data = dofile("src/mods/data.lua")
-    return data.loadCatalog(testImport), data
-end
-
-local function loadRunState()
-    return testImport("mods/logic/run_state.lua")
-end
-
-local function loadRewardLegality()
-    local semantics = testImport("mods/route/reward_planning/semantics.lua")
-    local invalidLocations = testImport("mods/route/invalid_locations.lua")
-    return testImport("mods/route/reward_planning/legality.lua", nil, {
-        conditions = testImport("mods/rewards/declarations/conditions.lua"),
-        rewardItems = testImport("mods/route/reward_planning/items.lua"),
-        semantics = semantics,
-        invalidLocations = invalidLocations,
-        context = testImport("mods/route/reward_planning/context.lua"),
-        markers = testImport("mods/route/reward_planning/marker_targets.lua", nil, {
-            markers = testImport("mods/route/markers.lua"),
-            semantics = semantics,
-            invalidLocations = invalidLocations,
-        }),
-    })
-end
-
-local function loadRouteTargets(timeline, rewardItems, semantics)
-    local targetCommon = testImport("mods/route/run_context/targets/common.lua")
-    return testImport("mods/route/run_context/targets.lua", nil, {
-        npcs = testImport("mods/route/run_context/targets/npcs.lua", nil, {
-            timeline = timeline,
-            rewardItems = rewardItems,
-            semantics = semantics,
-            common = targetCommon,
-        }),
-        features = testImport("mods/route/run_context/targets/features.lua", nil, {
-            timeline = timeline,
-            common = targetCommon,
-        }),
-    })
-end
-
-local function loadRoutePlan()
-    local timeline = testImport("mods/route/timeline.lua")
-    local rewardItems = testImport("mods/route/reward_planning/items.lua")
-    local semantics = testImport("mods/route/reward_planning/semantics.lua")
-    local runState = testImport("mods/logic/run_state.lua")
-    return testImport("mods/logic/route_plan.lua", nil, {
-        executionPlan = testImport("mods/logic/execution_plan.lua"),
-        runState = runState,
-        routeContext = testImport("mods/route/run_context.lua", nil, {
-            controls = testImport("mods/route/run_context/controls.lua"),
-            targets = loadRouteTargets(timeline, rewardItems, semantics),
-            rewards = testImport("mods/route/run_context/rewards.lua", nil, {
-                rewardLegality = loadRewardLegality(),
-                rewardItems = rewardItems,
-                semantics = semantics,
-                timeline = timeline,
-                valueStates = testImport("mods/route/value_states.lua"),
-            }),
-        }),
-    })
-end
-
-local function loadRoomRouting(routePlan, game)
-    return testImport("mods/logic/room_routing.lua", nil, {
-        routePlan = routePlan,
-        runState = testImport("mods/logic/run_state.lua"),
-        game = game,
-    })
-end
-
-local function loadRewardRouting(routePlan, game)
-    return testImport("mods/logic/reward_routing.lua", nil, {
-        routePlan = routePlan,
-        runState = testImport("mods/logic/run_state.lua"),
-        game = game,
-    })
-end
-
-local function logsContain(logs, text)
-    for _, line in ipairs(logs) do
-        if line:find(text, 1, true) ~= nil then
-            return true
-        end
-    end
-    return false
-end
-
-local function availableDoorCount(predetermined, unavailable)
-    local count = 0
-    for doorId in pairs(predetermined or {}) do
-        if unavailable == nil or unavailable[doorId] ~= true then
-            count = count + 1
-        end
-    end
-    return count
-end
-
-local function validBiomeSnapshot(biomeKey)
-    return {
-        controlName = "Route" .. biomeKey,
-        biomeKey = biomeKey,
-        valid = true,
-        disabled = false,
-        invalidRows = {},
-        rows = {},
-    }
-end
-
-local function plannedBiomeSnapshot(biomeKey, adapter, rows)
-    return {
-        controlName = "Route" .. biomeKey,
-        biomeKey = biomeKey,
-        adapter = adapter,
-        valid = true,
-        disabled = false,
-        invalidRows = {},
-        rows = normalizeRewardRows(rows),
-    }
-end
-
-local function invalidBiomeSnapshot(biomeKey)
-    return {
-        controlName = "Route" .. biomeKey,
-        biomeKey = biomeKey,
-        valid = false,
-        disabled = true,
-        invalidRows = {
-            {
-                rowIndex = 1,
-                code = "test_invalid",
-                message = "test invalid",
-            },
-        },
-        rows = {},
-    }
-end
-
-local function routeGlobalControl()
-    return {
-        setRouteContext = function()
-        end,
-        isLayerConfigured = function(_, layer)
-            return layer == "rewards"
-        end,
-    }
-end
-
-local function biomeControl(snapshot)
-    return {
-        setRouteContext = function()
-        end,
-        read = function(_, path)
-            if path == "snapshot" then
-                return snapshot
-            end
-            return nil
-        end,
-    }
-end
-
-local function buildControls(catalog, snapshots)
-    local controlsByName = {
-        RouteGlobalUnderworld = routeGlobalControl(),
-        RouteGlobalSurface = routeGlobalControl(),
-    }
-
-    for _, biome in ipairs(catalog.ordered or {}) do
-        local snapshot = snapshots[biome.key] or validBiomeSnapshot(biome.key)
-        normalizeRewardRows(snapshot.rows)
-        controlsByName["Route" .. biome.key] = biomeControl(snapshot)
-    end
-
-    return {
-        get = function(controlName)
-            return controlsByName[controlName]
-        end,
-    }
-end
-
-local function runtimeWithControls(routePlan, controls)
-    local state
-    local runtime = {
-        controls = controls,
-        data = {
-            cache = {
-                currentRun = {
-                    get = function(cacheName)
-                        if cacheName ~= routePlan.cacheName() then
-                            return nil
-                        end
-                        state = state or {}
-                        return state
-                    end,
-                },
-            },
-        },
-    }
-    return runtime
-end
-
-local function runtimeForCatalog(routePlan, catalog, snapshots)
-    return runtimeWithControls(routePlan, buildControls(catalog, snapshots or {}))
-end
-
-local function withCurrentRun(currentRun, callback)
-    local previous = _G.CurrentRun
-    _G.CurrentRun = currentRun
-    local ok, result = pcall(callback)
-    _G.CurrentRun = previous
-    if not ok then
-        error(result, 0)
-    end
-    return result
-end
-
-function TestRunPlannerLogic.testRoutePlanSelectsUnderworldForErebusStart()
-    local catalog = loadCatalog()
-    local routePlan = loadRoutePlan()
-    local runtime = runtimeForCatalog(routePlan, catalog)
-
-    local plan = routePlan.refresh(catalog, runtime, {
-        CurrentRoom = {
-            RoomSetName = "F",
-        },
-    }, {
-        StartingBiome = "F",
-    })
-
-    lu.assertTrue(plan.active)
-    lu.assertTrue(plan.valid)
-    lu.assertEquals(plan.routeKey, "Underworld")
-    lu.assertNil(plan.snapshot)
-    lu.assertEquals(plan.executionPlan.routeKey, "Underworld")
-    lu.assertEquals(plan.executionPlan.layers.rooms, true)
-    lu.assertEquals(plan.executionPlan.layers.rewards, true)
-    lu.assertEquals(plan.executionPlan.layers.npcs, false)
-    lu.assertEquals(plan.executionPlan.layers.features, false)
-    lu.assertIs(routePlan.get(runtime), plan)
-end
-
-function TestRunPlannerLogic.testRunStateNormalizesCurrentBiomeAndRoute()
-    local catalog = loadCatalog()
-    local runState = loadRunState()
-
-    lu.assertEquals(runState.currentBiomeKey({
-        CurrentRoom = {
-            RoomSetName = "F",
-        },
-    }), "F")
-    lu.assertEquals(runState.currentBiomeKey({
-        CurrentRoom = {
-            RoomSetName = "F",
-            NextRoomSet = { "G" },
-        },
-    }), "G")
-    lu.assertEquals(runState.currentBiomeKey({
-        CurrentRoom = {
-            RoomSetName = "F",
-            ForceNextRoomSet = "I",
-        },
-    }), "I")
-    lu.assertEquals(runState.currentBiomeKey({
-        CurrentRoom = {
-            RoomSetName = "Q",
-        },
-    }, {
-        RoomSetName = "O",
-    }), "O")
-    lu.assertEquals(runState.currentBiomeKey({
-        CurrentRoom = {
-            RoomSetName = "F",
-        },
-    }, nil, {
-        Name = "O_Combat05",
-        RoomSetName = "O",
-    }), "O")
-
-    lu.assertEquals(runState.routeKey(catalog, {
-        CurrentRoom = {
-            RoomSetName = "F",
-        },
-    }), "Underworld")
-    lu.assertEquals(runState.routeKey(catalog, {
-        CurrentRoom = {
-            RoomSetName = "O",
-        },
-    }), "Surface")
-    lu.assertTrue(runState.isRoute(catalog, {
-        CurrentRoom = {
-            RoomSetName = "O",
-        },
-    }, nil, nil, "Surface"))
-end
-
-function TestRunPlannerLogic.testRunStateNormalizesDepthCounters()
-    local runState = loadRunState()
-    local currentRun = {
-        RunDepthCache = "12",
-        BiomeDepthCache = "4",
-        BiomeEncounterDepth = "3",
-    }
-
-    lu.assertEquals(runState.runDepthCache(currentRun), 12)
-    lu.assertEquals(runState.biomeDepthCache(currentRun), 4)
-    lu.assertEquals(runState.nextBiomeDepthCache(currentRun), 5)
-    lu.assertEquals(runState.biomeEncounterDepth(currentRun), 3)
-    lu.assertEquals(runState.runDepthCache(nil), 0)
-    lu.assertEquals(runState.biomeDepthCache(nil), 0)
-    lu.assertEquals(runState.biomeEncounterDepth(nil), 0)
-end
-
-function TestRunPlannerLogic.testRoutePlanSelectsSurfaceForEphyraStart()
-    local catalog = loadCatalog()
-    local routePlan = loadRoutePlan()
-    local runtime = runtimeForCatalog(routePlan, catalog)
-
-    local plan = routePlan.refresh(catalog, runtime, {
-        CurrentRoom = {
-            RoomSetName = "N",
-        },
-    }, {
-        StartingBiome = "N",
-    })
-
-    lu.assertTrue(plan.active)
-    lu.assertTrue(plan.valid)
-    lu.assertEquals(plan.routeKey, "Surface")
-    lu.assertNil(plan.snapshot)
-    lu.assertEquals(plan.executionPlan.routeKey, "Surface")
-end
-
-function TestRunPlannerLogic.testRoutePlanCompilesRuntimeExecutionPlan()
-    local catalog = loadCatalog()
-    local routePlan = loadRoutePlan()
-    local runtime = runtimeForCatalog(routePlan, catalog, {
-        F = {
-            controlName = "RouteF",
-            biomeKey = "F",
-            adapter = "FixedLinearRoute",
-            valid = true,
-            disabled = false,
-            invalidRows = {},
-            rows = {
-                {
-                    rowIndex = 1,
-                    routeOrdinal = 0,
-                    slotKind = "intro",
-                    isBiomeEntry = true,
-                    roomKey = "F_PreRun",
-                    roleKey = "Intro",
-                    optionKey = "",
-                    valid = true,
-                    rewardKind = "roomStore",
-                    rewards = { "Boon", "ZeusUpgrade" },
-                    rewardLoot = { "ZeusUpgrade" },
-                    rewardPicks = {
-                        {
-                            key = "boonSource",
-                            kind = "dropdown",
-                            alias = "Reward1LootKey",
-                            value = "ZeusUpgrade",
-                        },
-                    },
-                },
-                {
-                    rowIndex = 2,
-                    routeOrdinal = 1,
-                    slotKind = "biomeRow",
-                    roomKey = "",
-                    roleKey = "Vanilla",
-                    optionKey = "",
-                    valid = true,
-                },
-                {
-                    rowIndex = 3,
-                    routeOrdinal = 2,
-                    biomeDepthCache = 1,
-                    biomeDepthCacheCost = 1,
-                    slotKind = "biomeRow",
-                    roomKey = "F_Story01",
-                    roleKey = "Story",
-                    optionKey = "Arachne",
-                    valid = true,
-                    features = {
-                        chaos = true,
-                    },
-                },
-            },
-        },
-    })
-
-    local plan = routePlan.refresh(catalog, runtime, {
-        CurrentRoom = {
-            RoomSetName = "F",
-        },
-    }, {
-        StartingBiome = "F",
-    })
-
-    local execution = plan.executionPlan
-    local biome = execution.biomes.F
-    lu.assertEquals(#biome.plannedRows, 2)
-    lu.assertEquals(biome.plannedByRowIndex[1].roomKey, "F_PreRun")
-    lu.assertEquals(biome.plannedEntryRoom.roomKey, "F_PreRun")
-    lu.assertEquals(biome.plannedByBiomeDepthCache[1].primary.roomKey, "F_Story01")
-    lu.assertEquals(biome.plannedRoutableByBiomeDepthCache[1].primary.roomKey, "F_Story01")
-    lu.assertEquals(biome.reservedRoomKeys.F_Story01.primary.rowIndex, 3)
-    lu.assertEquals(execution.reservedRoomKeys.F_Story01.primary.biomeKey, "F")
-    lu.assertEquals(primaryRewardItem(biome.plannedByRowIndex[1]).kind, "roomStore")
-    lu.assertEquals(primaryRewardItem(biome.plannedByRowIndex[1]).rewards[2], "ZeusUpgrade")
-    lu.assertEquals(primaryRewardItem(biome.plannedByRowIndex[1]).picks[1].value, "ZeusUpgrade")
-    lu.assertEquals(biome.plannedByRowIndex[3].features.chaos, true)
-end
-
-function TestRunPlannerLogic.testRewardRoutingLogsPlannedRewardChoice()
-    local catalog = loadCatalog()
-    local routePlan = loadRoutePlan()
-    local logs = {}
-    local rewardRouting = loadRewardRouting(routePlan, {
-        print = function(text)
-            logs[#logs + 1] = text
-        end,
-    })
-    local runtime = runtimeForCatalog(routePlan, catalog, {
-        F = plannedBiomeSnapshot("F", "fixedLinear", {
-            {
-                rowIndex = 3,
-                routeOrdinal = 2,
-                biomeDepthCache = 1,
-                biomeDepthCacheCost = 1,
-                slotKind = "biomeRow",
-                roomKey = "F_Combat01",
-                roleKey = "Combat",
-                optionKey = "F_Combat01",
-                valid = true,
-                rewardKind = "roomStore",
-                rewards = { "Boon", "ZeusUpgrade" },
-                rewardLoot = { "ZeusUpgrade" },
-            },
-        }),
-    })
-    local currentRun = {
-        CurrentRoom = {
-            RoomSetName = "F",
-        },
-        BiomeDepthCache = 1,
-    }
-    routePlan.refresh(catalog, runtime, currentRun, {
-        StartingBiome = "F",
-    })
-
-    local baseCalled = false
-    local rewardType = rewardRouting.chooseRoomReward(runtime, function(run, room, rewardStoreName, previouslyChosenRewards, args)
-        baseCalled = true
-        lu.assertIs(run, currentRun)
-        lu.assertEquals(room.Name, "F_Combat01")
-        lu.assertEquals(rewardStoreName, "RunProgress")
-        lu.assertEquals(previouslyChosenRewards[1].RewardType, "MaxHealthDrop")
-        lu.assertEquals(args.Marker, "test")
-        return "Boon"
-    end, currentRun, {
-        Name = "F_Combat01",
-        RoomSetName = "F",
-    }, "RunProgress", {
-        {
-            RewardType = "MaxHealthDrop",
-        },
-    }, {
-        Marker = "test",
-    })
-
-    lu.assertTrue(baseCalled)
-    lu.assertEquals(rewardType, "Boon")
-    lu.assertTrue(logsContain(logs, "choose set=F room=F_Combat01"))
-    lu.assertTrue(logsContain(logs, "row=3"))
-    lu.assertTrue(logsContain(logs, "Boon,ZeusUpgrade"))
-    lu.assertTrue(logsContain(logs, "actual=Boon"))
-end
-
-function TestRunPlannerLogic.testRewardRoutingLogsSetupRewardContext()
-    local catalog = loadCatalog()
-    local routePlan = loadRoutePlan()
-    local logs = {}
-    local rewardRouting = loadRewardRouting(routePlan, {
-        print = function(text)
-            logs[#logs + 1] = text
-        end,
-    })
-    local runtime = runtimeForCatalog(routePlan, catalog, {
-        F = plannedBiomeSnapshot("F", "fixedLinear", {
-            {
-                rowIndex = 3,
-                routeOrdinal = 2,
-                biomeDepthCache = 1,
-                biomeDepthCacheCost = 1,
-                slotKind = "biomeRow",
-                roomKey = "F_Combat01",
-                roleKey = "Combat",
-                optionKey = "F_Combat01",
-                valid = true,
-                rewardKind = "roomStore",
-                rewards = { "Boon", "ZeusUpgrade" },
-                rewardLoot = { "ZeusUpgrade" },
-            },
-        }),
-    })
-    local currentRun = {
-        CurrentRoom = {
-            RoomSetName = "F",
-        },
-        BiomeDepthCache = 1,
-    }
-    local room = {
-        Name = "F_Combat01",
-        RoomSetName = "F",
-        ChosenRewardType = "Boon",
-    }
-    routePlan.refresh(catalog, runtime, currentRun, {
-        StartingBiome = "F",
-    })
-
-    local result = rewardRouting.setupRoomReward(runtime, function()
-        room.ForceLootName = "ZeusUpgrade"
-        return "base-result"
-    end, currentRun, room, {}, {})
-
-    lu.assertEquals(result, "base-result")
-    lu.assertTrue(logsContain(logs, "setup set=F room=F_Combat01"))
-    lu.assertTrue(logsContain(logs, "row=3"))
-    lu.assertTrue(logsContain(logs, "chosen=Boon"))
-    lu.assertTrue(logsContain(logs, "loot=ZeusUpgrade"))
-end
-
-function TestRunPlannerLogic.testExecutionPlanPreservesDisabledNpcRows()
-    local executionPlan = testImport("mods/logic/execution_plan.lua")
-    local plan = executionPlan.compile({
-        routeKey = "Underworld",
-        biomes = {},
-        npcs = {
-            rows = {
-                {
-                    rowIndex = 1,
-                    slotKey = "Artemis",
-                    npcKey = "Artemis",
-                    groupKey = "FieldNPC",
-                    disabled = true,
-                    mode = "Disabled",
-                    valid = true,
-                },
-                {
-                    rowIndex = 2,
-                    slotKey = "Nemesis",
-                    npcKey = "Nemesis",
-                    groupKey = "FieldNPC",
-                    mode = "Vanilla",
-                    targetKey = "",
-                    valid = true,
-                },
-            },
-        },
-    }, {
-        layers = {
-            npcs = true,
-        },
-    })
-
-    lu.assertEquals(#plan.npcs.rows, 1)
-    lu.assertEquals(plan.npcs.rows[1].slotKey, "Artemis")
-    lu.assertTrue(plan.npcs.rows[1].disabled)
-    lu.assertEquals(plan.npcs.rows[1].mode, "Disabled")
-    lu.assertNil(plan.npcs.rows[1].target)
-    lu.assertEquals(plan.npcs.bySlotKey.Artemis.slotKey, "Artemis")
-    lu.assertNil(plan.npcs.bySlotKey.Nemesis)
-end
-
-function TestRunPlannerLogic.testRoutePlanKeepsPrebossBranchesAtSharedRouteOrdinal()
-    local catalog = loadCatalog()
-    local routePlan = loadRoutePlan()
-    local runtime = runtimeForCatalog(routePlan, catalog, {
-        F = {
-            controlName = "RouteF",
-            biomeKey = "F",
-            adapter = "FixedLinearRoute",
-            valid = true,
-            disabled = false,
-            invalidRows = {},
-            rows = {
-            {
-                rowIndex = 12,
-                routeOrdinal = 11,
-                biomeDepthCache = 10,
-                biomeDepthCacheCost = 0,
-                slotKind = "preboss",
-                    roomKey = "F_PreBoss01",
-                    branchKey = "Shop",
-                    roleKey = "Shop",
-                    optionKey = "",
-                    valid = true,
-                    rewardKind = "roomStore",
-                    rewards = { "Shop" },
-                },
-            {
-                rowIndex = 13,
-                routeOrdinal = 11,
-                biomeDepthCache = 10,
-                biomeDepthCacheCost = 0,
-                slotKind = "preboss",
-                    roomKey = "F_PreBoss01",
-                    branchKey = "MajorReward",
-                    roleKey = "MajorReward",
-                    optionKey = "",
-                    valid = true,
-                    rewardKind = "roomStore",
-                    rewards = { "Boon" },
-                },
-            },
-        },
-    })
-
-    local plan = routePlan.refresh(catalog, runtime, {
-        CurrentRoom = {
-            RoomSetName = "F",
-        },
-    }, {
-        StartingBiome = "F",
-    })
-
-    local biome = plan.executionPlan.biomes.F
-    local depthBucket = biome.plannedByBiomeDepthCache[10]
-    local room = depthBucket.byRoomKey.F_PreBoss01
-    local reservation = plan.executionPlan.reservedRoomKeys.F_PreBoss01
-
-    lu.assertEquals(#depthBucket.rows, 2)
-    lu.assertTrue(depthBucket.branchGroup)
-    lu.assertEquals(depthBucket.primary.branchKey, "Shop")
-    lu.assertEquals(depthBucket.byBranchKey.Shop.rowIndex, 12)
-    lu.assertEquals(depthBucket.byBranchKey.MajorReward.rowIndex, 13)
-    lu.assertEquals(#room.rows, 2)
-    lu.assertEquals(primaryRewardItem(room.byBranchKey.MajorReward).rewards[1], "Boon")
-    lu.assertEquals(#biome.plannedByRoomKey.F_PreBoss01.rows, 2)
-    lu.assertEquals(#reservation.entries, 2)
-    lu.assertEquals(reservation.entries[2].branchKey, "MajorReward")
-end
-
-function TestRunPlannerLogic.testRoomRoutingForcesPlannedLinearRoom()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingForcesPlannedLinearRoom()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan, {
@@ -737,7 +59,7 @@ function TestRunPlannerLogic.testRoomRoutingForcesPlannedLinearRoom()
     lu.assertNil(originalArgs.ForceNextRoom)
 end
 
-function TestRunPlannerLogic.testRoomRoutingExcludesFutureReservedRooms()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingExcludesFutureReservedRooms()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan)
@@ -780,7 +102,7 @@ function TestRunPlannerLogic.testRoomRoutingExcludesFutureReservedRooms()
     lu.assertEquals(args.ExcludedNames.F_Story01, true)
 end
 
-function TestRunPlannerLogic.testRoomRoutingDoesNotDuplicateNormalPlannedRoom()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingDoesNotDuplicateNormalPlannedRoom()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan)
@@ -824,7 +146,7 @@ function TestRunPlannerLogic.testRoomRoutingDoesNotDuplicateNormalPlannedRoom()
     lu.assertEquals(args.ExcludedNames.F_Story01, true)
 end
 
-function TestRunPlannerLogic.testRoomRoutingAllowsSharedPrebossBranchRoom()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingAllowsSharedPrebossBranchRoom()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan, {
@@ -882,7 +204,7 @@ function TestRunPlannerLogic.testRoomRoutingAllowsSharedPrebossBranchRoom()
     lu.assertEquals(args.ForceNextRoom, "F_PreBoss01")
 end
 
-function TestRunPlannerLogic.testRoomRoutingSupportsSummitLinearAdapter()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingSupportsSummitLinearAdapter()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan, {
@@ -923,7 +245,7 @@ function TestRunPlannerLogic.testRoomRoutingSupportsSummitLinearAdapter()
     lu.assertEquals(args.ForceNextRoom, "Q_MiniBoss01")
 end
 
-function TestRunPlannerLogic.testRoomRoutingSupportsThessalyMultiEncounterAdapter()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingSupportsThessalyMultiEncounterAdapter()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan, {
@@ -964,7 +286,7 @@ function TestRunPlannerLogic.testRoomRoutingSupportsThessalyMultiEncounterAdapte
     lu.assertEquals(args.ForceNextRoom, "O_Story01")
 end
 
-function TestRunPlannerLogic.testRoomRoutingSupportsTartarusClockworkAdapter()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingSupportsTartarusClockworkAdapter()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan, {
@@ -1005,7 +327,7 @@ function TestRunPlannerLogic.testRoomRoutingSupportsTartarusClockworkAdapter()
     lu.assertEquals(args.ForceNextRoom, "I_Combat03")
 end
 
-function TestRunPlannerLogic.testRoomRoutingSupportsFieldsCageAdapter()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingSupportsFieldsCageAdapter()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan, {
@@ -1050,7 +372,7 @@ function TestRunPlannerLogic.testRoomRoutingSupportsFieldsCageAdapter()
     lu.assertEquals(planned.cageRewardCount, 2)
 end
 
-function TestRunPlannerLogic.testRoomRoutingForcesFieldsCageRewardCount()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingForcesFieldsCageRewardCount()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local logs = {}
@@ -1102,7 +424,7 @@ function TestRunPlannerLogic.testRoomRoutingForcesFieldsCageRewardCount()
     lu.assertTrue(logsContain(logs, "cage rewards H_Combat05 forced count=3 planned=3"))
 end
 
-function TestRunPlannerLogic.testRoomRoutingClampsFieldsCageRewardCountToRoomMax()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingClampsFieldsCageRewardCountToRoomMax()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan, {
@@ -1148,7 +470,7 @@ function TestRunPlannerLogic.testRoomRoutingClampsFieldsCageRewardCountToRoomMax
     lu.assertEquals(count, 2)
 end
 
-function TestRunPlannerLogic.testRoomRoutingPrioritizesPlannedEphyraHubDoors()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingPrioritizesPlannedEphyraHubDoors()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local predetermined = {
@@ -1236,7 +558,7 @@ function TestRunPlannerLogic.testRoomRoutingPrioritizesPlannedEphyraHubDoors()
     lu.assertTrue(logsContain(logs, "hub doors N_Hub planned=2 available=9"))
 end
 
-function TestRunPlannerLogic.testRoomRoutingSuppressesUnplannedEphyraMinibossDoor()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingSuppressesUnplannedEphyraMinibossDoor()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local predetermined = {
@@ -1301,7 +623,7 @@ function TestRunPlannerLogic.testRoomRoutingSuppressesUnplannedEphyraMinibossDoo
     lu.assertEquals(availableDoorCount(predetermined, room.UnavailableDoors), 9)
 end
 
-function TestRunPlannerLogic.testRoomRoutingDisablesPlannedEphyraSideDoor()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingDisablesPlannedEphyraSideDoor()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local logs = {}
@@ -1363,7 +685,7 @@ function TestRunPlannerLogic.testRoomRoutingDisablesPlannedEphyraSideDoor()
     lu.assertTrue(logsContain(logs, "side door N_Combat12 door=558352 disabled planned=N_Sub09 row=4"))
 end
 
-function TestRunPlannerLogic.testRoomRoutingEnablesPlannedEphyraSideDoor()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingEnablesPlannedEphyraSideDoor()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local logs = {}
@@ -1429,7 +751,7 @@ function TestRunPlannerLogic.testRoomRoutingEnablesPlannedEphyraSideDoor()
     lu.assertTrue(logsContain(logs, "side door N_Combat12 door=558352 enabled planned=N_Sub09 row=4"))
 end
 
-function TestRunPlannerLogic.testRoomRoutingLeavesVanillaEphyraSideDoorToBase()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingLeavesVanillaEphyraSideDoorToBase()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan)
@@ -1486,7 +808,7 @@ function TestRunPlannerLogic.testRoomRoutingLeavesVanillaEphyraSideDoorToBase()
     lu.assertTrue(currentRun.CurrentRoom.UnavailableDoors[558352])
 end
 
-function TestRunPlannerLogic.testRoomRoutingForcesThessalyTwoEncounterRoom()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingForcesThessalyTwoEncounterRoom()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan, {
@@ -1545,7 +867,7 @@ function TestRunPlannerLogic.testRoomRoutingForcesThessalyTwoEncounterRoom()
     lu.assertNotNil(room.MultipleEncountersData[3].GameStateRequirements)
 end
 
-function TestRunPlannerLogic.testRoomRoutingForcesThessalyThreeEncounterRoom()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingForcesThessalyThreeEncounterRoom()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan, {
@@ -1606,7 +928,7 @@ function TestRunPlannerLogic.testRoomRoutingForcesThessalyThreeEncounterRoom()
     lu.assertNotNil(room.MultipleEncountersData[3].GameStateRequirements)
 end
 
-function TestRunPlannerLogic.testRoomRoutingForcesPlannedStartingRoom()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingForcesPlannedStartingRoom()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local createdArgs
@@ -1677,7 +999,7 @@ function TestRunPlannerLogic.testRoomRoutingForcesPlannedStartingRoom()
     lu.assertTrue(logsContain(logs, "plan row biome=F row=1 routeOrdinal=0 kind=opening room=F_Opening02"))
 end
 
-function TestRunPlannerLogic.testRoomRoutingFallsBackWhenPlannedStartingRoomIsIneligible()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingFallsBackWhenPlannedStartingRoomIsIneligible()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan, {
@@ -1736,152 +1058,4 @@ function TestRunPlannerLogic.testRoomRoutingFallsBackWhenPlannedStartingRoomIsIn
 
     lu.assertTrue(baseCalled)
     lu.assertEquals(result.Name, "Vanilla")
-end
-
-function TestRunPlannerLogic.testRoutePlanDefersDreamDive()
-    local catalog = loadCatalog()
-    local routePlan = loadRoutePlan()
-    local runtime = runtimeForCatalog(routePlan, catalog)
-
-    local plan = routePlan.refresh(catalog, runtime, {
-        IsDreamRun = true,
-        CurrentRoom = {
-            RoomSetName = "G",
-        },
-    }, {
-        StartingBiome = "G",
-    })
-
-    lu.assertFalse(plan.active)
-    lu.assertFalse(plan.valid)
-    lu.assertEquals(plan.reason, routePlan.REASON_DREAM_DIVE)
-    lu.assertNil(plan.routeKey)
-    lu.assertNil(plan.snapshot)
-end
-
-function TestRunPlannerLogic.testRoutePlanInvalidatesBadRouteSnapshot()
-    local catalog = loadCatalog()
-    local routePlan = loadRoutePlan()
-    local runtime = runtimeForCatalog(routePlan, catalog, {
-        F = invalidBiomeSnapshot("F"),
-    })
-
-    local plan = routePlan.refresh(catalog, runtime, {
-        CurrentRoom = {
-            RoomSetName = "F",
-        },
-    }, {
-        StartingBiome = "F",
-    })
-
-    lu.assertFalse(plan.active)
-    lu.assertFalse(plan.valid)
-    lu.assertEquals(plan.reason, routePlan.REASON_INVALID_SNAPSHOT)
-    lu.assertEquals(plan.routeKey, "Underworld")
-    lu.assertEquals(plan.invalidRows[1].biomeKey, "F")
-    lu.assertEquals(plan.invalidRows[1].code, "test_invalid")
-end
-
-function TestRunPlannerLogic.testRoutePlanRegistersCacheAndStartNewRunHook()
-    local catalog = loadCatalog()
-    local routePlan = loadRoutePlan()
-    local runtime = runtimeForCatalog(routePlan, catalog)
-    local cacheDefs
-    local startNewRunHook
-    local moduleRef = {
-        cache = {
-            define = function(defs)
-                cacheDefs = defs
-            end,
-        },
-        hooks = {
-            wrap = function(name, callback)
-                if name == "StartNewRun" then
-                    startNewRunHook = callback
-                end
-            end,
-        },
-    }
-
-    routePlan.defineCache(moduleRef)
-    routePlan.registerHooks(moduleRef, catalog)
-
-    lu.assertNotNil(cacheDefs.RoutePlan)
-    lu.assertEquals(cacheDefs.RoutePlan.domain, "currentRun")
-    lu.assertNotNil(startNewRunHook)
-
-    local baseCalled = false
-    local result = startNewRunHook({
-        isEnabled = function()
-            return true
-        end,
-    }, runtime, function(_, args)
-        baseCalled = true
-        return {
-            CurrentRoom = {
-                RoomSetName = args.StartingBiome,
-            },
-        }
-    end, nil, {
-        StartingBiome = "N",
-    })
-
-    lu.assertTrue(baseCalled)
-    lu.assertEquals(result.CurrentRoom.RoomSetName, "N")
-    lu.assertEquals(routePlan.get(runtime).routeKey, "Surface")
-end
-
-function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
-    local catalog, data = loadCatalog()
-    local logic
-    withTestImport(function()
-        logic = testImport("mods/systems.lua").create({
-            data = data,
-            catalog = catalog,
-        }).logic
-    end)
-
-    local cacheDefined = false
-    local hookedStartNewRun = false
-    local hookedChooseStartingRoom = false
-    local hookedChooseNextRoomData = false
-    local hookedSetupRoomMultipleEncountersData = false
-    local hookedSelectFieldsDoorCageCount = false
-    local hookedChooseAvailableNHubDoors = false
-    local hookedCheckNSubRoomDoorUnavailable = false
-    logic.attach({
-        cache = {
-            define = function(defs)
-                cacheDefined = defs.RoutePlan ~= nil
-            end,
-        },
-        hooks = {
-            wrap = function(name)
-                if name == "StartNewRun" then
-                    hookedStartNewRun = true
-                elseif name == "ChooseStartingRoom" then
-                    hookedChooseStartingRoom = true
-                elseif name == "ChooseNextRoomData" then
-                    hookedChooseNextRoomData = true
-                elseif name == "SetupRoomMultipleEncountersData" then
-                    hookedSetupRoomMultipleEncountersData = true
-                elseif name == "SelectFieldsDoorCageCount" then
-                    hookedSelectFieldsDoorCageCount = true
-                elseif name == "ChooseAvailableN_HubDoors" then
-                    hookedChooseAvailableNHubDoors = true
-                elseif name == "CheckN_SubRoomDoorUnavailable" then
-                    hookedCheckNSubRoomDoorUnavailable = true
-                end
-            end,
-        },
-    })
-
-    lu.assertTrue(cacheDefined)
-    lu.assertTrue(hookedStartNewRun)
-    lu.assertTrue(hookedChooseStartingRoom)
-    lu.assertTrue(hookedChooseNextRoomData)
-    lu.assertTrue(hookedSetupRoomMultipleEncountersData)
-    lu.assertTrue(hookedSelectFieldsDoorCageCount)
-    lu.assertTrue(hookedChooseAvailableNHubDoors)
-    lu.assertTrue(hookedCheckNSubRoomDoorUnavailable)
 end

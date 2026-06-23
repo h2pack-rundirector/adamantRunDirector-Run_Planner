@@ -184,15 +184,6 @@ definitions.bundles = {
             "RoomMoneyTripleDrop",
         },
     },
-    ClockworkExtensionRewards = {
-        options = {
-            "WeaponUpgrade",
-            "Devotion",
-            "StackUpgradeTriple",
-            "TalentBigDrop",
-            "RoomMoneyTripleDrop",
-        },
-    },
     TyphonBossRewards = {
         options = {
             "Boon",

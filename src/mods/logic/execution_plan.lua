@@ -51,6 +51,7 @@ local function compactRewardItem(item)
         picks = compactRewardPicks(item.rewardPicks),
         fixedRewardType = item.fixedRewardType,
         rewardStore = item.rewardStore,
+        rewardSourceCount = item.rewardSourceCount,
         valid = item.valid,
     }
 end

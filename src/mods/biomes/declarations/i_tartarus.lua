@@ -90,7 +90,7 @@ return function(importer, deps)
                 key = "ExtensionCombat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,
-                reward = rewards.roomStore("ClockworkExtensionRewards"),
+                reward = rewards.roomStore("TartarusRewards", { ineligibleRewardTypes = { "Boon" } }),
                 increments = { clockworkNonGoalReward = 1 },
                 requiresPrevious = { supportsExtensionChoice = true },
                 biomeEncounterDepthCost = 1,
