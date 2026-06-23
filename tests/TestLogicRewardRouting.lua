@@ -46,6 +46,66 @@ local function prebossRewardOffers()
     }
 end
 
+local function withShopGlobals(callback)
+    local previousStoreData = _G.StoreData
+    local previousConsumableData = _G.ConsumableData
+    local previousGetProcessedValue = _G.GetProcessedValue
+    _G.StoreData = {
+        WorldShop = {
+            GroupsOf = {
+                {
+                    OptionsData = {
+                        { Name = "RandomLoot" },
+                        { Name = "BlindBoxLoot" },
+                        { Name = "ShopHermesUpgrade" },
+                    },
+                },
+                {
+                    OptionsData = {
+                        { Name = "WeaponUpgradeDrop" },
+                        { Name = "RoomRewardHealDrop" },
+                        { Name = "MaxHealthDrop" },
+                        { Name = "ArmorBoost" },
+                    },
+                },
+                {
+                    OptionsData = {
+                        { Name = "MaxManaDrop" },
+                        { Name = "StackUpgrade", Cost = 100 },
+                        { Name = "StoreRewardRandomStack", Cost = 50 },
+                        { Name = "SpellDrop" },
+                        { Name = "TalentDrop" },
+                    },
+                },
+            },
+        },
+    }
+    _G.ConsumableData = {
+        RandomLoot = {
+            ResourceCosts = {
+                Money = 125,
+            },
+        },
+    }
+    _G.GetProcessedValue = function(value, args, processedKey)
+        lu.assertNil(args)
+        lu.assertEquals(processedKey, "ResourceCosts")
+        local copy = {}
+        for key, amount in pairs(value) do
+            copy[key] = amount
+        end
+        return copy
+    end
+
+    local ok, result = pcall(callback)
+    _G.StoreData = previousStoreData
+    _G.ConsumableData = previousConsumableData
+    _G.GetProcessedValue = previousGetProcessedValue
+    if not ok then
+        error(result, 0)
+    end
+end
+
 function TestRunPlannerLogicRewardRouting.testRewardRoutingLogsPlannedRewardChoice()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
@@ -645,6 +705,269 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingDoesNotForcePrebossSh
     lu.assertEquals(rewardType, "MaxHealthDrop")
     lu.assertNil(room.ForceLootName)
     lu.assertEquals(currentRun.RewardPriorities[1], "WeaponUpgrade")
+end
+
+function TestRunPlannerLogicRewardRouting.testRewardRoutingForcesPrebossShopOptions()
+    withShopGlobals(function()
+        local catalog = loadCatalog()
+        local routePlan = loadRoutePlan()
+        local rewardRouting = loadRewardRouting(routePlan, {
+            print = function()
+            end,
+        })
+        local runtime = runtimeForCatalog(routePlan, catalog, {
+            F = plannedBiomeSnapshot("F", "fixedLinear", {
+                {
+                    rowIndex = 12,
+                    routeOrdinal = 11,
+                    biomeDepthCache = 10,
+                    biomeDepthCacheCost = 0,
+                    slotKind = "preboss",
+                    roomKey = "F_PreBoss01",
+                    roleKey = "Preboss",
+                    optionKey = "F_PreBoss01",
+                    valid = true,
+                    rewardKind = "preboss",
+                    rewardOffers = prebossRewardOffers(),
+                    rewards = {
+                        "RandomLoot",
+                        "ArmorBoost",
+                        "StoreRewardRandomStack",
+                    },
+                    rewardLoot = {
+                        "DemeterUpgrade",
+                    },
+                    rewardPicks = {
+                        {
+                            key = "Boon",
+                            kind = "shopOption",
+                            alias = "Reward1Key",
+                            value = "RandomLoot",
+                        },
+                        {
+                            key = "BoonLoot",
+                            kind = "boonSource",
+                            alias = "Reward1LootKey",
+                            value = "DemeterUpgrade",
+                        },
+                        {
+                            key = "MajorNonBoon",
+                            kind = "shopOption",
+                            alias = "Reward2Key",
+                            value = "ArmorBoost",
+                        },
+                        {
+                            key = "Minor",
+                            kind = "shopOption",
+                            alias = "Reward3Key",
+                            value = "StoreRewardRandomStack",
+                        },
+                    },
+                },
+            }),
+        })
+        local currentRun = {
+            CurrentRoom = {
+                Name = "F_PreBoss01",
+                RoomSetName = "F",
+                StoreDataName = "WorldShop",
+            },
+            BiomeDepthCache = 10,
+        }
+        routePlan.refresh(catalog, runtime, currentRun, {
+            StartingBiome = "F",
+        })
+
+        local baseCalled = false
+        local store = rewardRouting.fillInShopOptions(runtime, function(args)
+            baseCalled = true
+            lu.assertEquals(args.RoomName, "F_PreBoss01")
+            return {
+                StoreOptions = {
+                    { Name = "BlindBoxLoot", Type = "Consumable" },
+                    { Name = "MaxHealthDrop", Type = "Consumable" },
+                    { Name = "MaxManaDrop", Type = "Consumable" },
+                },
+            }
+        end, {
+            RoomName = "F_PreBoss01",
+            StoreData = _G.StoreData.WorldShop,
+        }, currentRun)
+
+        lu.assertTrue(baseCalled)
+        lu.assertEquals(store.StoreOptions[1].Name, "RandomLoot")
+        lu.assertEquals(store.StoreOptions[1].Type, "Boon")
+        lu.assertEquals(store.StoreOptions[1].Args.ForceLootName, "DemeterUpgrade")
+        lu.assertEquals(store.StoreOptions[1].Args.ResourceCosts.Money, 125)
+        lu.assertEquals(store.StoreOptions[2].Name, "ArmorBoost")
+        lu.assertEquals(store.StoreOptions[2].Type, "Consumable")
+        lu.assertEquals(store.StoreOptions[3].Name, "StoreRewardRandomStack")
+        lu.assertEquals(store.StoreOptions[3].Type, "Consumable")
+        lu.assertEquals(store.StoreOptions[3].CostOverride, 50)
+    end)
+end
+
+function TestRunPlannerLogicRewardRouting.testRewardRoutingLeavesUnplannedPrebossShopSlotsVanilla()
+    withShopGlobals(function()
+        local catalog = loadCatalog()
+        local routePlan = loadRoutePlan()
+        local rewardRouting = loadRewardRouting(routePlan, {
+            print = function()
+            end,
+        })
+        local runtime = runtimeForCatalog(routePlan, catalog, {
+            F = plannedBiomeSnapshot("F", "fixedLinear", {
+                {
+                    rowIndex = 12,
+                    routeOrdinal = 11,
+                    biomeDepthCache = 10,
+                    biomeDepthCacheCost = 0,
+                    slotKind = "preboss",
+                    roomKey = "F_PreBoss01",
+                    roleKey = "Preboss",
+                    optionKey = "F_PreBoss01",
+                    valid = true,
+                    rewardKind = "preboss",
+                    rewardOffers = prebossRewardOffers(),
+                    rewards = {
+                        "",
+                        "ArmorBoost",
+                        "",
+                    },
+                    rewardPicks = {
+                        {
+                            key = "MajorNonBoon",
+                            kind = "shopOption",
+                            alias = "Reward2Key",
+                            value = "ArmorBoost",
+                        },
+                    },
+                },
+            }),
+        })
+        local currentRun = {
+            CurrentRoom = {
+                Name = "F_PreBoss01",
+                RoomSetName = "F",
+                StoreDataName = "WorldShop",
+            },
+            BiomeDepthCache = 10,
+        }
+        routePlan.refresh(catalog, runtime, currentRun, {
+            StartingBiome = "F",
+        })
+
+        local store = rewardRouting.fillInShopOptions(runtime, function()
+            return {
+                StoreOptions = {
+                    { Name = "BlindBoxLoot", Type = "Consumable" },
+                    { Name = "MaxHealthDrop", Type = "Consumable" },
+                    { Name = "MaxManaDrop", Type = "Consumable" },
+                },
+            }
+        end, {
+            RoomName = "F_PreBoss01",
+            StoreData = _G.StoreData.WorldShop,
+        }, currentRun)
+
+        lu.assertEquals(store.StoreOptions[1].Name, "BlindBoxLoot")
+        lu.assertEquals(store.StoreOptions[2].Name, "ArmorBoost")
+        lu.assertEquals(store.StoreOptions[3].Name, "MaxManaDrop")
+    end)
+end
+
+function TestRunPlannerLogicRewardRouting.testRewardRoutingRespectsPrebossShopRestockExclusions()
+    withShopGlobals(function()
+        local catalog = loadCatalog()
+        local routePlan = loadRoutePlan()
+        local rewardRouting = loadRewardRouting(routePlan, {
+            print = function()
+            end,
+        })
+        local runtime = runtimeForCatalog(routePlan, catalog, {
+            F = plannedBiomeSnapshot("F", "fixedLinear", {
+                {
+                    rowIndex = 12,
+                    routeOrdinal = 11,
+                    biomeDepthCache = 10,
+                    biomeDepthCacheCost = 0,
+                    slotKind = "preboss",
+                    roomKey = "F_PreBoss01",
+                    roleKey = "Preboss",
+                    optionKey = "F_PreBoss01",
+                    valid = true,
+                    rewardKind = "preboss",
+                    rewardOffers = prebossRewardOffers(),
+                    rewards = {
+                        "RandomLoot",
+                        "ArmorBoost",
+                        "StoreRewardRandomStack",
+                    },
+                    rewardLoot = {
+                        "DemeterUpgrade",
+                    },
+                    rewardPicks = {
+                        {
+                            key = "Boon",
+                            kind = "shopOption",
+                            alias = "Reward1Key",
+                            value = "RandomLoot",
+                        },
+                        {
+                            key = "BoonLoot",
+                            kind = "boonSource",
+                            alias = "Reward1LootKey",
+                            value = "DemeterUpgrade",
+                        },
+                        {
+                            key = "MajorNonBoon",
+                            kind = "shopOption",
+                            alias = "Reward2Key",
+                            value = "ArmorBoost",
+                        },
+                        {
+                            key = "Minor",
+                            kind = "shopOption",
+                            alias = "Reward3Key",
+                            value = "StoreRewardRandomStack",
+                        },
+                    },
+                },
+            }),
+        })
+        local currentRun = {
+            CurrentRoom = {
+                Name = "F_PreBoss01",
+                RoomSetName = "F",
+                StoreDataName = "WorldShop",
+            },
+            BiomeDepthCache = 10,
+        }
+        routePlan.refresh(catalog, runtime, currentRun, {
+            StartingBiome = "F",
+        })
+
+        local store = rewardRouting.fillInShopOptions(runtime, function()
+            return {
+                StoreOptions = {
+                    { Name = "BlindBoxLoot", Type = "Consumable" },
+                    { Name = "MaxHealthDrop", Type = "Consumable" },
+                    { Name = "MaxManaDrop", Type = "Consumable" },
+                },
+            }
+        end, {
+            RoomName = "F_PreBoss01",
+            StoreData = _G.StoreData.WorldShop,
+            ExclusionNames = {
+                "DemeterUpgrade",
+                "ArmorBoost",
+            },
+        }, currentRun)
+
+        lu.assertEquals(store.StoreOptions[1].Name, "BlindBoxLoot")
+        lu.assertEquals(store.StoreOptions[2].Name, "MaxHealthDrop")
+        lu.assertEquals(store.StoreOptions[3].Name, "StoreRewardRandomStack")
+    end)
 end
 
 function TestRunPlannerLogicRewardRouting.testRewardRoutingForcesLinearBoonSource()

@@ -100,6 +100,17 @@ local function pickRewardStore(item, key)
     return nil
 end
 
+local function copyMap(source)
+    if source == nil then
+        return nil
+    end
+    local copy = {}
+    for key, value in pairs(source) do
+        copy[key] = value
+    end
+    return copy
+end
+
 local function planFromRuntime(runtime)
     local state = routePlan.get(runtime)
     if state == nil or state.active ~= true or state.valid ~= true then
@@ -299,6 +310,18 @@ local function plannedDefaultRewardItem(row)
     return nil
 end
 
+local function plannedShopItem(row, address)
+    for _, item in ipairs(row and row.rewardItems or EMPTY_LIST) do
+        if item.valid ~= false
+            and item.address == address
+            and item.kind == "shop"
+        then
+            return item
+        end
+    end
+    return nil
+end
+
 local function rewardListEmpty(rewards)
     return rewards == nil or rewards[1] == nil
 end
@@ -464,6 +487,154 @@ local function rewardStoreForItem(item, _rewardType)
         return nil
     end
     return item.rewardStore
+end
+
+local function storeProfileData(profile)
+    local storeData = _G.StoreData
+    return storeData and profile and storeData[profile] or nil
+end
+
+local function profileMatchesCurrentStore(profile, currentRun, args)
+    local profileData = storeProfileData(profile)
+    if args ~= nil and args.StoreData ~= nil and profileData ~= nil then
+        return args.StoreData == profileData
+    end
+
+    local room = currentRun and currentRun.CurrentRoom or nil
+    if room and room.StoreDataName == profile then
+        return true
+    end
+    return false
+end
+
+local function shopOptionData(profile, slotIndex, rewardName)
+    local profileData = storeProfileData(profile)
+    local group = profileData and profileData.GroupsOf and profileData.GroupsOf[slotIndex] or nil
+    for _, option in ipairs(group and group.OptionsData or EMPTY_LIST) do
+        if option.Name == rewardName then
+            return option
+        end
+    end
+    for _, optionName in ipairs(group and group.Options or EMPTY_LIST) do
+        if optionName == rewardName then
+            return {
+                Name = optionName,
+            }
+        end
+    end
+    return nil
+end
+
+local function processedResourceCosts(rewardName, optionData)
+    local resourceCosts = optionData and optionData.ResourceCosts or nil
+    if resourceCosts == nil and _G.ConsumableData ~= nil and _G.ConsumableData[rewardName] ~= nil then
+        resourceCosts = _G.ConsumableData[rewardName].ResourceCosts
+    end
+    if resourceCosts == nil then
+        return nil
+    end
+
+    local processor = _G.GetProcessedValue
+    if type(processor) == "function" then
+        return processor(resourceCosts, nil, "ResourceCosts")
+    end
+    return copyMap(resourceCosts)
+end
+
+local function plannedBoonStoreOption(rewardName, lootName, optionData)
+    local args = {
+        ForceLootName = lootName,
+        BoughtFromShop = true,
+        DoesNotBlockExit = true,
+        ResourceCosts = processedResourceCosts(rewardName, optionData),
+    }
+    local option = {
+        Name = "RandomLoot",
+        Type = "Boon",
+        Args = args,
+    }
+    if rewardName == "BoostedRandomLoot" then
+        args.AddBoostedAnimation = true
+        args.BoonRaritiesOverride = {
+            Legendary = 0.1,
+            Epic = 0.25,
+            Rare = 0.90,
+        }
+    end
+    return option
+end
+
+local function plannedConsumableStoreOption(rewardName, optionData)
+    local option = {
+        Name = rewardName,
+        Type = "Consumable",
+    }
+    if optionData ~= nil then
+        if optionData.Cost ~= nil then
+            option.CostOverride = optionData.Cost
+        elseif optionData.ResourceCosts ~= nil then
+            option.ResourceCosts = optionData.ResourceCosts
+        end
+        option.ReplacePurchaseRequirements = optionData.ReplacePurchaseRequirements
+        option.AddBoostedAnimation = optionData.AddBoostedAnimation
+        option.BoonRaritiesOverride = optionData.BoonRaritiesOverride
+    end
+    return option
+end
+
+local function plannedStoreOptionExcluded(rewardName, lootName, args)
+    for _, exclusionName in ipairs(args and args.ExclusionNames or EMPTY_LIST) do
+        if exclusionName == rewardName or exclusionName == lootName then
+            return true
+        end
+    end
+    return false
+end
+
+local function plannedStoreOption(item, slotIndex, args)
+    local rewardName = rewardValue(item, slotIndex)
+    if rewardName == nil then
+        return nil
+    end
+    local lootName = item.loot and item.loot[slotIndex] or nil
+    if plannedStoreOptionExcluded(rewardName, lootName, args) then
+        return nil
+    end
+
+    local optionData = shopOptionData(item.shopProfile, slotIndex, rewardName)
+    if rewardName == "RandomLoot" or rewardName == "BoostedRandomLoot" then
+        return plannedBoonStoreOption(rewardName, lootName, optionData)
+    end
+    return plannedConsumableStoreOption(rewardName, optionData)
+end
+
+local function plannedShop(runtime, currentRun, args)
+    local run = runState.currentRun(currentRun)
+    local room = run and run.CurrentRoom or nil
+    if args ~= nil and args.RoomName ~= nil and roomName(room) ~= args.RoomName then
+        return nil
+    end
+
+    local row, context = rewardRouting.plannedRewardRow(runtime, run, room)
+    if context.active ~= true or not isRowRewardBiome(context.biomeKey) then
+        return nil, row, context
+    end
+
+    local item = plannedShopItem(row, "prebossShop")
+    if item == nil or not profileMatchesCurrentStore(item.shopProfile, run, args) then
+        return nil, row, context
+    end
+    return item, row, context
+end
+
+local function applyPlannedShopOptions(store, item, args)
+    local slotCount = math.floor(tonumber(item.rewardSourceCount) or #(item.rewards or EMPTY_LIST))
+    for slotIndex = 1, slotCount do
+        local option = plannedStoreOption(item, slotIndex, args)
+        if option ~= nil then
+            store.StoreOptions[slotIndex] = option
+        end
+    end
 end
 
 local function rewardTypeForItem(item)
@@ -697,6 +868,20 @@ function rewardRouting.chooseNextRewardStore(runtime, base, currentRun)
     return rewardStore
 end
 
+function rewardRouting.fillInShopOptions(runtime, base, args, currentRun)
+    local store = base(args)
+    local item, row, context = plannedShop(runtime, currentRun, args)
+    if item ~= nil then
+        applyPlannedShopOptions(store, item, args)
+        debugLog("shop set=" .. fieldValue(context.biomeKey)
+            .. " room=" .. fieldValue(context.roomKey)
+            .. " biomeDepthCache=" .. fieldValue(context.biomeDepthCache)
+            .. " row=" .. fieldValue(row and row.rowIndex)
+            .. " plannedRewards=" .. rewardItemSummary(item))
+    end
+    return store
+end
+
 function rewardRouting.registerHooks(moduleRef)
     moduleRef.hooks.wrap("ChooseNextRewardStore", function(host, runtime, base, currentRun)
         if host ~= nil and host.isEnabled ~= nil and not host.isEnabled() then
@@ -720,6 +905,14 @@ function rewardRouting.registerHooks(moduleRef)
         end
 
         return rewardRouting.setupRoomReward(runtime, base, currentRun, room, previouslyChosenRewards, args)
+    end)
+
+    moduleRef.hooks.wrap("FillInShopOptions", function(host, runtime, base, args)
+        if host ~= nil and host.isEnabled ~= nil and not host.isEnabled() then
+            return base(args)
+        end
+
+        return rewardRouting.fillInShopOptions(runtime, base, args)
     end)
 end
 
