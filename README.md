@@ -3,7 +3,6 @@
 Run Planner is a Run Director module for planning room and reward routing by
 biome depth.
 
-Part of the [Run Director modpack](https://github.com/h2pack-rundirector/run-director-modpack).
 
 ## What It Does
 
@@ -23,6 +22,3 @@ planned slot cannot be satisfied.
 
 Install using r2modman. In game, open the Run Director menu and configure this module from the shared settings window.
 
-## More Information
-
-- [Run Director modpack](https://github.com/h2pack-rundirector/run-director-modpack)

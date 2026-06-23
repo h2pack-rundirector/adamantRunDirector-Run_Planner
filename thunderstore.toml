@@ -6,7 +6,7 @@ namespace = "adamantRunDirector"
 name = "Run_Planner"
 description = "Plan biome room and reward routing by depth."
 versionNumber = "0.0.1"
-websiteUrl = "https://github.com/h2pack-rundirector/adamantRunDirector-Run_Planner"
+websiteUrl = ""
 containsNsfwContent = false
 
 [package.dependencies]
