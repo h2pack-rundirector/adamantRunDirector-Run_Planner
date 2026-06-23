@@ -28,8 +28,34 @@ local SURFACE_SHOP_SUBROOMS = {
     N_Sub15 = true,
 }
 
+local COMBAT_META = {
+    N_Combat01 = { location = "E", difficulty = 3 },
+    N_Combat02 = { location = "W", difficulty = 2 },
+    N_Combat03 = { location = "N", difficulty = 1 },
+    N_Combat04 = { location = "W", difficulty = 1 },
+    N_Combat05 = { location = "S", difficulty = 2 },
+    N_Combat06 = { location = "S", difficulty = 1 },
+    N_Combat07 = { location = "S", difficulty = 2 },
+    N_Combat08 = { location = "S", difficulty = 2 },
+    N_Combat09 = { location = "N", difficulty = 3 },
+    N_Combat10 = { location = "N", difficulty = 3 },
+    N_Combat11 = { location = "W", difficulty = 3 },
+    N_Combat12 = { location = "E", difficulty = 1 },
+    N_Combat13 = { location = "N", difficulty = 4 },
+    N_Combat14 = { location = "W", difficulty = 2 },
+    N_Combat15 = { location = "E", difficulty = 3 },
+    N_Combat16 = { location = "E", difficulty = 3 },
+    N_Combat17 = { location = "N", difficulty = 1 },
+    N_Combat18 = { location = "E", difficulty = 3 },
+    N_Combat19 = { location = "W", difficulty = 4 },
+    N_Combat20 = { location = "N", difficulty = 3 },
+    N_Combat21 = { location = "N", difficulty = 4 },
+    N_Combat22 = { location = "W", difficulty = 3 },
+    N_Combat23 = { location = "E", difficulty = 2 },
+}
+
 local function combatLabel(roomKey)
-    return "Combat " .. string.sub(roomKey, -2)
+    return "C" .. string.sub(roomKey, -2) .. " (" .. COMBAT_META[roomKey].location .. ")"
 end
 
 local function subroomRewardStore(roomKey)
@@ -50,9 +76,12 @@ end
 
 local function combatRoom(roomKey, hubDoorId, sideDoors, opts)
     opts = opts or {}
+    local meta = COMBAT_META[roomKey]
     local room = {
         key = roomKey,
         label = combatLabel(roomKey),
+        location = meta.location,
+        difficulty = meta.difficulty,
         hubDoorId = hubDoorId,
         sideDoors = sideDoors or {},
     }
@@ -104,18 +133,6 @@ local function buildHubDoorRooms()
 end
 
 layout.combatRooms = {
-    combatRoom("N_Combat01", 617113),
-    combatRoom("N_Combat02", 560725, {
-        sideDoor(558353, "N_Sub01"),
-        sideDoor(558352, "N_Sub03"),
-    }),
-    combatRoom("N_Combat03", 560702, {
-        sideDoor(558353, "N_Sub04"),
-    }),
-    combatRoom("N_Combat04", 560707, {
-        sideDoor(558834, "N_Sub02"),
-        sideDoor(558410, "N_Sub06"),
-    }),
     combatRoom("N_Combat05", 561337, {
         sideDoor(558354, "N_Sub02"),
         sideDoor(558378, "N_Sub07"),
@@ -127,6 +144,26 @@ layout.combatRooms = {
     }),
     combatRoom("N_Combat07", 617138),
     combatRoom("N_Combat08", 560699),
+    combatRoom("N_Combat02", 560725, {
+        sideDoor(558353, "N_Sub01"),
+        sideDoor(558352, "N_Sub03"),
+    }),
+    combatRoom("N_Combat04", 560707, {
+        sideDoor(558834, "N_Sub02"),
+        sideDoor(558410, "N_Sub06"),
+    }),
+    combatRoom("N_Combat11", 561449, {
+        sideDoor(558352, "N_Sub01"),
+    }),
+    combatRoom("N_Combat14", 561403),
+    combatRoom("N_Combat19", 560620),
+    combatRoom("N_Combat22", 560776, {
+        sideDoor(558352, "N_Sub14"),
+        sideDoor(661338, "N_Sub02"),
+    }),
+    combatRoom("N_Combat03", 560702, {
+        sideDoor(558353, "N_Sub04"),
+    }),
     combatRoom("N_Combat09", 617012, {
         sideDoor(566392, "N_Sub11"),
         sideDoor(566536, "N_Sub08"),
@@ -136,9 +173,17 @@ layout.combatRooms = {
         sideDoor(558352, "N_Sub05"),
         sideDoor(567015, "N_Sub09"),
     }),
-    combatRoom("N_Combat11", 561449, {
-        sideDoor(558352, "N_Sub01"),
+    combatRoom("N_Combat13", 616992),
+    combatRoom("N_Combat17", 561424, {
+        sideDoor(558352, "N_Sub11"),
+    }, {
+        reward = rewards.roomStore("EasyHubRewards"),
     }),
+    combatRoom("N_Combat20", 561418, {
+        sideDoor(659508, "N_Sub06"),
+    }),
+    combatRoom("N_Combat21", 560713),
+    combatRoom("N_Combat01", 617113),
     combatRoom("N_Combat12", 561389, {
         sideDoor(558352, "N_Sub09"),
         sideDoor(566544, "N_Sub10"),
@@ -146,30 +191,14 @@ layout.combatRooms = {
     }, {
         reward = rewards.roomStore("EasyHubRewards"),
     }),
-    combatRoom("N_Combat13", 616992),
-    combatRoom("N_Combat14", 561403),
     combatRoom("N_Combat15", 560705, {
         sideDoor(657623, "N_Sub03"),
     }),
     combatRoom("N_Combat16", 561354, {
         sideDoor(558352, "N_Sub04"),
     }),
-    combatRoom("N_Combat17", 561424, {
-        sideDoor(558352, "N_Sub11"),
-    }, {
-        reward = rewards.roomStore("EasyHubRewards"),
-    }),
     combatRoom("N_Combat18", 561374, {
         sideDoor(658853, "N_Sub12"),
-    }),
-    combatRoom("N_Combat19", 560620),
-    combatRoom("N_Combat20", 561418, {
-        sideDoor(659508, "N_Sub06"),
-    }),
-    combatRoom("N_Combat21", 560713),
-    combatRoom("N_Combat22", 560776, {
-        sideDoor(558352, "N_Sub14"),
-        sideDoor(661338, "N_Sub02"),
     }),
     combatRoom("N_Combat23", 561368, {
         sideDoor(755971, "N_Sub12"),

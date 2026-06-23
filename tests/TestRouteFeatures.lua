@@ -136,7 +136,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesBiomeRoomSelectionAndP
                                         rowIndex = 6,
                                         routeOrdinal = 5,
                                         slotLabel = "Depth 5",
-                                        option = { key = "P_Combat01", label = "Combat 01" },
+                                        option = { key = "P_Combat01", label = "C01" },
                                         features = { chaos = true },
                                         valid = true,
                                         roomHistoryCost = 1,
@@ -145,7 +145,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesBiomeRoomSelectionAndP
                                         rowIndex = 7,
                                         routeOrdinal = 6,
                                         slotLabel = "Depth 6",
-                                        option = { key = "P_Combat02", label = "Combat 02" },
+                                        option = { key = "P_Combat02", label = "C02" },
                                         features = { chaos = true },
                                         valid = true,
                                         roomHistoryCost = 1,
@@ -169,7 +169,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesBiomeRoomSelectionAndP
     control:writeBiome(1, "P")
     lu.assertEquals(fields.Targets:read(1, "BiomeKey"), "P")
     lu.assertEquals(control:roomOptions(1).values, { "", "6" })
-    lu.assertEquals(control:roomOptions(1).displayValues["6"], "Depth 5 - Combat 01")
+    lu.assertEquals(control:roomOptions(1).displayValues["6"], "Depth 5 - C01")
 
     control:writeRoom(1, "6")
     lu.assertEquals(fields.Targets:read(1, "RowIndex"), "6")
@@ -226,7 +226,7 @@ function TestRunPlannerRouteFeatures.testRouteContextDisablesFeatureTargetsWhenF
                                         rowIndex = 1,
                                         routeOrdinal = 4,
                                         slotLabel = "Depth 4",
-                                        option = { key = "P_Combat01", label = "Combat 01" },
+                                        option = { key = "P_Combat01", label = "C01" },
                                         features = { chaos = true },
                                         valid = true,
                                         roomHistoryCost = 1,
@@ -297,7 +297,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesShopDepthPolicy()
                                         rowIndex = 3,
                                         routeOrdinal = 2,
                                         slotLabel = "Depth 2",
-                                        option = { key = "O_Combat01", label = "Combat 01" },
+                                        option = { key = "O_Combat01", label = "C01" },
                                         features = { surfaceShop = true },
                                         valid = true,
                                         roomHistoryCost = 1,
@@ -306,7 +306,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesShopDepthPolicy()
                                         rowIndex = 4,
                                         routeOrdinal = 3,
                                         slotLabel = "Depth 3",
-                                        option = { key = "O_Combat02", label = "Combat 02" },
+                                        option = { key = "O_Combat02", label = "C02" },
                                         features = { surfaceShop = true },
                                         valid = true,
                                         roomHistoryCost = 1,
@@ -325,7 +325,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesShopDepthPolicy()
 
     control:writeBiome(1, "O")
     lu.assertEquals(control:roomOptions(1).values, { "", "4" })
-    lu.assertEquals(control:roomOptions(1).displayValues["4"], "Depth 3 - Combat 02")
+    lu.assertEquals(control:roomOptions(1).displayValues["4"], "Depth 3 - C02")
 end
 
 function TestRunPlannerRouteFeatures.testRouteFeaturesRejectsRepeatedTargetsInsideSpacingWindow()
@@ -384,7 +384,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesRejectsRepeatedTargetsInsi
                                         rowIndex = 4,
                                         routeOrdinal = 3,
                                         slotLabel = "Depth 3",
-                                        option = { key = "F_Combat01", label = "Combat 01" },
+                                        option = { key = "F_Combat01", label = "C01" },
                                         features = { wellShop = true },
                                         valid = true,
                                         roomHistoryCost = 1,
@@ -393,7 +393,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesRejectsRepeatedTargetsInsi
                                         rowIndex = 5,
                                         routeOrdinal = 4,
                                         slotLabel = "Depth 4",
-                                        option = { key = "F_Combat02", label = "Combat 02" },
+                                        option = { key = "F_Combat02", label = "C02" },
                                         features = { wellShop = true },
                                         valid = true,
                                         roomHistoryCost = 1,
@@ -555,7 +555,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesTimelineBlockersForPos
                                         rowIndex = 1,
                                         routeOrdinal = 3,
                                         slotLabel = "Depth 3",
-                                        option = { key = "G_Combat01", label = "Combat 01" },
+                                        option = { key = "G_Combat01", label = "C01" },
                                         features = { wellShop = true },
                                         valid = true,
                                         roomHistoryCost = 1,
@@ -636,7 +636,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesCanTargetEnabledSideRooms(
                                         rowIndex = 4,
                                         routeOrdinal = 1,
                                         slotLabel = "Pylon 1",
-                                        option = { key = "N_Combat01", label = "Combat 01" },
+                                        option = { key = "N_Combat01", label = "C01 (E)" },
                                         valid = true,
                                         roomHistoryCost = 2,
                                         sideRooms = {
@@ -652,7 +652,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesCanTargetEnabledSideRooms(
                                         rowIndex = 5,
                                         routeOrdinal = 2,
                                         slotLabel = "Pylon 2",
-                                        option = { key = "N_Combat02", label = "Combat 02" },
+                                        option = { key = "N_Combat02", label = "C02 (W)" },
                                         valid = true,
                                         roomHistoryCost = 2,
                                         sideRooms = {
@@ -684,8 +684,8 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesCanTargetEnabledSideRooms(
 
     control:writeBiome(1, "N")
     lu.assertEquals(control:roomOptions(1).values, { "", "4.side1", "5.side1" })
-    lu.assertEquals(control:roomOptions(1).displayValues["4.side1"], "Pylon 1 - Combat 01 / Side 1 - N_Sub01")
-    lu.assertEquals(control:roomOptions(1).displayValues["5.side1"], "Pylon 2 - Combat 02 / Side 1 - N_Sub03")
+    lu.assertEquals(control:roomOptions(1).displayValues["4.side1"], "Pylon 1 - C01 (E) / Side 1 - N_Sub01")
+    lu.assertEquals(control:roomOptions(1).displayValues["5.side1"], "Pylon 2 - C02 (W) / Side 1 - N_Sub03")
 
     control:writeRoom(1, "4.side1")
     lu.assertEquals(fields.Targets:read(1, "RowIndex"), "4.side1")

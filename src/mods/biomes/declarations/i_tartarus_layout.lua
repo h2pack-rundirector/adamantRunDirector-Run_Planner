@@ -5,15 +5,16 @@ local layout = {}
 local WELL_SHOP_FEATURES = { wellShop = true }
 local COMBAT_REWARD = rewards.roomStore("TartarusRewards", { ineligibleRewardTypes = { "Boon" } })
 
-local function combatLabel(roomKey)
-    return "Combat " .. string.sub(roomKey, -2)
+local function combatLabel(roomKey, exitCount)
+    local exitLabel = exitCount == 1 and "1 Exit" or tostring(exitCount) .. " Exits"
+    return "C" .. string.sub(roomKey, -2) .. " (" .. exitLabel .. ")"
 end
 
 local function combatRoom(roomKey, exitCount, opts)
     opts = opts or {}
     return {
         key = roomKey,
-        label = combatLabel(roomKey),
+        label = combatLabel(roomKey, exitCount),
         exitCount = exitCount,
         supportsExtensionChoice = exitCount > 1,
         features = opts.features or WELL_SHOP_FEATURES,

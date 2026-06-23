@@ -19,7 +19,9 @@ end
 
 local function combat(roomKey, opts)
     opts = opts or {}
-    return option(roomKey, "Combat " .. string.sub(roomKey, -2), {
+    local exitCount = opts.exitCount or 1
+    local exitLabel = exitCount == 1 and "1 Exit" or tostring(exitCount) .. " Exits"
+    return option(roomKey, "C" .. string.sub(roomKey, -2) .. " (" .. exitLabel .. ")", {
         exitCount = opts.exitCount,
         features = opts.features or CHAOS_WELL_FEATURES,
         availability = opts.availability,

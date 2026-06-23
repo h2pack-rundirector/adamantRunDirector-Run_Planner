@@ -42,7 +42,12 @@ end
 
 local function combat(roomKey, opts)
     opts = opts or {}
-    return option(roomKey, "Combat " .. string.sub(roomKey, -2), {
+    local tags = opts.tags or {}
+    local tagLabel = table.concat(tags, "/")
+    if tagLabel ~= "" then
+        tagLabel = " (" .. tagLabel .. ")"
+    end
+    return option(roomKey, "C" .. string.sub(roomKey, -2) .. tagLabel, {
         tags = opts.tags,
         features = opts.features or (SURFACE_SHOP_COMBAT_ROOMS[roomKey] and CHAOS_SURFACE_FEATURES or CHAOS_FEATURES),
         availability = opts.availability,

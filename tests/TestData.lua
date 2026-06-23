@@ -353,6 +353,100 @@ local function optionByKey(options, key)
     return nil
 end
 
+local function optionKeys(options)
+    local keys = {}
+    for _, option in ipairs(options or {}) do
+        keys[#keys + 1] = option.key
+    end
+    return keys
+end
+
+function TestRunPlannerData.testBiomeDefinitionsLabelCombatRoomMetadata()
+    local data = dofile("src/mods/data.lua")
+    local biomes = data.loadBiomes(testImport)
+
+    lu.assertEquals(
+        optionByKey(biomes.lookup.F.rolesByKey.Combat.mapOptions, "F_Combat01").label,
+        "C01 (1 Exit)"
+    )
+    lu.assertEquals(
+        optionByKey(biomes.lookup.F.rolesByKey.Combat.mapOptions, "F_Combat02").label,
+        "C02 (2 Exits)"
+    )
+    lu.assertEquals(
+        optionByKey(biomes.lookup.G.rolesByKey.Combat.mapOptions, "G_Combat02").label,
+        "C02 (3 Exits)"
+    )
+    lu.assertEquals(
+        optionByKey(biomes.lookup.I.rolesByKey.Goal.mapOptions, "I_Combat02").label,
+        "C02 (1 Exit)"
+    )
+    lu.assertEquals(
+        optionByKey(biomes.lookup.H.rolesByKey.Combat.mapOptions, "H_Combat04").label,
+        "C04 (4 Slots)"
+    )
+    lu.assertEquals(
+        optionByKey(biomes.lookup.N.rolesByKey.Combat.mapOptions, "N_Combat01").label,
+        "C01 (E)"
+    )
+    lu.assertEquals(
+        optionByKey(biomes.lookup.O.rolesByKey.Combat.mapOptions, "O_Combat01").label,
+        "C01"
+    )
+    lu.assertEquals(
+        optionByKey(biomes.lookup.P.rolesByKey.Combat.mapOptions, "P_Combat01").label,
+        "C01 (Outdoor)"
+    )
+    lu.assertEquals(
+        optionByKey(biomes.lookup.P.rolesByKey.Combat.mapOptions, "P_Combat02").label,
+        "C02 (Indoor)"
+    )
+    lu.assertEquals(
+        optionByKey(biomes.lookup.Q.rolesByKey.Combat.mapOptions, "Q_Combat01").label,
+        "C01"
+    )
+end
+
+function TestRunPlannerData.testEphyraCombatRoomsDeclareLocationAndDifficulty()
+    local data = dofile("src/mods/data.lua")
+    local biomes = data.loadBiomes(testImport)
+    local combat = biomes.lookup.N.rolesByKey.Combat.mapOptions
+
+    lu.assertEquals(optionKeys(combat), {
+        "N_Combat05",
+        "N_Combat06",
+        "N_Combat07",
+        "N_Combat08",
+        "N_Combat02",
+        "N_Combat04",
+        "N_Combat11",
+        "N_Combat14",
+        "N_Combat19",
+        "N_Combat22",
+        "N_Combat03",
+        "N_Combat09",
+        "N_Combat10",
+        "N_Combat13",
+        "N_Combat17",
+        "N_Combat20",
+        "N_Combat21",
+        "N_Combat01",
+        "N_Combat12",
+        "N_Combat15",
+        "N_Combat16",
+        "N_Combat18",
+        "N_Combat23",
+    })
+    lu.assertEquals(optionByKey(combat, "N_Combat05").location, "S")
+    lu.assertEquals(optionByKey(combat, "N_Combat05").difficulty, 2)
+    lu.assertEquals(optionByKey(combat, "N_Combat19").location, "W")
+    lu.assertEquals(optionByKey(combat, "N_Combat19").difficulty, 4)
+    lu.assertEquals(optionByKey(combat, "N_Combat21").location, "N")
+    lu.assertEquals(optionByKey(combat, "N_Combat21").difficulty, 4)
+    lu.assertEquals(optionByKey(combat, "N_Combat01").location, "E")
+    lu.assertEquals(optionByKey(combat, "N_Combat01").difficulty, 3)
+end
+
 local function assertMinibossCosts(role, expectedCosts)
     lu.assertTrue(role.requiresConcreteOption)
     lu.assertNil(role.biomeEncounterDepthCost)
@@ -747,7 +841,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     lu.assertEquals(biomes.lookup.I.rolesByKey.Miniboss.roomOptions[2].key, "I_MiniBoss02")
     lu.assertEquals(biomes.lookup.I.rolesByKey.Miniboss.maxCreationsThisRun, 1)
 
-    lu.assertEquals(biomes.lookup.N.rolesByKey.Combat.mapOptions[1].key, "N_Combat01")
+    lu.assertEquals(biomes.lookup.N.rolesByKey.Combat.mapOptions[1].key, "N_Combat05")
     lu.assertEquals(biomes.lookup.N.rolesByKey.Combat.reward, roomStoreReward("HubRewards"))
     lu.assertEquals(biomes.lookup.N.rolesByKey.Story.roomOptions[1].key, "N_Story01")
     lu.assertEquals(biomes.lookup.N.rolesByKey.Story.roomOptions[1].label, "Medea")

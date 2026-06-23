@@ -95,7 +95,7 @@ function TestRunPlannerRouteNpcs.testRouteNpcsUsesBiomeRoomTypeSelection()
                                         routeOrdinal = 5,
                                         slotLabel = "Depth 5",
                                         roleKey = "Combat",
-                                        option = { key = "F_Combat04", label = "Combat 04" },
+                                        option = { key = "F_Combat04", label = "C04" },
                                         valid = true,
                                         rewardKind = "majorMinor",
                                         rewards = { "Major", "MaxHealthDrop" },
@@ -114,7 +114,7 @@ function TestRunPlannerRouteNpcs.testRouteNpcsUsesBiomeRoomTypeSelection()
                                         routeOrdinal = 7,
                                         slotLabel = "Depth 7",
                                         roleKey = "Combat",
-                                        option = { key = "F_Combat05", label = "Combat 05" },
+                                        option = { key = "F_Combat05", label = "C05" },
                                         valid = true,
                                         rewardKind = "majorMinor",
                                         rewards = {},
@@ -154,7 +154,7 @@ function TestRunPlannerRouteNpcs.testRouteNpcsUsesBiomeRoomTypeSelection()
     control:writeBiome(1, "F")
     lu.assertEquals(fields.Targets:read(1, "BiomeKey"), "F")
     lu.assertEquals(control:roomOptions(1).values, { "", "3" })
-    lu.assertEquals(control:roomOptions(1).displayValues["3"], "Depth 5 - Combat 04")
+    lu.assertEquals(control:roomOptions(1).displayValues["3"], "Depth 5 - C04")
 
     control:writeRoom(1, "3")
     lu.assertEquals(fields.Targets:read(1, "RowIndex"), "3")
@@ -271,7 +271,7 @@ function TestRunPlannerRouteNpcs.testRouteContextBuildsNpcTargetsFromValidCombat
                                         routeOrdinal = 3,
                                         slotLabel = "Depth 3",
                                         roleKey = "Combat",
-                                        option = { key = "F_Combat02", label = "Combat 02" },
+                                        option = { key = "F_Combat02", label = "C02" },
                                         valid = true,
                                     },
                                     {
@@ -279,7 +279,7 @@ function TestRunPlannerRouteNpcs.testRouteContextBuildsNpcTargetsFromValidCombat
                                         routeOrdinal = 4,
                                         slotLabel = "Depth 4",
                                         roleKey = "Combat",
-                                        option = { key = "F_Combat03", label = "Combat 03" },
+                                        option = { key = "F_Combat03", label = "C03" },
                                         valid = true,
                                         rewardKind = "majorMinor",
                                         rewards = { "Major", "Boon", "ZeusUpgrade" },
@@ -289,7 +289,7 @@ function TestRunPlannerRouteNpcs.testRouteContextBuildsNpcTargetsFromValidCombat
                                         routeOrdinal = 5,
                                         slotLabel = "Depth 5",
                                         roleKey = "Combat",
-                                        option = { key = "F_Combat04", label = "Combat 04" },
+                                        option = { key = "F_Combat04", label = "C04" },
                                         valid = true,
                                         rewardKind = "majorMinor",
                                         rewards = { "Major", "MaxHealthDrop" },
@@ -310,7 +310,7 @@ function TestRunPlannerRouteNpcs.testRouteContextBuildsNpcTargetsFromValidCombat
     lu.assertNil(targets.byNpc.Artemis.lookup["F:1:ArtemisCombatF"])
     lu.assertNil(targets.byNpc.Artemis.lookup["F:2:ArtemisCombatF"])
     lu.assertNotNil(targets.byNpc.Artemis.lookup["F:3:ArtemisCombatF"])
-    lu.assertEquals(targets.byNpc.Artemis.displayValues["F:3:ArtemisCombatF"], "Erebus Depth 5 - Combat 04")
+    lu.assertEquals(targets.byNpc.Artemis.displayValues["F:3:ArtemisCombatF"], "Erebus Depth 5 - C04")
     lu.assertNotNil(targets.byNpc.Nemesis.lookup["F:3:Combat"])
     lu.assertNotNil(targets.byNpc.Nemesis.lookup["F:3:Random"])
     lu.assertEquals(targets.byNpcBiome.Arachne.F.values, {
@@ -357,7 +357,7 @@ function TestRunPlannerRouteNpcs.testRouteContextDisablesNpcTargetsWhenRewardsAr
                                         routeOrdinal = 5,
                                         slotLabel = "Depth 5",
                                         roleKey = "Combat",
-                                        option = { key = "F_Combat04", label = "Combat 04" },
+                                        option = { key = "F_Combat04", label = "C04" },
                                         valid = true,
                                         rewardKind = "majorMinor",
                                         rewards = { "Major", "Boon", "ZeusUpgrade" },
@@ -549,11 +549,11 @@ function TestRunPlannerRouteNpcs.testRouteContextFiltersOlympusNpcsByRoomTag()
     lu.assertNotNil(targets.byNpc.Icarus.lookup["P:5:IcarusCombatP"])
     lu.assertEquals(
         targets.byNpc.Heracles.displayValues["P:4:HeraclesCombatP"],
-        "Olympus Depth 3 - Combat 02"
+        "Olympus Depth 3 - C02 (Indoor)"
     )
     lu.assertEquals(
         targets.byNpc.Icarus.displayValues["P:5:IcarusCombatP"],
-        "Olympus Depth 4 - Combat 17"
+        "Olympus Depth 4 - C17 (Outdoor)"
     )
 end
 
@@ -607,7 +607,7 @@ function TestRunPlannerRouteNpcs.testRouteNpcsSnapshotValidatesTargetsAndSpacing
 	                                        routeOrdinal = 4,
 	                                        slotLabel = "Depth 4",
 	                                        roleKey = "Combat",
-	                                        option = { key = "F_Combat03", label = "Combat 03" },
+	                                        option = { key = "F_Combat03", label = "C03" },
 	                                        valid = true,
 	                                        rewardKind = "majorMinor",
 	                                        rewards = { "Major", "Boon", "ZeusUpgrade" },
@@ -617,7 +617,7 @@ function TestRunPlannerRouteNpcs.testRouteNpcsSnapshotValidatesTargetsAndSpacing
 	                                        routeOrdinal = 5,
 	                                        slotLabel = "Depth 5",
 	                                        roleKey = "Combat",
-	                                        option = { key = "F_Combat04", label = "Combat 04" },
+	                                        option = { key = "F_Combat04", label = "C04" },
 	                                        valid = true,
 	                                        rewardKind = "majorMinor",
 	                                        rewards = { "Major", "MaxHealthDrop" },
@@ -627,7 +627,7 @@ function TestRunPlannerRouteNpcs.testRouteNpcsSnapshotValidatesTargetsAndSpacing
 	                                        routeOrdinal = 6,
 	                                        slotLabel = "Depth 6",
 	                                        roleKey = "Combat",
-	                                        option = { key = "F_Combat05", label = "Combat 05" },
+	                                        option = { key = "F_Combat05", label = "C05" },
 	                                        valid = true,
 	                                        rewardKind = "majorMinor",
                                         rewards = { "Major", "MaxHealthDrop" },
