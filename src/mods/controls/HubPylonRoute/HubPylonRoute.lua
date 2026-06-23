@@ -5,12 +5,14 @@ local runtime = import("mods/controls/HubPylonRoute/runtime.lua", nil, {
     common = deps.route.common,
     rewards = deps.rewards,
     rewardItems = deps.route.rewardItems,
+    sideRoomProbability = deps.sideRoomProbability,
     invalidLocations = deps.route.invalidLocations,
 })
 local ui = import("mods/controls/HubPylonRoute/ui.lua", nil, {
     data = data,
     rewards = deps.rewards,
     runtime = runtime,
+    sideRoomProbability = deps.sideRoomProbability,
     decorations = deps.decorations,
 })
 

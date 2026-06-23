@@ -126,6 +126,16 @@ local function logsContain(logs, text)
     return false
 end
 
+local function availableDoorCount(predetermined, unavailable)
+    local count = 0
+    for doorId in pairs(predetermined or {}) do
+        if unavailable == nil or unavailable[doorId] ~= true then
+            count = count + 1
+        end
+    end
+    return count
+end
+
 local function validBiomeSnapshot(biomeKey)
     return {
         controlName = "Route" .. biomeKey,
@@ -1011,6 +1021,344 @@ function TestRunPlannerLogic.testRoomRoutingClampsFieldsCageRewardCountToRoomMax
     lu.assertEquals(count, 2)
 end
 
+function TestRunPlannerLogic.testRoomRoutingPrioritizesPlannedEphyraHubDoors()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local predetermined = {
+        [101] = "N_Combat01",
+        [102] = "N_Combat02",
+        [103] = "N_Combat03",
+        [104] = "N_Combat04",
+        [105] = "N_Combat05",
+        [106] = "N_Combat06",
+        [107] = "N_Combat07",
+        [108] = "N_Combat08",
+        [109] = "N_Combat09",
+        [110] = "N_Combat10",
+    }
+    local logs = {}
+    local roomRouting = loadRoomRouting(routePlan, {
+        RoomData = {
+            N_Hub = {
+                Name = "N_Hub",
+                PredeterminedDoorRooms = predetermined,
+            },
+        },
+        print = function(text)
+            logs[#logs + 1] = text
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        N = plannedBiomeSnapshot("N", "hubPylon", {
+            {
+                rowIndex = 4,
+                routeOrdinal = 1,
+                biomeDepthCache = 1,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "N_Combat01",
+                hubDoorId = 101,
+                roleKey = "Combat",
+                optionKey = "N_Combat01",
+                valid = true,
+            },
+            {
+                rowIndex = 5,
+                routeOrdinal = 2,
+                biomeDepthCache = 2,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "N_Combat02",
+                hubDoorId = 102,
+                roleKey = "Combat",
+                optionKey = "N_Combat02",
+                valid = true,
+            },
+        }),
+    })
+    routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "N",
+        },
+    }, {
+        StartingBiome = "N",
+    })
+
+    local room = {
+        Name = "N_Hub",
+        RoomSetName = "N",
+    }
+    local baseCalled = false
+    local result = roomRouting.chooseAvailableNHubDoors(runtime, function(baseRoom)
+        baseCalled = true
+        baseRoom.UnavailableDoors = {
+            [101] = true,
+        }
+        baseRoom.DoorsChosen = true
+        return "base"
+    end, room, {})
+    local planned = routePlan.get(runtime).executionPlan.biomes.N.plannedByRowIndex[4]
+
+    lu.assertTrue(baseCalled)
+    lu.assertEquals(result, "base")
+    lu.assertEquals(planned.hubDoorId, 101)
+    lu.assertNil(room.UnavailableDoors[101])
+    lu.assertNil(room.UnavailableDoors[102])
+    lu.assertTrue(room.UnavailableDoors[103])
+    lu.assertEquals(availableDoorCount(predetermined, room.UnavailableDoors), 9)
+    lu.assertTrue(logsContain(logs, "hub doors N_Hub planned=2 available=9"))
+end
+
+function TestRunPlannerLogic.testRoomRoutingSuppressesUnplannedEphyraMinibossDoor()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local predetermined = {
+        [101] = "N_Combat01",
+        [102] = "N_Combat02",
+        [103] = "N_Combat03",
+        [104] = "N_Combat04",
+        [105] = "N_Combat05",
+        [106] = "N_Combat06",
+        [107] = "N_Combat07",
+        [108] = "N_Combat08",
+        [201] = "N_MiniBoss01",
+        [202] = "N_MiniBoss02",
+    }
+    local roomRouting = loadRoomRouting(routePlan, {
+        RoomData = {
+            N_Hub = {
+                Name = "N_Hub",
+                PredeterminedDoorRooms = predetermined,
+            },
+        },
+        print = function()
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        N = plannedBiomeSnapshot("N", "hubPylon", {
+            {
+                rowIndex = 4,
+                routeOrdinal = 1,
+                biomeDepthCache = 1,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "N_MiniBoss01",
+                hubDoorId = 201,
+                roleKey = "Miniboss",
+                optionKey = "N_MiniBoss01",
+                valid = true,
+            },
+        }),
+    })
+    routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "N",
+        },
+    }, {
+        StartingBiome = "N",
+    })
+
+    local room = {
+        Name = "N_Hub",
+        RoomSetName = "N",
+    }
+    roomRouting.chooseAvailableNHubDoors(runtime, function(baseRoom)
+        baseRoom.UnavailableDoors = {
+            [201] = true,
+        }
+        baseRoom.DoorsChosen = true
+    end, room, {})
+
+    lu.assertNil(room.UnavailableDoors[201])
+    lu.assertTrue(room.UnavailableDoors[202])
+    lu.assertEquals(availableDoorCount(predetermined, room.UnavailableDoors), 9)
+end
+
+function TestRunPlannerLogic.testRoomRoutingDisablesPlannedEphyraSideDoor()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local logs = {}
+    local roomRouting = loadRoomRouting(routePlan, {
+        print = function(text)
+            logs[#logs + 1] = text
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        N = plannedBiomeSnapshot("N", "hubPylon", {
+            {
+                rowIndex = 4,
+                routeOrdinal = 1,
+                biomeDepthCache = 1,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "N_Combat12",
+                hubDoorId = 561389,
+                roleKey = "Combat",
+                optionKey = "N_Combat12",
+                valid = true,
+                sideRooms = {
+                    {
+                        sideIndex = 1,
+                        doorId = 558352,
+                        roomKey = "N_Sub09",
+                        modeKey = "Disabled",
+                        enabled = false,
+                    },
+                },
+            },
+        }),
+    })
+    local currentRun = {
+        CurrentRoom = {
+            Name = "N_Combat12",
+            RoomSetName = "N",
+        },
+        BiomeDepthCache = 1,
+    }
+    routePlan.refresh(catalog, runtime, currentRun, {
+        StartingBiome = "N",
+    })
+
+    local baseCalled = false
+    withCurrentRun(currentRun, function()
+        roomRouting.checkNSubRoomDoorUnavailable(runtime, function()
+            baseCalled = true
+        end, {
+            ObjectId = 558352,
+        }, {
+            AboveMinAvailableChance = 0.3,
+        })
+    end)
+
+    lu.assertFalse(baseCalled)
+    lu.assertTrue(currentRun.CurrentRoom.UnavailableDoors[558352])
+    lu.assertNil(currentRun.NumSubRoomsSpawned)
+    lu.assertTrue(logsContain(logs, "side door N_Combat12 door=558352 disabled planned=N_Sub09 row=4"))
+end
+
+function TestRunPlannerLogic.testRoomRoutingEnablesPlannedEphyraSideDoor()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local logs = {}
+    local roomRouting = loadRoomRouting(routePlan, {
+        print = function(text)
+            logs[#logs + 1] = text
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        N = plannedBiomeSnapshot("N", "hubPylon", {
+            {
+                rowIndex = 4,
+                routeOrdinal = 1,
+                biomeDepthCache = 1,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "N_Combat12",
+                hubDoorId = 561389,
+                roleKey = "Combat",
+                optionKey = "N_Combat12",
+                valid = true,
+                sideRooms = {
+                    {
+                        sideIndex = 1,
+                        doorId = 558352,
+                        roomKey = "N_Sub09",
+                        modeKey = "Enabled",
+                        enabled = true,
+                    },
+                },
+            },
+        }),
+    })
+    local currentRun = {
+        CurrentRoom = {
+            Name = "N_Combat12",
+            RoomSetName = "N",
+        },
+        BiomeDepthCache = 1,
+        NumSubRoomsSpawned = 0,
+    }
+    routePlan.refresh(catalog, runtime, currentRun, {
+        StartingBiome = "N",
+    })
+
+    local baseCalled = false
+    withCurrentRun(currentRun, function()
+        roomRouting.checkNSubRoomDoorUnavailable(runtime, function(source)
+            baseCalled = true
+            currentRun.CurrentRoom.UnavailableDoors = {
+                [source.ObjectId] = true,
+            }
+        end, {
+            ObjectId = 558352,
+        }, {
+            AboveMinAvailableChance = 0.3,
+        })
+    end)
+
+    lu.assertTrue(baseCalled)
+    lu.assertNil(currentRun.CurrentRoom.UnavailableDoors[558352])
+    lu.assertEquals(currentRun.NumSubRoomsSpawned, 1)
+    lu.assertTrue(logsContain(logs, "side door N_Combat12 door=558352 enabled planned=N_Sub09 row=4"))
+end
+
+function TestRunPlannerLogic.testRoomRoutingLeavesVanillaEphyraSideDoorToBase()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan)
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        N = plannedBiomeSnapshot("N", "hubPylon", {
+            {
+                rowIndex = 4,
+                routeOrdinal = 1,
+                biomeDepthCache = 1,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "N_Combat12",
+                hubDoorId = 561389,
+                roleKey = "Combat",
+                optionKey = "N_Combat12",
+                valid = true,
+                sideRooms = {
+                    {
+                        sideIndex = 1,
+                        doorId = 558352,
+                        roomKey = "N_Sub09",
+                        modeKey = "Vanilla",
+                        enabled = false,
+                    },
+                },
+            },
+        }),
+    })
+    local currentRun = {
+        CurrentRoom = {
+            Name = "N_Combat12",
+            RoomSetName = "N",
+        },
+        BiomeDepthCache = 1,
+    }
+    routePlan.refresh(catalog, runtime, currentRun, {
+        StartingBiome = "N",
+    })
+
+    local baseCalled = false
+    withCurrentRun(currentRun, function()
+        roomRouting.checkNSubRoomDoorUnavailable(runtime, function(source)
+            baseCalled = true
+            currentRun.CurrentRoom.UnavailableDoors = {
+                [source.ObjectId] = true,
+            }
+            return "base"
+        end, {
+            ObjectId = 558352,
+        }, {})
+    end)
+
+    lu.assertTrue(baseCalled)
+    lu.assertTrue(currentRun.CurrentRoom.UnavailableDoors[558352])
+end
+
 function TestRunPlannerLogic.testRoomRoutingForcesThessalyTwoEncounterRoom()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
@@ -1372,6 +1720,8 @@ function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
     local hookedChooseNextRoomData = false
     local hookedSetupRoomMultipleEncountersData = false
     local hookedSelectFieldsDoorCageCount = false
+    local hookedChooseAvailableNHubDoors = false
+    local hookedCheckNSubRoomDoorUnavailable = false
     logic.attach({
         cache = {
             define = function(defs)
@@ -1390,6 +1740,10 @@ function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
                     hookedSetupRoomMultipleEncountersData = true
                 elseif name == "SelectFieldsDoorCageCount" then
                     hookedSelectFieldsDoorCageCount = true
+                elseif name == "ChooseAvailableN_HubDoors" then
+                    hookedChooseAvailableNHubDoors = true
+                elseif name == "CheckN_SubRoomDoorUnavailable" then
+                    hookedCheckNSubRoomDoorUnavailable = true
                 end
             end,
         },
@@ -1401,4 +1755,6 @@ function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
     lu.assertTrue(hookedChooseNextRoomData)
     lu.assertTrue(hookedSetupRoomMultipleEncountersData)
     lu.assertTrue(hookedSelectFieldsDoorCageCount)
+    lu.assertTrue(hookedChooseAvailableNHubDoors)
+    lu.assertTrue(hookedCheckNSubRoomDoorUnavailable)
 end

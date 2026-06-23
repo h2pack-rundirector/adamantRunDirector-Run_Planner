@@ -521,7 +521,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareShopFeatureEligibility()
     local nCombat02 = biomes.lookup.N.hub.combatRoomsByKey.N_Combat02
     lu.assertEquals(nCombat02.sideDoors[1].features, surface)
     local nCombat06 = biomes.lookup.N.hub.combatRoomsByKey.N_Combat06
-    lu.assertNil(nCombat06.sideDoors[2].features)
+    lu.assertEquals(nCombat06.sideDoors[2].features, surface)
 
     lu.assertNil(optionByKey(biomes.lookup.O.rolesByKey.Combat.mapOptions, "O_Combat01").features)
     lu.assertEquals(optionByKey(biomes.lookup.O.rolesByKey.Combat.mapOptions, "O_Combat02").features, surface)

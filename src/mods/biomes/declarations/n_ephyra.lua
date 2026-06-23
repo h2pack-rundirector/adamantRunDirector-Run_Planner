@@ -87,6 +87,10 @@ return function(importer, deps)
             },
             sideRoomAvailability = {
                 identity = "parentCombatRoomAndDoorId",
+                vanillaPolicy = {
+                    minPerPylon = 0.5,
+                    chanceAfterMinimum = 0.3,
+                },
                 default = "",
                 modes = {
                     { key = "", label = "Vanilla" },

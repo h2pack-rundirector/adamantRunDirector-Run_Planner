@@ -126,6 +126,7 @@ local function compactRoomRow(row)
         slotKind = row.slotKind,
         isBiomeEntry = row.isBiomeEntry == true,
         roomKey = row.roomKey,
+        hubDoorId = row.hubDoorId,
         branchKey = row.branchKey,
         roleKey = row.roleKey,
         optionKey = row.optionKey,

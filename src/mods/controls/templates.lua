@@ -5,6 +5,7 @@ local decorations = deps.decorations
 
 local godData = deps.godData or import("mods/data/gods.lua")
 local rewardRatio = import("mods/controls/reward_ratio.lua")
+local sideRoomProbability = import("mods/controls/side_room_probability.lua")
 
 return {
     ClockworkGoalRoute = import("mods/controls/ClockworkGoalRoute/ClockworkGoalRoute.lua", nil, {
@@ -26,6 +27,7 @@ return {
     HubPylonRoute = import("mods/controls/HubPylonRoute/HubPylonRoute.lua", nil, {
         route = route,
         rewards = rewards,
+        sideRoomProbability = sideRoomProbability,
         decorations = decorations,
     }),
     MultiEncounterFixedRoute = import("mods/controls/MultiEncounterFixedRoute/MultiEncounterFixedRoute.lua", nil, {

@@ -4,6 +4,7 @@ local deps = ...
 local data = deps.data
 local rewardSystem = deps.rewards
 local runtime = deps.runtime
+local sideRoomProbability = deps.sideRoomProbability
 
 local ui = {}
 
@@ -58,6 +59,7 @@ local sideRooms = import("mods/controls/HubPylonRoute/views/side_rooms.lua", nil
     data = data,
     resetSideRewardDetails = resetSideRewardDetails,
     rewards = deps.rewards,
+    sideRoomProbability = sideRoomProbability,
     decorations = deps.decorations,
 })
 local planner = import("mods/controls/HubPylonRoute/views/planner.lua", nil, {

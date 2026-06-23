@@ -15,6 +15,7 @@ local SURFACE_SHOP_SUBROOMS = {
     N_Sub02 = true,
     N_Sub03 = true,
     N_Sub04 = true,
+    N_Sub05 = true,
     N_Sub06 = true,
     N_Sub07 = true,
     N_Sub08 = true,

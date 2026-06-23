@@ -83,6 +83,10 @@ function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
             },
         },
     })
+    lu.assertEquals(instance.biome.hub.sideRoomAvailability.vanillaPolicy, {
+        minPerPylon = 0.5,
+        chanceAfterMinimum = 0.3,
+    })
     lu.assertEquals(instance.sideRoomModeValues, {
         "",
         "Disabled",
@@ -283,6 +287,44 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
     lu.assertEquals(snapshot.rows[10].roomHistoryCost, 1)
     lu.assertTrue(snapshot.rows[10].valid)
     lu.assertEquals(primaryRewardItem(snapshot.rows[10]).rewardKind, "shop")
+end
+
+function TestRunPlannerHubPylonRoute.testHubPylonSideRoomProbabilitySummary()
+    local catalog = loadCatalog()
+    local template = loadHubPylonTemplate()
+    local instance = template.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {},
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "N_Combat12",
+            },
+            {
+                RoleKey = "Combat",
+                OptionKey = "N_Combat06",
+            },
+        }, {
+            { ModeKey = "Enabled" },
+            { ModeKey = "Disabled" },
+            {},
+            {},
+            { ModeKey = "Enabled" },
+        }), instance)
+    local summary = control:sideRoomProbabilitySummary()
+
+    lu.assertEquals(summary.totalCount, 5)
+    lu.assertEquals(summary.enabledCount, 2)
+    lu.assertEquals(summary.disabledCount, 1)
+    lu.assertEquals(summary.vanillaCount, 2)
+    lu.assertAlmostEquals(summary.expectedOpenCount, 2.6, 0.001)
+    lu.assertStrContains(summary.text, "Vanilla Side Rooms: min 0.5 per pylon, then 30.0% chance")
+    lu.assertStrContains(summary.text, "Current: 2 enabled / 1 disabled / 2 vanilla")
+    lu.assertStrContains(summary.text, "expected ~2.6 open")
 end
 
 function TestRunPlannerHubPylonRoute.testHubPylonPolicyAllowsDuplicateBoonSources()

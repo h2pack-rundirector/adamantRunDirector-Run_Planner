@@ -5,6 +5,7 @@ local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
 local rewardItems = deps.rewardItems
+local sideRoomProbability = deps.sideRoomProbability
 local invalidLocations = deps.invalidLocations
 
 local runtime = {}
@@ -77,6 +78,26 @@ local function prewarmRewardSurfaces(instance)
             prewarmRewardSurface(slot.role, option)
         end
     end
+end
+
+local function rebuildSideRoomProbability(control, fields, instance)
+    local summary = sideRoomProbability.createSummary(instance)
+    if summary == nil then
+        return nil
+    end
+
+    for rowIndex = 1, control:rowCount() do
+        local slot = control:slot(rowIndex)
+        for sideIndex = 1, data.sideDoorCountForRow(instance, control:routeRows(), rowIndex) do
+            local sideRowIndex = data.sideRoomRowIndex(instance, rowIndex, sideIndex)
+            sideRoomProbability.countSideDoor(
+                summary,
+                sideRowIndex and fields.SideRooms:read(sideRowIndex, data.sideRoomModeAlias()) or "",
+                slot and slot.routeOrdinal or 0
+            )
+        end
+    end
+    return sideRoomProbability.finish(summary)
 end
 
 local function selectedRoomKey(slot, option)
@@ -239,6 +260,16 @@ function runtime.create(fields, instance)
         return rewardSurface(self:role(rowIndex), self:option(rowIndex))
     end
 
+    function control:sideRoomProbabilitySummary()
+        local version = instance.sideRoomProbabilityVersion or 0
+        if instance.sideRoomProbabilityCacheBuilt ~= true or instance.sideRoomProbabilityCacheVersion ~= version then
+            instance.sideRoomProbabilityCacheBuilt = true
+            instance.sideRoomProbabilityCacheVersion = version
+            instance.sideRoomProbabilitySummary = rebuildSideRoomProbability(self, fields, instance)
+        end
+        return instance.sideRoomProbabilitySummary
+    end
+
     function control:rewardsConfigured()
         return common == nil or common.rewardsConfigured(instance)
     end
@@ -265,6 +296,7 @@ function runtime.create(fields, instance)
 
     function control:invalidateReadPass()
         data.invalidateReadPass(instance)
+        sideRoomProbability.invalidate(instance)
         if instance.routeContext ~= nil and instance.routeContext.markDirty ~= nil then
             instance.routeContext:markDirty(instance.routeKey, instance.biomeKey)
         end

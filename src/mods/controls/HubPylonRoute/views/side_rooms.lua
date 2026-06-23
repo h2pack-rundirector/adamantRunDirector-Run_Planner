@@ -5,6 +5,7 @@ local data = deps.data
 local resetSideRewardDetails = deps.resetSideRewardDetails
 local rewardSystem = deps.rewards
 local decorations = deps.decorations
+local sideRoomProbability = deps.sideRoomProbability
 
 local sideRooms = {}
 
@@ -133,6 +134,7 @@ function sideRooms.draw(draw, control, instance)
     local rowCount = control:rowCount()
     local drewRow = false
     local allRowsInactive, inactiveBoundary = decorations.routeInactiveBoundary(instance)
+    sideRoomProbability.drawInfoLine(draw.imgui, decorations, control:sideRoomProbabilitySummary())
     control:beginReadPass()
     for rowIndex = 1, rowCount do
         if hasSideRoomRows(control, instance, rowIndex) then

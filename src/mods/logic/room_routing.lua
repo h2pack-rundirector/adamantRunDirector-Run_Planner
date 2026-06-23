@@ -5,6 +5,9 @@ local game = deps.game or {}
 
 local roomRouting = {}
 local startingBiome
+local SIDE_ROOM_ENABLED = "Enabled"
+local SIDE_ROOM_DISABLED = "Disabled"
+local SIDE_ROOM_VANILLA = "Vanilla"
 
 local FIXED_DEPTH_ROOM_BIOMES = {
     F = true,
@@ -26,6 +29,11 @@ local FIXED_DEPTH_ROOM_ADAPTERS = {
     FieldsCageRoute = true,
     FixedLinearRoute = true,
     MultiEncounterFixedRoute = true,
+}
+
+local HUB_PYLON_ADAPTERS = {
+    hubPylon = true,
+    HubPylonRoute = true,
 }
 
 local function sortedKeys(source)
@@ -245,6 +253,21 @@ local function roomEligible(currentRun, args, roomKey)
     return isRoomEligible(currentRun, currentRun and currentRun.CurrentRoom or nil, args, roomData)
 end
 
+local function isGameStateEligible(roomKey)
+    local eligible = game.IsGameStateEligible or _G.IsGameStateEligible
+    if type(eligible) ~= "function" then
+        return true
+    end
+
+    local roomData = gameRoomData(roomKey)
+    return roomData ~= nil and eligible(roomData, roomData.GameStateRequirements) == true
+end
+
+local function isDoorClosedForRun(currentRun, source)
+    local closed = game.IsDoorClosedForRun or _G.IsDoorClosedForRun
+    return type(closed) == "function" and closed(currentRun, source) == true
+end
+
 local function roomAlreadyFilled(bucket, otherDoors, roomKey)
     return offeredRoomCount(otherDoors, roomKey) >= plannedRoomLimit(bucket, roomKey)
 end
@@ -433,6 +456,201 @@ function roomRouting.selectFieldsDoorCageCount(runtime, base, currentRun, room)
     return count
 end
 
+local function isHubPylonPlan(biomePlan)
+    return biomePlan ~= nil and HUB_PYLON_ADAPTERS[biomePlan.adapter] == true
+end
+
+local function hubRoomData(room)
+    return gameRoomData(roomName(room)) or room
+end
+
+local function plannedHubDoorRows(runtime, room)
+    local plan = planFromRuntime(runtime)
+    local biomeKey = runState.currentBiomeKey(runState.currentRun(), nil, room)
+    local biomePlan = plan and plan.biomes and plan.biomes[biomeKey] or nil
+    if not isHubPylonPlan(biomePlan) then
+        return nil
+    end
+
+    local predetermined = hubRoomData(room) and hubRoomData(room).PredeterminedDoorRooms or nil
+    if predetermined == nil then
+        return nil
+    end
+
+    local rows = {}
+    local byDoorId = {}
+    for _, row in ipairs(biomePlan.plannedRows or {}) do
+        local doorId = row.hubDoorId
+        if doorId ~= nil
+            and predetermined[doorId] == row.roomKey
+            and isGameStateEligible(row.roomKey)
+        then
+            rows[#rows + 1] = row
+            byDoorId[doorId] = row
+        end
+    end
+
+    if rows[1] == nil then
+        return nil
+    end
+    return rows, byDoorId, predetermined
+end
+
+local function plannedHubPylonRowForCurrentRoom(runtime, currentRun, room)
+    local plan = planFromRuntime(runtime)
+    local biomeKey = runState.currentBiomeKey(currentRun, nil, room)
+    local biomePlan = plan and plan.biomes and plan.biomes[biomeKey] or nil
+    if not isHubPylonPlan(biomePlan) then
+        return nil
+    end
+
+    local roomKey = roomName(room)
+    local depthBucket = biomePlan.plannedByBiomeDepthCache[currentBiomeDepthCache(currentRun)]
+    local depthRoom = depthBucket and depthBucket.byRoomKey and depthBucket.byRoomKey[roomKey] or nil
+    if depthRoom ~= nil then
+        return depthRoom.primary
+    end
+
+    local roomBucket = biomePlan.plannedByRoomKey and biomePlan.plannedByRoomKey[roomKey] or nil
+    return roomBucket and roomBucket.primary or nil
+end
+
+local function plannedSideRoomForDoor(runtime, source)
+    local currentRun = runState.currentRun()
+    local currentRoom = currentRun and currentRun.CurrentRoom or nil
+    local planned = plannedHubPylonRowForCurrentRoom(runtime, currentRun, currentRoom)
+    local doorId = source and source.ObjectId or nil
+    for _, sideRoom in ipairs(planned and planned.sideRooms or {}) do
+        if sideRoom.doorId == doorId then
+            return sideRoom, planned, currentRun
+        end
+    end
+    return nil
+end
+
+local function sortedDoorIds(source)
+    local ids = {}
+    for doorId in pairs(source or {}) do
+        ids[#ids + 1] = doorId
+    end
+    table.sort(ids, function(left, right)
+        return tonumber(left) < tonumber(right)
+    end)
+    return ids
+end
+
+local function availableDoorCount(predetermined, unavailable)
+    local count = 0
+    for doorId in pairs(predetermined or {}) do
+        if unavailable == nil or unavailable[doorId] ~= true then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function suppressUnplannedMinibossDoors(unavailable, predetermined, plannedByDoorId)
+    local hasPlannedMiniboss = false
+    for _, row in pairs(plannedByDoorId or {}) do
+        if tostring(row.roomKey or ""):match("^N_MiniBoss") ~= nil then
+            hasPlannedMiniboss = true
+            break
+        end
+    end
+    if not hasPlannedMiniboss then
+        return
+    end
+
+    for doorId, roomKey in pairs(predetermined or {}) do
+        if plannedByDoorId[doorId] == nil and tostring(roomKey or ""):match("^N_MiniBoss") ~= nil then
+            unavailable[doorId] = true
+        end
+    end
+end
+
+local function trimUnplannedHubDoors(unavailable, predetermined, plannedByDoorId, targetCount)
+    local count = availableDoorCount(predetermined, unavailable)
+    if count <= targetCount then
+        return
+    end
+
+    for _, doorId in ipairs(sortedDoorIds(predetermined)) do
+        if count <= targetCount then
+            return
+        end
+        if plannedByDoorId[doorId] == nil and unavailable[doorId] ~= true then
+            unavailable[doorId] = true
+            count = count - 1
+        end
+    end
+end
+
+function roomRouting.chooseAvailableNHubDoors(runtime, base, room, args)
+    local result = base(room, args)
+    local plannedRows, plannedByDoorId, predetermined = plannedHubDoorRows(runtime, room)
+    if plannedRows == nil then
+        return result
+    end
+
+    room.UnavailableDoors = room.UnavailableDoors or {}
+    local targetCount = availableDoorCount(predetermined, room.UnavailableDoors)
+    if targetCount < #plannedRows then
+        targetCount = #plannedRows
+    end
+
+    for doorId in pairs(plannedByDoorId) do
+        room.UnavailableDoors[doorId] = nil
+    end
+    suppressUnplannedMinibossDoors(room.UnavailableDoors, predetermined, plannedByDoorId)
+    trimUnplannedHubDoors(room.UnavailableDoors, predetermined, plannedByDoorId, targetCount)
+
+    debugLog("hub doors " .. tostring(roomName(room))
+        .. " planned=" .. tostring(#plannedRows)
+        .. " available=" .. tostring(availableDoorCount(predetermined, room.UnavailableDoors)))
+    return result
+end
+
+function roomRouting.checkNSubRoomDoorUnavailable(runtime, base, source, args)
+    local sideRoom, planned, currentRun = plannedSideRoomForDoor(runtime, source)
+    local mode = sideRoom and sideRoom.modeKey or nil
+    if sideRoom == nil or mode == nil or mode == SIDE_ROOM_VANILLA then
+        return base(source, args)
+    end
+
+    local currentRoom = currentRun and currentRun.CurrentRoom or nil
+    currentRoom.UnavailableDoors = currentRoom.UnavailableDoors or {}
+
+    if mode == SIDE_ROOM_DISABLED then
+        currentRoom.UnavailableDoors[source.ObjectId] = true
+        debugLog("side door " .. tostring(roomName(currentRoom))
+            .. " door=" .. tostring(source.ObjectId)
+            .. " disabled planned=" .. tostring(sideRoom.roomKey)
+            .. " row=" .. tostring(planned and planned.rowIndex or "-"))
+        return nil
+    end
+
+    if mode == SIDE_ROOM_ENABLED then
+        local beforeSpawned = math.floor(tonumber(currentRun.NumSubRoomsSpawned) or 0)
+        local result = base(source, args)
+        if not isDoorClosedForRun(currentRun, source)
+            and currentRoom.UnavailableDoors ~= nil
+            and currentRoom.UnavailableDoors[source.ObjectId] == true
+        then
+            currentRoom.UnavailableDoors[source.ObjectId] = nil
+            if math.floor(tonumber(currentRun.NumSubRoomsSpawned) or 0) <= beforeSpawned then
+                currentRun.NumSubRoomsSpawned = beforeSpawned + 1
+            end
+        end
+        debugLog("side door " .. tostring(roomName(currentRoom))
+            .. " door=" .. tostring(source.ObjectId)
+            .. " enabled planned=" .. tostring(sideRoom.roomKey)
+            .. " row=" .. tostring(planned and planned.rowIndex or "-"))
+        return result
+    end
+
+    return base(source, args)
+end
+
 function roomRouting.buildArgs(runtime, currentRun, args, otherDoors)
     args = args or {}
     if args.ForceNextRoom ~= nil or _G.ForceNextRoom ~= nil then
@@ -559,6 +777,22 @@ function roomRouting.registerHooks(moduleRef, catalog)
         end
 
         return roomRouting.selectFieldsDoorCageCount(runtime, base, currentRun, room)
+    end)
+
+    moduleRef.hooks.wrap("ChooseAvailableN_HubDoors", function(host, runtime, base, room, args)
+        if host ~= nil and host.isEnabled ~= nil and not host.isEnabled() then
+            return base(room, args)
+        end
+
+        return roomRouting.chooseAvailableNHubDoors(runtime, base, room, args)
+    end)
+
+    moduleRef.hooks.wrap("CheckN_SubRoomDoorUnavailable", function(host, runtime, base, source, args)
+        if host ~= nil and host.isEnabled ~= nil and not host.isEnabled() then
+            return base(source, args)
+        end
+
+        return roomRouting.checkNSubRoomDoorUnavailable(runtime, base, source, args)
     end)
 end
 
