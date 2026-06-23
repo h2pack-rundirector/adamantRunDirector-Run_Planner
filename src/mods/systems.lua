@@ -35,12 +35,17 @@ local function createLogic(catalog, route)
         routePlan = routePlan,
         runState = runState,
     })
+    local featureRouting = import("mods/logic/feature_routing.lua", nil, {
+        routePlan = routePlan,
+        runState = runState,
+    })
     return import("mods/logic.lua", nil, {
         catalog = catalog,
         routePlan = routePlan,
         roomRouting = roomRouting,
         rewardRouting = rewardRouting,
         npcRouting = npcRouting,
+        featureRouting = featureRouting,
     })
 end
 

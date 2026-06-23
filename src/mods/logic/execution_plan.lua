@@ -307,6 +307,7 @@ local function compactTarget(target)
         roomHistoryOrdinal = target.roomHistoryOrdinal,
         roomHistoryDepth = target.roomHistoryDepth,
         roomKey = target.roomKey,
+        parentRoomKey = target.parentRoomKey,
         sideIndex = target.sideIndex,
         variantKey = target.variantKey,
         encounterName = target.encounterName,

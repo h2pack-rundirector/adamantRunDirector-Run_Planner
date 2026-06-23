@@ -6,6 +6,7 @@ local routePlan = deps and deps.routePlan or nil
 local roomRouting = deps and deps.roomRouting or nil
 local rewardRouting = deps and deps.rewardRouting or nil
 local npcRouting = deps and deps.npcRouting or nil
+local featureRouting = deps and deps.featureRouting or nil
 
 function logic.defineCache(moduleRef)
     routePlan.defineCache(moduleRef)
@@ -16,6 +17,7 @@ function logic.registerHooks(moduleRef)
     roomRouting.registerHooks(moduleRef, catalog)
     rewardRouting.registerHooks(moduleRef, catalog)
     npcRouting.registerHooks(moduleRef, catalog)
+    featureRouting.registerHooks(moduleRef, catalog)
 end
 
 function logic.attach(moduleRef)

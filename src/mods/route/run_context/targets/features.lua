@@ -129,6 +129,7 @@ function featureTargets.buildTargets(context, routeKey)
                         roomHistoryOrdinal = rowContext.roomHistoryOrdinal,
                         runDepthCache = rowContext.runDepthCache,
                         roomHistoryDepth = rowContext.roomHistoryDepth,
+                        roomKey = row.roomKey,
                         row = row,
                     })
                 end
@@ -151,6 +152,8 @@ function featureTargets.buildTargets(context, routeKey)
                             roomHistoryOrdinal = sideRoomContext.roomHistoryOrdinal,
                             runDepthCache = sideRoomContext.runDepthCache,
                             roomHistoryDepth = sideRoomContext.roomHistoryDepth,
+                            roomKey = sideRoom.roomKey,
+                            parentRoomKey = row.roomKey,
                             row = row,
                             sideIndex = sideRoom.sideIndex,
                             sideRoom = sideRoom,

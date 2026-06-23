@@ -129,6 +129,14 @@ local function loadNpcRouting(routePlan, game)
     })
 end
 
+local function loadFeatureRouting(routePlan, game)
+    return testImport("mods/logic/feature_routing.lua", nil, {
+        routePlan = routePlan,
+        runState = testImport("mods/logic/run_state.lua"),
+        game = game,
+    })
+end
+
 local function logsContain(logs, text)
     for _, line in ipairs(logs) do
         if line:find(text, 1, true) ~= nil then
@@ -279,6 +287,7 @@ return {
     loadRoomRouting = loadRoomRouting,
     loadRewardRouting = loadRewardRouting,
     loadNpcRouting = loadNpcRouting,
+    loadFeatureRouting = loadFeatureRouting,
     logsContain = logsContain,
     availableDoorCount = availableDoorCount,
     validBiomeSnapshot = validBiomeSnapshot,

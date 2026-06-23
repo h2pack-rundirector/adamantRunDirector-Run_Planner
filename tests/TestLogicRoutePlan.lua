@@ -287,6 +287,46 @@ function TestRunPlannerLogicRoutePlan.testExecutionPlanPreservesDisabledNpcRows(
     lu.assertNil(plan.npcs.bySlotKey.Nemesis)
 end
 
+function TestRunPlannerLogicRoutePlan.testExecutionPlanPreservesFeatureTargetRoomIdentity()
+    local executionPlan = testImport("mods/logic/execution_plan.lua")
+    local plan = executionPlan.compile({
+        routeKey = "Surface",
+        biomes = {},
+        features = {
+            {
+                rows = {
+                    {
+                        rowIndex = 1,
+                        slotKey = "HermesShrine1",
+                        featureKey = "surfaceShop",
+                        targetKey = "N:4.side1",
+                        valid = true,
+                        target = {
+                            key = "N:4.side1",
+                            featureKey = "surfaceShop",
+                            biomeKey = "N",
+                            rowIndex = 4,
+                            targetRowIndex = "4.side1",
+                            roomKey = "N_Sub01",
+                            parentRoomKey = "N_Combat01",
+                            sideIndex = 1,
+                        },
+                    },
+                },
+            },
+        },
+    }, {
+        layers = {
+            features = true,
+        },
+    })
+
+    local row = plan.features.byFeatureKey.surfaceShop.rows[1]
+    lu.assertEquals(row.target.roomKey, "N_Sub01")
+    lu.assertEquals(row.target.parentRoomKey, "N_Combat01")
+    lu.assertEquals(row.target.sideIndex, 1)
+end
+
 function TestRunPlannerLogicRoutePlan.testRoutePlanKeepsCompositePrebossRewardsOnOneRoom()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
@@ -465,6 +505,7 @@ function TestRunPlannerLogicRoutePlan.testLogicAttachDefinesCacheAndHooks()
     local hookedChooseAvailableNHubDoors = false
     local hookedCheckNSubRoomDoorUnavailable = false
     local hookedChooseEncounter = false
+    local hookedHandleSecretSpawns = false
     logic.attach({
         cache = {
             define = function(defs)
@@ -489,6 +530,8 @@ function TestRunPlannerLogicRoutePlan.testLogicAttachDefinesCacheAndHooks()
                     hookedCheckNSubRoomDoorUnavailable = true
                 elseif name == "ChooseEncounter" then
                     hookedChooseEncounter = true
+                elseif name == "HandleSecretSpawns" then
+                    hookedHandleSecretSpawns = true
                 end
             end,
         },
@@ -503,4 +546,5 @@ function TestRunPlannerLogicRoutePlan.testLogicAttachDefinesCacheAndHooks()
     lu.assertTrue(hookedChooseAvailableNHubDoors)
     lu.assertTrue(hookedCheckNSubRoomDoorUnavailable)
     lu.assertTrue(hookedChooseEncounter)
+    lu.assertTrue(hookedHandleSecretSpawns)
 end
