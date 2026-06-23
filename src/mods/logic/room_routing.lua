@@ -9,15 +9,21 @@ local startingBiome
 local FIXED_DEPTH_ROOM_BIOMES = {
     F = true,
     G = true,
+    H = true,
+    I = true,
     O = true,
     P = true,
     Q = true,
 }
 
 local FIXED_DEPTH_ROOM_ADAPTERS = {
+    clockworkGoal = true,
+    ClockworkGoalRoute = true,
+    fieldsCageRoute = true,
     fixedLinear = true,
     multiEncounterFixed = true,
     scriptedFixedLinear = true,
+    FieldsCageRoute = true,
     FixedLinearRoute = true,
     MultiEncounterFixedRoute = true,
 }
@@ -397,6 +403,36 @@ function roomRouting.setupMultipleEncounters(runtime, base, room, args)
     end)
 end
 
+local function plannedCageRewardCount(room, planned)
+    local count = math.floor(tonumber(planned and planned.cageRewardCount) or 0)
+    if count <= 0 then
+        return nil
+    end
+
+    local minCount = math.floor(tonumber(room.MinDoorCageRewards) or count)
+    local maxCount = math.floor(tonumber(room.MaxDoorCageRewards) or count)
+    if count < minCount then
+        return minCount
+    end
+    if count > maxCount then
+        return maxCount
+    end
+    return count
+end
+
+function roomRouting.selectFieldsDoorCageCount(runtime, base, currentRun, room)
+    local planned = plannedRoomForSetup(runtime, currentRun, room)
+    local count = plannedCageRewardCount(room, planned)
+    if count == nil then
+        return base(currentRun, room)
+    end
+
+    debugLog("cage rewards " .. tostring(roomName(room))
+        .. " forced count=" .. tostring(count)
+        .. " planned=" .. tostring(planned.cageRewardCount))
+    return count
+end
+
 function roomRouting.buildArgs(runtime, currentRun, args, otherDoors)
     args = args or {}
     if args.ForceNextRoom ~= nil or _G.ForceNextRoom ~= nil then
@@ -515,6 +551,14 @@ function roomRouting.registerHooks(moduleRef, catalog)
         end
 
         return roomRouting.setupMultipleEncounters(runtime, base, room, args)
+    end)
+
+    moduleRef.hooks.wrap("SelectFieldsDoorCageCount", function(host, runtime, base, currentRun, room)
+        if host ~= nil and host.isEnabled ~= nil and not host.isEnabled() then
+            return base(currentRun, room)
+        end
+
+        return roomRouting.selectFieldsDoorCageCount(runtime, base, currentRun, room)
     end)
 end
 

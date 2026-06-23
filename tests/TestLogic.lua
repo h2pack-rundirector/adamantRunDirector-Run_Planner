@@ -827,6 +827,190 @@ function TestRunPlannerLogic.testRoomRoutingSupportsThessalyMultiEncounterAdapte
     lu.assertEquals(args.ForceNextRoom, "O_Story01")
 end
 
+function TestRunPlannerLogic.testRoomRoutingSupportsTartarusClockworkAdapter()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan, {
+        RoomData = {
+            I_Combat03 = { Name = "I_Combat03" },
+        },
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        I = plannedBiomeSnapshot("I", "clockworkGoal", {
+            {
+                rowIndex = 3,
+                routeOrdinal = 2,
+                biomeDepthCache = 2,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "I_Combat03",
+                roleKey = "Goal",
+                optionKey = "I_Combat03",
+                valid = true,
+            },
+        }),
+    })
+    routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "I",
+        },
+    }, {
+        StartingBiome = "I",
+    })
+
+    local args = roomRouting.buildArgs(runtime, {
+        CurrentRoom = {
+            RoomSetName = "I",
+        },
+        BiomeDepthCache = 2,
+    }, {}, {})
+
+    lu.assertEquals(args.ForceNextRoom, "I_Combat03")
+end
+
+function TestRunPlannerLogic.testRoomRoutingSupportsFieldsCageAdapter()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan, {
+        RoomData = {
+            H_Combat05 = { Name = "H_Combat05" },
+        },
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        H = plannedBiomeSnapshot("H", "fieldsCageRoute", {
+            {
+                rowIndex = 3,
+                routeOrdinal = 2,
+                biomeDepthCache = 2,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "H_Combat05",
+                roleKey = "Combat",
+                optionKey = "H_Combat05",
+                variantKey = "TwoRewards",
+                cageRewardCount = 2,
+                valid = true,
+            },
+        }),
+    })
+    routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "H",
+        },
+    }, {
+        StartingBiome = "H",
+    })
+
+    local args = roomRouting.buildArgs(runtime, {
+        CurrentRoom = {
+            RoomSetName = "H",
+        },
+        BiomeDepthCache = 2,
+    }, {}, {})
+
+    local planned = routePlan.get(runtime).executionPlan.biomes.H.plannedByBiomeDepthCache[2].primary
+    lu.assertEquals(args.ForceNextRoom, "H_Combat05")
+    lu.assertEquals(planned.cageRewardCount, 2)
+end
+
+function TestRunPlannerLogic.testRoomRoutingForcesFieldsCageRewardCount()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local logs = {}
+    local roomRouting = loadRoomRouting(routePlan, {
+        print = function(text)
+            logs[#logs + 1] = text
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        H = plannedBiomeSnapshot("H", "fieldsCageRoute", {
+            {
+                rowIndex = 3,
+                routeOrdinal = 2,
+                biomeDepthCache = 2,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "H_Combat05",
+                roleKey = "Combat",
+                optionKey = "H_Combat05",
+                variantKey = "ThreeRewards",
+                cageRewardCount = 3,
+                valid = true,
+            },
+        }),
+    })
+    local currentRun = {
+        CurrentRoom = {
+            RoomSetName = "H",
+        },
+        BiomeDepthCache = 2,
+    }
+    routePlan.refresh(catalog, runtime, currentRun, {
+        StartingBiome = "H",
+    })
+
+    local baseCalled = false
+    local count = roomRouting.selectFieldsDoorCageCount(runtime, function()
+        baseCalled = true
+        return 2
+    end, currentRun, {
+        Name = "H_Combat05",
+        RoomSetName = "H",
+        MinDoorCageRewards = 2,
+        MaxDoorCageRewards = 3,
+    })
+
+    lu.assertFalse(baseCalled)
+    lu.assertEquals(count, 3)
+    lu.assertTrue(logsContain(logs, "cage rewards H_Combat05 forced count=3 planned=3"))
+end
+
+function TestRunPlannerLogic.testRoomRoutingClampsFieldsCageRewardCountToRoomMax()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan, {
+        print = function()
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        H = plannedBiomeSnapshot("H", "fieldsCageRoute", {
+            {
+                rowIndex = 3,
+                routeOrdinal = 2,
+                biomeDepthCache = 2,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "H_Combat05",
+                roleKey = "Combat",
+                optionKey = "H_Combat05",
+                variantKey = "ThreeRewards",
+                cageRewardCount = 3,
+                valid = true,
+            },
+        }),
+    })
+    local currentRun = {
+        CurrentRoom = {
+            RoomSetName = "H",
+        },
+        BiomeDepthCache = 2,
+    }
+    routePlan.refresh(catalog, runtime, currentRun, {
+        StartingBiome = "H",
+    })
+
+    local count = roomRouting.selectFieldsDoorCageCount(runtime, function()
+        return 2
+    end, currentRun, {
+        Name = "H_Combat05",
+        RoomSetName = "H",
+        MinDoorCageRewards = 2,
+        MaxDoorCageRewards = 2,
+    })
+
+    lu.assertEquals(count, 2)
+end
+
 function TestRunPlannerLogic.testRoomRoutingForcesThessalyTwoEncounterRoom()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
@@ -1187,6 +1371,7 @@ function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
     local hookedChooseStartingRoom = false
     local hookedChooseNextRoomData = false
     local hookedSetupRoomMultipleEncountersData = false
+    local hookedSelectFieldsDoorCageCount = false
     logic.attach({
         cache = {
             define = function(defs)
@@ -1203,6 +1388,8 @@ function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
                     hookedChooseNextRoomData = true
                 elseif name == "SetupRoomMultipleEncountersData" then
                     hookedSetupRoomMultipleEncountersData = true
+                elseif name == "SelectFieldsDoorCageCount" then
+                    hookedSelectFieldsDoorCageCount = true
                 end
             end,
         },
@@ -1213,4 +1400,5 @@ function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
     lu.assertTrue(hookedChooseStartingRoom)
     lu.assertTrue(hookedChooseNextRoomData)
     lu.assertTrue(hookedSetupRoomMultipleEncountersData)
+    lu.assertTrue(hookedSelectFieldsDoorCageCount)
 end

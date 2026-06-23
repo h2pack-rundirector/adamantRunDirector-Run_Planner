@@ -130,6 +130,7 @@ local function compactRoomRow(row)
         roleKey = row.roleKey,
         optionKey = row.optionKey,
         variantKey = row.variantKey,
+        cageRewardCount = row.cageRewardCount,
         encounterPolicyKey = row.encounterPolicyKey,
         realCombatCount = row.realCombatCount,
         roomHistoryCost = row.roomHistoryCost,
