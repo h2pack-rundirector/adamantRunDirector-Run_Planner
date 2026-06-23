@@ -9,6 +9,9 @@ return function(importer, deps)
         label = "Thessaly",
         region = "Surface",
         adapter = "multiEncounterFixed",
+        rewardRatio = {
+            targetMetaProgress = 0.30,
+        },
         timeline = parser.standardTimeline("O", {
             postBossFeatures = { surfaceShop = true },
         }),

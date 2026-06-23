@@ -4,6 +4,7 @@ local rewards = deps.rewards or (route and route.rewards) or nil
 local decorations = deps.decorations
 
 local godData = deps.godData or import("mods/data/gods.lua")
+local rewardRatio = import("mods/controls/reward_ratio.lua")
 
 return {
     ClockworkGoalRoute = import("mods/controls/ClockworkGoalRoute/ClockworkGoalRoute.lua", nil, {
@@ -19,6 +20,7 @@ return {
     FixedLinearRoute = import("mods/controls/FixedLinearRoute/FixedLinearRoute.lua", nil, {
         route = route,
         rewards = rewards,
+        rewardRatio = rewardRatio,
         decorations = decorations,
     }),
     HubPylonRoute = import("mods/controls/HubPylonRoute/HubPylonRoute.lua", nil, {
@@ -29,6 +31,7 @@ return {
     MultiEncounterFixedRoute = import("mods/controls/MultiEncounterFixedRoute/MultiEncounterFixedRoute.lua", nil, {
         route = route,
         rewards = rewards,
+        rewardRatio = rewardRatio,
         decorations = decorations,
     }),
     RouteNpcs = import("mods/controls/RouteNpcs/RouteNpcs.lua", nil, {

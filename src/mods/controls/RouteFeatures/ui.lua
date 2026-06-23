@@ -102,6 +102,7 @@ local function drawFeatureRow(draw, control, rowIndex)
     local imgui = draw.imgui
     imgui.AlignTextToFramePadding()
     imgui.Text(slot.label)
+    imgui.SameLine()
 
     drawDropdownLine(draw, "Biome", control:biomeField(rowIndex), decoratedOpts(
         control,

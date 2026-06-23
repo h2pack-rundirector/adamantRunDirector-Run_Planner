@@ -84,6 +84,40 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(storage[2].row[12].key, "Reward6LootKey")
 end
 
+function TestRunPlannerFixedLinearRoute.testFixedLinearRewardRatioSummaryCountsMajorMinorChoices()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local rows = {
+        {},
+        { RoleKey = "Combat", Reward1Key = "Minor" },
+        { RoleKey = "Combat", Reward1Key = "Major" },
+        { RoleKey = "Fountain" },
+    }
+    local control = template.createRuntime(routeFields(rows), instance)
+    local summary = control:rewardRatioSummary()
+
+    lu.assertEquals(summary.targetMetaProgress, 0.315)
+    lu.assertEquals(summary.totalCount, 3)
+    lu.assertEquals(summary.minorCount, 1)
+    lu.assertEquals(summary.majorCount, 1)
+    lu.assertEquals(summary.unsetCount, 1)
+    lu.assertEquals(
+        summary.text,
+        "Expected Minor/Major: 31.5% / 68.5%    Current Minor/Major: 50.0% / 50.0% (2/3 set, 1 vanilla)"
+    )
+
+    rows[2].Reward1Key = "Major"
+    control:invalidateReadPass()
+    summary = control:rewardRatioSummary()
+    lu.assertEquals(summary.minorCount, 0)
+    lu.assertEquals(summary.majorCount, 2)
+    lu.assertEquals(summary.unsetCount, 1)
+end
+
 function TestRunPlannerFixedLinearRoute.testErebusSpecialRoomsUseSelectionDepthWindow()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()

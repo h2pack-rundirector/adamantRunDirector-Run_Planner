@@ -41,6 +41,7 @@ local rooms = import("mods/controls/MultiEncounterFixedRoute/views/rooms.lua", n
 local rewards = import("mods/controls/MultiEncounterFixedRoute/views/rewards.lua", nil, {
     data = data,
     rewards = deps.rewards,
+    rewardRatio = deps.rewardRatio,
     decorations = deps.decorations,
 })
 local planner = import("mods/controls/MultiEncounterFixedRoute/views/planner.lua", nil, {

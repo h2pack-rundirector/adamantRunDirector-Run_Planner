@@ -188,6 +188,51 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterStorageMatchesThess
     lu.assertEquals(routeData.rowContext(instance, rows, 6).biomeEncounterDepth, 5)
 end
 
+function TestRunPlannerMultiEncounterRoute.testMultiEncounterRewardRatioSummaryCountsEncounterLegs()
+    local catalog = loadCatalog()
+    local template = loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat01",
+            VariantKey = "TwoCombats",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat02",
+            VariantKey = "TwoCombats",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat03",
+            VariantKey = "ThreeCombats",
+        },
+    }, nil, nil, {
+        {},
+        {},
+        {},
+        {},
+        { Reward1Key = "Minor" },
+        { Reward1Key = "Major" },
+    }), instance)
+    local summary = control:rewardRatioSummary()
+
+    lu.assertEquals(summary.targetMetaProgress, 0.30)
+    lu.assertEquals(summary.totalCount, 4)
+    lu.assertEquals(summary.minorCount, 1)
+    lu.assertEquals(summary.majorCount, 1)
+    lu.assertEquals(summary.unsetCount, 2)
+    lu.assertEquals(
+        summary.text,
+        "Expected Minor/Major: 30.0% / 70.0%    Current Minor/Major: 50.0% / 50.0% (2/4 set, 2 vanillas)"
+    )
+end
+
 function TestRunPlannerMultiEncounterRoute.testMultiEncounterSnapshotUsesSelectedOptionRoomKey()
     local catalog = loadCatalog()
     local template = loadMultiEncounterTemplate()

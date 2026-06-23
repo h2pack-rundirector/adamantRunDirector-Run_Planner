@@ -3,6 +3,7 @@
 local deps = ...
 local rewardSystem = deps.rewards
 local decorations = deps.decorations
+local rewardRatio = deps.rewardRatio
 
 local rewards = {}
 
@@ -89,6 +90,7 @@ function rewards.draw(draw, control, instance)
     local rowCount = control:rowCount()
     local drewRow = false
     local allRowsInactive, inactiveAfterRouteOrdinal = decorations.routeInactiveBoundary(instance)
+    rewardRatio.drawInfoLine(draw.imgui, decorations, control:rewardRatioSummary())
     control:beginReadPass()
     for rowIndex = 1, rowCount do
         if drewRow then

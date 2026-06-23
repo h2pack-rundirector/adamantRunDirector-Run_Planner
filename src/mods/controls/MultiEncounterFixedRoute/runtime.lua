@@ -5,6 +5,7 @@ local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
 local rewardItems = deps.rewardItems
+local rewardRatio = deps.rewardRatio
 local invalidLocations = deps.invalidLocations
 
 local runtime = {}
@@ -130,6 +131,37 @@ local function encounterRewardLegSnapshots(fields, instance, routeRows, rowIndex
     return snapshots
 end
 
+local function countEncounterRewardSurfaces(summary, fields, instance, routeRows, rowIndex)
+    for legIndex = 1, data.encounterRewardLegCountForRow(instance, routeRows, rowIndex) do
+        local leg = data.encounterRewardLegForRow(instance, routeRows, rowIndex, legIndex)
+        local encounterRewardRowIndex = data.encounterRewardRowIndex(instance, rowIndex, legIndex)
+        rewardRatio.countSurface(
+            summary,
+            rewardSystem,
+            rewardSurfaceForContext(leg.reward),
+            rewardSystem.fields(fields.EncounterRewards, encounterRewardRowIndex)
+        )
+    end
+end
+
+local function rebuildRewardRatio(control, fields, instance, routeRows)
+    local summary = rewardRatio.createSummary(instance)
+    if summary == nil then
+        return nil
+    end
+
+    for rowIndex = 1, control:rowCount() do
+        rewardRatio.countSurface(
+            summary,
+            rewardSystem,
+            control:rewardSurface(rowIndex),
+            rewardSystem.fields(fields.Rewards, rowIndex)
+        )
+        countEncounterRewardSurfaces(summary, fields, instance, routeRows, rowIndex)
+    end
+    return rewardRatio.finish(summary)
+end
+
 function runtime.create(fields, instance)
     prewarmRewardSurfaces(instance)
     local routeRows = createRouteRows(fields)
@@ -205,6 +237,16 @@ function runtime.create(fields, instance)
         return rewardSurface(role, self:option(rowIndex))
     end
 
+    function control:rewardRatioSummary()
+        local version = instance.rewardRatioVersion or 0
+        if instance.rewardRatioCacheBuilt ~= true or instance.rewardRatioCacheVersion ~= version then
+            instance.rewardRatioCacheBuilt = true
+            instance.rewardRatioCacheVersion = version
+            instance.rewardRatioSummary = rebuildRewardRatio(self, fields, instance, routeRows)
+        end
+        return instance.rewardRatioSummary
+    end
+
     function control:rewardsConfigured()
         return common == nil or common.rewardsConfigured(instance)
     end
@@ -231,6 +273,7 @@ function runtime.create(fields, instance)
 
     function control:invalidateReadPass()
         data.invalidateReadPass(instance)
+        rewardRatio.invalidate(instance)
         if instance.routeContext ~= nil and instance.routeContext.markDirty ~= nil then
             instance.routeContext:markDirty(instance.routeKey, instance.biomeKey)
         end

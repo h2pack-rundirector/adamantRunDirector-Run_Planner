@@ -14,6 +14,9 @@ return function(importer, deps)
         label = "Erebus",
         region = "Underworld",
         adapter = "fixedLinear",
+        rewardRatio = {
+            targetMetaProgress = 0.315,
+        },
         timeline = parser.standardTimeline("F", {
             postBossFeatures = { wellShop = true },
         }),

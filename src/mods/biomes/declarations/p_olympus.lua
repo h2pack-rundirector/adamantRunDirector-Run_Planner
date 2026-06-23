@@ -9,6 +9,9 @@ return function(importer, deps)
         label = "Olympus",
         region = "Surface",
         adapter = "fixedLinear",
+        rewardRatio = {
+            targetMetaProgress = 0.20,
+        },
         timeline = parser.standardTimeline("P", {
             bossRooms = {
                 { key = "P_Boss01", label = "Boss" },

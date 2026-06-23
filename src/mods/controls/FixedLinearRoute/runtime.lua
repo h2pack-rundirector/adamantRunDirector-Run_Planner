@@ -5,6 +5,7 @@ local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
 local rewardItems = deps.rewardItems
+local rewardRatio = deps.rewardRatio
 local invalidLocations = deps.invalidLocations
 
 local runtime = {}
@@ -59,6 +60,23 @@ local function prewarmRewardSurfaces(instance)
             prewarmRewardSurface(branch)
         end
     end
+end
+
+local function rebuildRewardRatio(control, fields, instance)
+    local summary = rewardRatio.createSummary(instance)
+    if summary == nil then
+        return nil
+    end
+
+    for rowIndex = 1, control:rowCount() do
+        rewardRatio.countSurface(
+            summary,
+            rewardSystem,
+            control:rewardSurface(rowIndex),
+            rewardSystem.fields(fields.Rewards, rowIndex)
+        )
+    end
+    return rewardRatio.finish(summary)
 end
 
 local function selectedRoomKey(slot, option)
@@ -139,6 +157,16 @@ function runtime.create(fields, instance)
         return rewardSurface(self:role(rowIndex), self:option(rowIndex))
     end
 
+    function control:rewardRatioSummary()
+        local version = instance.rewardRatioVersion or 0
+        if instance.rewardRatioCacheBuilt ~= true or instance.rewardRatioCacheVersion ~= version then
+            instance.rewardRatioCacheBuilt = true
+            instance.rewardRatioCacheVersion = version
+            instance.rewardRatioSummary = rebuildRewardRatio(self, fields, instance)
+        end
+        return instance.rewardRatioSummary
+    end
+
     function control:rewardsConfigured()
         return common == nil or common.rewardsConfigured(instance)
     end
@@ -165,6 +193,7 @@ function runtime.create(fields, instance)
 
     function control:invalidateReadPass()
         data.invalidateReadPass(instance)
+        rewardRatio.invalidate(instance)
         if instance.routeContext ~= nil and instance.routeContext.markDirty ~= nil then
             instance.routeContext:markDirty(instance.routeKey, instance.biomeKey)
         end

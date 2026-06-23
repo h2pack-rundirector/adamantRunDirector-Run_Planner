@@ -229,6 +229,21 @@ function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
     lu.assertEquals(biomes.lookup.Q.slotLayout.routeEndOrdinal, 6)
 end
 
+function TestRunPlannerData.testBiomeDefinitionsDeclareRewardRatios()
+    local data = dofile("src/mods/data.lua")
+    local biomes = data.loadBiomes(testImport)
+
+    lu.assertEquals(biomes.lookup.F.rewardRatio, { targetMetaProgress = 0.315 })
+    lu.assertEquals(biomes.lookup.G.rewardRatio, { targetMetaProgress = 0.35 })
+    lu.assertEquals(biomes.lookup.O.rewardRatio, { targetMetaProgress = 0.30 })
+    lu.assertEquals(biomes.lookup.P.rewardRatio, { targetMetaProgress = 0.20 })
+
+    lu.assertNil(biomes.lookup.N.rewardRatio)
+    lu.assertNil(biomes.lookup.H.rewardRatio)
+    lu.assertNil(biomes.lookup.I.rewardRatio)
+    lu.assertNil(biomes.lookup.Q.rewardRatio)
+end
+
 function TestRunPlannerData.testBiomeDefinitionsDeclareRoomHistoryTimeline()
     local data = dofile("src/mods/data.lua")
     local biomes = data.loadBiomes(testImport)

@@ -107,6 +107,53 @@ function TestRunPlannerRouteUi.testRouteStatusDrawsFirstInvalidMessage()
     })
 end
 
+function TestRunPlannerRouteUi.testRouteStatusDrawsRelatedConflictParticipants()
+    local routeStatus = loadRouteStatus()
+    local rendered = {}
+    local draw = {
+        imgui = {
+            Text = function(text)
+                rendered[#rendered + 1] = text
+            end,
+            TextColored = function(_, _, _, _, text)
+                rendered[#rendered + 1] = text
+            end,
+            SameLine = function()
+                rendered[#rendered + 1] = "<same-line>"
+            end,
+            SetCursorPosX = function(x)
+                rendered[#rendered + 1] = "<x:" .. tostring(x) .. ">"
+            end,
+        },
+    }
+
+    routeStatus.drawRouteStatus(draw, {
+        label = "Underworld",
+        valid = false,
+        invalidRows = {
+            {
+                markerKind = "primary",
+                locationLabel = "Erebus Depth 8 Rewards",
+                message = "Hammer limit reached",
+            },
+            {
+                markerKind = "related",
+                locationLabel = "Erebus Depth 2 Rewards",
+                message = "Hammer limit reached",
+            },
+        },
+    })
+
+    lu.assertEquals(rendered, {
+        "Underworld Invalid:",
+        "<same-line>",
+        "<x:165>",
+        "Erebus Depth 8 Rewards: Hammer limit reached",
+        "<x:165>",
+        "Conflicts with Erebus Depth 2 Rewards: Hammer limit reached",
+    })
+end
+
 function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
     local catalog, data = loadCatalog()
     local controls = data.buildControls(catalog, testImport)
