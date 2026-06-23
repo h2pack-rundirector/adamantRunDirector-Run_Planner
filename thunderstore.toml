@@ -5,7 +5,7 @@ schemaVersion = "0.0.1"
 namespace = "adamantRunDirector"
 name = "Run_Planner"
 description = "Plan biome room and reward routing by depth."
-versionNumber = "0.1.0"
+versionNumber = "0.2.0"
 websiteUrl = ""
 containsNsfwContent = false
 

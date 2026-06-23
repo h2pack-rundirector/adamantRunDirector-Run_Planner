@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-23
+
+### Added
+
+- run-planner: add route-safe room colors (
+c0cc10)
+- run-planner: compact combat labels (
+f66f07)
+- run-planner: route feature spawns (
+f43d98)
+- run-planner: route npc encounters (
+33527a)
+- run-planner: route preboss shop rewards (
+05d28e)
+- run-planner: route preboss free rewards (
+fac710)
+- run-planner: model preboss reward offers (
+964f11)
+- run-planner: route planned rewards (
+92b37b)
+- run-planner: trace reward routing (
+995efb)
+- run-planner: route ephyra hub doors (
+fa4d4c)
+- run-planner: route fields and tartarus (
+2d37f7)
+- run-planner: route thessaly combat counts (
+a1e2d5)
+
+### Fixed
+
+- run-planner: preserve room swap rewards (46d176c)
+- run-planner: simplyfing H bridge room modeling (
+009950)
+- run-planner: stabilize route depth and inactive ordering (
+da475a)
+
 ## [0.1.0] - 2026-06-23
 
 ### Added
