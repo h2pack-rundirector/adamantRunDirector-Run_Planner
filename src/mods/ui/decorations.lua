@@ -5,9 +5,15 @@ local decorations = {}
 
 local INVALID_COLOR = { 1.0, 0.24, 0.16, 1.0 }
 local VALID_COLOR = { 0.35, 0.9, 0.45, 1.0 }
+local INACTIVE_COLOR = { 0.55, 0.55, 0.55, 1.0 }
 local INVALID_VALUE_COLOR = { 1.0, 0.22, 0.16, 1.0 }
 local WARNING_VALUE_COLOR = { 1.0, 0.78, 0.18, 1.0 }
 local EMPTY_LIST = {}
+local PLANNER_TAB_ORDER = {
+    rooms = 1,
+    rewards = 2,
+    sideRooms = 3,
+}
 
 local function clearMap(map)
     for key in pairs(map) do
@@ -82,6 +88,19 @@ local function invalidMatchesPlannerTab(invalid, controlName, biomeKey, tabKey)
         return isSideInvalid(invalid)
     end
     return false
+end
+
+local function plannerTabForInvalid(invalid)
+    if invalid == nil then
+        return nil
+    end
+    if isSideInvalid(invalid) then
+        return "sideRooms"
+    end
+    if isRewardInvalid(invalid) then
+        return "rewards"
+    end
+    return "rooms"
 end
 
 local function colorForState(state, opts)
@@ -199,27 +218,48 @@ function decorations.validColor()
     return VALID_COLOR
 end
 
+function decorations.inactiveColor()
+    return INACTIVE_COLOR
+end
+
 function decorations.warningValueColor()
     return WARNING_VALUE_COLOR
 end
 
-function decorations.beginTabItem(imgui, label, invalid)
+function decorations.beginTabItem(imgui, label, invalid, inactive)
+    local color
     if invalid then
-        pushTextColor(imgui, INVALID_COLOR)
+        color = INVALID_COLOR
+    elseif inactive then
+        color = INACTIVE_COLOR
+    end
+    if color ~= nil then
+        pushTextColor(imgui, color)
     end
     local opened = imgui.BeginTabItem(label)
-    if invalid then
+    if color ~= nil then
         popTextColor(imgui)
     end
     return opened
 end
 
 function decorations.beginPlannerTabItem(imgui, label, control, instance, tabKey)
-    return decorations.beginTabItem(imgui, label, decorations.plannerTabInvalid(control, tabKey, instance))
+    return decorations.beginTabItem(
+        imgui,
+        label,
+        decorations.plannerTabInvalid(control, tabKey, instance),
+        decorations.plannerTabInactive(control, tabKey, instance)
+    )
 end
 
-function decorations.setNavTabInvalid(tab, invalid)
-    tab.color = invalid and INVALID_COLOR or nil
+function decorations.setNavTabState(tab, invalid, inactive)
+    if invalid then
+        tab.color = INVALID_COLOR
+    elseif inactive then
+        tab.color = INACTIVE_COLOR
+    else
+        tab.color = nil
+    end
 end
 
 function decorations.plannerTabInvalid(control, tabKey, instance)
@@ -234,6 +274,29 @@ function decorations.plannerTabInvalid(control, tabKey, instance)
     return false
 end
 
+function decorations.plannerTabInactive(control, tabKey, instance)
+    local routeContext = instance.routeContext
+    if routeContext == nil then
+        return false
+    end
+
+    if routeContext:isRouteBiomeInactive(instance.routeKey, instance.biomeKey) then
+        return true
+    end
+
+    local horizon = routeContext:blockingHorizon(instance.routeKey)
+    if horizon == nil
+        or horizon.layer ~= "route"
+        or not invalidMatchesControl(horizon, control:name(), instance.biomeKey)
+    then
+        return false
+    end
+
+    local horizonOrder = PLANNER_TAB_ORDER[plannerTabForInvalid(horizon)]
+    local tabOrder = PLANNER_TAB_ORDER[tabKey]
+    return horizonOrder ~= nil and tabOrder ~= nil and tabOrder > horizonOrder
+end
+
 function decorations.routeTabInvalid(routeSnapshot)
     return invalidRows(routeSnapshot)[1] ~= nil
 end
@@ -245,6 +308,48 @@ function decorations.navTabInvalid(routeSnapshot, tab)
         end
     end
     return false
+end
+
+function decorations.pushInactive(imgui, inactive)
+    if inactive then
+        pushTextColor(imgui, INACTIVE_COLOR)
+        return true
+    end
+    return false
+end
+
+function decorations.popInactive(imgui, pushed)
+    if pushed then
+        popTextColor(imgui)
+    end
+end
+
+function decorations.routeInactiveBoundary(instance)
+    local routeContext = instance.routeContext
+    if routeContext == nil then
+        return false, nil
+    end
+    local horizon = routeContext:blockingHorizon(instance.routeKey)
+    if horizon == nil or horizon.layer ~= "route" then
+        return false, nil
+    end
+    if routeContext:isRouteBiomeInactive(instance.routeKey, instance.biomeKey) then
+        return true, nil
+    end
+    if horizon.routeOrdinal ~= nil then
+        return false, horizon.routeOrdinal
+    end
+    return false, nil
+end
+
+function decorations.routeRowInactive(allInactive, inactiveAfterRouteOrdinal, slot)
+    return allInactive
+        or (
+            inactiveAfterRouteOrdinal ~= nil
+            and slot ~= nil
+            and slot.routeOrdinal ~= nil
+            and slot.routeOrdinal > inactiveAfterRouteOrdinal
+        )
 end
 
 function decorations.decorateDropdown(owner, baseOpts, states, opts)

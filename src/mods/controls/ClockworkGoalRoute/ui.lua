@@ -30,6 +30,7 @@ local rooms = import("mods/controls/ClockworkGoalRoute/views/rooms.lua", nil, {
 local rewards = import("mods/controls/ClockworkGoalRoute/views/rewards.lua", nil, {
     data = data,
     rewards = deps.rewards,
+    decorations = deps.decorations,
 })
 local planner = import("mods/controls/ClockworkGoalRoute/views/planner.lua", nil, {
     rooms = rooms,

@@ -136,8 +136,14 @@ local function drawRows(draw, control)
         return
     end
 
+    local allRowsInactive, inactiveAfterRowIndex = control:inactiveBoundary()
     for rowIndex = 1, rowCount do
+        local inactive = decorations.pushInactive(
+            draw.imgui,
+            control:isRowInactive(rowIndex, allRowsInactive, inactiveAfterRowIndex)
+        )
         drawFeatureRow(draw, control, rowIndex)
+        decorations.popInactive(draw.imgui, inactive)
         if rowIndex < rowCount then
             draw.imgui.Spacing()
         end

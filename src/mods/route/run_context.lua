@@ -14,6 +14,12 @@ local buildRouteInfo = routeControls.buildRouteInfo
 local buildRouteFeatureKeysByRoute = routeControls.buildRouteFeatureKeysByRoute
 local routeFeatureKeys = routeControls.routeFeatureKeys
 
+local LAYER_ORDER = {
+    route = 1,
+    npcs = 2,
+    features = 3,
+}
+
 local function biomeLabel(context, biomeKey)
     local biome = context and context.biomeLookup and context.biomeLookup[biomeKey] or nil
     return tostring(biome and (biome.label or biome.key) or biomeKey or "Route")
@@ -143,6 +149,59 @@ local function rewardBoundaryForInvalid(invalid)
         }
     end
     return nil
+end
+
+local function featureControlIndex(context, route, controlName)
+    for index, featureKey in ipairs(routeFeatureKeys(context, route)) do
+        if controlName == routeFeatureControlName(route.key, featureKey) then
+            return index
+        end
+    end
+    return nil
+end
+
+local function layerControlIndex(context, route, layer, controlName)
+    if layer == "npcs" then
+        return controlName == routeNpcControlName(route.key) and 1 or nil
+    elseif layer == "features" then
+        return featureControlIndex(context, route, controlName)
+    end
+    return nil
+end
+
+local function layerForInvalid(context, route, invalid)
+    if invalid.layer ~= nil then
+        return invalid.layer
+    end
+    if invalid.controlName == routeNpcControlName(route.key) then
+        return "npcs"
+    end
+    if featureControlIndex(context, route, invalid.controlName) ~= nil then
+        return "features"
+    end
+    return "route"
+end
+
+local function blockingHorizon(context, route, invalid)
+    if invalid == nil then
+        return nil
+    end
+
+    local horizon = copyInvalidRow(invalid, {
+        layer = layerForInvalid(context, route, invalid),
+        routeKey = route.key,
+    })
+    if horizon.routeBiomeIndex == nil and horizon.biomeKey ~= nil then
+        local info = context:routeInfo(route.key, horizon.biomeKey)
+        horizon.routeBiomeIndex = info and info.index or nil
+    end
+    return horizon
+end
+
+local function layerInactive(horizon, layer)
+    local horizonOrder = horizon and LAYER_ORDER[horizon.layer] or nil
+    local layerOrder = LAYER_ORDER[layer]
+    return horizonOrder ~= nil and layerOrder ~= nil and layerOrder > horizonOrder
 end
 
 local function clearMap(map)
@@ -402,12 +461,17 @@ function runContext.create(opts)
             },
         }
         if route == nil then
+            local invalid = { code = "unknown_route", message = "Unknown route: " .. tostring(routeKey) }
             return {
                 routeKey = routeKey,
                 valid = false,
                 disabled = true,
-                invalidRows = {
-                    { code = "unknown_route", message = "Unknown route: " .. tostring(routeKey) },
+                invalidRows = { invalid },
+                blockingHorizon = {
+                    layer = "route",
+                    routeKey = routeKey,
+                    code = invalid.code,
+                    message = invalid.message,
                 },
                 layerStatus = layerStatus,
                 biomes = snapshots,
@@ -486,6 +550,7 @@ function runContext.create(opts)
             valid = invalidRows[1] == nil,
             disabled = invalidRows[1] ~= nil,
             invalidRows = invalidRows,
+            blockingHorizon = blockingHorizon(self, route, invalidRows[1]),
             layerStatus = layerStatus,
             biomes = snapshots,
             npcs = npcSnapshot,
@@ -493,10 +558,82 @@ function runContext.create(opts)
         }
     end
 
+    function context:blockingHorizon(routeKey)
+        local snapshot = self:overview(routeKey)
+        return snapshot and snapshot.blockingHorizon or nil
+    end
+
     function context:canDecorateLayer(routeKey, layer)
         local snapshot = self:overview(routeKey)
         local status = snapshot and snapshot.layerStatus and snapshot.layerStatus[layer] or nil
         return status == nil or status.canDecorate ~= false
+    end
+
+    function context:isLayerInactive(routeKey, layer)
+        return layerInactive(self:blockingHorizon(routeKey), layer)
+    end
+
+    function context:isRouteBiomeInactive(routeKey, biomeKey)
+        local horizon = self:blockingHorizon(routeKey)
+        if horizon == nil or horizon.layer ~= "route" or horizon.routeBiomeIndex == nil then
+            return false
+        end
+        local info = self:routeInfo(routeKey, biomeKey)
+        return info ~= nil and info.index > horizon.routeBiomeIndex
+    end
+
+    function context:isRouteRowInactive(routeKey, biomeKey, routeOrdinal)
+        local horizon = self:blockingHorizon(routeKey)
+        if horizon == nil or horizon.layer ~= "route" then
+            return false
+        end
+        if horizon.routeOrdinal ~= nil and routeOrdinal ~= nil then
+            return routeOrdinal > horizon.routeOrdinal
+        end
+        return self:isRouteBiomeInactive(routeKey, biomeKey)
+    end
+
+    function context:isTargetRowInactive(routeKey, layer, controlName, rowIndex)
+        local allInactive, inactiveAfterRowIndex = self:targetInactiveBoundary(routeKey, layer, controlName)
+        return allInactive
+            or (
+                inactiveAfterRowIndex ~= nil
+                and rowIndex ~= nil
+                and rowIndex > inactiveAfterRowIndex
+            )
+    end
+
+    function context:targetInactiveBoundary(routeKey, layer, controlName)
+        if self:isLayerInactive(routeKey, layer) then
+            return true, nil
+        end
+
+        local horizon = self:blockingHorizon(routeKey)
+        if horizon == nil or horizon.layer ~= layer then
+            return false, nil
+        end
+
+        local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
+        if route == nil then
+            return false, nil
+        end
+
+        local targetIndex = layerControlIndex(self, route, layer, controlName)
+        local horizonIndex = layerControlIndex(self, route, layer, horizon.controlName)
+        if targetIndex == nil or horizonIndex == nil then
+            return false, nil
+        end
+        if targetIndex ~= horizonIndex then
+            return targetIndex > horizonIndex, nil
+        end
+        return false, horizon.rowIndex
+    end
+
+    function context:isNavTabInactive(routeKey, tab)
+        if tab.layer ~= nil then
+            return self:isLayerInactive(routeKey, tab.layer)
+        end
+        return self:isRouteBiomeInactive(routeKey, tab.key)
     end
 
     function context:overview(routeKey)

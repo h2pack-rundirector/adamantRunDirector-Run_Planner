@@ -52,11 +52,13 @@ local rooms = import("mods/controls/HubPylonRoute/views/rooms.lua", nil, {
 })
 local rewards = import("mods/controls/HubPylonRoute/views/rewards.lua", nil, {
     rewards = deps.rewards,
+    decorations = deps.decorations,
 })
 local sideRooms = import("mods/controls/HubPylonRoute/views/side_rooms.lua", nil, {
     data = data,
     resetSideRewardDetails = resetSideRewardDetails,
     rewards = deps.rewards,
+    decorations = deps.decorations,
 })
 local planner = import("mods/controls/HubPylonRoute/views/planner.lua", nil, {
     rooms = rooms,

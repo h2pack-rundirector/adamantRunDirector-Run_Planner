@@ -114,7 +114,11 @@ function routePanel.create(deps)
         clearList(visibleTabs)
         for _, tab in ipairs(routeAllTabs[region] or EMPTY_LIST) do
             if tabLayerConfigured(routeContext, region, tab) then
-                decorations.setNavTabInvalid(tab, decorations.navTabInvalid(snapshot, tab))
+                decorations.setNavTabState(
+                    tab,
+                    decorations.navTabInvalid(snapshot, tab),
+                    routeContext:isNavTabInactive(region, tab)
+                )
                 visibleTabs[#visibleTabs + 1] = tab
             end
         end

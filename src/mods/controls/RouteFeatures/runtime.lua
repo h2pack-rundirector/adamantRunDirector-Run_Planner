@@ -584,6 +584,22 @@ function runtime.create(fields, instance)
         return targetMarkers.valueStates(self:valueStateSnapshot(), rowIndex, controlAlias)
     end
 
+    function control:inactiveBoundary()
+        if instance.routeContext == nil then
+            return false, nil
+        end
+        return instance.routeContext:targetInactiveBoundary(instance.routeKey, "features", instance.name)
+    end
+
+    function control:isRowInactive(rowIndex, allInactive, inactiveAfterRowIndex)
+        return allInactive
+            or (
+                inactiveAfterRowIndex ~= nil
+                and rowIndex ~= nil
+                and rowIndex > inactiveAfterRowIndex
+            )
+    end
+
     return control
 end
 

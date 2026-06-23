@@ -29,6 +29,7 @@ local rooms = import("mods/controls/FixedLinearRoute/views/rooms.lua", nil, {
 })
 local rewards = import("mods/controls/FixedLinearRoute/views/rewards.lua", nil, {
     rewards = deps.rewards,
+    decorations = deps.decorations,
 })
 local planner = import("mods/controls/FixedLinearRoute/views/planner.lua", nil, {
     rooms = rooms,

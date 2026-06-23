@@ -159,14 +159,20 @@ end
 function rooms.draw(draw, control, instance)
     local rowCount = control:rowCount()
     local drewRow = false
+    local allRowsInactive, inactiveAfterRouteOrdinal = decorations.routeInactiveBoundary(instance)
     control:beginReadPass()
     for rowIndex = 1, rowCount do
         if drewRow then
             drawRouteRowSeparator(draw.imgui)
         end
+        local inactive = decorations.pushInactive(
+            draw.imgui,
+            decorations.routeRowInactive(allRowsInactive, inactiveAfterRouteOrdinal, control:slot(rowIndex))
+        )
         drawRoomRow(draw, control, instance, rowIndex)
-        drewRow = true
-    end
+            decorations.popInactive(draw.imgui, inactive)
+            drewRow = true
+        end
     control:endReadPass()
 end
 

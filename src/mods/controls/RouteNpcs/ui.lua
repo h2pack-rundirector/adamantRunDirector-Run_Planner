@@ -137,11 +137,17 @@ local function drawRows(draw, control)
         return
     end
 
+    local allRowsInactive, inactiveAfterRowIndex = control:inactiveBoundary()
     for rowIndex = 1, rowCount do
         if rowIndex > 1 then
             drawSeparator(draw.imgui)
         end
+        local inactive = decorations.pushInactive(
+            draw.imgui,
+            control:isRowInactive(rowIndex, allRowsInactive, inactiveAfterRowIndex)
+        )
         drawTargetRow(draw, control, rowIndex)
+        decorations.popInactive(draw.imgui, inactive)
     end
 end
 

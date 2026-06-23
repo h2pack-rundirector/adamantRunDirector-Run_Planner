@@ -3,6 +3,7 @@
 local deps = ...
 local data = deps.data
 local rewardSystem = deps.rewards
+local decorations = deps.decorations
 
 local rewards = {}
 
@@ -91,13 +92,19 @@ function rewards.draw(draw, control, instance)
     local rowCount = control:rowCount()
     local drewRow = false
     local rows = control:routeRows()
+    local allRowsInactive, inactiveAfterRouteOrdinal = decorations.routeInactiveBoundary(instance)
     control:beginReadPass()
     for rowIndex = 1, rowCount do
         if shouldRenderRow(control, instance, rows, rowIndex) then
             if drewRow then
                 drawRouteRowSeparator(draw.imgui)
             end
+            local inactive = decorations.pushInactive(
+                draw.imgui,
+                decorations.routeRowInactive(allRowsInactive, inactiveAfterRouteOrdinal, control:slot(rowIndex))
+            )
             drawRewardRow(draw, control, rowIndex)
+            decorations.popInactive(draw.imgui, inactive)
             drewRow = true
         end
     end
