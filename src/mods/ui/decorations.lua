@@ -1,5 +1,6 @@
 local deps = ... or {}
 local valueStates = deps.valueStates or import("mods/route/value_states.lua")
+local routePosition = deps.routePosition or import("mods/route/position.lua")
 
 local decorations = {}
 
@@ -9,11 +10,6 @@ local INACTIVE_COLOR = { 0.55, 0.55, 0.55, 1.0 }
 local INVALID_VALUE_COLOR = { 1.0, 0.22, 0.16, 1.0 }
 local WARNING_VALUE_COLOR = { 1.0, 0.78, 0.18, 1.0 }
 local EMPTY_LIST = {}
-local PLANNER_TAB_ORDER = {
-    rooms = 1,
-    rewards = 2,
-    sideRooms = 3,
-}
 
 local function clearMap(map)
     for key in pairs(map) do
@@ -28,20 +24,6 @@ end
 
 local function popTextColor(imgui)
     imgui.PopStyleColor()
-end
-
-local function isRewardInvalid(invalid)
-    return invalid ~= nil and (invalid.rewardType ~= nil or invalid.address ~= nil)
-end
-
-local function isSideInvalid(invalid)
-    local address = invalid and invalid.address or nil
-    return invalid ~= nil
-        and (
-            invalid.tabKey == "sideRooms"
-            or invalid.sourceKind == "side"
-            or (type(address) == "string" and string.sub(address, 1, 5) == "side:")
-        )
 end
 
 local function invalidRows(routeSnapshot)
@@ -77,30 +59,7 @@ local function invalidMatchesPlannerTab(invalid, controlName, biomeKey, tabKey)
     if not invalidMatchesControl(invalid, controlName, biomeKey) then
         return false
     end
-
-    if tabKey == "rewards" then
-        return isRewardInvalid(invalid) and not isSideInvalid(invalid)
-    end
-    if tabKey == "rooms" then
-        return not isRewardInvalid(invalid) and not isSideInvalid(invalid)
-    end
-    if tabKey == "sideRooms" then
-        return isSideInvalid(invalid)
-    end
-    return false
-end
-
-local function plannerTabForInvalid(invalid)
-    if invalid == nil then
-        return nil
-    end
-    if isSideInvalid(invalid) then
-        return "sideRooms"
-    end
-    if isRewardInvalid(invalid) then
-        return "rewards"
-    end
-    return "rooms"
+    return routePosition.tabKeyForInvalid(invalid) == tabKey
 end
 
 local function colorForState(state, opts)
@@ -292,8 +251,8 @@ function decorations.plannerTabInactive(control, tabKey, instance)
         return false
     end
 
-    local horizonOrder = PLANNER_TAB_ORDER[plannerTabForInvalid(horizon)]
-    local tabOrder = PLANNER_TAB_ORDER[tabKey]
+    local horizonOrder = routePosition.tabOrder(routePosition.tabKeyForInvalid(horizon))
+    local tabOrder = routePosition.tabOrder(tabKey)
     return horizonOrder ~= nil and tabOrder ~= nil and tabOrder > horizonOrder
 end
 
@@ -336,19 +295,34 @@ function decorations.routeInactiveBoundary(instance)
     if routeContext:isRouteBiomeInactive(instance.routeKey, instance.biomeKey) then
         return true, nil
     end
-    if horizon.routeOrdinal ~= nil then
-        return false, horizon.routeOrdinal
+    local info = routeContext:routeInfo(instance.routeKey, instance.biomeKey)
+    local horizonKey = routePosition.key({
+        routeBiomeIndex = horizon.routeBiomeIndex,
+        tabKey = routePosition.tabKeyForInvalid(horizon),
+        routeOrdinal = horizon.routeOrdinal,
+    })
+    if horizonKey ~= nil then
+        return false, {
+            routeBiomeIndex = info and info.index or nil,
+            horizonKey = horizonKey,
+        }
     end
     return false, nil
 end
 
-function decorations.routeRowInactive(allInactive, inactiveAfterRouteOrdinal, slot)
+function decorations.routeRowInactive(allInactive, inactiveBoundary, slot, tabKey)
     return allInactive
         or (
-            inactiveAfterRouteOrdinal ~= nil
+            inactiveBoundary ~= nil
             and slot ~= nil
-            and slot.routeOrdinal ~= nil
-            and slot.routeOrdinal > inactiveAfterRouteOrdinal
+            and routePosition.after(
+                routePosition.key({
+                    routeBiomeIndex = inactiveBoundary.routeBiomeIndex,
+                    tabKey = tabKey,
+                    routeOrdinal = slot.routeOrdinal,
+                }),
+                inactiveBoundary.horizonKey
+            )
         )
 end
 

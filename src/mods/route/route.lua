@@ -46,6 +46,7 @@ function routeFactory.create(opts)
     local rewards = opts.rewards
 
     local routeTimeline = import("mods/route/timeline.lua")
+    local routePosition = import("mods/route/position.lua")
     local invalidLocations = import("mods/route/invalid_locations.lua")
     local routeMarkers = import("mods/route/markers.lua")
     local planning = createRewardPlanning(invalidLocations, routeMarkers)
@@ -77,6 +78,7 @@ function routeFactory.create(opts)
     }
     route.runContext = import("mods/route/run_context.lua", nil, {
         controls = import("mods/route/run_context/controls.lua"),
+        position = routePosition,
         targets = createRouteTargets(routeTimeline, planning),
         rewards = import("mods/route/run_context/rewards.lua", nil, {
             rewardLegality = planning.rewardLegality,

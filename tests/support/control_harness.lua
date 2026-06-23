@@ -185,6 +185,7 @@ local function loadRunContext()
     local semantics = testImport("mods/route/reward_planning/semantics.lua")
     return testImport("mods/route/run_context.lua", nil, {
         controls = testImport("mods/route/run_context/controls.lua"),
+        position = testImport("mods/route/position.lua"),
         targets = loadRouteTargets(timeline, rewardItems, semantics),
         rewards = testImport("mods/route/run_context/rewards.lua", nil, {
             rewardLegality = loadRewardLegality(),

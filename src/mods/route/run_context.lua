@@ -2,6 +2,7 @@ local deps = ... or {}
 local routeControls = deps.controls
 local routeTargets = deps.targets
 local routeRewards = deps.rewards
+local routePosition = deps.position
 
 local runContext = {}
 local EMPTY_LIST = {}
@@ -594,15 +595,28 @@ function runContext.create(opts)
         return info ~= nil and info.index > horizon.routeBiomeIndex
     end
 
-    function context:isRouteRowInactive(routeKey, biomeKey, routeOrdinal)
+    function context:isRouteRowInactive(routeKey, biomeKey, routeOrdinal, tabKey)
         local horizon = self:blockingHorizon(routeKey)
         if horizon == nil or horizon.layer ~= "route" then
             return false
         end
-        if horizon.routeOrdinal ~= nil and routeOrdinal ~= nil then
-            return routeOrdinal > horizon.routeOrdinal
+        local info = self:routeInfo(routeKey, biomeKey)
+        local horizonKey = routePosition.key({
+            routeBiomeIndex = horizon.routeBiomeIndex,
+            tabKey = routePosition.tabKeyForInvalid(horizon),
+            routeOrdinal = horizon.routeOrdinal,
+        })
+        if horizonKey == nil then
+            return self:isRouteBiomeInactive(routeKey, biomeKey)
         end
-        return self:isRouteBiomeInactive(routeKey, biomeKey)
+        return routePosition.after(
+            routePosition.key({
+                routeBiomeIndex = info and info.index or nil,
+                tabKey = tabKey or "rooms",
+                routeOrdinal = routeOrdinal,
+            }),
+            horizonKey
+        )
     end
 
     function context:isTargetRowInactive(routeKey, layer, controlName, rowIndex)

@@ -21,14 +21,14 @@ function TestRunPlannerTimeline.testWalkRouteCountsRowsAndAfterBiomeTimeline()
                     rowIndex = 1,
                     roomHistoryCost = 1,
                     biomeDepthCache = 0,
-                    biomeEncounterDepth = 0,
+                    biomeEncounterDepth = 1,
                     biomeEncounterDepthCost = 1,
                 },
                 {
                     rowIndex = 2,
                     roomHistoryCost = 2,
                     biomeDepthCache = 1,
-                    biomeEncounterDepth = 1,
+                    biomeEncounterDepth = 2,
                     biomeEncounterDepthCost = 2,
                 },
             },
@@ -39,7 +39,7 @@ function TestRunPlannerTimeline.testWalkRouteCountsRowsAndAfterBiomeTimeline()
                     rowIndex = 1,
                     roomHistoryCost = 1,
                     biomeDepthCache = 0,
-                    biomeEncounterDepth = 0,
+                    biomeEncounterDepth = 1,
                     biomeEncounterDepthCost = 1,
                 },
             },
@@ -190,9 +190,9 @@ function TestRunPlannerTimeline.testNextBiomeRowCountersUseStartAndPreviousCosts
 
     local first = timeline.nextBiomeRowCounters(instance)
     lu.assertEquals(first.biomeDepthCache, 3)
-    lu.assertEquals(first.biomeEncounterDepth, 0)
-    lu.assertEquals(first.biomeEncounterDepthMin, 0)
-    lu.assertEquals(first.biomeEncounterDepthMax, 0)
+    lu.assertEquals(first.biomeEncounterDepth, 1)
+    lu.assertEquals(first.biomeEncounterDepthMin, 1)
+    lu.assertEquals(first.biomeEncounterDepthMax, 1)
 
     local second = timeline.nextBiomeRowCounters(instance, {
         biomeDepthCache = first.biomeDepthCache,
@@ -203,9 +203,9 @@ function TestRunPlannerTimeline.testNextBiomeRowCountersUseStartAndPreviousCosts
         biomeEncounterDepthCost = 1,
     })
     lu.assertEquals(second.biomeDepthCache, 5)
-    lu.assertEquals(second.biomeEncounterDepth, 1)
-    lu.assertEquals(second.biomeEncounterDepthMin, 1)
-    lu.assertEquals(second.biomeEncounterDepthMax, 1)
+    lu.assertEquals(second.biomeEncounterDepth, 2)
+    lu.assertEquals(second.biomeEncounterDepthMin, 2)
+    lu.assertEquals(second.biomeEncounterDepthMax, 2)
 end
 
 function TestRunPlannerTimeline.testNextBiomeRowCountersPropagateEncounterDepthBounds()

@@ -47,8 +47,6 @@ return function(importer, deps)
                 },
             },
         },
-        vanillaDepthHints = layout.vanillaDepthHints,
-        forcedDepthOptions = layout.forcedDepthOptions,
         roles = {
             {
                 key = "Vanilla",

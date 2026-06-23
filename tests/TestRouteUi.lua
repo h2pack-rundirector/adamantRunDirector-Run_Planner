@@ -26,10 +26,15 @@ local function loadValueStates()
     return dofile("src/mods/route/value_states.lua")
 end
 
+local function loadRoutePosition()
+    return dofile("src/mods/route/position.lua")
+end
+
 local function loadDecorations()
     local chunk = assert(loadfile("src/mods/ui/decorations.lua"))
     return chunk({
         valueStates = loadValueStates(),
+        routePosition = loadRoutePosition(),
     })
 end
 
@@ -386,6 +391,84 @@ function TestRunPlannerRouteUi.testRouteContextExposesRouteBlockingHorizon()
     lu.assertTrue(routeContext:isLayerInactive("Underworld", "features"))
 end
 
+function TestRunPlannerRouteUi.testRoutePositionOrdersBiomeTabAndRow()
+    local position = loadRoutePosition()
+    local latestFReward = position.key({
+        routeBiomeIndex = 1,
+        tabKey = "rewards",
+        routeOrdinal = 31,
+    })
+    local firstGRoom = position.key({
+        routeBiomeIndex = 2,
+        tabKey = "rooms",
+        routeOrdinal = 0,
+    })
+    local roomRowAfterRewardRow = position.key({
+        routeBiomeIndex = 3,
+        tabKey = "rooms",
+        routeOrdinal = 9,
+    })
+    local rewardRow = position.key({
+        routeBiomeIndex = 3,
+        tabKey = "rewards",
+        routeOrdinal = 2,
+    })
+    local sideRow = position.key({
+        routeBiomeIndex = 3,
+        tabKey = "sideRooms",
+        routeOrdinal = 0,
+    })
+
+    lu.assertTrue(position.after(firstGRoom, latestFReward))
+    lu.assertFalse(position.after(roomRowAfterRewardRow, rewardRow))
+    lu.assertTrue(position.after(sideRow, rewardRow))
+end
+
+function TestRunPlannerRouteUi.testRouteContextDoesNotApplyLaterBiomeRowHorizonToEarlierBiomes()
+    local controls = {
+        RouteGlobalUnderworld = fakeLayerConfig(),
+        RouteF = fakeSnapshotControl(validRouteSnapshot("RouteF")),
+        RouteG = fakeSnapshotControl(validRouteSnapshot("RouteG")),
+        RouteH = fakeSnapshotControl({
+            controlName = "RouteH",
+            valid = false,
+            invalidRows = {
+                {
+                    controlName = "RouteH",
+                    biomeKey = "H",
+                    rowIndex = 2,
+                    routeOrdinal = 2,
+                    message = "Fields invalid",
+                },
+            },
+            rows = {},
+        }),
+        RouteI = fakeSnapshotControl(validRouteSnapshot("RouteI")),
+    }
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F", "G", "H", "I" },
+            },
+        }),
+        controlResolver = function(controlName)
+            return controls[controlName]
+        end,
+    })
+
+    routeContext:beginPass()
+    local snapshot = routeContext:overview("Underworld")
+
+    lu.assertEquals(snapshot.blockingHorizon.routeBiomeIndex, 3)
+    lu.assertFalse(routeContext:isRouteRowInactive("Underworld", "F", 9))
+    lu.assertFalse(routeContext:isRouteRowInactive("Underworld", "G", 9))
+    lu.assertFalse(routeContext:isRouteRowInactive("Underworld", "H", 2))
+    lu.assertTrue(routeContext:isRouteRowInactive("Underworld", "H", 3))
+    lu.assertTrue(routeContext:isRouteRowInactive("Underworld", "I", 1))
+end
+
 function TestRunPlannerRouteUi.testRouteContextExposesTargetLayerInactiveRows()
     local controls = {
         RouteGlobalUnderworld = fakeLayerConfig(),
@@ -584,35 +667,98 @@ function TestRunPlannerRouteUi.testDecorationsRouteInactiveBoundaryPrefersDownst
     local horizon = {
         layer = "route",
         biomeKey = "F",
+        routeBiomeIndex = 1,
         routeOrdinal = 4,
     }
     local routeContext = {
         blockingHorizon = function()
             return horizon
         end,
+        routeInfo = function(_, _, biomeKey)
+            return {
+                index = biomeKey == "G" and 2 or 1,
+            }
+        end,
         isRouteBiomeInactive = function(_, _, biomeKey)
             return biomeKey == "G"
         end,
     }
 
-    local allInactive, inactiveAfterRouteOrdinal = decorations.routeInactiveBoundary({
+    local allInactive, inactiveBoundary = decorations.routeInactiveBoundary({
         routeContext = routeContext,
         routeKey = "Underworld",
         biomeKey = "F",
     })
     lu.assertFalse(allInactive)
-    lu.assertEquals(inactiveAfterRouteOrdinal, 4)
-    lu.assertFalse(decorations.routeRowInactive(allInactive, inactiveAfterRouteOrdinal, { routeOrdinal = 4 }))
-    lu.assertTrue(decorations.routeRowInactive(allInactive, inactiveAfterRouteOrdinal, { routeOrdinal = 5 }))
+    lu.assertNotNil(inactiveBoundary)
+    lu.assertFalse(decorations.routeRowInactive(allInactive, inactiveBoundary, { routeOrdinal = 4 }, "rooms"))
+    lu.assertTrue(decorations.routeRowInactive(allInactive, inactiveBoundary, { routeOrdinal = 5 }, "rooms"))
 
-    allInactive, inactiveAfterRouteOrdinal = decorations.routeInactiveBoundary({
+    allInactive, inactiveBoundary = decorations.routeInactiveBoundary({
         routeContext = routeContext,
         routeKey = "Underworld",
         biomeKey = "G",
     })
     lu.assertTrue(allInactive)
-    lu.assertNil(inactiveAfterRouteOrdinal)
-    lu.assertTrue(decorations.routeRowInactive(allInactive, inactiveAfterRouteOrdinal, { routeOrdinal = 1 }))
+    lu.assertNil(inactiveBoundary)
+    lu.assertTrue(decorations.routeRowInactive(allInactive, inactiveBoundary, { routeOrdinal = 1 }, "rooms"))
+end
+
+function TestRunPlannerRouteUi.testDecorationsRouteInactiveBoundaryIgnoresLaterBiomeLocalRows()
+    local decorations = loadDecorations()
+    local horizon = {
+        layer = "route",
+        biomeKey = "H",
+        routeBiomeIndex = 3,
+        routeOrdinal = 2,
+    }
+    local indexes = {
+        F = 1,
+        G = 2,
+        H = 3,
+        I = 4,
+    }
+    local routeContext = {
+        blockingHorizon = function()
+            return horizon
+        end,
+        routeInfo = function(_, _, biomeKey)
+            return {
+                index = indexes[biomeKey],
+            }
+        end,
+        isRouteBiomeInactive = function(_, _, biomeKey)
+            return biomeKey == "I"
+        end,
+    }
+
+    local allInactive, inactiveBoundary = decorations.routeInactiveBoundary({
+        routeContext = routeContext,
+        routeKey = "Underworld",
+        biomeKey = "G",
+    })
+    lu.assertFalse(allInactive)
+    lu.assertNotNil(inactiveBoundary)
+    lu.assertFalse(decorations.routeRowInactive(allInactive, inactiveBoundary, { routeOrdinal = 9 }, "rooms"))
+
+    allInactive, inactiveBoundary = decorations.routeInactiveBoundary({
+        routeContext = routeContext,
+        routeKey = "Underworld",
+        biomeKey = "H",
+    })
+    lu.assertFalse(allInactive)
+    lu.assertNotNil(inactiveBoundary)
+    lu.assertFalse(decorations.routeRowInactive(allInactive, inactiveBoundary, { routeOrdinal = 2 }, "rooms"))
+    lu.assertTrue(decorations.routeRowInactive(allInactive, inactiveBoundary, { routeOrdinal = 3 }, "rooms"))
+    lu.assertTrue(decorations.routeRowInactive(allInactive, inactiveBoundary, { routeOrdinal = 1 }, "rewards"))
+
+    allInactive, inactiveBoundary = decorations.routeInactiveBoundary({
+        routeContext = routeContext,
+        routeKey = "Underworld",
+        biomeKey = "I",
+    })
+    lu.assertTrue(allInactive)
+    lu.assertNil(inactiveBoundary)
 end
 
 function TestRunPlannerRouteUi.testRouteUiColorsInvalidRouteAndRegionTabs()

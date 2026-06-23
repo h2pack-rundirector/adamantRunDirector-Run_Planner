@@ -1,6 +1,7 @@
 local timeline = {}
 
 local DEFAULT_ROOM_HISTORY_COST = 1
+local BIOME_ENCOUNTER_DEPTH_START = 1
 local EMPTY_LIST = {}
 
 local function numericCost(value, fallback)
@@ -200,7 +201,7 @@ function timeline.nextBiomeRowCounters(instance, previous, target)
         previous,
         "biomeEncounterDepth",
         "biomeEncounterDepthCost",
-        0
+        BIOME_ENCOUNTER_DEPTH_START
     )
     target = target or {}
     target.biomeDepthCache = biomeDepthCache

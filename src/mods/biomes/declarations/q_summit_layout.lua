@@ -55,69 +55,25 @@ layout.prebossRoom = option("Q_PreBoss01", "Preboss", {
 })
 
 layout.combatRooms = {
-    combat("Q_Combat01", { availability = { biomeDepthCache = { maxExclusive = 7 } } }),
-    combat("Q_Combat02", { availability = { biomeDepthCache = { maxExclusive = 7 } } }),
-    combat("Q_Combat03", {
-        availability = {
-            biomeDepthCache = { exact = 2 },
-        },
-    }),
-    combat("Q_Combat04", { availability = { biomeDepthCache = { maxExclusive = 7 } } }),
-    combat("Q_Combat05", {
-        availability = {
-            biomeDepthCache = { exact = 2 },
-        },
-    }),
-    combat("Q_Combat06", { availability = { biomeDepthCache = { minExclusive = 3 } } }),
-    combat("Q_Combat07"),
-    combat("Q_Combat08", { availability = { biomeDepthCache = { maxExclusive = 7 } } }),
-    combat("Q_Combat09", { availability = { biomeDepthCache = { minExclusive = 3 } } }),
+    combat("Q_Combat01", { availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat02", { availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat03", { availability = { biomeDepthCache = { exact = 2 } } }),
+    combat("Q_Combat04", { availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat05", { availability = { biomeDepthCache = { exact = 2 } } }),
+    combat("Q_Combat06", { availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat07", { availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat08", { availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat09", { availability = { biomeDepthCache = { exact = 4 } } }),
     combat("Q_Combat10", { availability = { biomeDepthCache = { exact = 1 } } }),
     combat("Q_Combat11", { availability = { biomeDepthCache = { exact = 1 } } }),
-    combat("Q_Combat12", {
-        availability = {
-            biomeDepthCache = { exact = 5 },
-        },
-    }),
-    combat("Q_Combat13", {
-        availability = {
-            biomeDepthCache = { exact = 5 },
-        },
-    }),
-    combat("Q_Combat14", {
-        availability = {
-            biomeDepthCache = { exact = 5 },
-        },
-    }),
-    combat("Q_Combat15", {
-        availability = {
-            biomeDepthCache = { exact = 2 },
-        },
-    }),
-    combat("Q_Combat16"),
+    combat("Q_Combat12", { availability = { biomeDepthCache = { exact = 5 } } }),
+    combat("Q_Combat13", { availability = { biomeDepthCache = { exact = 5 } } }),
+    combat("Q_Combat14", { availability = { biomeDepthCache = { exact = 5 } } }),
+    combat("Q_Combat15", { availability = { biomeDepthCache = { exact = 2 } } }),
+    combat("Q_Combat16", { availability = { biomeDepthCache = { exact = 4 } } }),
 }
 
 layout.combatRoomsByKey = indexByKey(layout.combatRooms)
-
-layout.vanillaDepthHints = {
-    [1] = { "Q_Combat10", "Q_Combat11" },
-    [2] = { "Q_Combat03", "Q_Combat05", "Q_Combat15" },
-    [3] = { "Q_MiniBoss02", "Q_MiniBoss05" },
-    [5] = { "Q_Combat12", "Q_Combat13", "Q_Combat14" },
-    [6] = { "Q_MiniBoss03", "Q_MiniBoss04" },
-    [7] = { "Q_PreBoss01" },
-}
-
-layout.forcedDepthOptions = {
-    [3] = {
-        roleKey = "Miniboss",
-        optionKeys = { "Q_MiniBoss02", "Q_MiniBoss05" },
-    },
-    [6] = {
-        roleKey = "Miniboss",
-        optionKeys = { "Q_MiniBoss03", "Q_MiniBoss04" },
-    },
-}
 
 layout.minibossRooms = {
     option("Q_MiniBoss02", "Brute", {

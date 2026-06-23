@@ -3,15 +3,11 @@ local common = deps.common
 local timeline = deps.timeline
 local rowEngine = deps.rowEngine
 
-local VANILLA_ROLE_KEY = common.VANILLA_ROLE_KEY
-
 local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
-local buildKeyLookup = common.buildKeyLookup
 local addChoice = common.addChoice
 local buildOptionChoices = common.buildOptionChoices
 local validStatus = common.validStatus
-local invalidStatus = common.invalidStatus
 local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
 local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
 local routeStartOrdinal = common.routeStartOrdinal
@@ -39,37 +35,6 @@ end
 
 local function firstBranchKey(slot)
     return slot and (slot.branchKey or (slot.branchValues and slot.branchValues[1])) or ""
-end
-
-local function forcedRuleForRow(instance, rows, rowIndex)
-    local context = data.rowContext(instance, rows, rowIndex)
-    local depth = context and context.biomeDepthCache or nil
-    if depth == nil then
-        return nil
-    end
-    return instance.forcedDepthOptions and instance.forcedDepthOptions[depth] or nil
-end
-
-local function isRoleAllowedByForcedRule(instance, rows, rowIndex, roleKey)
-    local rule = forcedRuleForRow(instance, rows, rowIndex)
-    if rule == nil or roleKey == VANILLA_ROLE_KEY then
-        return true
-    end
-    return roleKey == rule.roleKey
-end
-
-local function isOptionAllowedByForcedRule(instance, rows, rowIndex, roleKey, optionKey)
-    local rule = forcedRuleForRow(instance, rows, rowIndex)
-    if rule == nil then
-        return true
-    end
-    if roleKey ~= rule.roleKey then
-        return false
-    end
-    if rule.optionKeysByKey == nil then
-        return true
-    end
-    return rule.optionKeysByKey[optionKey] == true
 end
 
 local function buildFixedRoleSlot(instance, ordinal, special)
@@ -264,47 +229,6 @@ local adapter = {
         return nil
     end,
 
-    isRoleAllowed = function(instance, rows, rowIndex, roleKey)
-        return isRoleAllowedByForcedRule(instance, rows, rowIndex, roleKey)
-    end,
-
-    isOptionAllowed = function(instance, rows, rowIndex, roleKey, optionKey)
-        return isOptionAllowedByForcedRule(instance, rows, rowIndex, roleKey, optionKey)
-    end,
-
-    roleDisallowedStatus = function(instance, rows, rowIndex)
-        local rule = forcedRuleForRow(instance, rows, rowIndex)
-        return invalidStatus(
-            "forced_depth_role",
-            routeRowLabel(
-                instance.biome and instance.biome.slotLayout or nil,
-                instance.routeSlots[rowIndex] and instance.routeSlots[rowIndex].routeOrdinal,
-                "Depth"
-            )
-                .. " is forced to " .. tostring(rule and rule.roleKey or "another role")
-        )
-    end,
-
-    roleDisallowedFailureCode = function()
-        return "forced_depth_role"
-    end,
-
-    optionDisallowedStatus = function(instance, _rows, rowIndex, _roleKey, _optionKey, role)
-        return invalidStatus(
-            "forced_depth_option",
-            tostring(role.label or role.key) .. " is not valid at "
-                .. routeRowLabel(
-                    instance.biome and instance.biome.slotLayout or nil,
-                    instance.routeSlots[rowIndex] and instance.routeSlots[rowIndex].routeOrdinal,
-                    "Depth"
-                )
-        )
-    end,
-
-    optionDisallowedFailureCode = function()
-        return "forced_depth_option"
-    end,
-
     optionUnavailableMessage = function(_, _, _, _, role)
         return tostring(role.label or role.key) .. " is not valid at this depth"
     end,
@@ -317,10 +241,6 @@ function data.prepare(instance)
     instance.biomeKey = instance.biome.key or instance.biomeKey or instance.name
     instance.label = instance.label or instance.biome.label or instance.biomeKey
     data.prepareRoles(instance)
-    instance.forcedDepthOptions = instance.biome.forcedDepthOptions or {}
-    for _, rule in pairs(instance.forcedDepthOptions) do
-        rule.optionKeysByKey = buildKeyLookup(rule.optionKeys)
-    end
 
     buildRouteSlots(instance)
     timeline.applyRouteSlots(instance)

@@ -785,7 +785,6 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
 
     local thessaly = biomes.lookup.O.rolesByKey
     lu.assertEquals(thessaly.Combat.mapOptions[13].availability.biomeDepthCache, { min = 6 })
-    lu.assertEquals(thessaly.Combat.mapOptions[13].availability.requiresGeneratedIntroEncounters, 3)
     lu.assertEquals(thessaly.Story.roomOptions[1].availability.biomeEncounterDepth, { minExclusive = 3 })
     lu.assertEquals(thessaly.Fountain.roomOptions[1].availability.biomeDepthCache, { min = 3, max = 5 })
     lu.assertEquals(thessaly.Devotion.roomOptions[1].availability.biomeEncounterDepth, { min = 2 })

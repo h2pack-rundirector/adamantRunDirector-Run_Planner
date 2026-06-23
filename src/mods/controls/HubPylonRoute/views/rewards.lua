@@ -89,7 +89,7 @@ end
 function rewards.draw(draw, control, instance)
     local rowCount = control:rowCount()
     local drewRow = false
-    local allRowsInactive, inactiveAfterRouteOrdinal = decorations.routeInactiveBoundary(instance)
+    local allRowsInactive, inactiveBoundary = decorations.routeInactiveBoundary(instance)
     control:beginReadPass()
     for rowIndex = 1, rowCount do
         if drewRow then
@@ -97,7 +97,7 @@ function rewards.draw(draw, control, instance)
         end
         local inactive = decorations.pushInactive(
             draw.imgui,
-            decorations.routeRowInactive(allRowsInactive, inactiveAfterRouteOrdinal, control:slot(rowIndex))
+            decorations.routeRowInactive(allRowsInactive, inactiveBoundary, control:slot(rowIndex), "rewards")
         )
         drawRewardRow(draw, control, rowIndex)
         decorations.popInactive(draw.imgui, inactive)

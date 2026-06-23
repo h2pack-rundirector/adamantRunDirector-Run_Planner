@@ -511,6 +511,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesScriptedExactD
     lu.assertTrue(hasValue(values, "Q_Combat10"))
     lu.assertTrue(hasValue(values, "Q_Combat11"))
     lu.assertTrue(hasValue(values, "Q_Combat03"))
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 2, "Combat").Q_Combat10)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 2, "Combat").Q_Combat11)
+    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 2, "Combat").Q_Combat01, valueStates.HIDDEN)
     lu.assertEquals(data.optionValueStatesForRow(instance, rows, 2, "Combat").Q_Combat03, valueStates.HIDDEN)
 
     data.fillOptionValues(instance, rows, 3, "Combat", values)
@@ -519,6 +522,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesScriptedExactD
     lu.assertTrue(hasValue(values, "Q_Combat15"))
     lu.assertTrue(hasValue(values, "Q_Combat10"))
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "Combat").Q_Combat03)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "Combat").Q_Combat05)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "Combat").Q_Combat15)
+    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 3, "Combat").Q_Combat01, valueStates.HIDDEN)
     lu.assertEquals(data.optionValueStatesForRow(instance, rows, 3, "Combat").Q_Combat10, valueStates.HIDDEN)
 
     data.fillOptionValues(instance, rows, 4, "Miniboss", values)
@@ -526,6 +532,25 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesScriptedExactD
     lu.assertTrue(hasValue(values, "Q_MiniBoss05"))
     lu.assertTrue(hasValue(values, "Q_MiniBoss03"))
     lu.assertEquals(data.optionValueStatesForRow(instance, rows, 4, "Miniboss").Q_MiniBoss03, valueStates.HIDDEN)
+
+    data.fillOptionValues(instance, rows, 5, "Combat", values)
+    lu.assertTrue(hasValue(values, "Q_Combat01"))
+    lu.assertTrue(hasValue(values, "Q_Combat06"))
+    lu.assertTrue(hasValue(values, "Q_Combat16"))
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 5, "Combat").Q_Combat01)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 5, "Combat").Q_Combat06)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 5, "Combat").Q_Combat16)
+    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 5, "Combat").Q_Combat03, valueStates.HIDDEN)
+    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 5, "Combat").Q_Combat12, valueStates.HIDDEN)
+
+    data.fillOptionValues(instance, rows, 6, "Combat", values)
+    lu.assertTrue(hasValue(values, "Q_Combat12"))
+    lu.assertTrue(hasValue(values, "Q_Combat13"))
+    lu.assertTrue(hasValue(values, "Q_Combat14"))
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").Q_Combat12)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").Q_Combat13)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").Q_Combat14)
+    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 6, "Combat").Q_Combat01, valueStates.HIDDEN)
 
     data.fillOptionValues(instance, rows, 7, "Miniboss", values)
     lu.assertTrue(hasValue(values, "Q_MiniBoss03"))
@@ -535,7 +560,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesScriptedExactD
     lu.assertEquals(data.optionValueStatesForRow(instance, rows, 7, "Miniboss").Q_MiniBoss02, valueStates.HIDDEN)
 end
 
-function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesForcedDepthRoles()
+function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesExactDepthRoles()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
     local instance = data.prepare({
@@ -566,7 +591,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesForcedDepthRol
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 7).Miniboss)
 end
 
-function TestRunPlannerFixedLinearRoute.testFixedLinearForcedDepthUsesBiomeDepthCache()
+function TestRunPlannerFixedLinearRoute.testFixedLinearExactDepthUsesBiomeDepthCache()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
     local biome = {}
@@ -602,7 +627,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearForcedDepthUsesBiomeDepth
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 5).Miniboss)
 end
 
-function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesForcedDepthRoles()
+function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesExactDepthOptions()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
     local instance = template.prepare({
@@ -630,11 +655,11 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesForcedD
     lu.assertTrue(snapshot.disabled)
     lu.assertEquals(#snapshot.invalidRows, 1)
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 4)
-    lu.assertEquals(snapshot.invalidRows[1].code, "forced_depth_role")
+    lu.assertEquals(snapshot.invalidRows[1].code, "biome_depth_unavailable")
     lu.assertEquals(snapshot.rows[4].routeOrdinal, 3)
     lu.assertEquals(snapshot.rows[4].roleKey, "Combat")
     lu.assertFalse(snapshot.rows[4].valid)
-    lu.assertEquals(snapshot.rows[4].invalidCode, "forced_depth_role")
+    lu.assertEquals(snapshot.rows[4].invalidCode, "biome_depth_unavailable")
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearAvailabilityConsumesPriorOneShotRoles()
@@ -788,25 +813,25 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRowContextUsesSelectionDe
         routeOrdinal = 0,
         biomeDepthCache = 0,
         biomeDepthCacheCost = 0,
-        biomeEncounterDepth = 0,
-        biomeEncounterDepthMin = 0,
-        biomeEncounterDepthMax = 0,
+        biomeEncounterDepth = 1,
+        biomeEncounterDepthMin = 1,
+        biomeEncounterDepthMax = 1,
         biomeEncounterDepthCost = 1,
         biomeEncounterDepthCostMin = 1,
         biomeEncounterDepthCostMax = 1,
         roomHistoryCost = 1,
     })
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeDepthCache, 3)
-    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepth, 4)
-    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthMin, 4)
-    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthMax, 4)
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepth, 5)
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthMin, 5)
+    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthMax, 5)
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCost, 0)
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCostMin, 0)
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCostMax, 0)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeDepthCache, 4)
-    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepth, 4)
-    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthMin, 4)
-    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthMax, 4)
+    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepth, 5)
+    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthMin, 5)
+    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthMax, 5)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthCost, 1)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthCostMin, 1)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthCostMax, 1)
@@ -834,8 +859,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearAmbiguousEncounterDepthBl
 
     local context = data.rowContext(instance, rows, 3)
     lu.assertNil(context.biomeEncounterDepth)
-    lu.assertEquals(context.biomeEncounterDepthMin, 1)
-    lu.assertEquals(context.biomeEncounterDepthMax, 2)
+    lu.assertEquals(context.biomeEncounterDepthMin, 2)
+    lu.assertEquals(context.biomeEncounterDepthMax, 3)
     lu.assertFalse(data.isOptionAvailable(instance, rows, 3, "Combat", "F_Combat05"))
 
     local validation = data.validateRow(instance, rows, 3)
@@ -884,9 +909,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRowContextUsesOptionDepth
     })
 
     lu.assertEquals(data.rowContext(instance, rows, 7).biomeDepthCache, 6)
-    lu.assertEquals(data.rowContext(instance, rows, 7).biomeEncounterDepth, 5)
+    lu.assertEquals(data.rowContext(instance, rows, 7).biomeEncounterDepth, 6)
     lu.assertEquals(data.rowContext(instance, rows, 7).biomeEncounterDepthCost, 0)
-    lu.assertEquals(data.rowContext(instance, rows, 8).biomeEncounterDepth, 5)
+    lu.assertEquals(data.rowContext(instance, rows, 8).biomeEncounterDepth, 6)
 end
 
 function TestRunPlannerFixedLinearRoute.testMinibossRequiresConcreteOption()

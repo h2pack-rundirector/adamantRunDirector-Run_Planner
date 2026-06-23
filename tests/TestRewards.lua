@@ -34,10 +34,15 @@ local function loadValueStates()
     return dofile("src/mods/route/value_states.lua")
 end
 
+local function loadRoutePosition()
+    return dofile("src/mods/route/position.lua")
+end
+
 local function loadDecorations()
     local chunk = assert(loadfile("src/mods/ui/decorations.lua"))
     return chunk({
         valueStates = loadValueStates(),
+        routePosition = loadRoutePosition(),
     })
 end
 

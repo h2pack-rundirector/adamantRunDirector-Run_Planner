@@ -7,8 +7,6 @@ valueStates.WARNING = 3
 
 valueStates.failureCodeStates = {
     biome_depth_unavailable = valueStates.HIDDEN,
-    forced_depth_role = valueStates.HIDDEN,
-    forced_depth_option = valueStates.HIDDEN,
 }
 
 local function normalize(state)

@@ -126,12 +126,7 @@ layout.combatRooms = {
     combat("O_Combat10"),
     combat("O_Combat11", { availability = { biomeDepthCache = { max = 3 } } }),
     combat("O_Combat12"),
-    combat("O_Combat13", {
-        availability = {
-            biomeDepthCache = { min = 6 },
-            requiresGeneratedIntroEncounters = 3,
-        },
-    }),
+    combat("O_Combat13", { availability = { biomeDepthCache = { min = 6 } } }),
     combat("O_Combat14"),
     combat("O_Combat15", { availability = { biomeDepthCache = { max = 3 } } }),
 }
