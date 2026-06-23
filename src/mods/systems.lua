@@ -17,12 +17,15 @@ local function createControlTemplates(route, decorations)
 end
 
 local function createLogic(catalog, route)
+    local runState = import("mods/logic/run_state.lua")
     local routePlan = import("mods/logic/route_plan.lua", nil, {
         executionPlan = import("mods/logic/execution_plan.lua"),
         routeContext = route.runContext,
+        runState = runState,
     })
     local roomRouting = import("mods/logic/room_routing.lua", nil, {
         routePlan = routePlan,
+        runState = runState,
     })
     return import("mods/logic.lua", nil, {
         catalog = catalog,

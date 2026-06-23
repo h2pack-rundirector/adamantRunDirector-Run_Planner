@@ -1,21 +1,25 @@
 local deps = ...
 local routePlan = deps.routePlan
+local runState = deps.runState
 local game = deps.game or {}
 
 local roomRouting = {}
 local startingBiome
 
-local LINEAR_BIOMES = {
+local FIXED_DEPTH_ROOM_BIOMES = {
     F = true,
     G = true,
+    O = true,
     P = true,
     Q = true,
 }
 
-local LINEAR_ADAPTERS = {
+local FIXED_DEPTH_ROOM_ADAPTERS = {
     fixedLinear = true,
+    multiEncounterFixed = true,
     scriptedFixedLinear = true,
     FixedLinearRoute = true,
+    MultiEncounterFixedRoute = true,
 }
 
 local function sortedKeys(source)
@@ -50,13 +54,6 @@ local function shallowCopy(source)
         copy[key] = value
     end
     return copy
-end
-
-local function firstListValue(values)
-    if type(values) ~= "table" then
-        return nil
-    end
-    return values[1]
 end
 
 local function debugLog(message)
@@ -177,43 +174,23 @@ local function isRoomEligible(currentRun, currentRoom, args, roomData)
     return eligible(currentRun, currentRoom, roomData, args) == true
 end
 
-local function previousRoom(currentRun)
-    local getPreviousRoom = game.GetPreviousRoom or _G.GetPreviousRoom
-    if type(getPreviousRoom) == "function" then
-        return getPreviousRoom(currentRun)
-    end
-    local history = currentRun and currentRun.RoomHistory or nil
-    return history and history[#history] or nil
-end
-
 local function currentRoomSetName(currentRun, args)
-    args = args or {}
-    local currentRoom = currentRun and currentRun.CurrentRoom or nil
-    local roomSetName = args.RoomSetName or currentRoom and currentRoom.RoomSetName or "F"
-    if args.ForceNextRoomSet ~= nil or currentRoom and currentRoom.ForceNextRoomSet ~= nil then
-        roomSetName = args.ForceNextRoomSet or currentRoom.ForceNextRoomSet
-    elseif currentRoom and currentRoom.NextRoomSet ~= nil then
-        roomSetName = firstListValue(currentRoom.NextRoomSet)
-    elseif currentRoom and currentRoom.UsePreviousRoomSet then
-        local prevRoom = previousRoom(currentRun) or currentRoom
-        roomSetName = prevRoom.RoomSetName
-    end
-    return roomSetName
+    return runState.currentBiomeKey(currentRun, args)
 end
 
 local function currentBiomeDepthCache(currentRun)
-    return math.floor(tonumber(currentRun and currentRun.BiomeDepthCache or 0) or 0)
+    return runState.biomeDepthCache(currentRun)
 end
 
 local function nextRouteOrdinal(currentRun)
-    return currentBiomeDepthCache(currentRun) + 1
+    return runState.nextBiomeDepthCache(currentRun)
 end
 
-local function isLinearBiomePlan(biomeKey, biomePlan)
+local function isFixedDepthRoomPlan(biomeKey, biomePlan)
     return biomeKey ~= nil
-        and LINEAR_BIOMES[biomeKey] == true
+        and FIXED_DEPTH_ROOM_BIOMES[biomeKey] == true
         and biomePlan ~= nil
-        and LINEAR_ADAPTERS[biomePlan.adapter] == true
+        and FIXED_DEPTH_ROOM_ADAPTERS[biomePlan.adapter] == true
 end
 
 local function plannedRoomLimit(bucket, roomKey)
@@ -313,7 +290,7 @@ local function planFromRuntime(runtime)
 end
 
 startingBiome = function(args)
-    return args and args.StartingBiome or nil
+    return runState.startingBiome(nil, args)
 end
 
 local function plannedStartingRoom(plan, args)
@@ -323,7 +300,27 @@ local function plannedStartingRoom(plan, args)
 end
 
 local function roomName(roomData)
-    return roomData and (roomData.GenusName or roomData.Name) or nil
+    return runState.roomName(roomData)
+end
+
+local function plannedRoomForSetup(runtime, currentRun, room)
+    local plan = planFromRuntime(runtime)
+    local biomeKey = runState.currentBiomeKey(currentRun, nil, room)
+    local biomePlan = plan and plan.biomes and plan.biomes[biomeKey] or nil
+    if not isFixedDepthRoomPlan(biomeKey, biomePlan) then
+        return nil
+    end
+
+    local roomKey = roomName(room)
+    local bucket = biomePlan.plannedRoutableByBiomeDepthCache[currentBiomeDepthCache(currentRun)]
+    local roomBucket = bucket and bucket.byRoomKey and bucket.byRoomKey[roomKey] or nil
+    if roomBucket ~= nil then
+        return roomBucket.primary
+    end
+    if bucket ~= nil and bucket.primary ~= nil and bucket.primary.roomKey == roomKey then
+        return bucket.primary
+    end
+    return nil
 end
 
 local function startingRoomEligible(currentRun, args, roomKey)
@@ -358,6 +355,48 @@ function roomRouting.createStartingRoom(runtime, currentRun, args)
     return room
 end
 
+local function forceMultipleEncounterCount(room, realCombatCount, callback)
+    realCombatCount = math.floor(tonumber(realCombatCount) or 0)
+    if realCombatCount <= 0 then
+        return callback()
+    end
+
+    local original = room.MultipleEncountersData
+    if original == nil then
+        return callback()
+    end
+
+    local forced = {}
+    for index = 1, realCombatCount do
+        forced[index] = original[index]
+    end
+    if realCombatCount >= 3 and original[3] ~= nil then
+        forced[3] = shallowCopy(original[3])
+        forced[3].GameStateRequirements = nil
+        forced[3].ForceRequirements = nil
+    end
+
+    room.MultipleEncountersData = forced
+    local result = callback()
+    room.MultipleEncountersData = original
+    return result
+end
+
+function roomRouting.setupMultipleEncounters(runtime, base, room, args)
+    local planned = plannedRoomForSetup(runtime, runState.currentRun(), room)
+    if planned == nil or planned.realCombatCount == nil then
+        return base(room, args)
+    end
+
+    return forceMultipleEncounterCount(room, planned.realCombatCount, function()
+        local result = base(room, args)
+        debugLog("encounters " .. tostring(roomName(room))
+            .. " forced realCombatCount=" .. tostring(planned.realCombatCount)
+            .. " actual=" .. tostring(#(room.Encounters or {})))
+        return result
+    end)
+end
+
 function roomRouting.buildArgs(runtime, currentRun, args, otherDoors)
     args = args or {}
     if args.ForceNextRoom ~= nil or _G.ForceNextRoom ~= nil then
@@ -367,7 +406,7 @@ function roomRouting.buildArgs(runtime, currentRun, args, otherDoors)
     local plan = planFromRuntime(runtime)
     local biomeKey = currentRoomSetName(currentRun, args)
     local biomePlan = plan and plan.biomes and plan.biomes[biomeKey] or nil
-    if not isLinearBiomePlan(biomeKey, biomePlan) then
+    if not isFixedDepthRoomPlan(biomeKey, biomePlan) then
         return nil
     end
 
@@ -416,9 +455,9 @@ local function nextDecisionDetail(runtime, currentRun, args, otherDoors, nextArg
 
     return "next detail set=" .. fieldValue(biomeKey)
         .. " current=" .. fieldValue(roomName(currentRoom))
-        .. " runDepth=" .. fieldValue(currentRun and currentRun.RunDepthCache)
-        .. " biomeDepthCache=" .. fieldValue(currentRun and currentRun.BiomeDepthCache)
-        .. " biomeEncounterDepth=" .. fieldValue(currentRun and currentRun.BiomeEncounterDepth)
+        .. " runDepth=" .. fieldValue(runState.runDepthCache(currentRun))
+        .. " biomeDepthCache=" .. fieldValue(runState.biomeDepthCache(currentRun))
+        .. " biomeEncounterDepth=" .. fieldValue(runState.biomeEncounterDepth(currentRun))
         .. " routeOrdinal=" .. fieldValue(nextRouteOrdinal(currentRun))
         .. " plannedBiomeDepthCache=" .. fieldValue(planned and planned.biomeDepthCache)
         .. " plannedBiomeDepthCacheCost=" .. fieldValue(planned and planned.biomeDepthCacheCost)
@@ -468,6 +507,14 @@ function roomRouting.registerHooks(moduleRef, catalog)
             .. tostring(nextRouteOrdinal(currentRun)) .. "] "
             .. routeDecision(args, nextArgs) .. " -> " .. tostring(roomName(roomData)))
         return roomData
+    end)
+
+    moduleRef.hooks.wrap("SetupRoomMultipleEncountersData", function(host, runtime, base, room, args)
+        if host ~= nil and host.isEnabled ~= nil and not host.isEnabled() then
+            return base(room, args)
+        end
+
+        return roomRouting.setupMultipleEncounters(runtime, base, room, args)
     end)
 end
 

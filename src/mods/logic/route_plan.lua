@@ -1,6 +1,7 @@
 local deps = ...
 local routeContext = deps.routeContext
 local executionPlan = deps.executionPlan
+local runState = deps.runState
 
 local routePlan = {}
 
@@ -43,32 +44,6 @@ local function activePlan(routeKey, plan)
         executionPlan = plan,
         invalidRows = nil,
     }
-end
-
-local function startingBiome(currentRun, args)
-    args = args or {}
-    if args.StartingBiome ~= nil and args.StartingBiome ~= "" then
-        return args.StartingBiome
-    end
-    return currentRun
-        and currentRun.CurrentRoom
-        and currentRun.CurrentRoom.RoomSetName
-        or nil
-end
-
-local function routeForBiome(catalog, biomeKey)
-    if biomeKey == nil then
-        return nil
-    end
-
-    for _, route in ipairs(catalog and catalog.routes and catalog.routes.ordered or {}) do
-        for _, routeBiomeKey in ipairs(route.biomes or {}) do
-            if routeBiomeKey == biomeKey then
-                return route
-            end
-        end
-    end
-    return nil
 end
 
 local function controlResolver(runtime)
@@ -128,11 +103,11 @@ function routePlan.defineCache(moduleRef)
 end
 
 function routePlan.build(catalog, runtime, currentRun, args)
-    if currentRun ~= nil and currentRun.IsDreamRun then
+    if runState.isDreamRun(currentRun) then
         return inactivePlan(REASON_DREAM_DIVE)
     end
 
-    local route = routeForBiome(catalog, startingBiome(currentRun, args))
+    local route = runState.routeForBiome(catalog, runState.startingBiome(currentRun, args))
     if route == nil then
         return inactivePlan(REASON_UNKNOWN_ROUTE)
     end

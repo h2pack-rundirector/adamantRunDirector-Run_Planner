@@ -50,6 +50,10 @@ local function loadCatalog()
     return data.loadCatalog(testImport), data
 end
 
+local function loadRunState()
+    return testImport("mods/logic/run_state.lua")
+end
+
 local function loadRewardLegality()
     local semantics = testImport("mods/route/reward_planning/semantics.lua")
     local invalidLocations = testImport("mods/route/invalid_locations.lua")
@@ -87,8 +91,10 @@ local function loadRoutePlan()
     local timeline = testImport("mods/route/timeline.lua")
     local rewardItems = testImport("mods/route/reward_planning/items.lua")
     local semantics = testImport("mods/route/reward_planning/semantics.lua")
+    local runState = testImport("mods/logic/run_state.lua")
     return testImport("mods/logic/route_plan.lua", nil, {
         executionPlan = testImport("mods/logic/execution_plan.lua"),
+        runState = runState,
         routeContext = testImport("mods/route/run_context.lua", nil, {
             controls = testImport("mods/route/run_context/controls.lua"),
             targets = loadRouteTargets(timeline, rewardItems, semantics),
@@ -106,6 +112,7 @@ end
 local function loadRoomRouting(routePlan, game)
     return testImport("mods/logic/room_routing.lua", nil, {
         routePlan = routePlan,
+        runState = testImport("mods/logic/run_state.lua"),
         game = game,
     })
 end
@@ -226,6 +233,17 @@ local function runtimeForCatalog(routePlan, catalog, snapshots)
     return runtimeWithControls(routePlan, buildControls(catalog, snapshots or {}))
 end
 
+local function withCurrentRun(currentRun, callback)
+    local previous = _G.CurrentRun
+    _G.CurrentRun = currentRun
+    local ok, result = pcall(callback)
+    _G.CurrentRun = previous
+    if not ok then
+        error(result, 0)
+    end
+    return result
+end
+
 function TestRunPlannerLogic.testRoutePlanSelectsUnderworldForErebusStart()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
@@ -249,6 +267,77 @@ function TestRunPlannerLogic.testRoutePlanSelectsUnderworldForErebusStart()
     lu.assertEquals(plan.executionPlan.layers.npcs, false)
     lu.assertEquals(plan.executionPlan.layers.features, false)
     lu.assertIs(routePlan.get(runtime), plan)
+end
+
+function TestRunPlannerLogic.testRunStateNormalizesCurrentBiomeAndRoute()
+    local catalog = loadCatalog()
+    local runState = loadRunState()
+
+    lu.assertEquals(runState.currentBiomeKey({
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+    }), "F")
+    lu.assertEquals(runState.currentBiomeKey({
+        CurrentRoom = {
+            RoomSetName = "F",
+            NextRoomSet = { "G" },
+        },
+    }), "G")
+    lu.assertEquals(runState.currentBiomeKey({
+        CurrentRoom = {
+            RoomSetName = "F",
+            ForceNextRoomSet = "I",
+        },
+    }), "I")
+    lu.assertEquals(runState.currentBiomeKey({
+        CurrentRoom = {
+            RoomSetName = "Q",
+        },
+    }, {
+        RoomSetName = "O",
+    }), "O")
+    lu.assertEquals(runState.currentBiomeKey({
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+    }, nil, {
+        Name = "O_Combat05",
+        RoomSetName = "O",
+    }), "O")
+
+    lu.assertEquals(runState.routeKey(catalog, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+    }), "Underworld")
+    lu.assertEquals(runState.routeKey(catalog, {
+        CurrentRoom = {
+            RoomSetName = "O",
+        },
+    }), "Surface")
+    lu.assertTrue(runState.isRoute(catalog, {
+        CurrentRoom = {
+            RoomSetName = "O",
+        },
+    }, nil, nil, "Surface"))
+end
+
+function TestRunPlannerLogic.testRunStateNormalizesDepthCounters()
+    local runState = loadRunState()
+    local currentRun = {
+        RunDepthCache = "12",
+        BiomeDepthCache = "4",
+        BiomeEncounterDepth = "3",
+    }
+
+    lu.assertEquals(runState.runDepthCache(currentRun), 12)
+    lu.assertEquals(runState.biomeDepthCache(currentRun), 4)
+    lu.assertEquals(runState.nextBiomeDepthCache(currentRun), 5)
+    lu.assertEquals(runState.biomeEncounterDepth(currentRun), 3)
+    lu.assertEquals(runState.runDepthCache(nil), 0)
+    lu.assertEquals(runState.biomeDepthCache(nil), 0)
+    lu.assertEquals(runState.biomeEncounterDepth(nil), 0)
 end
 
 function TestRunPlannerLogic.testRoutePlanSelectsSurfaceForEphyraStart()
@@ -697,6 +786,167 @@ function TestRunPlannerLogic.testRoomRoutingSupportsSummitLinearAdapter()
     lu.assertEquals(args.ForceNextRoom, "Q_MiniBoss01")
 end
 
+function TestRunPlannerLogic.testRoomRoutingSupportsThessalyMultiEncounterAdapter()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan, {
+        RoomData = {
+            O_Story01 = { Name = "O_Story01" },
+        },
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        O = plannedBiomeSnapshot("O", "multiEncounterFixed", {
+            {
+                rowIndex = 5,
+                routeOrdinal = 4,
+                biomeDepthCache = 4,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "O_Story01",
+                roleKey = "Story",
+                optionKey = "O_Story01",
+                valid = true,
+            },
+        }),
+    })
+    routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "O",
+        },
+    }, {
+        StartingBiome = "O",
+    })
+
+    local args = roomRouting.buildArgs(runtime, {
+        CurrentRoom = {
+            RoomSetName = "O",
+        },
+        BiomeDepthCache = 4,
+    }, {}, {})
+
+    lu.assertEquals(args.ForceNextRoom, "O_Story01")
+end
+
+function TestRunPlannerLogic.testRoomRoutingForcesThessalyTwoEncounterRoom()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan, {
+        print = function()
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        O = plannedBiomeSnapshot("O", "multiEncounterFixed", {
+            {
+                rowIndex = 5,
+                routeOrdinal = 4,
+                biomeDepthCache = 4,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "O_Combat05",
+                roleKey = "Combat",
+                optionKey = "O_Combat05",
+                variantKey = "TwoCombats",
+                realCombatCount = 2,
+                valid = true,
+            },
+        }),
+    })
+    local currentRun = {
+        CurrentRoom = {
+            RoomSetName = "O",
+        },
+        BiomeDepthCache = 4,
+    }
+    routePlan.refresh(catalog, runtime, currentRun, {
+        StartingBiome = "O",
+    })
+
+    local room = {
+        Name = "O_Combat05",
+        RoomSetName = "O",
+        MultipleEncountersData = {
+            { LegalEncounters = { "Intro" } },
+            { LegalEncounters = { "First" } },
+            { LegalEncounters = { "Second" }, GameStateRequirements = { ChanceToPlay = 0.6 } },
+        },
+    }
+
+    withCurrentRun(currentRun, function()
+        roomRouting.setupMultipleEncounters(runtime, function(setupRoom)
+            lu.assertEquals(#setupRoom.MultipleEncountersData, 2)
+            setupRoom.Encounters = {
+                { Name = "Intro" },
+                { Name = "First" },
+            }
+        end, room)
+    end)
+
+    lu.assertEquals(#room.Encounters, 2)
+    lu.assertEquals(#room.MultipleEncountersData, 3)
+    lu.assertNotNil(room.MultipleEncountersData[3].GameStateRequirements)
+end
+
+function TestRunPlannerLogic.testRoomRoutingForcesThessalyThreeEncounterRoom()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local roomRouting = loadRoomRouting(routePlan, {
+        print = function()
+        end,
+    })
+    local runtime = runtimeForCatalog(routePlan, catalog, {
+        O = plannedBiomeSnapshot("O", "multiEncounterFixed", {
+            {
+                rowIndex = 5,
+                routeOrdinal = 4,
+                biomeDepthCache = 4,
+                biomeDepthCacheCost = 1,
+                slotKind = "biomeRow",
+                roomKey = "O_Combat05",
+                roleKey = "Combat",
+                optionKey = "O_Combat05",
+                variantKey = "ThreeCombats",
+                realCombatCount = 3,
+                valid = true,
+            },
+        }),
+    })
+    local currentRun = {
+        CurrentRoom = {
+            RoomSetName = "O",
+        },
+        BiomeDepthCache = 4,
+    }
+    routePlan.refresh(catalog, runtime, currentRun, {
+        StartingBiome = "O",
+    })
+
+    local room = {
+        Name = "O_Combat05",
+        RoomSetName = "O",
+        MultipleEncountersData = {
+            { LegalEncounters = { "Intro" } },
+            { LegalEncounters = { "First" } },
+            { LegalEncounters = { "Second" }, GameStateRequirements = { ChanceToPlay = 0.6 } },
+        },
+    }
+
+    withCurrentRun(currentRun, function()
+        roomRouting.setupMultipleEncounters(runtime, function(setupRoom)
+            lu.assertEquals(#setupRoom.MultipleEncountersData, 3)
+            lu.assertNil(setupRoom.MultipleEncountersData[3].GameStateRequirements)
+            setupRoom.Encounters = {
+                { Name = "Intro" },
+                { Name = "First" },
+                { Name = "Second" },
+            }
+        end, room)
+    end)
+
+    lu.assertEquals(#room.Encounters, 3)
+    lu.assertEquals(#room.MultipleEncountersData, 3)
+    lu.assertNotNil(room.MultipleEncountersData[3].GameStateRequirements)
+end
+
 function TestRunPlannerLogic.testRoomRoutingForcesPlannedStartingRoom()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
@@ -936,6 +1186,7 @@ function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
     local hookedStartNewRun = false
     local hookedChooseStartingRoom = false
     local hookedChooseNextRoomData = false
+    local hookedSetupRoomMultipleEncountersData = false
     logic.attach({
         cache = {
             define = function(defs)
@@ -950,6 +1201,8 @@ function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
                     hookedChooseStartingRoom = true
                 elseif name == "ChooseNextRoomData" then
                     hookedChooseNextRoomData = true
+                elseif name == "SetupRoomMultipleEncountersData" then
+                    hookedSetupRoomMultipleEncountersData = true
                 end
             end,
         },
@@ -959,4 +1212,5 @@ function TestRunPlannerLogic.testLogicAttachDefinesCacheAndHooks()
     lu.assertTrue(hookedStartNewRun)
     lu.assertTrue(hookedChooseStartingRoom)
     lu.assertTrue(hookedChooseNextRoomData)
+    lu.assertTrue(hookedSetupRoomMultipleEncountersData)
 end
