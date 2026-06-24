@@ -181,6 +181,82 @@ Meaning:
 This belongs on the O encounter reward node. It should not be inferred from
 generic room exits.
 
+## Deferred Structural Detour: Chaos Gates
+
+Chaos gates are intentionally deferred from the first exact reward-bag pass.
+They should not be treated as ordinary in-room features like wells or Hermes
+shrines. They are structural route detours.
+
+Confirmed vanilla behavior:
+
+- `RoomLogic.lua:HandleSecretSpawns(...)` sets
+  `currentRoom.ForceSecretDoor = true`, chooses a room from
+  `ForceNextRoomSet = "Chaos"`, creates that room, and assigns it to a spawned
+  secret door.
+- A live map `SecretPoint` is required before Chaos can spawn. Do not infer
+  Chaos eligibility from `SecretSpawnChance` alone.
+- `RoomDataChaos.lua:BaseChaos` uses `UsePreviousRoomSet = true`, so exiting
+  Chaos chooses the next room from the previous biome room set.
+- `BaseChaos` has `ForcedRewardStore = "Secrets"`, and `RewardStoreData.Secrets`
+  contains `TrialUpgrade`.
+- `Empty_Chaos` inherits `Empty`; Chaos does not advance
+  `BiomeEncounterDepth`.
+- Chaos does enter `RoomHistory`, so it advances `RunDepthCache` and
+  `BiomeDepthCache` by one room.
+
+Observed Chaos map exit counts from `Maps/bin/Chaos_*.thing_bin`:
+
+```text
+Chaos_01 -> 2 exit doors
+Chaos_02 -> 2 exit doors
+Chaos_03 -> 1 exit door
+Chaos_04 -> 2 exit doors
+Chaos_05 -> 3 exit doors
+Chaos_06 -> 1 exit door
+```
+
+Planner decision for a future pass:
+
+- If the user configures Chaos on a row, assume the player takes Chaos. Do not
+  add branching/oracle behavior.
+- The entered path is deterministic:
+
+```text
+planned row -> Chaos room -> next planned row
+```
+
+- The row where Chaos appears still generates the next normal room offer. The
+  Chaos room then generates the following normal room offer when leaving Chaos.
+- If Chaos appears immediately before preboss, preboss is not lost. Chaos
+  consumes an entered depth, so preboss shifts later:
+
+```text
+Normal:          Depth 11 -> Preboss at 12
+Chaos selected:  Depth 11 -> Chaos at 12 -> Preboss at 13
+```
+
+Future implementation direction:
+
+- Move Chaos out of generic route features or give it a distinct structural
+  detour lane. Wells and Hermes shrines remain ordinary in-room features.
+- Timeline must consume selected Chaos before producing downstream counters.
+  Avoid a post-walk adjustment pass that creates two route truths.
+- A synthetic Chaos step should use:
+
+```lua
+{
+    roomHistoryCost = 1,
+    biomeDepthCacheCost = 1,
+    biomeEncounterDepthCost = 0,
+    rewardStore = "Secrets",
+}
+```
+
+- Exact reward-bag simulation must decide whether Chaos map identity is selected
+  by the user or modeled as bounded outgoing offer count `1..3`.
+- Until that detour model exists, disable or hide Chaos from reward-bag-sensitive
+  planning rather than half-modeling it as a normal feature.
+
 ## Design Rules
 
 - Biome declarations own topology and structure.
@@ -192,6 +268,8 @@ generic room exits.
   reward bag state.
 - H and O should become deterministic at the generation-structure level before
   exact reward bag simulation is trusted.
+- Chaos should be modeled as a structural detour before it participates in exact
+  reward-bag simulation.
 
 ## Source Anchors
 
@@ -201,6 +279,8 @@ Useful vanilla files/functions:
 - `Scripts/RoomLogic.lua`: `DoUnlockRoomExits(...)`
 - `Scripts/RoomLogic.lua`: `SpawnRewardCages(...)`
 - `Scripts/RoomLogic.lua`: ship wheel reward choice setup
+- `Scripts/RoomLogic.lua`: `HandleSecretSpawns(...)`
+- `Scripts/RoomDataChaos.lua`: `BaseChaos`, `Chaos_01..06`
 - `Scripts/RoomDataH.lua`: `BaseH`, cage reward counts, H combat cage data
 - `Scripts/LootData.lua`: reward store definitions
-
+- `Maps/bin/Chaos_*.thing_bin`: Chaos map exit-door counts
