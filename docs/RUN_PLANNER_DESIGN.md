@@ -10,6 +10,9 @@ mostly true: `F`, `G`, `P`, and `Q`, plus route-level declarations for fields
 cage routing `H`, clockwork `I`, hub-pylon `N`, and multi-encounter `O`.
 Other biomes need separate adapters.
 
+Reward bag pressure and generation timing are tracked separately in
+`docs/REWARD_GENERATION_MODEL.md`.
+
 ## Depth Standard
 
 Planner rows expose explicit depth context:
