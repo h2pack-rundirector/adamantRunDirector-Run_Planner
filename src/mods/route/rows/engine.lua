@@ -82,6 +82,15 @@ local function optionLabelsForRole(instance, role)
     return role.optionLabels or instance.optionLabelsByRole[role.key] or {}
 end
 
+local function hasTag(tags, expected)
+    for _, tag in ipairs(tags or {}) do
+        if tag == expected then
+            return true
+        end
+    end
+    return false
+end
+
 local function buildRoomRows()
     return {
         { key = "RoleKey", type = "string", default = "", maxLen = 32 },
@@ -155,6 +164,39 @@ function rowEngine.create(adapter)
             return true
         end
         return adapter.isOptionAllowed(instance, rows, rowIndex, roleKey, optionKey, role, option, slotForRow(instance, rowIndex))
+    end
+
+    local function previousOptionForRow(instance, rows, rowIndex)
+        if rowIndex <= 1 then
+            return nil
+        end
+        local previousRoleKey = data.resolveRole(instance, rows, rowIndex - 1)
+        if previousRoleKey == VANILLA_ROLE_KEY then
+            return nil
+        end
+        local _, previousOption = data.resolveOption(instance, rows, rowIndex - 1, previousRoleKey)
+        return previousOption
+    end
+
+    local function nextRoomTagsFailureCode(instance, rows, rowIndex, option)
+        local previousOption = previousOptionForRow(instance, rows, rowIndex)
+        local requiredTags = previousOption and previousOption.nextRoomTags or nil
+        if requiredTags == nil then
+            return nil
+        end
+        for _, requiredTag in ipairs(requiredTags) do
+            if hasTag(option and option.tags, requiredTag) then
+                return nil
+            end
+        end
+        return "previous_room_next_tags"
+    end
+
+    local function nextRoomTagsMessage(instance, rows, rowIndex)
+        local previousOption = previousOptionForRow(instance, rows, rowIndex)
+        local requiredTags = previousOption and previousOption.nextRoomTags or nil
+        local requiredTag = requiredTags and requiredTags[1] or "required"
+        return "Previous planned room only leads to " .. tostring(requiredTag) .. " rooms"
     end
 
     local function selectedOptionForCost(role, rows, rowIndex)
@@ -439,6 +481,7 @@ function rowEngine.create(adapter)
     local function hasAvailableConcreteOption(instance, role, rows, rowIndex, rowContext)
         for _, option in ipairs(optionListForRole(role)) do
             if isAvailable(option, rowContext)
+                and nextRoomTagsFailureCode(instance, rows, rowIndex, option) == nil
                 and isOptionWithinSelectionCap(instance, role, option, rows, rowIndex)
                 and isOptionAllowed(instance, rows, rowIndex, role.key, option.key, role, option)
             then
@@ -523,6 +566,7 @@ function rowEngine.create(adapter)
             return false
         end
         return isAvailable(option, data.rowContext(instance, rows, rowIndex))
+            and nextRoomTagsFailureCode(instance, rows, rowIndex, option) == nil
             and isOptionWithinSelectionCap(instance, role, option, rows, rowIndex)
             and isOptionAllowed(instance, rows, rowIndex, roleKey, optionKey, role, option)
     end
@@ -754,6 +798,10 @@ function rowEngine.create(adapter)
                     "option_limit",
                     tostring(option.label or resolvedOptionKey) .. " is already planned for this biome"
                 )
+            end
+            local nextRoomTagsCode = nextRoomTagsFailureCode(instance, rows, rowIndex, option)
+            if nextRoomTagsCode ~= nil then
+                return invalidStatus(nextRoomTagsCode, nextRoomTagsMessage(instance, rows, rowIndex))
             end
         end
         if resolvedOptionKey == "" or not data.isOptionAvailable(instance, rows, rowIndex, roleKey, resolvedOptionKey) then
@@ -1006,6 +1054,10 @@ function rowEngine.create(adapter)
 
         local state = valueStates.forFailureCodeOrNormal(
             availabilityFailureCode(option, data.rowContext(instance, rows, rowIndex))
+        )
+        state = valueStates.merge(
+            state,
+            valueStates.forFailureCodeOrNormal(nextRoomTagsFailureCode(instance, rows, rowIndex, option))
         )
         if not isOptionWithinSelectionCap(instance, role, option, rows, rowIndex) then
             state = valueStates.merge(state, valueStates.INVALID)

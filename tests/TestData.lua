@@ -787,6 +787,9 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     lu.assertEquals(biomes.lookup.P.rolesByKey.Fountain.roomOptions[1].tags, { "Indoor" })
     lu.assertEquals(biomes.lookup.P.rolesByKey.Midshop.roomOptions[1].tags, { "Outdoor" })
     lu.assertEquals(biomes.lookup.P.rolesByKey.Miniboss.roomOptions[1].tags, { "Indoor" })
+    lu.assertEquals(optionByKey(biomes.lookup.P.rolesByKey.Miniboss.roomOptions, "P_MiniBoss02").nextRoomTags, {
+        "Outdoor",
+    })
     assertOneShotRole(biomes.lookup.P.rolesByKey.Story)
     assertOneShotRole(biomes.lookup.P.rolesByKey.Fountain)
     assertOneShotRole(biomes.lookup.P.rolesByKey.Midshop)

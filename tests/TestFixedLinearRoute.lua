@@ -572,6 +572,61 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesOptionsByRoute
     lu.assertEquals(data.optionValueStatesForRow(instance, rows, 6, "Combat").F_Combat09, valueStates.INVALID)
 end
 
+function TestRunPlannerFixedLinearRoute.testFixedLinearOlympusFirstRouteRowRequiresOutdoorCombatMap()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteP",
+        biome = catalog.lookup.P,
+    })
+    local rows = fakeRows({})
+    local values = {}
+
+    lu.assertEquals(data.rowContext(instance, rows, 2).biomeDepthCache, 1)
+    data.fillOptionValues(instance, rows, 2, "Combat", values)
+    lu.assertTrue(hasValue(values, "P_Combat02"))
+    lu.assertTrue(hasValue(values, "P_Combat05"))
+    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 2, "Combat").P_Combat02, valueStates.HIDDEN)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 2, "Combat").P_Combat05)
+
+    lu.assertEquals(data.rowContext(instance, rows, 3).biomeDepthCache, 2)
+    data.fillOptionValues(instance, rows, 3, "Combat", values)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "Combat").P_Combat02)
+end
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearMegaDraconOnlyLeadsToOutdoorRooms()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteP",
+        biome = catalog.lookup.P,
+    })
+    local rows = fakeRows({
+        {},
+        { RoleKey = "Combat", OptionKey = "P_Combat05" },
+        { RoleKey = "Combat", OptionKey = "P_Combat06" },
+        { RoleKey = "Combat", OptionKey = "P_Combat11" },
+        { RoleKey = "Miniboss", OptionKey = "P_MiniBoss02" },
+        { RoleKey = "Combat", OptionKey = "P_Combat02" },
+    })
+    local values = {}
+
+    lu.assertTrue(data.validateRow(instance, rows, 5).valid)
+    lu.assertEquals(data.rowContext(instance, rows, 6).biomeDepthCache, 5)
+    data.fillOptionValues(instance, rows, 6, "Combat", values)
+    lu.assertTrue(hasValue(values, "P_Combat02"))
+    lu.assertTrue(hasValue(values, "P_Combat13"))
+    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 6, "Combat").P_Combat02, valueStates.INVALID)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").P_Combat13)
+    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 6).Story, valueStates.INVALID)
+    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 6).Fountain, valueStates.INVALID)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 6).Midshop)
+
+    local validation = data.validateRow(instance, rows, 6)
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "previous_room_next_tags")
+end
+
 function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesScriptedExactDepthOptions()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()

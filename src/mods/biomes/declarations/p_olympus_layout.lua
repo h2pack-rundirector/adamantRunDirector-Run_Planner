@@ -32,6 +32,7 @@ local function option(key, label, opts)
         key = key,
         label = label,
         tags = opts.tags,
+        nextRoomTags = opts.nextRoomTags,
         features = opts.features,
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
@@ -81,23 +82,29 @@ layout.prebossRoom = option("P_PreBoss01", "Preboss", {
 
 layout.combatRooms = {
     combat("P_Combat01", { tags = OUTDOOR_TAGS, availability = { biomeEncounterDepth = { min = 3 } } }),
-    combat("P_Combat02", { tags = INDOOR_TAGS }),
+    combat("P_Combat02", { tags = INDOOR_TAGS, availability = { biomeDepthCache = { min = 2 } } }),
     combat("P_Combat03", { tags = OUTDOOR_TAGS, availability = { biomeEncounterDepth = { max = 4 } } }),
-    combat("P_Combat04", { tags = INDOOR_TAGS }),
+    combat("P_Combat04", { tags = INDOOR_TAGS, availability = { biomeDepthCache = { min = 2 } } }),
     combat("P_Combat05", { tags = OUTDOOR_TAGS }),
     combat("P_Combat06", { tags = OUTDOOR_TAGS }),
-    combat("P_Combat07", { tags = INDOOR_TAGS }),
-    combat("P_Combat08", { tags = INDOOR_TAGS }),
-    combat("P_Combat09", { tags = INDOOR_TAGS }),
-    combat("P_Combat10", { tags = INDOOR_TAGS }),
+    combat("P_Combat07", { tags = INDOOR_TAGS, availability = { biomeDepthCache = { min = 2 } } }),
+    combat("P_Combat08", { tags = INDOOR_TAGS, availability = { biomeDepthCache = { min = 2 } } }),
+    combat("P_Combat09", { tags = INDOOR_TAGS, availability = { biomeDepthCache = { min = 2 } } }),
+    combat("P_Combat10", { tags = INDOOR_TAGS, availability = { biomeDepthCache = { min = 2 } } }),
     combat("P_Combat11", { tags = OUTDOOR_TAGS }),
-    combat("P_Combat12", { tags = INDOOR_TAGS }),
+    combat("P_Combat12", { tags = INDOOR_TAGS, availability = { biomeDepthCache = { min = 2 } } }),
     combat("P_Combat13", { tags = OUTDOOR_TAGS }),
     combat("P_Combat14", { tags = OUTDOOR_TAGS }),
     combat("P_Combat15", { tags = OUTDOOR_TAGS }),
     combat("P_Combat16", { tags = OUTDOOR_TAGS }),
     combat("P_Combat17", { tags = OUTDOOR_TAGS, availability = { biomeEncounterDepth = { min = 3 } } }),
-    combat("P_Combat18", { tags = INDOOR_TAGS, availability = { biomeEncounterDepth = { min = 3 } } }),
+    combat("P_Combat18", {
+        tags = INDOOR_TAGS,
+        availability = {
+            biomeDepthCache = { min = 2 },
+            biomeEncounterDepth = { min = 3 },
+        },
+    }),
     combat("P_Combat19", { tags = OUTDOOR_TAGS }),
 }
 
@@ -150,6 +157,7 @@ layout.minibossRooms = {
     }),
     option("P_MiniBoss02", "Mega-Dracon", {
         tags = INDOOR_TAGS,
+        nextRoomTags = OUTDOOR_TAGS,
         biomeEncounterDepthCost = 1,
         availability = {
             biomeDepthCache = { min = 4, max = 7 },
