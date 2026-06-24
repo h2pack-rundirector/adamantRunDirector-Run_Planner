@@ -97,6 +97,7 @@ local function combatRoom(roomKey, hubDoorId, sideDoors, opts)
         room.reward = opts.reward
     end
     room.biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1
+    room.maxCreationsThisRun = opts.maxCreationsThisRun or 1
     return room
 end
 

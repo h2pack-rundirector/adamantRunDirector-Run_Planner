@@ -106,6 +106,10 @@ function runState.runDepthCache(currentRun)
     return numeric(currentRun and currentRun.RunDepthCache, 0)
 end
 
+function runState.runEncounterDepth(currentRun)
+    return numeric(currentRun and currentRun.EncounterDepth, 0)
+end
+
 function runState.biomeDepthCache(currentRun)
     return numeric(currentRun and currentRun.BiomeDepthCache, 0)
 end

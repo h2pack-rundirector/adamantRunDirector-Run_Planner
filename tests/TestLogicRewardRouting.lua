@@ -807,6 +807,102 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingForcesPrebossShopOpti
     end)
 end
 
+function TestRunPlannerLogicRewardRouting.testRewardRoutingUsesCurrentRoomForPrebossShopWhenArgsRoomIsStale()
+    withShopGlobals(function()
+        local catalog = loadCatalog()
+        local routePlan = loadRoutePlan()
+        local logs = {}
+        local rewardRouting = loadRewardRouting(routePlan, {
+            print = function(text)
+                logs[#logs + 1] = text
+            end,
+        })
+        local runtime = runtimeForCatalog(routePlan, catalog, {
+            F = plannedBiomeSnapshot("F", "fixedLinear", {
+                {
+                    rowIndex = 12,
+                    routeOrdinal = 11,
+                    biomeDepthCache = 10,
+                    biomeDepthCacheCost = 0,
+                    slotKind = "preboss",
+                    roomKey = "F_PreBoss01",
+                    roleKey = "Preboss",
+                    optionKey = "F_PreBoss01",
+                    valid = true,
+                    rewardKind = "preboss",
+                    rewardOffers = prebossRewardOffers(),
+                    rewards = {
+                        "RandomLoot",
+                        "ArmorBoost",
+                        "StoreRewardRandomStack",
+                    },
+                    rewardLoot = {
+                        "DemeterUpgrade",
+                    },
+                    rewardPicks = {
+                        {
+                            key = "Boon",
+                            kind = "shopOption",
+                            alias = "Reward1Key",
+                            value = "RandomLoot",
+                        },
+                        {
+                            key = "BoonLoot",
+                            kind = "boonSource",
+                            alias = "Reward1LootKey",
+                            value = "DemeterUpgrade",
+                        },
+                        {
+                            key = "MajorNonBoon",
+                            kind = "shopOption",
+                            alias = "Reward2Key",
+                            value = "ArmorBoost",
+                        },
+                        {
+                            key = "Minor",
+                            kind = "shopOption",
+                            alias = "Reward3Key",
+                            value = "StoreRewardRandomStack",
+                        },
+                    },
+                },
+            }),
+        })
+        local currentRun = {
+            CurrentRoom = {
+                Name = "F_PreBoss01",
+                RoomSetName = "F",
+                StoreDataName = "WorldShop",
+            },
+            BiomeDepthCache = 10,
+        }
+        routePlan.refresh(catalog, runtime, currentRun, {
+            StartingBiome = "F",
+        })
+
+        local store = rewardRouting.fillInShopOptions(runtime, function(args)
+            lu.assertEquals(args.RoomName, "F_Combat07")
+            return {
+                StoreOptions = {
+                    { Name = "BlindBoxLoot", Type = "Consumable" },
+                    { Name = "MaxHealthDrop", Type = "Consumable" },
+                    { Name = "MaxManaDrop", Type = "Consumable" },
+                },
+            }
+        end, {
+            RoomName = "F_Combat07",
+            StoreData = _G.StoreData.WorldShop,
+        }, currentRun)
+
+        lu.assertEquals(store.StoreOptions[1].Name, "RandomLoot")
+        lu.assertEquals(store.StoreOptions[1].Args.ForceLootName, "DemeterUpgrade")
+        lu.assertEquals(store.StoreOptions[2].Name, "ArmorBoost")
+        lu.assertEquals(store.StoreOptions[3].Name, "StoreRewardRandomStack")
+        lu.assertTrue(logsContain(logs, "shop set=F"))
+        lu.assertTrue(logsContain(logs, "argsRoom=F_Combat07"))
+    end)
+end
+
 function TestRunPlannerLogicRewardRouting.testRewardRoutingLeavesUnplannedPrebossShopSlotsVanilla()
     withShopGlobals(function()
         local catalog = loadCatalog()

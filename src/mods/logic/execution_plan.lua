@@ -1,3 +1,7 @@
+local deps = ... or {}
+local routeTimeline = deps.timeline
+local biomeLookup = deps.biomeLookup or {}
+
 local executionPlan = {}
 
 local EMPTY_LIST = {}
@@ -119,6 +123,11 @@ local function compactRoomRow(row)
     return {
         rowIndex = row.rowIndex,
         routeOrdinal = row.routeOrdinal,
+        roomHistoryOrdinal = row.roomHistoryOrdinal,
+        runDepthCache = row.runDepthCache,
+        runEncounterDepth = row.runEncounterDepth,
+        runEncounterDepthMin = row.runEncounterDepthMin,
+        runEncounterDepthMax = row.runEncounterDepthMax,
         biomeDepthCache = row.biomeDepthCache,
         biomeDepthCacheCost = row.biomeDepthCacheCost,
         biomeEncounterDepth = row.biomeEncounterDepth,
@@ -146,6 +155,53 @@ local function compactRoomRow(row)
         rewardItems = compactRewardItems(row.rewardItems),
         sideRooms = compactSideRooms(row.sideRooms),
     }
+end
+
+local function rowsByBiome(snapshot)
+    local byBiome = {}
+    for _, biomeSnapshot in ipairs(snapshot and snapshot.biomes or EMPTY_LIST) do
+        if biomeSnapshot.biomeKey ~= nil then
+            byBiome[biomeSnapshot.biomeKey] = biomeSnapshot
+        end
+    end
+    return byBiome
+end
+
+local function routeForSnapshot(snapshot)
+    local biomes = {}
+    for _, biomeSnapshot in ipairs(snapshot and snapshot.biomes or EMPTY_LIST) do
+        if biomeSnapshot.biomeKey ~= nil then
+            biomes[#biomes + 1] = biomeSnapshot.biomeKey
+        end
+    end
+    return {
+        key = snapshot and snapshot.routeKey or nil,
+        biomes = biomes,
+    }
+end
+
+local function annotateRouteCounters(snapshot)
+    if routeTimeline == nil then
+        return
+    end
+
+    local snapshotByBiome = rowsByBiome(snapshot)
+    routeTimeline.walkRoute(routeForSnapshot(snapshot), {
+        biomeLookup = biomeLookup,
+        snapshotForBiome = function(_, biomeKey)
+            return snapshotByBiome[biomeKey]
+        end,
+        onRow = function(context)
+            local row = context.row
+            if row ~= nil then
+                row.roomHistoryOrdinal = context.roomHistoryOrdinal
+                row.runDepthCache = context.runDepthCache
+                row.runEncounterDepth = context.runEncounterDepth
+                row.runEncounterDepthMin = context.runEncounterDepthMin
+                row.runEncounterDepthMax = context.runEncounterDepthMax
+            end
+        end,
+    })
 end
 
 local function biomeDepthCacheBucket(biome, biomeDepthCache)
@@ -392,6 +448,8 @@ end
 
 function executionPlan.compile(snapshot, opts)
     opts = opts or {}
+    annotateRouteCounters(snapshot)
+
     local plan = {
         routeKey = snapshot.routeKey,
         label = snapshot.label,

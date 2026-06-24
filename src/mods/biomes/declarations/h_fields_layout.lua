@@ -23,6 +23,7 @@ local function combat(roomKey, maxCageRewards, opts)
     opts.maxCageRewards = maxCageRewards
     opts.features = opts.features or WELL_SHOP_FEATURES
     opts.biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1
+    opts.maxCreationsThisRun = opts.maxCreationsThisRun or 1
     return option(roomKey, "C" .. string.sub(roomKey, -2) .. " (" .. tostring(maxCageRewards) .. " Slots)", opts)
 end
 

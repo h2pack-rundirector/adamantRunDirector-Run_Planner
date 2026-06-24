@@ -438,13 +438,13 @@ function TestRunPlannerRewardPlanning.testRouteContextDevotionRewardUsesPriorUnd
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat06",
+            OptionKey = "F_Combat04",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat07",
+            OptionKey = "F_Combat06",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -456,13 +456,13 @@ function TestRunPlannerRewardPlanning.testRouteContextDevotionRewardUsesPriorUnd
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat06",
+            OptionKey = "F_Combat07",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat07",
+            OptionKey = "F_Combat05",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -534,13 +534,13 @@ function TestRunPlannerRewardPlanning.testRouteContextScopesPriorGodLootByRoute(
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat06",
+            OptionKey = "F_Combat04",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat07",
+            OptionKey = "F_Combat06",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -552,13 +552,13 @@ function TestRunPlannerRewardPlanning.testRouteContextScopesPriorGodLootByRoute(
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat06",
+            OptionKey = "F_Combat07",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat07",
+            OptionKey = "F_Combat05",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -2359,7 +2359,7 @@ function TestRunPlannerRewardPlanning.testRouteOverviewInvalidatesDuplicateTrial
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat04",
+            OptionKey = "F_Combat06",
         },
         {
             RoleKey = "Combat",

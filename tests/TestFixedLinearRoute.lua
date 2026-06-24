@@ -198,6 +198,44 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearQShopSharedOfferGroupInva
     lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_shop_group_option")
 end
 
+function TestRunPlannerFixedLinearRoute.testFixedLinearCombatRoomsCannotRepeatInOneBiome()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local template = loadFixedLinearTemplate()
+    local instance = data.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local rowData = {
+        {},
+        { RoleKey = "Combat", OptionKey = "F_Combat06" },
+        { RoleKey = "Combat", OptionKey = "F_Combat06" },
+    }
+    local rows = fakeRows(rowData)
+
+    lu.assertTrue(data.validateRow(instance, rows, 2).valid)
+    local validation = data.validateRow(instance, rows, 3)
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "option_limit")
+    lu.assertEquals(
+        data.optionValueStatesForRow(instance, rows, 3, "Combat").F_Combat06,
+        valueStates.INVALID
+    )
+
+    instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(routeFields(rowData), instance)
+    attachSingleBiomeRouteContext(control, "Underworld", "F")
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertEquals(snapshot.rows[3].invalidCode, "option_limit")
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 3)
+    lu.assertEquals(snapshot.invalidRows[1].code, "option_limit")
+end
+
 function TestRunPlannerFixedLinearRoute.testFixedLinearOpeningRowUsesFixedRoomChoice()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
@@ -490,7 +528,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesRolesByRouteRo
         { RoleKey = "Combat", OptionKey = "F_Combat03" },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat02",
+            OptionKey = "F_Combat04",
         },
     })
     data.fillRoleValues(instance, rows, 6, values)
@@ -716,11 +754,11 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearAvailabilityConsumesPrior
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat01",
+            OptionKey = "F_Combat10",
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat02",
+            OptionKey = "F_Combat04",
         },
         {
             RoleKey = "Combat",
@@ -755,7 +793,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearAvailabilityChecksPreviou
         { RoleKey = "Combat", OptionKey = "F_Combat03" },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat01",
+            OptionKey = "F_Combat10",
         },
     })
     local validExitRows = fakeRows({
@@ -765,7 +803,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearAvailabilityChecksPreviou
         { RoleKey = "Combat", OptionKey = "F_Combat03" },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat02",
+            OptionKey = "F_Combat04",
         },
     })
     local values = {}
@@ -803,7 +841,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearReadPassInvalidationRefre
     lu.assertTrue(hasValue(values, "Midshop"))
     lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 6).Midshop)
 
-    rowState[5].OptionKey = "F_Combat02"
+    rowState[5].OptionKey = "F_Combat04"
     lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 6).Midshop)
 
     data.invalidateReadPass(instance)

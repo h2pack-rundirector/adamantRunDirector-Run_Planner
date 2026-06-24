@@ -396,16 +396,19 @@ function rowEngine.create(adapter)
         return count
     end
 
-    local function countPriorOptionSelections(instance, role, rows, rowIndex, optionKey)
+    local function countPriorOptionSelections(instance, _role, rows, rowIndex, optionKey)
         if rows == nil or optionKey == nil or optionKey == "" then
             return 0
         end
 
         local count = 0
         for priorIndex = 1, rowIndex - 1 do
-            if rows:read(priorIndex, "RoleKey") == role.key
-                and rows:read(priorIndex, "OptionKey") == optionKey
-                and data.isOptionAvailable(instance, rows, priorIndex, role.key, optionKey)
+            local priorRoleKey, priorRole = data.resolveRole(instance, rows, priorIndex)
+            local priorOptionKey, priorOption = data.resolveOption(instance, rows, priorIndex, priorRoleKey)
+            if priorRole ~= nil
+                and priorOption ~= nil
+                and priorOptionKey == optionKey
+                and data.isOptionAvailable(instance, rows, priorIndex, priorRoleKey, priorOptionKey)
             then
                 count = count + 1
             end
@@ -745,6 +748,12 @@ function rowEngine.create(adapter)
             local status = availabilityStatus(option, data.rowContext(instance, rows, rowIndex))
             if not status.valid then
                 return invalidStatus(status.code, status.message)
+            end
+            if not isOptionWithinSelectionCap(instance, role, option, rows, rowIndex) then
+                return invalidStatus(
+                    "option_limit",
+                    tostring(option.label or resolvedOptionKey) .. " is already planned for this biome"
+                )
             end
         end
         if resolvedOptionKey == "" or not data.isOptionAvailable(instance, rows, rowIndex, roleKey, resolvedOptionKey) then

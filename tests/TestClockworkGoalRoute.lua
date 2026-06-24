@@ -10,6 +10,7 @@ local routeFields = h.routeFields
 local routeUiFields = h.routeUiFields
 local noOpDraw = h.noOpDraw
 local attachSingleBiomeRouteContext = h.attachSingleBiomeRouteContext
+local valueStates = dofile("src/mods/route/value_states.lua")
 
 -- luacheck: globals TestRunPlannerClockworkGoalRoute
 TestRunPlannerClockworkGoalRoute = {}
@@ -95,6 +96,29 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalForcesFirstRouteRowFr
     })
     lu.assertEquals(data.optionValuesForRow(instance, blankFirstStep, 2, "ExtensionCombat"), {})
     lu.assertEquals(data.optionValuesForRow(instance, blankFirstStep, 2, "Goal")[2], "I_Combat01")
+end
+
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalCombatRoomsCannotRepeatAcrossGoalAndExtension()
+    local catalog = loadCatalog()
+    local data = loadClockworkGoalData()
+    local instance = data.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local rows = fakeRows({
+        {},
+        { RoleKey = "Goal", OptionKey = "I_Combat01" },
+        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat01" },
+    })
+
+    lu.assertTrue(data.validateRow(instance, rows, 2).valid)
+    local validation = data.validateRow(instance, rows, 3)
+    lu.assertFalse(validation.valid)
+    lu.assertEquals(validation.code, "option_limit")
+    lu.assertEquals(
+        data.optionValueStatesForRow(instance, rows, 3, "ExtensionCombat").I_Combat01,
+        valueStates.INVALID
+    )
 end
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalRuntimeBuildsValidatedSnapshot()

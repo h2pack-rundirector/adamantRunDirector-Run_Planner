@@ -512,7 +512,7 @@ function TestRunPlannerRouteNpcs.testRouteContextFiltersOlympusNpcsByRoomTag()
         { RoleKey = "Combat", OptionKey = "P_Combat04" },
         {
             RoleKey = "Combat",
-            OptionKey = "P_Combat02",
+            OptionKey = "P_Combat07",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -549,7 +549,7 @@ function TestRunPlannerRouteNpcs.testRouteContextFiltersOlympusNpcsByRoomTag()
     lu.assertNotNil(targets.byNpc.Icarus.lookup["P:5:IcarusCombatP"])
     lu.assertEquals(
         targets.byNpc.Heracles.displayValues["P:4:HeraclesCombatP"],
-        "Olympus Depth 3 - C02 (Indoor)"
+        "Olympus Depth 3 - C07 (Indoor)"
     )
     lu.assertEquals(
         targets.byNpc.Icarus.displayValues["P:5:IcarusCombatP"],

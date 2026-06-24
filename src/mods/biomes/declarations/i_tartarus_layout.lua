@@ -21,6 +21,7 @@ local function combatRoom(roomKey, exitCount, opts)
         reward = opts.reward or COMBAT_REWARD,
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
+        maxCreationsThisRun = opts.maxCreationsThisRun or 1,
     }
 end
 

@@ -19,7 +19,10 @@ end
 local function createLogic(catalog, route)
     local runState = import("mods/logic/run_state.lua")
     local routePlan = import("mods/logic/route_plan.lua", nil, {
-        executionPlan = import("mods/logic/execution_plan.lua"),
+        executionPlan = import("mods/logic/execution_plan.lua", nil, {
+            timeline = route.timeline,
+            biomeLookup = catalog.lookup,
+        }),
         routeContext = route.runContext,
         runState = runState,
     })

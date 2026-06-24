@@ -74,6 +74,39 @@ local function rewardItemsSummary(row)
     return table.concat(parts, ";")
 end
 
+local function counterSummary(currentRun, row)
+    return " actualRunDepth=" .. fieldValue(runState.runDepthCache(currentRun))
+        .. " actualRunEncounterDepth=" .. fieldValue(runState.runEncounterDepth(currentRun))
+        .. " actualBiomeDepthCache=" .. fieldValue(runState.biomeDepthCache(currentRun))
+        .. " actualBiomeEncounterDepth=" .. fieldValue(runState.biomeEncounterDepth(currentRun))
+        .. " simRoomHistoryOrdinal=" .. fieldValue(row and row.roomHistoryOrdinal)
+        .. " simRunDepthCache=" .. fieldValue(row and row.runDepthCache)
+        .. " simRunEncounterDepth=" .. fieldValue(row and row.runEncounterDepth)
+        .. " simRunEncounterDepthMin=" .. fieldValue(row and row.runEncounterDepthMin)
+        .. " simRunEncounterDepthMax=" .. fieldValue(row and row.runEncounterDepthMax)
+        .. " simBiomeDepthCache=" .. fieldValue(row and row.biomeDepthCache)
+        .. " simBiomeEncounterDepth=" .. fieldValue(row and row.biomeEncounterDepth)
+        .. " simBiomeEncounterDepthMin=" .. fieldValue(row and row.biomeEncounterDepthMin)
+        .. " simBiomeEncounterDepthMax=" .. fieldValue(row and row.biomeEncounterDepthMax)
+end
+
+local function eligibleStoreRewardsSummary(currentRun, room, rewardStoreName, previouslyChosenRewards, args)
+    local run = runState.currentRun(currentRun)
+    local store = run and run.RewardStores and run.RewardStores[rewardStoreName] or nil
+    local isRewardEligible = game.IsRoomRewardEligible or _G.IsRoomRewardEligible
+    if store == nil or isRewardEligible == nil then
+        return "-"
+    end
+
+    local rewards = {}
+    for _, reward in ipairs(store) do
+        if isRewardEligible(run, room, reward, previouslyChosenRewards, args or {}) then
+            rewards[#rewards + 1] = tostring(reward.Name)
+        end
+    end
+    return joinList(rewards)
+end
+
 local function rewardValue(item, index)
     local value = item and item.rewards and item.rewards[index] or nil
     if value == nil or value == "" then
@@ -494,6 +527,15 @@ local function storeProfileData(profile)
     return storeData and profile and storeData[profile] or nil
 end
 
+local function storeDataName(storeData)
+    for profile, data in pairs(_G.StoreData or {}) do
+        if data == storeData then
+            return profile
+        end
+    end
+    return nil
+end
+
 local function profileMatchesCurrentStore(profile, currentRun, args)
     local profileData = storeProfileData(profile)
     if args ~= nil and args.StoreData ~= nil and profileData ~= nil then
@@ -611,18 +653,18 @@ end
 local function plannedShop(runtime, currentRun, args)
     local run = runState.currentRun(currentRun)
     local room = run and run.CurrentRoom or nil
-    if args ~= nil and args.RoomName ~= nil and roomName(room) ~= args.RoomName then
-        return nil
-    end
-
     local row, context = rewardRouting.plannedRewardRow(runtime, run, room)
+
     if context.active ~= true or not isRowRewardBiome(context.biomeKey) then
-        return nil, row, context
+        return nil, row, context, "inactive_context"
     end
 
     local item = plannedShopItem(row, "prebossShop")
-    if item == nil or not profileMatchesCurrentStore(item.shopProfile, run, args) then
-        return nil, row, context
+    if item == nil then
+        return nil, row, context, "no_planned_shop"
+    end
+    if not profileMatchesCurrentStore(item.shopProfile, run, args) then
+        return nil, row, context, "store_profile_mismatch"
     end
     return item, row, context
 end
@@ -750,21 +792,23 @@ local function withRewardPriority(currentRun, rewardType, callback)
     return reward
 end
 
-local function rewardChoiceDetail(row, context, rewardStoreName, actualRewardType)
+local function rewardChoiceDetail(currentRun, row, context, rewardStoreName, eligibleStoreRewards, actualRewardType)
     if context.active ~= true then
         return nil
     end
     return "choose set=" .. fieldValue(context.biomeKey)
         .. " room=" .. fieldValue(context.roomKey)
         .. " biomeDepthCache=" .. fieldValue(context.biomeDepthCache)
+        .. counterSummary(currentRun, row)
         .. " store=" .. fieldValue(rewardStoreName)
+        .. " eligibleStoreRewards=" .. fieldValue(eligibleStoreRewards)
         .. " match=" .. fieldValue(context.source)
         .. " row=" .. fieldValue(row and row.rowIndex)
         .. " plannedRewards=" .. rewardItemsSummary(row)
         .. " actual=" .. fieldValue(actualRewardType)
 end
 
-local function forcedRewardChoiceDetail(row, context, rewardStoreName, planned, actualRewardType)
+local function forcedRewardChoiceDetail(currentRun, row, context, rewardStoreName, eligibleStoreRewards, planned, actualRewardType)
     if context.active ~= true then
         return nil
     end
@@ -772,7 +816,9 @@ local function forcedRewardChoiceDetail(row, context, rewardStoreName, planned, 
     return "choose set=" .. fieldValue(context.biomeKey)
         .. " room=" .. fieldValue(context.roomKey)
         .. " biomeDepthCache=" .. fieldValue(context.biomeDepthCache)
+        .. counterSummary(currentRun, row)
         .. " store=" .. fieldValue(rewardStoreName)
+        .. " eligibleStoreRewards=" .. fieldValue(eligibleStoreRewards)
         .. " match=" .. fieldValue(context.source)
         .. " row=" .. fieldValue(row and row.rowIndex)
         .. " planned=" .. fieldValue(planned.rewardType)
@@ -781,13 +827,14 @@ local function forcedRewardChoiceDetail(row, context, rewardStoreName, planned, 
         .. " action=" .. result
 end
 
-local function setupRewardDetail(row, context, room, actualRewardType)
+local function setupRewardDetail(currentRun, row, context, room, actualRewardType)
     if context.active ~= true then
         return nil
     end
     return "setup set=" .. fieldValue(context.biomeKey)
         .. " room=" .. fieldValue(context.roomKey)
         .. " biomeDepthCache=" .. fieldValue(context.biomeDepthCache)
+        .. counterSummary(currentRun, row)
         .. " match=" .. fieldValue(context.source)
         .. " row=" .. fieldValue(row and row.rowIndex)
         .. " plannedRewards=" .. rewardItemsSummary(row)
@@ -797,6 +844,7 @@ end
 
 function rewardRouting.chooseRoomReward(runtime, base, currentRun, room, rewardStoreName, previouslyChosenRewards, args)
     local planned, row, context = plannedReward(runtime, currentRun, room, previouslyChosenRewards, "choose", args)
+    local eligibleStoreRewards = eligibleStoreRewardsSummary(currentRun, room, rewardStoreName, previouslyChosenRewards, args)
     local rewardType
     local detail
     if planned ~= nil then
@@ -806,10 +854,10 @@ function rewardRouting.chooseRoomReward(runtime, base, currentRun, room, rewardS
         if rewardType == planned.rewardType and rewardType == "Boon" and planned.boonSource ~= nil then
             room.ForceLootName = planned.boonSource
         end
-        detail = forcedRewardChoiceDetail(row, context, rewardStoreName, planned, rewardType)
+        detail = forcedRewardChoiceDetail(currentRun, row, context, rewardStoreName, eligibleStoreRewards, planned, rewardType)
     else
         rewardType = base(currentRun, room, rewardStoreName, previouslyChosenRewards, args)
-        detail = rewardChoiceDetail(row, context, rewardStoreName, rewardType)
+        detail = rewardChoiceDetail(currentRun, row, context, rewardStoreName, eligibleStoreRewards, rewardType)
     end
     if detail ~= nil then
         debugLog(detail)
@@ -837,7 +885,7 @@ function rewardRouting.setupRoomReward(runtime, base, currentRun, room, previous
         room.Encounter.LootAName = planned.devotionSourceA or room.Encounter.LootAName
         room.Encounter.LootBName = planned.devotionSourceB or room.Encounter.LootBName
     end
-    local detail = setupRewardDetail(row, context, room, rewardType)
+    local detail = setupRewardDetail(currentRun, row, context, room, rewardType)
     if detail ~= nil then
         debugLog(detail)
     end
@@ -870,14 +918,31 @@ end
 
 function rewardRouting.fillInShopOptions(runtime, base, args, currentRun)
     local store = base(args)
-    local item, row, context = plannedShop(runtime, currentRun, args)
+    local run = runState.currentRun(currentRun)
+    local room = run and run.CurrentRoom or nil
+    local item, row, context, missReason = plannedShop(runtime, run, args)
     if item ~= nil then
         applyPlannedShopOptions(store, item, args)
         debugLog("shop set=" .. fieldValue(context.biomeKey)
             .. " room=" .. fieldValue(context.roomKey)
             .. " biomeDepthCache=" .. fieldValue(context.biomeDepthCache)
             .. " row=" .. fieldValue(row and row.rowIndex)
+            .. counterSummary(run, row)
+            .. " argsRoom=" .. fieldValue(args and args.RoomName)
+            .. " argsStore=" .. fieldValue(storeDataName(args and args.StoreData))
             .. " plannedRewards=" .. rewardItemSummary(item))
+    elseif context ~= nil and context.active == true then
+        debugLog("shop miss=" .. fieldValue(missReason)
+            .. " currentRoom=" .. fieldValue(roomName(room))
+            .. " currentStore=" .. fieldValue(room and room.StoreDataName)
+            .. " argsRoom=" .. fieldValue(args and args.RoomName)
+            .. " argsStore=" .. fieldValue(storeDataName(args and args.StoreData))
+            .. " biome=" .. fieldValue(context.biomeKey)
+            .. " contextRoom=" .. fieldValue(context.roomKey)
+            .. " biomeDepthCache=" .. fieldValue(context.biomeDepthCache)
+            .. " row=" .. fieldValue(row and row.rowIndex)
+            .. counterSummary(run, row)
+            .. " plannedRewards=" .. rewardItemsSummary(row))
     end
     return store
 end

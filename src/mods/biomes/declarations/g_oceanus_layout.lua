@@ -45,7 +45,7 @@ local function combat(roomKey, opts)
         features = opts.features or (WELL_SHOP_COMBAT_ROOMS[roomKey] and CHAOS_WELL_FEATURES or CHAOS_FEATURES),
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
-        maxCreationsThisRun = opts.maxCreationsThisRun,
+        maxCreationsThisRun = opts.maxCreationsThisRun or 1,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
     })
 end
