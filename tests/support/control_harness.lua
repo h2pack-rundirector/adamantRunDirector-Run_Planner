@@ -417,6 +417,8 @@ local function noOpDraw()
         "TextWrapped",
         "SameLine",
         "SetCursorPosX",
+        "Indent",
+        "Unindent",
         "Spacing",
         "Separator",
     }) do

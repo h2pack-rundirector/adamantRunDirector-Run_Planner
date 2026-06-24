@@ -236,6 +236,70 @@ function TestRunPlannerRouteFeatures.testRouteContextDisablesFeatureTargetsWhenF
     lu.assertNil(targets.byFeatureBiome.surfaceShop)
 end
 
+function TestRunPlannerRouteFeatures.testRouteContextDisablesSpecificFeatureTargets()
+    local catalog = loadCatalog()
+    local globalTemplate = loadRouteGlobalTemplate()
+    local globalInstance = globalTemplate.prepare({
+        name = "RouteGlobalSurface",
+        route = catalog.routes.lookup.Surface,
+        gods = catalog.gods,
+        features = catalog.features,
+    })
+    local globalFields = routeUiFields(globalTemplate.storage(globalInstance))
+    globalFields.ConfigureFeatureHermesShrine:write(false)
+    local globalControl = globalTemplate.createRuntime(globalFields, globalInstance)
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Surface",
+                label = "Surface",
+                biomes = { "P" },
+            },
+        }),
+        biomes = catalog.lookup,
+        features = catalog.features,
+        controlResolver = function(controlName)
+            if controlName == "RouteGlobalSurface" then
+                return globalControl
+            elseif controlName == "RouteP" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteP",
+                                valid = true,
+                                invalidRows = {},
+                                rows = normalizeRewardRows({
+                                    {
+                                        rowIndex = 1,
+                                        routeOrdinal = 4,
+                                        slotLabel = "Depth 4",
+                                        option = { key = "P_Combat01", label = "C01" },
+                                        features = { surfaceShop = true },
+                                        valid = true,
+                                        roomHistoryCost = 1,
+                                    },
+                                }),
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+
+    local targets = routeContext:featureTargets("Surface")
+
+    lu.assertTrue(routeContext:isLayerConfigured("Surface", "features"))
+    lu.assertFalse(routeContext:isFeatureConfigured("Surface", "HermesShrine"))
+    lu.assertFalse(routeContext:hasConfiguredFeatures("Surface"))
+    lu.assertNil(targets.byFeature.surfaceShop)
+    lu.assertNil(targets.byFeatureBiome.surfaceShop)
+    lu.assertNil(routeContext:featureTargetsForSlot("Surface", "surfaceShop"))
+end
+
 function TestRunPlannerRouteFeatures.testRouteFeaturesUsesShopDepthPolicy()
     local catalog = loadCatalog()
     local route = {

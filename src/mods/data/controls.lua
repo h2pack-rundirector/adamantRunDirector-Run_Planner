@@ -173,6 +173,7 @@ function controls.build(catalog)
                 label = "Global",
                 route = route,
                 gods = catalog.gods,
+                features = catalog.features,
             }
             instances[routeNpcControlName(route.key)] = {
                 template = "RouteNpcs",

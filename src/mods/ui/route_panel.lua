@@ -104,6 +104,18 @@ function routePanel.create(deps)
         return routeContext:isLayerConfigured(region, tab.layer) ~= false
     end
 
+    local function tabConfigured(routeContext, region, tab)
+        if not tabLayerConfigured(routeContext, region, tab) then
+            return false
+        end
+        for _, controlName in ipairs(tab.controlNames or EMPTY_LIST) do
+            if routeContext:isControlConfigured(region, controlName) ~= false then
+                return true
+            end
+        end
+        return false
+    end
+
     local function refreshRegionTabs(routeContext, region)
         local visibleTabs = routeVisibleTabs[region]
         if visibleTabs == nil then
@@ -113,7 +125,7 @@ function routePanel.create(deps)
         local snapshot = routeSnapshot(routeContext, region)
         clearList(visibleTabs)
         for _, tab in ipairs(routeAllTabs[region] or EMPTY_LIST) do
-            if tabLayerConfigured(routeContext, region, tab) then
+            if tabConfigured(routeContext, region, tab) then
                 decorations.setNavTabState(
                     tab,
                     decorations.navTabInvalid(snapshot, tab),
@@ -154,15 +166,19 @@ function routePanel.create(deps)
 
         imgui.BeginChild(childId .. "Detail", 0, 0, false)
         local controlNames = routeControlByTab[region][activeTab]
-        for index, controlName in ipairs(controlNames or EMPTY_LIST) do
-            if index > 1 then
-                imgui.Spacing()
-                imgui.Separator()
-                imgui.Spacing()
+        local drawnCount = 0
+        for _, controlName in ipairs(controlNames or EMPTY_LIST) do
+            if routeContext:isControlConfigured(region, controlName) ~= false then
+                if drawnCount > 0 then
+                    imgui.Spacing()
+                    imgui.Separator()
+                    imgui.Spacing()
+                end
+                drawnCount = drawnCount + 1
+                local control = ctx.controls.get(controlName)
+                routeContext:bindControl(control, region)
+                draw.control(control, "planner")
             end
-            local control = ctx.controls.get(controlName)
-            routeContext:bindControl(control, region)
-            draw.control(control, "planner")
         end
         imgui.EndChild()
     end

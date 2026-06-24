@@ -245,6 +245,9 @@ function TestRunPlannerRouteUi.testRouteUiHidesTabsForDisabledLayers()
         isLayerConfigured = function(_, _, layer)
             return layer ~= "npcs" and layer ~= "features"
         end,
+        isControlConfigured = function()
+            return true
+        end,
         isNavTabInactive = function()
             return false
         end,
@@ -309,6 +312,114 @@ function TestRunPlannerRouteUi.testRouteUiHidesTabsForDisabledLayers()
     lu.assertEquals(capturedTabs, {
         { key = "Global", label = "Global", controlNames = { "RouteGlobalUnderworld" } },
         { key = "F", label = "Erebus", controlNames = { "RouteF" } },
+    })
+end
+
+function TestRunPlannerRouteUi.testRouteUiFiltersDisabledFeatureControls()
+    local routeUi
+    local capturedTabs
+    local drawnControls = {}
+    local routeContext = {
+        beginPass = function()
+        end,
+        bindControl = function(_, control)
+            return control
+        end,
+        overview = function(_, routeKey)
+            return {
+                routeKey = routeKey,
+                valid = true,
+                invalidRows = {},
+            }
+        end,
+        isLayerConfigured = function()
+            return true
+        end,
+        isControlConfigured = function(_, _, controlName)
+            return controlName ~= "RouteFeatureStygianWellUnderworld"
+        end,
+        isNavTabInactive = function()
+            return false
+        end,
+    }
+    withTestImport(function()
+        routeUi = testImport("mods/ui.lua", nil, {
+            routes = routeDefinitions({
+                {
+                    key = "Underworld",
+                    label = "Underworld",
+                    biomes = { "F" },
+                },
+            }),
+            routeControlTabs = {
+                Underworld = {
+                    { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
+                    {
+                        key = "Features",
+                        label = "Features",
+                        layer = "features",
+                        controlNames = {
+                            "RouteFeatureStygianWellUnderworld",
+                            "RouteFeatureHermesShrineUnderworld",
+                        },
+                    },
+                },
+            },
+            routeContext = {
+                create = function()
+                    return routeContext
+                end,
+            },
+            routeStatus = {
+                drawRouteStatus = function()
+                end,
+            },
+        })
+    end)
+    local draw = noOpDraw()
+    draw.imgui.BeginTabBar = function()
+        return true
+    end
+    draw.imgui.BeginTabItem = function(label)
+        return label == "Underworld"
+    end
+    draw.imgui.BeginChild = function()
+    end
+    draw.imgui.EndChild = function()
+    end
+    draw.nav = {
+        verticalTabs = function(opts)
+            capturedTabs = opts.tabs
+            return "Features"
+        end,
+    }
+    draw.control = function(control)
+        drawnControls[#drawnControls + 1] = control.name
+    end
+
+    routeUi.drawTab(nil, {
+        draw = draw,
+        controls = {
+            get = function(controlName)
+                return { name = controlName }
+            end,
+        },
+    })
+
+    lu.assertEquals(capturedTabs, {
+        { key = "Global", label = "Global", controlNames = { "RouteGlobalUnderworld" } },
+        {
+            key = "Features",
+            label = "Features",
+            layer = "features",
+            controlNames = {
+                "RouteFeatureStygianWellUnderworld",
+                "RouteFeatureHermesShrineUnderworld",
+            },
+        },
+    })
+    lu.assertEquals(drawnControls, {
+        "RouteFeatureHermesShrineUnderworld",
     })
 end
 
@@ -807,6 +918,9 @@ function TestRunPlannerRouteUi.testRouteUiColorsInvalidRouteAndRegionTabs()
             }
         end,
         isLayerConfigured = function()
+            return true
+        end,
+        isControlConfigured = function()
             return true
         end,
         isNavTabInactive = function()

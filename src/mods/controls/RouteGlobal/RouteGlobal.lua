@@ -12,6 +12,7 @@ local VANILLA_VALUE = ""
 local CONFIGURE_REWARDS_KEY = "ConfigureRewards"
 local CONFIGURE_NPCS_KEY = "ConfigureNpcs"
 local CONFIGURE_FEATURES_KEY = "ConfigureFeatures"
+local CONFIGURE_FEATURE_PREFIX = "ConfigureFeature"
 local DISABLED_TEXT_COLOR = { 0.55, 0.55, 0.55, 1 }
 local REWARDS_DISABLED_NOTE = "Disabling rewards invalidates Trial rewards and disables NPC encounter planning."
 
@@ -26,7 +27,7 @@ local CONFIG_TOGGLES = {
     },
     {
         key = CONFIGURE_FEATURES_KEY,
-        label = "Configure Route Features",
+        label = "Configure Features",
     },
 }
 
@@ -34,6 +35,27 @@ local function clearList(list)
     for index = #list, 1, -1 do
         list[index] = nil
     end
+end
+
+local function featureConfigKey(featureKey)
+    return CONFIGURE_FEATURE_PREFIX .. tostring(featureKey or "")
+end
+
+local function routeBiomeLookup(route)
+    local lookup = {}
+    for _, biomeKey in ipairs(route and route.biomes or {}) do
+        lookup[biomeKey] = true
+    end
+    return lookup
+end
+
+local function routeHasFeature(routeLookup, feature)
+    for biomeKey in pairs(feature and feature.biomes or {}) do
+        if routeLookup[biomeKey] then
+            return true
+        end
+    end
+    return false
 end
 
 local function copyColor(color)
@@ -112,11 +134,41 @@ local function buildGodSourceOptions(instance)
     instance.godSourceDirty = true
 end
 
+local function buildFeatureConfigToggles(instance)
+    local routeLookup = routeBiomeLookup(instance.route)
+    instance.featureConfigToggles = {}
+    instance.featureConfigKeyByKey = {}
+    instance.featureConfigKeyByFeatureKey = {}
+
+    for _, featureKey in ipairs(instance.features and instance.features.ordered or {}) do
+        local feature = instance.features.byKey and instance.features.byKey[featureKey] or nil
+        if feature ~= nil and routeHasFeature(routeLookup, feature) then
+            local key = featureConfigKey(feature.key)
+            instance.featureConfigToggles[#instance.featureConfigToggles + 1] = {
+                key = key,
+                label = feature.configLabel or ("Configure " .. tostring(feature.label or feature.key)),
+                featureKey = feature.key,
+                runtimeFeatureKey = feature.featureKey,
+            }
+            instance.featureConfigKeyByKey[feature.key] = key
+            instance.featureConfigKeyByFeatureKey[feature.featureKey] = key
+        end
+    end
+end
+
 local function buildDrawLabels(instance)
     local controlName = tostring(instance.name)
     instance.configDrawLabels = {}
     instance.configDisabledLabels = {}
     for _, toggle in ipairs(CONFIG_TOGGLES) do
+        local visibleLabel = tostring(toggle.label)
+        instance.configDrawLabels[toggle.key] = visibleLabel .. "##" .. controlName .. ":" .. tostring(toggle.key)
+        instance.configDisabledLabels[toggle.key] = {
+            checked = "[x] " .. visibleLabel,
+            unchecked = "[ ] " .. visibleLabel,
+        }
+    end
+    for _, toggle in ipairs(instance.featureConfigToggles or {}) do
         local visibleLabel = tostring(toggle.label)
         instance.configDrawLabels[toggle.key] = visibleLabel .. "##" .. controlName .. ":" .. tostring(toggle.key)
         instance.configDisabledLabels[toggle.key] = {
@@ -135,6 +187,7 @@ function RouteGlobal.prepare(instance)
     instance.routeKey = instance.route.key or instance.routeKey or instance.name
     instance.label = instance.label or "Global"
     instance.gods = copyGods(instance.gods or (godData and godData.olympian()) or {})
+    buildFeatureConfigToggles(instance)
     instance.godBits = buildBits(instance.gods)
     buildGodSourceOptions(instance)
     buildDrawLabels(instance)
@@ -142,7 +195,7 @@ function RouteGlobal.prepare(instance)
 end
 
 function RouteGlobal.storage(instance)
-    return {
+    local storage = {
         {
             key = CONFIGURE_REWARDS_KEY,
             type = "bool",
@@ -158,13 +211,26 @@ function RouteGlobal.storage(instance)
             type = "bool",
             default = true,
         },
-        {
-            key = "GodPool",
-            type = "packedInt",
-            width = #instance.godBits,
-            bits = instance.godBits,
-        },
     }
+    for _, toggle in ipairs(instance.featureConfigToggles or {}) do
+        storage[#storage + 1] = {
+            key = toggle.key,
+            type = "bool",
+            default = true,
+        }
+    end
+    storage[#storage + 1] = {
+        key = "GodPool",
+        type = "packedInt",
+        width = #instance.godBits,
+        bits = instance.godBits,
+    }
+    return storage
+end
+
+local function featureConfigFieldKey(instance, featureKey)
+    return (instance.featureConfigKeyByKey and instance.featureConfigKeyByKey[featureKey])
+        or (instance.featureConfigKeyByFeatureKey and instance.featureConfigKeyByFeatureKey[featureKey])
 end
 
 function RouteGlobal.createRuntime(fields, instance)
@@ -228,6 +294,17 @@ function RouteGlobal.createRuntime(fields, instance)
             return true
         end
         return field:read() == true
+    end
+
+    function control:isFeatureConfigured(featureKey)
+        if not self:isLayerConfigured("features") then
+            return false
+        end
+        local key = featureConfigFieldKey(instance, featureKey)
+        if key == nil then
+            return true
+        end
+        return self:isConfigEnabled(key)
     end
 
     function control:isLayerConfigured(layer)
@@ -315,6 +392,10 @@ function RouteGlobal.createUi(fields, instance)
 
     function control:configToggles()
         return CONFIG_TOGGLES
+    end
+
+    function control:featureConfigToggles()
+        return instance.featureConfigToggles
     end
 
     function control:configField(key)
@@ -406,11 +487,18 @@ end
 local function drawConfiguration(draw, control)
     draw.widgets.text("Configuration", { alignToFramePadding = true })
     local rewardsEnabled = control:isConfigEnabled(CONFIGURE_REWARDS_KEY)
+    local featuresEnabled = control:isConfigEnabled(CONFIGURE_FEATURES_KEY)
 
     for _, toggle in ipairs(control:configToggles()) do
         drawConfigCheckbox(draw, control, toggle, toggle.key == CONFIGURE_NPCS_KEY and not rewardsEnabled)
         if toggle.key == CONFIGURE_REWARDS_KEY and not rewardsEnabled then
             drawPolicyNote(draw, REWARDS_DISABLED_NOTE)
+        elseif toggle.key == CONFIGURE_FEATURES_KEY then
+            draw.imgui.Indent()
+            for _, featureToggle in ipairs(control:featureConfigToggles() or {}) do
+                drawConfigCheckbox(draw, control, featureToggle, not featuresEnabled)
+            end
+            draw.imgui.Unindent()
         end
     end
 end

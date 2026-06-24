@@ -165,6 +165,25 @@ local function featureControlIndex(context, route, controlName)
     return nil
 end
 
+local function featureKeyForControl(context, route, controlName)
+    for _, featureKey in ipairs(routeFeatureKeys(context, route)) do
+        if controlName == routeFeatureControlName(route.key, featureKey) then
+            return featureKey
+        end
+    end
+    return nil
+end
+
+local function featureDefinitionForKey(context, route, featureKey)
+    for _, routeFeatureKey in ipairs(routeFeatureKeys(context, route)) do
+        local feature = context.features.byKey and context.features.byKey[routeFeatureKey] or nil
+        if feature ~= nil and (feature.key == featureKey or feature.featureKey == featureKey) then
+            return feature
+        end
+    end
+    return nil
+end
+
 local function layerControlIndex(context, route, layer, controlName)
     if layer == "npcs" then
         return controlName == routeNpcControlName(route.key) and 1 or nil
@@ -363,6 +382,50 @@ function runContext.create(opts)
         return true
     end
 
+    function context:isFeatureConfigured(routeKey, featureKey)
+        if not self:isLayerConfigured(routeKey, "features") then
+            return false
+        end
+        local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
+        local feature = route ~= nil and featureDefinitionForKey(self, route, featureKey) or nil
+        if feature == nil then
+            return true
+        end
+        local control = self:controlByName(routeGlobalControlName(routeKey), routeKey)
+        if control ~= nil and control.isFeatureConfigured ~= nil then
+            return control:isFeatureConfigured(feature.key) ~= false
+        end
+        return true
+    end
+
+    function context:hasConfiguredFeatures(routeKey)
+        local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
+        if route == nil or not self:isLayerConfigured(routeKey, "features") then
+            return false
+        end
+        for _, featureKey in ipairs(routeFeatureKeys(self, route)) do
+            if self:isFeatureConfigured(routeKey, featureKey) then
+                return true
+            end
+        end
+        return false
+    end
+
+    function context:isControlConfigured(routeKey, controlName)
+        if controlName == routeGlobalControlName(routeKey) then
+            return true
+        end
+        if controlName == routeNpcControlName(routeKey) then
+            return self:isLayerConfigured(routeKey, "npcs")
+        end
+        local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
+        local featureKey = route ~= nil and featureKeyForControl(self, route, controlName) or nil
+        if featureKey ~= nil then
+            return self:isFeatureConfigured(routeKey, featureKey)
+        end
+        return true
+    end
+
     function context:attachControls()
         for _, route in ipairs(self.routes.ordered or EMPTY_LIST) do
             self:godSourceForRoute(route.key)
@@ -411,6 +474,9 @@ function runContext.create(opts)
     end
 
     function context:featureTargetsForSlot(routeKey, featureKey, biomeKey)
+        if not self:isFeatureConfigured(routeKey, featureKey) then
+            return nil
+        end
         local targets = self:featureTargets(routeKey)
         if biomeKey ~= nil then
             return targets.byFeatureBiome[featureKey] and targets.byFeatureBiome[featureKey][biomeKey] or nil
@@ -536,21 +602,23 @@ function runContext.create(opts)
         end
 
         local npcsValid = not npcsConfigured or invalidRows[1] == nil
-        local featuresConfigured = self:isLayerConfigured(route.key, "features")
+        local featuresConfigured = self:hasConfiguredFeatures(route.key)
         layerStatus.npcs.valid = npcsValid
         layerStatus.features.canDecorate = routeValid and npcsValid
 
         if routeValid and npcsValid and featuresConfigured then
             for _, featureKey in ipairs(routeFeatureKeys(self, route)) do
-                local featureControl = self:controlByName(routeFeatureControlName(route.key, featureKey), route.key)
-                if featureControl ~= nil and featureControl.read ~= nil then
-                    layerStatus.features.evaluated = true
-                    local featureSnapshot = featureControl:read("snapshot")
-                    featureSnapshots[#featureSnapshots + 1] = featureSnapshot
-                    local invalidRow = featureSnapshot and featureSnapshot.invalidRows and featureSnapshot.invalidRows[1] or nil
-                    if invalidRow ~= nil then
-                        appendInvalidRows(invalidRows, featureSnapshot.invalidRows)
-                        break
+                if self:isFeatureConfigured(route.key, featureKey) then
+                    local featureControl = self:controlByName(routeFeatureControlName(route.key, featureKey), route.key)
+                    if featureControl ~= nil and featureControl.read ~= nil then
+                        layerStatus.features.evaluated = true
+                        local featureSnapshot = featureControl:read("snapshot")
+                        featureSnapshots[#featureSnapshots + 1] = featureSnapshot
+                        local invalidRow = featureSnapshot and featureSnapshot.invalidRows and featureSnapshot.invalidRows[1] or nil
+                        if invalidRow ~= nil then
+                            appendInvalidRows(invalidRows, featureSnapshot.invalidRows)
+                            break
+                        end
                     end
                 end
             end

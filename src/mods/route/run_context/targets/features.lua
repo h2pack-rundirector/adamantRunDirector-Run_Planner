@@ -33,7 +33,7 @@ local function timelineFeatureLabel(context, biomeKey, entry)
         .. tostring(entry and (entry.label or entry.key) or "Timeline")
 end
 
-local function addTimelineFeatureBlockers(context, result, entryContext)
+local function addTimelineFeatureBlockers(context, routeKey, result, entryContext)
     local biomeKey = entryContext and entryContext.biomeKey or nil
     local entry = entryContext and entryContext.entry or nil
     if result == nil or entry == nil or entry.features == nil then
@@ -41,7 +41,7 @@ local function addTimelineFeatureBlockers(context, result, entryContext)
     end
 
     for featureKey, enabled in pairs(entry.features) do
-        if enabled == true then
+        if enabled == true and context:isFeatureConfigured(routeKey, featureKey) then
             addFeatureBlocker(result, {
                 key = featureTargetKey(biomeKey, "timeline-" .. tostring(entry.key or featureKey)),
                 label = timelineFeatureLabel(context, biomeKey, entry),
@@ -115,7 +115,10 @@ function featureTargets.buildTargets(context, routeKey)
             local biomeKey = rowContext.biomeKey
             for _, featureKey in ipairs(context.features.ordered or EMPTY_LIST) do
                 local feature = context.features.byKey and context.features.byKey[featureKey] or nil
-                if feature ~= nil and featureMatchesRow(context, feature, biomeKey, row, rowContext.roomHistoryDepth) then
+                if feature ~= nil
+                    and context:isFeatureConfigured(routeKey, feature.key)
+                    and featureMatchesRow(context, feature, biomeKey, row, rowContext.roomHistoryDepth)
+                then
                     addFeatureTarget(result, {
                         key = featureTargetKey(biomeKey, row.rowIndex),
                         label = common.candidateLabel(context, biomeKey, row, nil),
@@ -136,6 +139,7 @@ function featureTargets.buildTargets(context, routeKey)
                 for _, sideRoom in ipairs(row and row.sideRooms or EMPTY_LIST) do
                     local sideRoomContext = routeTimeline.sideRoomContext(rowContext, sideRoom)
                     if feature ~= nil
+                        and context:isFeatureConfigured(routeKey, feature.key)
                         and featureMatchesSideRoom(context, feature, biomeKey, sideRoom, sideRoomContext.roomHistoryDepth)
                     then
                         local sideSuffix = "side" .. tostring(sideRoom.sideIndex or "")
@@ -163,7 +167,7 @@ function featureTargets.buildTargets(context, routeKey)
             end
         end,
         onAfterBiomeEntry = function(entryContext)
-            addTimelineFeatureBlockers(context, result, entryContext)
+            addTimelineFeatureBlockers(context, routeKey, result, entryContext)
         end,
     })
     return result

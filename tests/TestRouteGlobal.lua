@@ -20,6 +20,7 @@ function TestRunPlannerRouteGlobal.testRouteGlobalTemplateStoresConfigurationAnd
         name = "RouteGlobalUnderworld",
         route = catalog.routes.lookup.Underworld,
         gods = catalog.gods,
+        features = catalog.features,
     })
     local storage = template.storage(instance)
     local control = template.createRuntime(routeUiFields(storage), instance)
@@ -39,11 +40,16 @@ function TestRunPlannerRouteGlobal.testRouteGlobalTemplateStoresConfigurationAnd
         type = "bool",
         default = true,
     })
-    lu.assertEquals(storage[4].key, "GodPool")
-    lu.assertEquals(storage[4].type, "packedInt")
-    lu.assertEquals(storage[4].width, 9)
-    lu.assertEquals(#storage[4].bits, 9)
-    lu.assertEquals(storage[4].bits[1], {
+    lu.assertEquals(storage[4], {
+        key = "ConfigureFeatureStygianWell",
+        type = "bool",
+        default = true,
+    })
+    lu.assertEquals(storage[5].key, "GodPool")
+    lu.assertEquals(storage[5].type, "packedInt")
+    lu.assertEquals(storage[5].width, 9)
+    lu.assertEquals(#storage[5].bits, 9)
+    lu.assertEquals(storage[5].bits[1], {
         key = "AphroditeUpgrade",
         label = "Aphrodite",
         type = "bool",
@@ -72,6 +78,7 @@ function TestRunPlannerRouteGlobal.testRouteGlobalConfigurationPreservesNpcDepen
         name = "RouteGlobalUnderworld",
         route = catalog.routes.lookup.Underworld,
         gods = catalog.gods,
+        features = catalog.features,
     })
     local fields = routeUiFields(template.storage(instance))
     local control = template.createRuntime(fields, instance)
@@ -79,6 +86,8 @@ function TestRunPlannerRouteGlobal.testRouteGlobalConfigurationPreservesNpcDepen
     lu.assertTrue(control:isLayerConfigured("rewards"))
     lu.assertTrue(control:isLayerConfigured("npcs"))
     lu.assertTrue(control:isLayerConfigured("features"))
+    lu.assertTrue(control:isFeatureConfigured("StygianWell"))
+    lu.assertTrue(control:isFeatureConfigured("wellShop"))
 
     fields.ConfigureRewards:write(false)
 
@@ -88,11 +97,18 @@ function TestRunPlannerRouteGlobal.testRouteGlobalConfigurationPreservesNpcDepen
 
     fields.ConfigureRewards:write(true)
     fields.ConfigureNpcs:write(false)
-    fields.ConfigureFeatures:write(false)
+    fields.ConfigureFeatureStygianWell:write(false)
 
     lu.assertTrue(control:isLayerConfigured("rewards"))
     lu.assertFalse(control:isLayerConfigured("npcs"))
+    lu.assertTrue(control:isLayerConfigured("features"))
+    lu.assertFalse(control:isFeatureConfigured("StygianWell"))
+    lu.assertFalse(control:isFeatureConfigured("wellShop"))
+
+    fields.ConfigureFeatures:write(false)
+
     lu.assertFalse(control:isLayerConfigured("features"))
+    lu.assertFalse(control:isFeatureConfigured("StygianWell"))
 end
 
 function TestRunPlannerRouteGlobal.testRouteGlobalDrawDisablesNpcToggleWhenRewardsAreDisabled()
