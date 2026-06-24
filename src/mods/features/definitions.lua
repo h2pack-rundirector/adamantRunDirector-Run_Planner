@@ -1,28 +1,11 @@
 local definitions = {}
 
 definitions.ordered = {
-    "ChaosGate",
     "StygianWell",
     "HermesShrine",
 }
 
 definitions.byKey = {
-    ChaosGate = {
-        key = "ChaosGate",
-        label = "Chaos Gate",
-        featureKey = "chaos",
-        plannedSpacingRooms = 10,
-        defaultManagedCount = 1,
-        maxManagedCount = 10,
-        vanillaNamedRequirement = "NoRecentChaosEncounter",
-        suppressesNaturalSpawn = true,
-        biomes = {
-            F = true,
-            G = true,
-            N = true,
-            P = true,
-        },
-    },
     StygianWell = {
         key = "StygianWell",
         label = "Stygian Well",

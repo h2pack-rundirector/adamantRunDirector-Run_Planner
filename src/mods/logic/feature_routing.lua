@@ -5,17 +5,13 @@ local game = deps.game or {}
 
 local featureRouting = {}
 local EMPTY_LIST = {}
+local DISABLE_NATURAL_CHAOS = true
 local FEATURE_ORDER = {
-    "chaos",
     "wellShop",
     "surfaceShop",
 }
 
 local FEATURE_FLAGS = {
-    chaos = {
-        force = "ForceSecretDoor",
-        chance = "SecretChanceSuccess",
-    },
     wellShop = {
         force = "ForceWellShop",
         chance = "WellShopChanceSuccess",
@@ -146,6 +142,16 @@ local function setFeature(room, featureKey, planned)
     end
 end
 
+local function suppressNaturalChaos(currentRun)
+    if not DISABLE_NATURAL_CHAOS then
+        return
+    end
+    local room = currentRun and currentRun.CurrentRoom or nil
+    if room ~= nil then
+        room.SecretChanceSuccess = false
+    end
+end
+
 function featureRouting.prepareRoomFeatures(runtime, currentRun)
     local room = currentRun and currentRun.CurrentRoom or nil
     local plan = planFromRuntime(runtime)
@@ -167,6 +173,7 @@ function featureRouting.prepareRoomFeatures(runtime, currentRun)
 end
 
 function featureRouting.handleSecretSpawns(runtime, base, currentRun)
+    suppressNaturalChaos(currentRun)
     featureRouting.prepareRoomFeatures(runtime, currentRun)
     return base(currentRun)
 end

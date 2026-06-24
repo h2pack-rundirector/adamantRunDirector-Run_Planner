@@ -16,24 +16,12 @@ TestRunPlannerRouteFeatures = {}
 function TestRunPlannerRouteFeatures.testRouteFeaturesStorageDerivesSlotsFromDeclarations()
     local catalog = loadCatalog()
     local template = loadRouteFeaturesTemplate()
-    local underworldChaos = template.prepare({
-        name = "RouteFeatureChaosGateUnderworld",
-        route = catalog.routes.lookup.Underworld,
-        feature = catalog.features.byKey.ChaosGate,
-        biomeLookup = catalog.lookup,
-    })
     local underworldWell = template.prepare({
         name = "RouteFeatureStygianWellUnderworld",
         route = catalog.routes.lookup.Underworld,
         feature = catalog.features.byKey.StygianWell,
         biomeLookup = catalog.lookup,
     })
-
-    lu.assertEquals(underworldChaos.slotCount, 10)
-    lu.assertEquals(underworldChaos.slots[1].key, "ChaosGate1")
-    lu.assertEquals(underworldChaos.slots[1].label, "Entry 1")
-    lu.assertEquals(underworldChaos.slots[1].featureKey, "chaos")
-    lu.assertEquals(underworldChaos.slots[1].plannedSpacingRooms, 10)
 
     lu.assertEquals(underworldWell.slotCount, 10)
     lu.assertEquals(underworldWell.slots[1].key, "StygianWell1")
@@ -74,9 +62,9 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesBiomeRoomSelectionAndP
     }
     local template = loadRouteFeaturesTemplate()
     local instance = template.prepare({
-        name = "RouteFeatureChaosGateSurface",
+        name = "RouteFeatureHermesShrineSurface",
         route = route,
-        feature = catalog.features.byKey.ChaosGate,
+        feature = catalog.features.byKey.HermesShrine,
         biomeLookup = catalog.lookup,
     })
     local fields = routeUiFields(template.storage(instance))
@@ -128,7 +116,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesBiomeRoomSelectionAndP
                                         rowIndex = 5,
                                         routeOrdinal = 4,
                                         slotLabel = "Depth 4",
-                                        features = { chaos = true },
+                                        features = { surfaceShop = true },
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
@@ -137,7 +125,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesBiomeRoomSelectionAndP
                                         routeOrdinal = 5,
                                         slotLabel = "Depth 5",
                                         option = { key = "P_Combat01", label = "C01" },
-                                        features = { chaos = true },
+                                        features = { surfaceShop = true },
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
@@ -146,7 +134,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesBiomeRoomSelectionAndP
                                         routeOrdinal = 6,
                                         slotLabel = "Depth 6",
                                         option = { key = "P_Combat02", label = "C02" },
-                                        features = { chaos = true },
+                                        features = { surfaceShop = true },
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
@@ -168,7 +156,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesBiomeRoomSelectionAndP
 
     control:writeBiome(1, "P")
     lu.assertEquals(fields.Targets:read(1, "BiomeKey"), "P")
-    lu.assertEquals(control:roomOptions(1).values, { "", "6" })
+    lu.assertEquals(control:roomOptions(1).values, { "", "6", "7" })
     lu.assertEquals(control:roomOptions(1).displayValues["6"], "Depth 5 - C01")
 
     control:writeRoom(1, "6")
@@ -177,10 +165,10 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesBiomeRoomSelectionAndP
     lu.assertEquals(control:selectedTargetKey(1), "P:6")
     lu.assertTrue(control:rowValidation(1).valid)
 
-    control:writeTarget(1, "P:7")
+    control:writeTarget(1, "P:5")
     lu.assertEquals(control:rowValidation(1).code, "feature_target_unavailable")
     local featureSnapshot = control:buildSnapshot()
-    lu.assertEquals(featureSnapshot.invalidRows[1].locationLabel, "Surface Chaos Gate Entry 1")
+    lu.assertEquals(featureSnapshot.invalidRows[1].locationLabel, "Surface Hermes Shrine Entry 1")
 
     control:writeBiome(1, "")
     lu.assertEquals(fields.Targets:read(1, "BiomeKey"), nil)
@@ -227,7 +215,7 @@ function TestRunPlannerRouteFeatures.testRouteContextDisablesFeatureTargetsWhenF
                                         routeOrdinal = 4,
                                         slotLabel = "Depth 4",
                                         option = { key = "P_Combat01", label = "C01" },
-                                        features = { chaos = true },
+                                        features = { surfaceShop = true },
                                         valid = true,
                                         roomHistoryCost = 1,
                                     },
@@ -244,8 +232,8 @@ function TestRunPlannerRouteFeatures.testRouteContextDisablesFeatureTargetsWhenF
 
     local targets = routeContext:featureTargets("Surface")
 
-    lu.assertNil(targets.byFeature.chaos)
-    lu.assertNil(targets.byFeatureBiome.chaos)
+    lu.assertNil(targets.byFeature.surfaceShop)
+    lu.assertNil(targets.byFeatureBiome.surfaceShop)
 end
 
 function TestRunPlannerRouteFeatures.testRouteFeaturesUsesShopDepthPolicy()

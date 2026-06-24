@@ -170,7 +170,6 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
         "RouteH",
         "RouteI",
         "RouteNpcsUnderworld",
-        "RouteFeatureChaosGateUnderworld",
         "RouteFeatureStygianWellUnderworld",
         "RouteGlobalSurface",
         "RouteN",
@@ -178,7 +177,6 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
         "RouteP",
         "RouteQ",
         "RouteNpcsSurface",
-        "RouteFeatureChaosGateSurface",
         "RouteFeatureHermesShrineSurface",
     })
     lu.assertEquals(data.routeControlTabs(catalog, testImport).Underworld, {
@@ -193,7 +191,6 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
             label = "Features",
             layer = "features",
             controlNames = {
-                "RouteFeatureChaosGateUnderworld",
                 "RouteFeatureStygianWellUnderworld",
             },
         },
@@ -210,7 +207,6 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
             label = "Features",
             layer = "features",
             controlNames = {
-                "RouteFeatureChaosGateSurface",
                 "RouteFeatureHermesShrineSurface",
             },
         },
@@ -221,7 +217,6 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
     lu.assertEquals(controls.RouteH.template, "FieldsCageRoute")
     lu.assertEquals(controls.RouteI.template, "ClockworkGoalRoute")
     lu.assertEquals(controls.RouteNpcsUnderworld.template, "RouteNpcs")
-    lu.assertEquals(controls.RouteFeatureChaosGateUnderworld.template, "RouteFeatures")
     lu.assertEquals(controls.RouteFeatureStygianWellUnderworld.template, "RouteFeatures")
     lu.assertEquals(controls.RouteGlobalSurface.template, "RouteGlobal")
     lu.assertEquals(controls.RouteN.template, "HubPylonRoute")
@@ -229,7 +224,6 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
     lu.assertEquals(controls.RouteP.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteQ.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteNpcsSurface.template, "RouteNpcs")
-    lu.assertEquals(controls.RouteFeatureChaosGateSurface.template, "RouteFeatures")
     lu.assertEquals(controls.RouteFeatureHermesShrineSurface.template, "RouteFeatures")
 end
 
@@ -532,7 +526,7 @@ function TestRunPlannerRouteUi.testRouteContextExposesTargetLayerInactiveRows()
     lu.assertTrue(routeContext:isTargetRowInactive(
         "Underworld",
         "features",
-        "RouteFeatureChaosGateUnderworld",
+        "RouteFeatureStygianWellUnderworld",
         1
     ))
 end
@@ -546,19 +540,19 @@ function TestRunPlannerRouteUi.testRouteContextOrdersFeatureTargetRows()
             valid = true,
             invalidRows = {},
         }),
-        RouteFeatureChaosGateUnderworld = fakeSnapshotControl({
-            controlName = "RouteFeatureChaosGateUnderworld",
+        RouteFeatureStygianWellUnderworld = fakeSnapshotControl({
+            controlName = "RouteFeatureStygianWellUnderworld",
             valid = false,
             invalidRows = {
                 {
-                    controlName = "RouteFeatureChaosGateUnderworld",
+                    controlName = "RouteFeatureStygianWellUnderworld",
                     rowIndex = 1,
                     message = "Feature conflict",
                 },
             },
         }),
-        RouteFeatureStygianWellUnderworld = fakeSnapshotControl({
-            controlName = "RouteFeatureStygianWellUnderworld",
+        RouteFeatureHermesShrineUnderworld = fakeSnapshotControl({
+            controlName = "RouteFeatureHermesShrineUnderworld",
             valid = true,
             invalidRows = {},
         }),
@@ -572,10 +566,10 @@ function TestRunPlannerRouteUi.testRouteContextOrdersFeatureTargetRows()
             },
         }),
         features = {
-            ordered = { "ChaosGate", "StygianWell" },
+            ordered = { "StygianWell", "HermesShrine" },
             byKey = {
-                ChaosGate = { key = "ChaosGate", biomes = { F = true } },
                 StygianWell = { key = "StygianWell", biomes = { F = true } },
+                HermesShrine = { key = "HermesShrine", biomes = { F = true } },
             },
         },
         controlResolver = function(controlName)
@@ -590,19 +584,19 @@ function TestRunPlannerRouteUi.testRouteContextOrdersFeatureTargetRows()
     lu.assertFalse(routeContext:isTargetRowInactive(
         "Underworld",
         "features",
-        "RouteFeatureChaosGateUnderworld",
+        "RouteFeatureStygianWellUnderworld",
         1
     ))
     lu.assertTrue(routeContext:isTargetRowInactive(
         "Underworld",
         "features",
-        "RouteFeatureChaosGateUnderworld",
+        "RouteFeatureStygianWellUnderworld",
         2
     ))
     lu.assertTrue(routeContext:isTargetRowInactive(
         "Underworld",
         "features",
-        "RouteFeatureStygianWellUnderworld",
+        "RouteFeatureHermesShrineUnderworld",
         1
     ))
 end
@@ -973,9 +967,9 @@ function TestRunPlannerRouteUi.testRouteTemplateViewsSupportNoOpUiTraversal()
 
     local routeFeaturesTemplate = loadRouteFeaturesTemplate()
     local routeFeaturesInstance = routeFeaturesTemplate.prepare({
-        name = "RouteFeatureChaosGateUnderworld",
+        name = "RouteFeatureStygianWellUnderworld",
         route = catalog.routes.lookup.Underworld,
-        feature = catalog.features.byKey.ChaosGate,
+        feature = catalog.features.byKey.StygianWell,
         biomeLookup = catalog.lookup,
     })
     local routeFeaturesControl = routeFeaturesTemplate.createUi(
@@ -1102,9 +1096,9 @@ function TestRunPlannerRouteUi.testRouteTemplateViewAllocationsStayBounded()
 
     local routeFeaturesTemplate = loadRouteFeaturesTemplate()
     local routeFeaturesInstance = routeFeaturesTemplate.prepare({
-        name = "RouteFeatureChaosGateUnderworld",
+        name = "RouteFeatureStygianWellUnderworld",
         route = catalog.routes.lookup.Underworld,
-        feature = catalog.features.byKey.ChaosGate,
+        feature = catalog.features.byKey.StygianWell,
         biomeLookup = catalog.lookup,
     })
     local routeFeaturesControl = routeFeaturesTemplate.createUi(
@@ -1242,9 +1236,9 @@ function TestRunPlannerRouteUi.testRouteTemplateViewCpuStaysBounded()
 
     local routeFeaturesTemplate = loadRouteFeaturesTemplate()
     local routeFeaturesInstance = routeFeaturesTemplate.prepare({
-        name = "RouteFeatureChaosGateUnderworld",
+        name = "RouteFeatureStygianWellUnderworld",
         route = catalog.routes.lookup.Underworld,
-        feature = catalog.features.byKey.ChaosGate,
+        feature = catalog.features.byKey.StygianWell,
         biomeLookup = catalog.lookup,
     })
     local routeFeaturesControl = routeFeaturesTemplate.createUi(

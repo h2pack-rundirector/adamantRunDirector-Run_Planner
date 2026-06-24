@@ -91,53 +91,8 @@ local function quietFeatureRouting(routePlan)
     })
 end
 
-function TestRunPlannerLogicFeatureRouting.testFeatureRoutingForcesPlannedChaosGate()
-    local row = plannedRoom(3, 4, "F_Combat04")
-    local plan = planWithFeatures({
-        room = row,
-        byFeatureKey = {
-            chaos = {
-                rows = {
-                    featureRow("chaos", row),
-                },
-            },
-        },
-    })
-    local runtime, routePlan = runtimeForPlan(plan)
-    local featureRouting = quietFeatureRouting(routePlan)
-    local currentRun = {
-        CurrentRoom = {
-            Name = "F_Combat04",
-            RoomSetName = "F",
-        },
-        BiomeDepthCache = 4,
-    }
-
-    local baseCalled = false
-    featureRouting.handleSecretSpawns(runtime, function()
-        baseCalled = true
-    end, currentRun)
-
-    lu.assertTrue(baseCalled)
-    lu.assertTrue(currentRun.CurrentRoom.ForceSecretDoor)
-end
-
-function TestRunPlannerLogicFeatureRouting.testFeatureRoutingSuppressesNaturalChaosAwayFromTarget()
-    local targetRow = plannedRoom(5, 6, "F_Combat06")
-    local currentRow = plannedRoom(3, 4, "F_Combat04")
-    local plan = planWithFeatures({
-        rooms = {
-            currentRow,
-            targetRow,
-        },
-        byFeatureKey = {
-            chaos = {
-                rows = {
-                    featureRow("chaos", targetRow),
-                },
-            },
-        },
-    })
+function TestRunPlannerLogicFeatureRouting.testFeatureRoutingSuppressesNaturalChaosInSecretSpawnHook()
+    local plan = planWithFeatures()
     local runtime, routePlan = runtimeForPlan(plan)
     local featureRouting = quietFeatureRouting(routePlan)
     local currentRun = {
@@ -149,8 +104,12 @@ function TestRunPlannerLogicFeatureRouting.testFeatureRoutingSuppressesNaturalCh
         BiomeDepthCache = 4,
     }
 
-    featureRouting.prepareRoomFeatures(runtime, currentRun)
+    local baseCalled = false
+    featureRouting.handleSecretSpawns(runtime, function()
+        baseCalled = true
+    end, currentRun)
 
+    lu.assertTrue(baseCalled)
     lu.assertFalse(currentRun.CurrentRoom.SecretChanceSuccess)
     lu.assertNil(currentRun.CurrentRoom.ForceSecretDoor)
 end
@@ -194,15 +153,15 @@ function TestRunPlannerLogicFeatureRouting.testFeatureRoutingForcesWellAndSuppre
     lu.assertFalse(currentRun.CurrentRoom.SurfaceShopChanceSuccess)
 end
 
-function TestRunPlannerLogicFeatureRouting.testFeatureRoutingLeavesVanillaWhenLayerDisabled()
+function TestRunPlannerLogicFeatureRouting.testFeatureRoutingLeavesShopFeaturesVanillaWhenLayerDisabled()
     local row = plannedRoom(3, 4, "F_Combat04")
     local plan = planWithFeatures({
         featuresLayer = false,
         room = row,
         byFeatureKey = {
-            chaos = {
+            wellShop = {
                 rows = {
-                    featureRow("chaos", row),
+                    featureRow("wellShop", row),
                 },
             },
         },
@@ -213,15 +172,15 @@ function TestRunPlannerLogicFeatureRouting.testFeatureRoutingLeavesVanillaWhenLa
         CurrentRoom = {
             Name = "F_Combat04",
             RoomSetName = "F",
-            SecretChanceSuccess = true,
+            WellShopChanceSuccess = true,
         },
         BiomeDepthCache = 4,
     }
 
     featureRouting.prepareRoomFeatures(runtime, currentRun)
 
-    lu.assertTrue(currentRun.CurrentRoom.SecretChanceSuccess)
-    lu.assertNil(currentRun.CurrentRoom.ForceSecretDoor)
+    lu.assertTrue(currentRun.CurrentRoom.WellShopChanceSuccess)
+    lu.assertNil(currentRun.CurrentRoom.ForceWellShop)
 end
 
 function TestRunPlannerLogicFeatureRouting.testFeatureRoutingCanTargetEphyraSideRooms()
