@@ -97,6 +97,22 @@ function rewards.forcedReward(rewardType, opts)
     return context
 end
 
+function rewards.clockworkChoice(rewardStore, opts)
+    opts = opts or {}
+    local context = {
+        kind = "clockworkChoice",
+        rewardStore = rewardStore,
+        goalRewardType = opts.goalRewardType,
+    }
+    if opts.eligibleRewardTypes ~= nil then
+        context.eligibleRewardTypes = copyList(opts.eligibleRewardTypes)
+    end
+    if opts.ineligibleRewardTypes ~= nil then
+        context.ineligibleRewardTypes = copyList(opts.ineligibleRewardTypes)
+    end
+    return context
+end
+
 function rewards.devotion()
     local context = rewards.forcedReward("Devotion")
     context.pick = routeRules.devotionPick()

@@ -3,7 +3,6 @@ local rewards = deps.rewards
 local layout = {}
 
 local WELL_SHOP_FEATURES = { wellShop = true }
-local COMBAT_REWARD = rewards.roomStore("TartarusRewards", { ineligibleRewardTypes = { "Boon" } })
 
 local function combatLabel(roomKey, exitCount)
     local exitLabel = exitCount == 1 and "1 Exit" or tostring(exitCount) .. " Exits"
@@ -18,7 +17,7 @@ local function combatRoom(roomKey, exitCount, opts)
         exitCount = exitCount,
         supportsExtensionChoice = exitCount > 1,
         features = opts.features or WELL_SHOP_FEATURES,
-        reward = opts.reward or COMBAT_REWARD,
+        reward = opts.reward,
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
         maxCreationsThisRun = opts.maxCreationsThisRun or 1,

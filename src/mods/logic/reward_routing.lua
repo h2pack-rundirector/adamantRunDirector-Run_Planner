@@ -426,18 +426,31 @@ local function fieldsCageRewardItemForCall(row, room, args)
     return nil
 end
 
-local function tartarusRewardApplies(row, previouslyChosenRewards, phase)
+local function itemRewardType(item)
+    if item == nil then
+        return nil
+    end
+    if item.kind == "fixedReward" then
+        return item.fixedRewardType or rewardValue(item, 1)
+    elseif item.kind == "roomStore" then
+        return pickValue(item, "rewardType") or rewardValue(item, 1)
+    end
+    return nil
+end
+
+local function tartarusRewardApplies(row, item, previouslyChosenRewards, phase)
     if phase == "store" then
+        return true
+    end
+    if row == nil or row.roleKey ~= "Combat" then
         return true
     end
 
     local firstReward = rewardListEmpty(previouslyChosenRewards)
-    if row and row.roleKey == "Goal" then
+    if itemRewardType(item) == "ClockworkGoal" then
         return firstReward
-    elseif row and row.roleKey == "ExtensionCombat" then
-        return not firstReward
     end
-    return true
+    return not firstReward
 end
 
 local function plannedRewardItemForCall(row, context, currentRun, room, previouslyChosenRewards, phase, args)
@@ -469,11 +482,12 @@ local function plannedRewardItemForCall(row, context, currentRun, room, previous
         end
     end
 
-    if context.biomeKey == "I" and not tartarusRewardApplies(row, previouslyChosenRewards, phase) then
+    local item = plannedDefaultRewardItem(row)
+    if context.biomeKey == "I" and not tartarusRewardApplies(row, item, previouslyChosenRewards, phase) then
         return nil
     end
 
-    return plannedDefaultRewardItem(row)
+    return item
 end
 
 local function boonSourceForItem(item, rewardType)

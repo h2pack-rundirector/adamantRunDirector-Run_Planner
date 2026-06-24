@@ -42,17 +42,16 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalStorageMatchesTartaru
     lu.assertEquals(instance.routeSlots[14].roomOptions[2].key, "I_PreBoss02")
     lu.assertEquals(instance.roleValues, {
         "Vanilla",
-        "Goal",
-        "ExtensionCombat",
+        "Combat",
         "Story",
         "Fountain",
         "Miniboss",
     })
-    lu.assertEquals(instance.roleLabels.Goal, "Goal Room")
-    lu.assertEquals(instance.optionValuesByRole.Goal[1], "")
-    lu.assertEquals(instance.optionValuesByRole.Goal[2], "I_Combat01")
-    lu.assertNil(instance.rolesByKey.Goal.mapOptions[1].reward)
-    lu.assertEquals(instance.optionValuesByRole.ExtensionCombat[1], "")
+    lu.assertEquals(instance.roleLabels.Combat, "Combat")
+    lu.assertEquals(instance.optionValuesByRole.Combat[1], "")
+    lu.assertEquals(instance.optionValuesByRole.Combat[2], "I_Combat01")
+    lu.assertEquals(instance.rolesByKey.Combat.reward.kind, "clockworkChoice")
+    lu.assertNil(instance.rolesByKey.Combat.mapOptions[1].reward)
     lu.assertEquals(instance.optionValuesByRole.Story, { "I_Story01" })
     lu.assertEquals(instance.optionValuesByRole.Fountain, { "I_Reprieve01" })
     lu.assertEquals(instance.optionValuesByRole.Miniboss, {
@@ -86,16 +85,19 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalForcesFirstRouteRowFr
     })
     local staleFirstStep = fakeRows({
         {},
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat01" },
+        { RoleKey = "Story", OptionKey = "I_Story01", Reward1Key = "MaxHealthDrop" },
     })
 
-    lu.assertEquals(data.readRoleKey(instance, blankFirstStep, 2), "Goal")
-    lu.assertEquals(data.readRoleKey(instance, staleFirstStep, 2), "Goal")
+    lu.assertEquals(data.readRoleKey(instance, blankFirstStep, 2), "Combat")
+    lu.assertEquals(data.readRoleKey(instance, staleFirstStep, 2), "Combat")
     lu.assertEquals(data.roleValuesForRow(instance, blankFirstStep, 2), {
-        "Goal",
+        "Combat",
     })
-    lu.assertEquals(data.optionValuesForRow(instance, blankFirstStep, 2, "ExtensionCombat"), {})
-    lu.assertEquals(data.optionValuesForRow(instance, blankFirstStep, 2, "Goal")[2], "I_Combat01")
+    lu.assertEquals(data.optionValuesForRow(instance, blankFirstStep, 2, "Story"), {})
+    lu.assertEquals(data.optionValuesForRow(instance, blankFirstStep, 2, "Combat")[2], "I_Combat01")
+    local rewardContext = data.rewardContext(instance, blankFirstStep, 2, instance.rolesByKey.Combat)
+    lu.assertEquals(rewardContext.kind, "forcedReward")
+    lu.assertEquals(rewardContext.rewardType, "ClockworkGoal")
 end
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalCombatRoomsCannotRepeatAcrossGoalAndExtension()
@@ -107,8 +109,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalCombatRoomsCannotRepe
     })
     local rows = fakeRows({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", OptionKey = "I_Combat01" },
     })
 
     lu.assertTrue(data.validateRow(instance, rows, 2).valid)
@@ -116,7 +118,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalCombatRoomsCannotRepe
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "option_limit")
     lu.assertEquals(
-        data.optionValueStatesForRow(instance, rows, 3, "ExtensionCombat").I_Combat01,
+        data.optionValueStatesForRow(instance, rows, 3, "Combat").I_Combat01,
         valueStates.INVALID
     )
 end
@@ -130,16 +132,16 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRuntimeBuildsValidate
     })
     local control = template.createRuntime(routeFields({
             {},
-            { RoleKey = "Goal", OptionKey = "I_Combat01" },
-            { RoleKey = "ExtensionCombat", OptionKey = "I_Combat03", Reward1Key = "MaxHealthDrop" },
-            { RoleKey = "Goal", OptionKey = "I_Combat04" },
-            { RoleKey = "ExtensionCombat", OptionKey = "I_Combat09" },
-            { RoleKey = "Goal", OptionKey = "I_Combat10" },
-            { RoleKey = "ExtensionCombat", OptionKey = "I_Combat11" },
-            { RoleKey = "ExtensionCombat", OptionKey = "I_Combat12" },
-            { RoleKey = "Goal", OptionKey = "I_Combat15" },
-            { RoleKey = "Goal", OptionKey = "I_Combat18" },
-            { RoleKey = "ExtensionCombat", OptionKey = "I_Combat21" },
+            { RoleKey = "Combat", OptionKey = "I_Combat01" },
+            { RoleKey = "Combat", OptionKey = "I_Combat03", Reward1Key = "MaxHealthDrop" },
+            { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat04" },
+            { RoleKey = "Combat", OptionKey = "I_Combat09", Reward1Key = "MaxHealthDrop" },
+            { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat10" },
+            { RoleKey = "Combat", OptionKey = "I_Combat11", Reward1Key = "MaxHealthDrop" },
+            { RoleKey = "Combat", OptionKey = "I_Combat12", Reward1Key = "MaxHealthDrop" },
+            { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat15" },
+            { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat18" },
+            { RoleKey = "Combat", OptionKey = "I_Combat21", Reward1Key = "MaxHealthDrop" },
             { RoleKey = "Story", OptionKey = "I_Story01" },
             {},
             {},
@@ -165,14 +167,14 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRuntimeBuildsValidate
 
     lu.assertEquals(snapshot.rows[2].slotKind, "biomeRow")
     lu.assertEquals(snapshot.rows[2].routeOrdinal, 1)
-    lu.assertEquals(snapshot.rows[2].roleKey, "Goal")
+    lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[2].optionKey, "I_Combat01")
     lu.assertEquals(snapshot.rows[2].roomKey, "I_Combat01")
     lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardKind, "fixedReward")
     lu.assertTrue(snapshot.rows[2].countsGoalReward)
     lu.assertFalse(snapshot.rows[2].countsNonGoalReward)
 
-    lu.assertEquals(snapshot.rows[3].roleKey, "ExtensionCombat")
+    lu.assertEquals(snapshot.rows[3].roleKey, "Combat")
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardKind, "roomStore")
     lu.assertFalse(snapshot.rows[3].countsGoalReward)
     lu.assertTrue(snapshot.rows[3].countsNonGoalReward)
@@ -204,9 +206,9 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalCombatCanSelectDevoti
     })
     local control = template.createRuntime(routeFields({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", OptionKey = "I_Combat01" },
         {
-            RoleKey = "ExtensionCombat",
+            RoleKey = "Combat",
             OptionKey = "I_Combat03",
             Reward1Key = "Devotion",
             Reward3Key = "ZeusUpgrade",
@@ -215,7 +217,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalCombatCanSelectDevoti
     }), instance)
     local snapshot = control:buildSnapshot()
 
-    lu.assertEquals(snapshot.rows[3].roleKey, "ExtensionCombat")
+    lu.assertEquals(snapshot.rows[3].roleKey, "Combat")
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardKind, "roomStore")
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[1].key, "rewardType")
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[1].value, "Devotion")
@@ -234,9 +236,9 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalInvalidatesDuplicateT
     })
     local control = template.createRuntime(routeFields({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat01" },
         {
-            RoleKey = "ExtensionCombat",
+            RoleKey = "Combat",
             OptionKey = "I_Combat03",
             Reward1Key = "Devotion",
             Reward3Key = "ZeusUpgrade",
@@ -263,7 +265,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
 
     local storyAfterOneExit = fakeRows({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat02" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat02" },
         { RoleKey = "Story", OptionKey = "I_Story01" },
     })
     local validation = data.validateRow(instance, storyAfterOneExit, 3)
@@ -276,8 +278,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
 
     local extensionAfterOneExit = fakeRows({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat02" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat03" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat02" },
+        { RoleKey = "Combat", OptionKey = "I_Combat03", Reward1Key = "MaxHealthDrop" },
     })
     validation = data.validateRow(instance, extensionAfterOneExit, 3)
     lu.assertFalse(validation.valid)
@@ -285,22 +287,22 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
 
     local rolesAfterTwoExit = data.roleValuesForRow(instance, fakeRows({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat01" },
         {},
     }), 3)
-    lu.assertTrue(hasValue(rolesAfterTwoExit, "ExtensionCombat"))
+    lu.assertTrue(hasValue(rolesAfterTwoExit, "Combat"))
     lu.assertTrue(hasValue(rolesAfterTwoExit, "Story"))
 
     local seventhExtension = fakeRows({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat03" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat04" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat09" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat10" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat11" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat12" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat18" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", OptionKey = "I_Combat03", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat04", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat09", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat10", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat11", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat12", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat18", Reward1Key = "MaxHealthDrop" },
     })
     validation = data.validateRow(instance, seventhExtension, 9)
     lu.assertFalse(validation.valid)
@@ -308,60 +310,60 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
 
     local finalExtensionTwoExit = fakeRows({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat03" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat04" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat09" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat10" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat11" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat12" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", OptionKey = "I_Combat03", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat04", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat09", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat10", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat11", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat12", Reward1Key = "MaxHealthDrop" },
     })
     validation = data.validateRow(instance, finalExtensionTwoExit, 8)
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "option_unavailable")
-    local finalExtensionOptions = data.optionValuesForRow(instance, finalExtensionTwoExit, 8, "ExtensionCombat")
+    local finalExtensionOptions = data.optionValuesForRow(instance, finalExtensionTwoExit, 8, "Combat")
     lu.assertTrue(hasValue(finalExtensionOptions, "I_Combat12"))
     lu.assertTrue(hasValue(finalExtensionOptions, "I_Combat13"))
-    lu.assertNotNil(data.optionValueStatesForRow(instance, finalExtensionTwoExit, 8, "ExtensionCombat").I_Combat12)
-    lu.assertNil(data.optionValueStatesForRow(instance, finalExtensionTwoExit, 8, "ExtensionCombat").I_Combat13)
+    lu.assertNotNil(data.optionValueStatesForRow(instance, finalExtensionTwoExit, 8, "Combat").I_Combat12)
+    lu.assertNil(data.optionValueStatesForRow(instance, finalExtensionTwoExit, 8, "Combat").I_Combat13)
 
     local finalExtensionOneExit = fakeRows({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat03" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat04" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat09" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat10" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat11" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat13" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", OptionKey = "I_Combat03", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat04", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat09", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat10", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat11", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat13", Reward1Key = "MaxHealthDrop" },
     })
     validation = data.validateRow(instance, finalExtensionOneExit, 8)
     lu.assertTrue(validation.valid)
 
     local sixthGoal = fakeRows({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
-        { RoleKey = "Goal", OptionKey = "I_Combat03" },
-        { RoleKey = "Goal", OptionKey = "I_Combat04" },
-        { RoleKey = "Goal", OptionKey = "I_Combat09" },
-        { RoleKey = "Goal", OptionKey = "I_Combat10" },
-        { RoleKey = "Goal", OptionKey = "I_Combat11" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat03" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat04" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat09" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat10" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat11" },
     })
     validation = data.validateRow(instance, sixthGoal, 7)
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "clockwork_goal_limit")
-    lu.assertEquals(data.readRoleKey(instance, sixthGoal, 7), "Goal")
+    lu.assertEquals(data.readRoleKey(instance, sixthGoal, 7), "Combat")
     local postGoalRoles = data.roleValuesForRow(instance, sixthGoal, 7)
-    lu.assertTrue(hasValue(postGoalRoles, "Goal"))
+    lu.assertTrue(hasValue(postGoalRoles, "Combat"))
     lu.assertTrue(hasValue(postGoalRoles, "Story"))
-    lu.assertNotNil(data.roleValueStatesForRow(instance, sixthGoal, 7).Goal)
+    lu.assertNotNil(data.roleValueStatesForRow(instance, sixthGoal, 7).Combat)
 
     local missingGoal = fakeRows({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
-        { RoleKey = "Goal", OptionKey = "I_Combat03" },
-        { RoleKey = "Goal", OptionKey = "I_Combat04" },
-        { RoleKey = "Goal", OptionKey = "I_Combat09" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat03" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat04" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat09" },
         {},
     })
     validation = data.validateRow(instance, missingGoal, 14)
@@ -378,10 +380,10 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalLateVanillaRowIsValid
     })
     local rows = fakeRows({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
-        { RoleKey = "Goal", OptionKey = "I_Combat03" },
-        { RoleKey = "Goal", OptionKey = "I_Combat04" },
-        { RoleKey = "Goal", OptionKey = "I_Combat09" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat03" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat04" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat09" },
         { RoleKey = "Vanilla" },
         { RoleKey = "Vanilla" },
         { RoleKey = "Vanilla" },
@@ -411,13 +413,13 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalAllowsPostGoalExtensi
     })
     local rowData = {
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
-        { RoleKey = "Goal", OptionKey = "I_Combat03" },
-        { RoleKey = "Goal", OptionKey = "I_Combat04" },
-        { RoleKey = "Goal", OptionKey = "I_Combat09" },
-        { RoleKey = "Goal", OptionKey = "I_Combat10" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat03" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat04" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat09" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat10" },
         { RoleKey = "Story", OptionKey = "I_Story01" },
-        { RoleKey = "ExtensionCombat", OptionKey = "I_Combat12", Reward1Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "I_Combat12", Reward1Key = "MaxHealthDrop" },
         {},
         {},
         {},
@@ -432,8 +434,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalAllowsPostGoalExtensi
     lu.assertFalse(data.isInactiveRouteRow(instance, rows, 7))
     lu.assertTrue(data.validateRow(instance, rows, 7).valid)
     local postGoalRoles = data.roleValuesForRow(instance, rows, 7)
-    lu.assertTrue(hasValue(postGoalRoles, "Goal"))
-    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 7).Goal)
+    lu.assertTrue(hasValue(postGoalRoles, "Combat"))
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 7).Combat)
     lu.assertTrue(hasValue(postGoalRoles, "Story"))
 
     lu.assertEquals(data.readRoleKey(instance, rows, 8), "Vanilla")
@@ -472,11 +474,11 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTerminatesAfterOneExi
     })
     local rows = fakeRows({
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
-        { RoleKey = "Goal", OptionKey = "I_Combat03" },
-        { RoleKey = "Goal", OptionKey = "I_Combat04" },
-        { RoleKey = "Goal", OptionKey = "I_Combat09" },
-        { RoleKey = "Goal", OptionKey = "I_Combat02" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat03" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat04" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat09" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat02" },
         { RoleKey = "Story", OptionKey = "I_Story01" },
         {},
     })
@@ -500,16 +502,20 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRoomViewHidesInactive
     local fields = routeUiFields(template.storage(instance))
     local rowData = {
         {},
-        { RoleKey = "Goal", OptionKey = "I_Combat01" },
-        { RoleKey = "Goal", OptionKey = "I_Combat03" },
-        { RoleKey = "Goal", OptionKey = "I_Combat04" },
-        { RoleKey = "Goal", OptionKey = "I_Combat09" },
-        { RoleKey = "Goal", OptionKey = "I_Combat02" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat01" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat03" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat04" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat09" },
+        { RoleKey = "Combat", Reward1Key = "ClockworkGoal", OptionKey = "I_Combat02" },
         { RoleKey = "Story", OptionKey = "I_Story01" },
     }
     for rowIndex, row in ipairs(rowData) do
         for alias, value in pairs(row) do
-            fields.Rooms:get(rowIndex, alias):write(value)
+            if string.match(alias, "^Reward") then
+                fields.Rewards:get(rowIndex, alias):write(value)
+            else
+                fields.Rooms:get(rowIndex, alias):write(value)
+            end
         end
     end
 
@@ -526,4 +532,28 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRoomViewHidesInactive
     lu.assertTrue(rendered["Step 5"])
     lu.assertNil(rendered["Step 6"])
     lu.assertNil(rendered["Step 12"])
+end
+
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalRewardViewShowsForcedFirstReward()
+    local catalog = loadCatalog()
+    local template = loadClockworkGoalTemplate()
+    local instance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(2, "RoleKey"):write("Combat")
+    fields.Rooms:get(2, "OptionKey"):write("I_Combat01")
+
+    local control = template.createUi(fields, instance)
+    local draw = noOpDraw()
+    local rendered = {}
+    draw.imgui.Text = function(text)
+        rendered[tostring(text)] = true
+    end
+
+    template.views.rewards(draw, control, instance)
+
+    lu.assertTrue(rendered.Combat)
+    lu.assertTrue(rendered["Clockwork Goal"])
 end

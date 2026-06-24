@@ -292,7 +292,7 @@ function TestRunPlannerLogicRoomRouting.testRoomRoutingSupportsTartarusClockwork
                 biomeDepthCacheCost = 1,
                 slotKind = "biomeRow",
                 roomKey = "I_Combat03",
-                roleKey = "Goal",
+                roleKey = "Combat",
                 optionKey = "I_Combat03",
                 valid = true,
             },

@@ -379,6 +379,57 @@ function TestRunPlannerRouteNpcs.testRouteContextDisablesNpcTargetsWhenRewardsAr
     lu.assertNil(targets.byNpcBiome.Artemis)
 end
 
+function TestRunPlannerRouteNpcs.testRouteContextTargetsNemesisOnTartarusClockworkCombat()
+    local catalog = loadCatalog()
+    local route = {
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "I" },
+    }
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        biomes = catalog.lookup,
+        npcs = catalog.npcs,
+        controlResolver = function(controlName)
+            if controlName == "RouteI" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                controlName = "RouteI",
+                                valid = true,
+                                invalidRows = {},
+                                rows = normalizeRewardRows({
+                                    {
+                                        rowIndex = 5,
+                                        routeOrdinal = 4,
+                                        slotLabel = "Step 4",
+                                        roleKey = "Combat",
+                                        option = { key = "I_Combat09", label = "C09" },
+                                        biomeDepthCache = 4,
+                                        biomeEncounterDepthMin = 4,
+                                        biomeEncounterDepthMax = 4,
+                                        valid = true,
+                                        rewardKind = "fixedReward",
+                                        fixedRewardType = "ClockworkGoal",
+                                    },
+                                }),
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return nil
+        end,
+    })
+
+    local targets = routeContext:npcTargets("Underworld")
+
+    lu.assertNotNil(targets.byNpc.Nemesis.lookup["I:5:Combat"])
+    lu.assertEquals(targets.byNpc.Nemesis.displayValues["I:5:Combat"], "Tartarus Step 4 - C09 [Combat]")
+end
+
 function TestRunPlannerRouteNpcs.testRouteContextUsesRoomHistoryTimelineForNpcTargets()
     local catalog = loadCatalog()
     local hubTemplate = loadHubPylonTemplate()

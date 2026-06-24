@@ -139,7 +139,7 @@ local function drawGroupedControls(draw, surface, fields, opts)
 end
 
 function ui.draw(draw, surface, fields, opts)
-    if runtime ~= nil and not runtime.hasControls(surface) then
+    if runtime ~= nil and not runtime.hasDisplay(surface) then
         return false
     end
     if surface == nil or fields == nil then
@@ -149,6 +149,11 @@ function ui.draw(draw, surface, fields, opts)
     local drew = false
     local changed = false
     local imgui = draw.imgui
+    if surface.displayLabel ~= nil then
+        imgui.AlignTextToFramePadding()
+        imgui.Text(tostring(surface.displayLabel))
+        return false
+    end
     if hasGroupedRows(surface) then
         return drawGroupedControls(draw, surface, fields, opts)
     end

@@ -21,21 +21,11 @@ local function createRouteRows(fields)
     }
 end
 
-local function rewardContext(role, option)
-    if role ~= nil and role.reward ~= nil and role.reward.kind == "forcedReward" then
-        return role.reward
-    end
-    if option ~= nil and option.reward ~= nil then
-        return option.reward
-    end
-    return role and role.reward or nil
-end
-
-local function rewardSurface(role, option)
+local function rewardSurface(instance, rows, rowIndex, role, option)
     if rewardSystem == nil or role == nil then
         return nil
     end
-    return rewardSystem.surfaceFor(rewardContext(role, option))
+    return rewardSystem.surfaceFor(data.rewardContext(instance, rows, rowIndex, role, option))
 end
 
 local function routeRewardValidation(instance, rowIndex)
@@ -45,19 +35,24 @@ local function routeRewardValidation(instance, rowIndex)
     return nil
 end
 
-local function prewarmRewardSurface(role, option)
-    rewardSurface(role, option)
+local function prewarmRewardSurface(instance, routeRows, rowIndex, role, option)
+    rewardSurface(instance, routeRows, rowIndex, role, option)
 end
 
 local function prewarmRewardSurfaces(instance)
+    local routeRows = {
+        read = function()
+            return ""
+        end,
+    }
     for _, role in ipairs(instance.roles or {}) do
-        prewarmRewardSurface(role)
+        prewarmRewardSurface(instance, routeRows, 1, role)
         for _, option in ipairs(data.optionListForRole(role)) do
-            prewarmRewardSurface(role, option)
+            prewarmRewardSurface(instance, routeRows, 1, role, option)
         end
     end
     for _, slot in ipairs(instance.routeSlots or {}) do
-        prewarmRewardSurface(slot.role)
+        prewarmRewardSurface(instance, routeRows, slot.rowIndex or 1, slot.role)
     end
 end
 
@@ -147,7 +142,8 @@ function runtime.create(fields, instance)
     end
 
     function control:rewardSurface(rowIndex)
-        return rewardSurface(self:role(rowIndex), self:option(rowIndex))
+        local role = self:role(rowIndex)
+        return rewardSurface(instance, routeRows, rowIndex, role, self:option(rowIndex))
     end
 
     function control:rewardsConfigured()
@@ -195,8 +191,10 @@ function runtime.create(fields, instance)
         local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
         local validation = self:rowValidation(rowIndex)
         local rewardsConfigured = self:rewardsConfigured()
-        local surface = rewardsConfigured and rewardSurface(role, option) or nil
+        local surface = rewardsConfigured and rewardSurface(instance, routeRows, rowIndex, role, option) or nil
         local context = data.rowContext(instance, routeRows, rowIndex)
+        local rewards = rewardsConfigured and rewardSystem.readRewards(fields.Rewards, rowIndex) or EMPTY_LIST
+        local rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST
         local row = {
             rowIndex = rowIndex,
             routeOrdinal = slot.routeOrdinal,
@@ -220,14 +218,14 @@ function runtime.create(fields, instance)
             optionKey = optionKey,
             option = option,
             features = data.rowFeatures(slot, role, option),
-            countsGoalReward = data.rowCountsGoalReward(role, option),
-            countsNonGoalReward = data.rowCountsNonGoalReward(role, option),
+            countsGoalReward = data.rowCountsGoalReward(instance, routeRows, rowIndex, role, option),
+            countsNonGoalReward = data.rowCountsNonGoalReward(instance, routeRows, rowIndex, role, option),
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
-            rewards = rewardsConfigured and rewardSystem.readRewards(fields.Rewards, rowIndex) or EMPTY_LIST,
-            rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
+            rewards = rewards,
+            rewardLoot = rewardLoot,
             rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
             rewardConstraints = surface and surface.rewardConstraints or nil,
             rewardPicks = rewardsConfigured

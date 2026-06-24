@@ -59,6 +59,7 @@ function rewardSystem.create(opts)
 
         draw = ui.draw,
         hasControls = runtime.hasControls,
+        hasDisplay = runtime.hasDisplay,
         snapshot = runtime.snapshot,
         surfaceFor = runtime.surfaceFor,
 

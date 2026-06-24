@@ -105,7 +105,7 @@ local function drawSideRoomRow(draw, control, instance, rowIndex)
         local surface = sideDoor ~= nil and rewardSystem and rewardSystem.surfaceFor(sideDoor.reward) or nil
         if mode == data.sideRoomEnabledMode()
             and rewardSystem ~= nil
-            and rewardSystem.hasControls(surface)
+            and rewardSystem.hasDisplay(surface)
         then
             draw.imgui.SameLine()
             draw.imgui.SetCursorPosX(SIDE_REWARD_COLUMN_X)

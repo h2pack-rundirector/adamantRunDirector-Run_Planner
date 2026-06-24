@@ -95,7 +95,7 @@ local function drawEncounterRewardRows(draw, control, instance, rowIndex)
         if encounterRewardRowIndex ~= nil
             and rewardSystem ~= nil
             and rewardSystem ~= nil
-            and rewardSystem.hasControls(legSurface)
+        and rewardSystem.hasDisplay(legSurface)
         then
             if legIndex == 1 then
                 imgui.SameLine()
@@ -132,7 +132,7 @@ local function drawRewardRow(draw, control, instance, rowIndex)
 
     if rewardSystem ~= nil
         and rewardSystem ~= nil
-        and rewardSystem.hasControls(surface)
+        and rewardSystem.hasDisplay(surface)
     then
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)

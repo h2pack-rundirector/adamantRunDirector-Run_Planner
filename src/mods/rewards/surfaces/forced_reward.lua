@@ -47,6 +47,7 @@ function forcedReward.create(definitions, context)
         kind = "fixedReward",
         context = context,
         fixedRewardType = context.rewardType,
+        displayLabel = common.rewardOptionLabel(definitions, context.rewardType),
         controls = {},
     }
 end

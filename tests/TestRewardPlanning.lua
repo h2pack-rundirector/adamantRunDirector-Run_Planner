@@ -475,11 +475,11 @@ function TestRunPlannerRewardPlanning.testRouteContextDevotionRewardUsesPriorUnd
     local iControl = template.createRuntime(routeFields({
         {},
         {
-            RoleKey = "Goal",
+            RoleKey = "Combat",
             OptionKey = "I_Combat01",
         },
         {
-            RoleKey = "ExtensionCombat",
+            RoleKey = "Combat",
             OptionKey = "I_Combat03",
             Reward1Key = "Devotion",
             Reward3Key = "ZeusUpgrade",
@@ -571,11 +571,11 @@ function TestRunPlannerRewardPlanning.testRouteContextScopesPriorGodLootByRoute(
     local iControl = template.createRuntime(routeFields({
         {},
         {
-            RoleKey = "Goal",
+            RoleKey = "Combat",
             OptionKey = "I_Combat01",
         },
         {
-            RoleKey = "ExtensionCombat",
+            RoleKey = "Combat",
             OptionKey = "I_Combat03",
             Reward1Key = "Devotion",
             Reward3Key = "ZeusUpgrade",

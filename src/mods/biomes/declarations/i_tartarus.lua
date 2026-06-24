@@ -3,6 +3,7 @@ return function(importer, deps)
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules
+    local clockworkGoalReward = "ClockworkGoal"
 
     return {
         key = "I",
@@ -52,23 +53,15 @@ return function(importer, deps)
             },
         },
         clockwork = {
-            forcedFirstRouteRole = "Goal",
+            forcedFirstRouteRole = "Combat",
             routeCounters = {
                 clockworkGoal = {
                     maxCreationsThisRun = 5,
+                    rewardType = clockworkGoalReward,
                 },
                 clockworkNonGoalReward = {
                     maxCreationsThisRun = 6,
                 },
-            },
-            goalRoom = {
-                roomOptions = layout.combatRooms,
-                reward = rewards.forcedReward("ClockworkGoal"),
-                increments = { clockworkGoal = 1 },
-            },
-            extensionRoom = {
-                combatOptions = layout.combatRooms,
-                specialOptions = layout.specialExtensionRooms,
             },
         },
         roles = {
@@ -79,20 +72,13 @@ return function(importer, deps)
                 biomeEncounterDepthCost = routeRules.encounterDepthCost(0, 1),
             },
             {
-                key = "Goal",
-                label = "Goal Room",
-                mapOptions = layout.combatRooms,
-                reward = rewards.forcedReward("ClockworkGoal"),
-                increments = { clockworkGoal = 1 },
-                biomeEncounterDepthCost = 1,
-            },
-            {
-                key = "ExtensionCombat",
+                key = "Combat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,
-                reward = rewards.roomStore("TartarusRewards", { ineligibleRewardTypes = { "Boon" } }),
-                increments = { clockworkNonGoalReward = 1 },
-                requiresPrevious = { supportsExtensionChoice = true },
+                reward = rewards.clockworkChoice("TartarusRewards", {
+                    goalRewardType = clockworkGoalReward,
+                    ineligibleRewardTypes = { "Boon" },
+                }),
                 biomeEncounterDepthCost = 1,
             },
             {

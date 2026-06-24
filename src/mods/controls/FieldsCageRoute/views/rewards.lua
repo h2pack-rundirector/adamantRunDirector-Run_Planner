@@ -87,7 +87,7 @@ local function drawRewardRow(draw, control, instance, rowIndex)
 
     if rewardSystem ~= nil
         and rewardSystem ~= nil
-        and rewardSystem.hasControls(surface)
+        and rewardSystem.hasDisplay(surface)
         and (control:rewardSourceCount(rowIndex) or 1) > 0
     then
         imgui.SameLine()

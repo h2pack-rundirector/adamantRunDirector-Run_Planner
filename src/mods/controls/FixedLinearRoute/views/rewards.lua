@@ -72,7 +72,7 @@ local function drawRewardRow(draw, control, rowIndex)
     drawRewardRowHeader(imgui, control, rowIndex, slot)
     if rewardSystem ~= nil
         and rewardSystem ~= nil
-        and rewardSystem.hasControls(surface)
+        and rewardSystem.hasDisplay(surface)
     then
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)

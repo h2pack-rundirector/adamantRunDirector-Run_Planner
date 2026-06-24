@@ -11,6 +11,10 @@ local majorMinor = import("mods/rewards/surfaces/major_minor.lua", nil, {
     constraints = constraints,
 })
 local builders = {
+    clockworkChoice = import("mods/rewards/surfaces/clockwork_choice.lua", nil, {
+        common = common,
+        constraints = constraints,
+    }),
     fieldsCages = import("mods/rewards/surfaces/fields_cages.lua", nil, {
         common = common,
         constraints = constraints,

@@ -86,4 +86,8 @@ function runtime.hasControls(surface)
     return surface ~= nil and surface.controls ~= nil and surface.controls[1] ~= nil
 end
 
+function runtime.hasDisplay(surface)
+    return runtime.hasControls(surface) or (surface ~= nil and surface.displayLabel ~= nil)
+end
+
 return runtime
