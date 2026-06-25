@@ -8,16 +8,32 @@ local majorMinor = {}
 function majorMinor.create(definitions, context)
     local majorRewardStore = context.majorRewardStore or "RunProgress"
     local minorRewardStore = context.minorRewardStore or "MetaProgress"
-    local majorEligible = common.lookupList(context.majorEligibleRewardTypes or context.eligibleRewardTypes)
-    local majorIneligible = common.lookupListWithDefaultBan(
-        context.majorIneligibleRewardTypes or context.ineligibleRewardTypes,
-        "Devotion",
-        context.allowDevotion ~= true
+    local majorEligible = common.rewardTypeLookup(
+        definitions,
+        context.majorEligibleRewardTypes or context.eligibleRewardTypes,
+        context.majorEligibleRewardSet or context.eligibleRewardSet
     )
-    local minorEligible = common.lookupList(context.minorEligibleRewardTypes)
-    local minorIneligible = common.lookupList(context.minorIneligibleRewardTypes)
+    local majorIneligible = common.rewardTypeLookup(
+        definitions,
+        context.majorIneligibleRewardTypes or context.ineligibleRewardTypes,
+        context.majorIneligibleRewardSet or context.ineligibleRewardSet
+    )
+    if context.allowDevotion ~= true then
+        majorIneligible = majorIneligible or {}
+        majorIneligible.Devotion = true
+    end
+    local minorEligible = common.rewardTypeLookup(
+        definitions,
+        context.minorEligibleRewardTypes,
+        context.minorEligibleRewardSet
+    )
+    local minorIneligible = common.rewardTypeLookup(
+        definitions,
+        context.minorIneligibleRewardTypes,
+        context.minorIneligibleRewardSet
+    )
     local majorValues, majorLabels = common.uniqueNames(
-        common.bundleOptions(definitions, majorRewardStore),
+        common.optionsFor(definitions, majorRewardStore),
         majorEligible,
         majorIneligible,
         function(name)
@@ -25,7 +41,7 @@ function majorMinor.create(definitions, context)
         end
     )
     local minorValues, minorLabels = common.uniqueNames(
-        common.bundleOptions(definitions, minorRewardStore),
+        common.optionsFor(definitions, minorRewardStore),
         minorEligible,
         minorIneligible,
         function(name)
@@ -36,8 +52,8 @@ function majorMinor.create(definitions, context)
     local rewardClassValues = { common.VANILLA_VALUE, common.MAJOR_VALUE, common.MINOR_VALUE }
     local rewardClassLabels = {
         [common.VANILLA_VALUE] = "Vanilla",
-        [common.MAJOR_VALUE] = common.bundleLabel(definitions, majorRewardStore, common.MAJOR_VALUE),
-        [common.MINOR_VALUE] = common.bundleLabel(definitions, minorRewardStore, common.MINOR_VALUE),
+        [common.MAJOR_VALUE] = common.optionsLabel(definitions, majorRewardStore, common.MAJOR_VALUE),
+        [common.MINOR_VALUE] = common.optionsLabel(definitions, minorRewardStore, common.MINOR_VALUE),
     }
 
     return {

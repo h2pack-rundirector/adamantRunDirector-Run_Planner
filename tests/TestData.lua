@@ -35,6 +35,12 @@ local function roomStoreReward(rewardStore, opts)
     if opts.ineligibleRewardTypes ~= nil then
         reward.ineligibleRewardTypes = opts.ineligibleRewardTypes
     end
+    if opts.eligibleRewardSet ~= nil then
+        reward.eligibleRewardSet = opts.eligibleRewardSet
+    end
+    if opts.ineligibleRewardSet ~= nil then
+        reward.ineligibleRewardSet = opts.ineligibleRewardSet
+    end
     return reward
 end
 
@@ -75,6 +81,12 @@ local function clockworkChoiceReward(rewardStore, opts)
     end
     if opts.eligibleRewardTypes ~= nil then
         reward.eligibleRewardTypes = opts.eligibleRewardTypes
+    end
+    if opts.ineligibleRewardSet ~= nil then
+        reward.ineligibleRewardSet = opts.ineligibleRewardSet
+    end
+    if opts.eligibleRewardSet ~= nil then
+        reward.eligibleRewardSet = opts.eligibleRewardSet
     end
     return reward
 end
@@ -692,7 +704,9 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
     lu.assertEquals(fOpening.kind, "opening")
     lu.assertEquals(fOpening.key, "Opening")
     lu.assertEquals(fOpening.roomOptions[1].key, "F_Opening01")
-    lu.assertEquals(fOpening.reward, roomStoreReward("OpeningRunProgress"))
+    lu.assertEquals(fOpening.reward, roomStoreReward("RunProgress", {
+        ineligibleRewardSet = "OpeningRoomBans",
+    }))
     lu.assertTrue(fOpening.locked)
 
     local fPreboss = biomes.lookup.F.slotLayout.special[11]
@@ -1006,9 +1020,13 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     local ephyra = biomes.lookup.N
 
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].roomKey, "N_Opening01")
-    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].reward, roomStoreReward("OpeningRunProgress"))
+    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].reward, roomStoreReward("RunProgress", {
+        ineligibleRewardSet = "OpeningRoomBans",
+    }))
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].roomKey, "N_PreHub01")
-    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].reward, roomStoreReward("OpeningRunProgress"))
+    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].reward, roomStoreReward("RunProgress", {
+        ineligibleRewardSet = "OpeningRoomBans",
+    }))
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].roomKey, "N_Hub")
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].reward, noneReward())
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].roomHistoryCost, 0)
@@ -1029,7 +1047,9 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
 
     local combat12 = ephyra.hub.combatRoomsByKey.N_Combat12
     lu.assertEquals(combat12.hubDoorId, 561389)
-    lu.assertEquals(combat12.reward, roomStoreReward("EasyHubRewards"))
+    lu.assertEquals(combat12.reward, roomStoreReward("HubRewards", {
+        ineligibleRewardSet = "HubCombatRoomEasyBans",
+    }))
     lu.assertEquals(#combat12.sideDoors, 3)
     lu.assertEquals(combat12.sideDoors[1], {
         doorId = 558352,
@@ -1045,7 +1065,9 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     })
 
     lu.assertEquals(ephyra.hub.combatRoomsByKey.N_Combat01.sideDoors, {})
-    lu.assertEquals(ephyra.hub.combatRoomsByKey.N_Combat17.reward, roomStoreReward("EasyHubRewards"))
+    lu.assertEquals(ephyra.hub.combatRoomsByKey.N_Combat17.reward, roomStoreReward("HubRewards", {
+        ineligibleRewardSet = "HubCombatRoomEasyBans",
+    }))
     lu.assertEquals(ephyra.hub.combatRoomsByKey.N_Combat23.sideDoors[3].roomKey, "N_Sub15")
     lu.assertEquals(ephyra.hub.subroomRewardStores.N_Sub14, "SubRoomRewardsHard")
     lu.assertEquals(ephyra.hub.subroomRewardStores.N_Sub15, "SubRoomRewards")

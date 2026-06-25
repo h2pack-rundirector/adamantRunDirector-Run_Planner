@@ -7,9 +7,9 @@ local roomStore = {}
 
 function roomStore.create(definitions, context)
     local rewardStore = context.rewardStore or "RunProgress"
-    local rewardTypes = common.bundleOptions(definitions, rewardStore)
-    local eligible = common.lookupList(context.eligibleRewardTypes)
-    local ineligible = common.lookupList(context.ineligibleRewardTypes)
+    local rewardTypes = common.optionsFor(definitions, rewardStore)
+    local eligible = common.rewardTypeLookup(definitions, context.eligibleRewardTypes, context.eligibleRewardSet)
+    local ineligible = common.rewardTypeLookup(definitions, context.ineligibleRewardTypes, context.ineligibleRewardSet)
 
     if common.isOnlyEligible(context.eligibleRewardTypes, "Boon")
         and (ineligible == nil or not ineligible.Boon)

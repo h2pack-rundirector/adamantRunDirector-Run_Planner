@@ -61,8 +61,10 @@ function surfaces.create(definitions)
     local instance = {
         definitions = {
             godLoot = common.copyList(source.godLoot),
-            bundles = source.bundles or {},
             primitives = source.primitives or {},
+            rewardSets = source.rewardSets or {},
+            rewardStores = source.rewardStores or {},
+            shopOptionSets = source.shopOptionSets or {},
             shops = source.shops or {},
         },
         surfaceCache = {},

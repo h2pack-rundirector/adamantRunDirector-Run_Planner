@@ -7,6 +7,11 @@ common.VANILLA_VALUE = ""
 common.MAJOR_VALUE = "Major"
 common.MINOR_VALUE = "Minor"
 
+local OPTION_SOURCE_KEYS = {
+    "rewardStores",
+    "shopOptionSets",
+}
+
 function common.copyList(source)
     local copy = {}
     for index, value in ipairs(source or {}) do
@@ -27,11 +32,11 @@ function common.lookupList(values)
     return lookup
 end
 
-function common.lookupListWithDefaultBan(values, bannedKey, banEnabled)
+function common.rewardTypeLookup(definitions, values, rewardSetName)
     local lookup = common.lookupList(values)
-    if banEnabled and bannedKey ~= nil then
+    for _, value in ipairs(rewardSetName ~= nil and definitions.rewardSets[rewardSetName] or {}) do
         lookup = lookup or {}
-        lookup[bannedKey] = true
+        lookup[value] = true
     end
     return lookup
 end
@@ -69,18 +74,28 @@ function common.displayLabel(definitions, key)
     return label
 end
 
-function common.bundleOptions(definitions, bundleName)
-    local bundle = definitions.bundles and definitions.bundles[bundleName]
-    if bundle ~= nil then
-        return bundle.options or {}
+function common.optionSource(definitions, optionSetName)
+    for _, sourceKey in ipairs(OPTION_SOURCE_KEYS) do
+        local optionSet = definitions[sourceKey][optionSetName]
+        if optionSet ~= nil then
+            return optionSet
+        end
+    end
+    return nil
+end
+
+function common.optionsFor(definitions, optionSetName)
+    local optionSet = common.optionSource(definitions, optionSetName)
+    if optionSet ~= nil then
+        return optionSet.options or {}
     end
     return {}
 end
 
-function common.bundleLabel(definitions, bundleName, fallback)
-    local bundle = definitions.bundles and definitions.bundles[bundleName]
-    if bundle ~= nil and bundle.label ~= nil then
-        return bundle.label
+function common.optionsLabel(definitions, optionSetName, fallback)
+    local optionSet = common.optionSource(definitions, optionSetName)
+    if optionSet ~= nil and optionSet.label ~= nil then
+        return optionSet.label
     end
     return fallback
 end

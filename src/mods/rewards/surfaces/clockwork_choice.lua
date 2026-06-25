@@ -7,9 +7,9 @@ local clockworkChoice = {}
 
 local function rewardOptions(definitions, context)
     local rewardStore = context.rewardStore or "TartarusRewards"
-    local rewardTypes = common.bundleOptions(definitions, rewardStore)
-    local eligible = common.lookupList(context.eligibleRewardTypes)
-    local ineligible = common.lookupList(context.ineligibleRewardTypes)
+    local rewardTypes = common.optionsFor(definitions, rewardStore)
+    local eligible = common.rewardTypeLookup(definitions, context.eligibleRewardTypes, context.eligibleRewardSet)
+    local ineligible = common.rewardTypeLookup(definitions, context.ineligibleRewardTypes, context.ineligibleRewardSet)
     local values, labels = common.uniqueNames(rewardTypes, eligible, ineligible, function(name)
         return common.rewardOptionLabel(definitions, name)
     end)

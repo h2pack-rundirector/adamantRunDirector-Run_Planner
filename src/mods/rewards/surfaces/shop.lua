@@ -43,7 +43,7 @@ function shopSurface.create(definitions, context)
         local rewardAlias = storage.rewardAlias(index)
         local lootAlias = storage.lootAlias(index)
         sourceIndexBySlotKey[slot.key] = index
-        local options = slot.options or common.bundleOptions(definitions, slot.bundle)
+        local options = slot.options or common.optionsFor(definitions, slot.optionSet)
         local values, labels = common.uniqueNames(options, nil, nil, function(name)
             return common.rewardOptionLabel(definitions, name)
         end)

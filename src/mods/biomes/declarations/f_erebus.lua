@@ -40,7 +40,7 @@ return function(importer, deps)
                     key = "Opening",
                     label = "Opening",
                     roomOptions = layout.openingRooms,
-                    reward = rewards.roomStore("OpeningRunProgress"),
+                    reward = rewards.roomStore("RunProgress", { ineligibleRewardSet = "OpeningRoomBans" }),
                     biomeEncounterDepthCost = 1,
                     locked = true,
                 },

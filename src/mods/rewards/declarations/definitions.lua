@@ -82,7 +82,42 @@ definitions.godLoot = {
     "ZeusUpgrade",
 }
 
-definitions.bundles = {
+definitions.rewardSets = {
+    OpeningRoomBans = {
+        "Devotion",
+        "RoomMoneyDrop",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+    },
+    HubCombatRoomEasyBans = {
+        "Devotion",
+        "WeaponUpgrade",
+        "HermesUpgrade",
+    },
+    SubroomEasyBans = {
+        "MaxHealthDrop",
+        "MaxManaDrop",
+        "StackUpgrade",
+        "RoomMoneyDrop",
+        "TalentDrop",
+    },
+    SubroomHardBans = {
+        "MaxManaDropSmall",
+        "MaxHealthDropSmall",
+        "EmptyMaxHealthSmallDrop",
+        "RoomMoneyTinyDrop",
+        "GiftDrop",
+        "MetaCurrencyDrop",
+        "MetaCardPointsCommonDrop",
+        "MemPointsCommonDrop",
+        "AirBoost",
+        "FireBoost",
+        "WaterBoost",
+        "EarthBoost",
+    },
+}
+
+definitions.rewardStores = {
     RunProgress = {
         label = "Major",
         options = {
@@ -96,15 +131,6 @@ definitions.bundles = {
             "StackUpgrade",
             "SpellDrop",
             "TalentDrop",
-        },
-    },
-    OpeningRunProgress = {
-        options = {
-            "Boon",
-            "HermesUpgrade",
-            "WeaponUpgrade",
-            "StackUpgrade",
-            "SpellDrop",
         },
     },
     MetaProgress = {
@@ -122,14 +148,6 @@ definitions.bundles = {
             "Boon",
             "HermesUpgrade",
             "WeaponUpgrade",
-            "MaxHealthDropBig",
-            "MaxManaDropBig",
-            "SpellDrop",
-        },
-    },
-    EasyHubRewards = {
-        options = {
-            "Boon",
             "MaxHealthDropBig",
             "MaxManaDropBig",
             "SpellDrop",
@@ -181,7 +199,9 @@ definitions.bundles = {
             "WeaponUpgrade",
         },
     },
+}
 
+definitions.shopOptionSets = {
     WorldShopBoon = {
         options = {
             "RandomLoot",
@@ -291,28 +311,28 @@ definitions.bundles = {
 definitions.shops = {
     WorldShop = {
         slots = {
-            { key = "Boon", label = "Offer 1", bundle = "WorldShopBoon" },
-            { key = "MajorNonBoon", label = "Offer 2", bundle = "WorldShopNonBoon" },
-            { key = "Minor", label = "Offer 3", bundle = "WorldShopMinor" },
+            { key = "Boon", label = "Offer 1", optionSet = "WorldShopBoon" },
+            { key = "MajorNonBoon", label = "Offer 2", optionSet = "WorldShopNonBoon" },
+            { key = "Minor", label = "Offer 3", optionSet = "WorldShopMinor" },
         },
     },
     I_WorldShop = {
         slots = {
-            { key = "Group1Offer1", label = "Offer 1", bundle = "TartarusShopPriorityPower" },
-            { key = "Group2Offer1", label = "Offer 2", bundle = "TartarusShopMixedReward" },
-            { key = "Group3Offer1", label = "Offer 3", bundle = "TartarusShopSurvival" },
-            { key = "Group4Offer1", label = "Offer 4", bundle = "TartarusShopMajorPower" },
-            { key = "Group5Offer1", label = "Offer 5", bundle = "EndShopResource" },
+            { key = "Group1Offer1", label = "Offer 1", optionSet = "TartarusShopPriorityPower" },
+            { key = "Group2Offer1", label = "Offer 2", optionSet = "TartarusShopMixedReward" },
+            { key = "Group3Offer1", label = "Offer 3", optionSet = "TartarusShopSurvival" },
+            { key = "Group4Offer1", label = "Offer 4", optionSet = "TartarusShopMajorPower" },
+            { key = "Group5Offer1", label = "Offer 5", optionSet = "EndShopResource" },
         },
     },
     Q_WorldShop = {
         slots = {
-            { key = "Group1Offer1", label = "Offer 1", bundle = "EndShopPrimaryPower" },
-            { key = "Group1Offer2", label = "Offer 2", bundle = "EndShopPrimaryPower" },
-            { key = "Group2Offer1", label = "Offer 3", bundle = "EndShopSecondaryReward" },
-            { key = "Group3Offer1", label = "Offer 4", bundle = "TartarusShopSurvival" },
-            { key = "Group4Offer1", label = "Offer 5", bundle = "EndShopMajorPower" },
-            { key = "Group5Offer1", label = "Offer 6", bundle = "EndShopResource" },
+            { key = "Group1Offer1", label = "Offer 1", optionSet = "EndShopPrimaryPower" },
+            { key = "Group1Offer2", label = "Offer 2", optionSet = "EndShopPrimaryPower" },
+            { key = "Group2Offer1", label = "Offer 3", optionSet = "EndShopSecondaryReward" },
+            { key = "Group3Offer1", label = "Offer 4", optionSet = "TartarusShopSurvival" },
+            { key = "Group4Offer1", label = "Offer 5", optionSet = "EndShopMajorPower" },
+            { key = "Group5Offer1", label = "Offer 6", optionSet = "EndShopResource" },
         },
     },
 }

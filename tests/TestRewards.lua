@@ -530,6 +530,37 @@ function TestRunPlannerRewards.testConditionsBlockRoomHammerAfterShopHammer()
     })
 end
 
+function TestRunPlannerRewards.testDefinitionsSeparateRewardStoresSetsAndShopOptionSets()
+    local definitions = dofile("src/mods/rewards/declarations/definitions.lua")
+
+    lu.assertNotNil(definitions.rewardStores.RunProgress)
+    lu.assertNotNil(definitions.rewardStores.HubRewards)
+    lu.assertNotNil(definitions.rewardStores.SubRoomRewards)
+    lu.assertNotNil(definitions.rewardStores.TartarusRewards)
+    lu.assertNotNil(definitions.rewardStores.TyphonBossRewards)
+
+    lu.assertNil(definitions.rewardStores.OpeningRunProgress)
+    lu.assertNil(definitions.rewardStores.EasyHubRewards)
+    lu.assertNil(definitions.rewardStoreViews)
+
+    lu.assertNil(definitions.rewardStores.WorldShopBoon)
+    lu.assertNotNil(definitions.shopOptionSets.WorldShopBoon)
+    lu.assertNotNil(definitions.shopOptionSets.EndShopPrimaryPower)
+    lu.assertEquals(definitions.shops.WorldShop.slots[1].optionSet, "WorldShopBoon")
+
+    lu.assertEquals(definitions.rewardSets.OpeningRoomBans, {
+        "Devotion",
+        "RoomMoneyDrop",
+        "MaxHealthDrop",
+        "MaxManaDrop",
+    })
+    lu.assertEquals(definitions.rewardSets.HubCombatRoomEasyBans, {
+        "Devotion",
+        "WeaponUpgrade",
+        "HermesUpgrade",
+    })
+end
+
 function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()
     local catalog = loadCatalog()
     local surface = catalog:surfaceFor({
@@ -571,12 +602,13 @@ function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()
     lu.assertEquals(surface.controls[4].key, "lootBName")
 end
 
-function TestRunPlannerRewards.testCatalogNormalizesSpecializedRewardBundles()
+function TestRunPlannerRewards.testCatalogAppliesNamedRewardSets()
     local catalog = loadCatalog()
 
     local opening = catalog:surfaceFor({
         kind = "roomStore",
-        rewardStore = "OpeningRunProgress",
+        rewardStore = "RunProgress",
+        ineligibleRewardSet = "OpeningRoomBans",
     })
     lu.assertEquals(opening.controls[1].values, {
         "",
@@ -585,11 +617,13 @@ function TestRunPlannerRewards.testCatalogNormalizesSpecializedRewardBundles()
         "WeaponUpgrade",
         "StackUpgrade",
         "SpellDrop",
+        "TalentDrop",
     })
 
     local easyHub = catalog:surfaceFor({
         kind = "roomStore",
-        rewardStore = "EasyHubRewards",
+        rewardStore = "HubRewards",
+        ineligibleRewardSet = "HubCombatRoomEasyBans",
     })
     lu.assertEquals(easyHub.controls[1].values, {
         "",
@@ -796,11 +830,11 @@ function TestRunPlannerRewards.testCatalogOptInDevotionForMajorMinorSurface()
     })
 end
 
-function TestRunPlannerRewards.testCatalogUsesBundleLabelsForMajorMinorCategories()
+function TestRunPlannerRewards.testCatalogUsesRewardStoreLabelsForMajorMinorCategories()
     local catalog = loadCatalogWith({
         godLoot = {},
         primitives = {},
-        bundles = {
+        rewardStores = {
             MajorBundle = {
                 label = "Primary",
                 options = {},
@@ -1160,6 +1194,27 @@ function TestRunPlannerRewards.testCatalogComposesEligibleAndIneligibleRewardTyp
         "",
         "Boon",
         "HermesUpgrade",
+    })
+end
+
+function TestRunPlannerRewards.testCatalogComposesNamedAndExplicitRewardFilters()
+    local catalog = loadCatalog()
+    local surface = catalog:surfaceFor({
+        kind = "roomStore",
+        rewardStore = "RunProgress",
+        eligibleRewardSet = "OpeningRoomBans",
+        eligibleRewardTypes = { "Boon", "HermesUpgrade" },
+        ineligibleRewardTypes = { "RoomMoneyDrop" },
+    })
+
+    lu.assertEquals(surface.kind, "roomStore")
+    lu.assertEquals(surface.controls[1].values, {
+        "",
+        "Boon",
+        "HermesUpgrade",
+        "Devotion",
+        "MaxHealthDrop",
+        "MaxManaDrop",
     })
 end
 

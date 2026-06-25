@@ -39,6 +39,37 @@ local function copyRewardGeneration(context, generation)
     }
 end
 
+local function prefixedKey(prefix, key)
+    if prefix == "" then
+        return key
+    end
+    return prefix .. string.upper(string.sub(key, 1, 1)) .. string.sub(key, 2)
+end
+
+local function copyRewardFilters(context, opts, sourcePrefix, targetPrefix)
+    local sourceEligibleTypes = prefixedKey(sourcePrefix, "eligibleRewardTypes")
+    local sourceIneligibleTypes = prefixedKey(sourcePrefix, "ineligibleRewardTypes")
+    local sourceEligibleSet = prefixedKey(sourcePrefix, "eligibleRewardSet")
+    local sourceIneligibleSet = prefixedKey(sourcePrefix, "ineligibleRewardSet")
+    local targetEligibleTypes = prefixedKey(targetPrefix, "eligibleRewardTypes")
+    local targetIneligibleTypes = prefixedKey(targetPrefix, "ineligibleRewardTypes")
+    local targetEligibleSet = prefixedKey(targetPrefix, "eligibleRewardSet")
+    local targetIneligibleSet = prefixedKey(targetPrefix, "ineligibleRewardSet")
+
+    if opts[sourceEligibleTypes] ~= nil then
+        context[targetEligibleTypes] = copyList(opts[sourceEligibleTypes])
+    end
+    if opts[sourceIneligibleTypes] ~= nil then
+        context[targetIneligibleTypes] = copyList(opts[sourceIneligibleTypes])
+    end
+    if opts[sourceEligibleSet] ~= nil then
+        context[targetEligibleSet] = opts[sourceEligibleSet]
+    end
+    if opts[sourceIneligibleSet] ~= nil then
+        context[targetIneligibleSet] = opts[sourceIneligibleSet]
+    end
+end
+
 function rewards.none()
     return {
         kind = "none",
@@ -51,12 +82,7 @@ function rewards.roomStore(rewardStore, opts)
         kind = "roomStore",
         rewardStore = rewardStore,
     }
-    if opts.eligibleRewardTypes ~= nil then
-        context.eligibleRewardTypes = copyList(opts.eligibleRewardTypes)
-    end
-    if opts.ineligibleRewardTypes ~= nil then
-        context.ineligibleRewardTypes = copyList(opts.ineligibleRewardTypes)
-    end
+    copyRewardFilters(context, opts, "", "")
     return context
 end
 
@@ -70,18 +96,9 @@ function rewards.majorMinor(opts)
     if opts.allowDevotion == true then
         context.allowDevotion = true
     end
-    if opts.majorEligibleRewardTypes ~= nil then
-        context.majorEligibleRewardTypes = copyList(opts.majorEligibleRewardTypes)
-    end
-    if opts.majorIneligibleRewardTypes ~= nil then
-        context.majorIneligibleRewardTypes = copyList(opts.majorIneligibleRewardTypes)
-    end
-    if opts.minorEligibleRewardTypes ~= nil then
-        context.minorEligibleRewardTypes = copyList(opts.minorEligibleRewardTypes)
-    end
-    if opts.minorIneligibleRewardTypes ~= nil then
-        context.minorIneligibleRewardTypes = copyList(opts.minorIneligibleRewardTypes)
-    end
+    copyRewardFilters(context, opts, "major", "major")
+    copyRewardFilters(context, opts, "minor", "minor")
+    copyRewardFilters(context, opts, "", "")
     return context
 end
 
@@ -104,12 +121,7 @@ function rewards.clockworkChoice(rewardStore, opts)
         rewardStore = rewardStore,
         goalRewardType = opts.goalRewardType,
     }
-    if opts.eligibleRewardTypes ~= nil then
-        context.eligibleRewardTypes = copyList(opts.eligibleRewardTypes)
-    end
-    if opts.ineligibleRewardTypes ~= nil then
-        context.ineligibleRewardTypes = copyList(opts.ineligibleRewardTypes)
-    end
+    copyRewardFilters(context, opts, "", "")
     return context
 end
 
@@ -140,12 +152,7 @@ function rewards.preboss(shopProfile, rewardStore, opts)
         rewardAliasCount = 2,
         rewardChoiceGroup = prebossChoiceGroup(),
     }
-    if opts.eligibleRewardTypes ~= nil then
-        roomOffer.eligibleRewardTypes = copyList(opts.eligibleRewardTypes)
-    end
-    if opts.ineligibleRewardTypes ~= nil then
-        roomOffer.ineligibleRewardTypes = copyList(opts.ineligibleRewardTypes)
-    end
+    copyRewardFilters(roomOffer, opts, "", "")
 
     return {
         kind = "preboss",
@@ -180,12 +187,7 @@ function rewards.fieldsCages(opts)
         kind = "fieldsCages",
         rewardStore = opts.rewardStore or "RunProgress",
     }
-    if opts.eligibleRewardTypes ~= nil then
-        context.eligibleRewardTypes = copyList(opts.eligibleRewardTypes)
-    end
-    if opts.ineligibleRewardTypes ~= nil then
-        context.ineligibleRewardTypes = copyList(opts.ineligibleRewardTypes)
-    end
+    copyRewardFilters(context, opts, "", "")
     copyRewardGeneration(context, opts.rewardGeneration)
     return context
 end

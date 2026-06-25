@@ -186,7 +186,7 @@ layout.combatRooms = {
     combatRoom("N_Combat17", 561424, {
         sideDoor(558352, "N_Sub11"),
     }, {
-        reward = rewards.roomStore("EasyHubRewards"),
+        reward = rewards.roomStore("HubRewards", { ineligibleRewardSet = "HubCombatRoomEasyBans" }),
     }),
     combatRoom("N_Combat20", 561418, {
         sideDoor(659508, "N_Sub06"),
@@ -198,7 +198,7 @@ layout.combatRooms = {
         sideDoor(566544, "N_Sub10"),
         sideDoor(566545, "N_Sub07"),
     }, {
-        reward = rewards.roomStore("EasyHubRewards"),
+        reward = rewards.roomStore("HubRewards", { ineligibleRewardSet = "HubCombatRoomEasyBans" }),
     }),
     combatRoom("N_Combat15", 560705, {
         sideDoor(657623, "N_Sub03"),
