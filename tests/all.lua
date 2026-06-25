@@ -2,6 +2,8 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 local lu = require("luaunit")
 dofile("tests/TestData.lua")
+dofile("tests/TestBiomeDeclarations.lua")
+dofile("tests/TestLiveGameValidator.lua")
 dofile("tests/TestTimeline.lua")
 dofile("tests/TestRouteUi.lua")
 dofile("tests/TestRouteGlobal.lua")

@@ -506,6 +506,7 @@ function TestRunPlannerLogicRoutePlan.testLogicAttachDefinesCacheAndHooks()
     local hookedCheckNSubRoomDoorUnavailable = false
     local hookedChooseEncounter = false
     local hookedHandleSecretSpawns = false
+    local registeredOnActivate = false
     logic.attach({
         cache = {
             define = function(defs)
@@ -535,6 +536,9 @@ function TestRunPlannerLogicRoutePlan.testLogicAttachDefinesCacheAndHooks()
                 end
             end,
         },
+        onActivate = function()
+            registeredOnActivate = true
+        end,
     })
 
     lu.assertTrue(cacheDefined)
@@ -547,4 +551,5 @@ function TestRunPlannerLogicRoutePlan.testLogicAttachDefinesCacheAndHooks()
     lu.assertTrue(hookedCheckNSubRoomDoorUnavailable)
     lu.assertTrue(hookedChooseEncounter)
     lu.assertTrue(hookedHandleSecretSpawns)
+    lu.assertTrue(registeredOnActivate)
 end

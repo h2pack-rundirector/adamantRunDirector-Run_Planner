@@ -49,6 +49,7 @@ local function createLogic(catalog, route)
         rewardRouting = rewardRouting,
         npcRouting = npcRouting,
         featureRouting = featureRouting,
+        liveGameValidator = import("mods/biomes/live_validator.lua"),
     })
 end
 
