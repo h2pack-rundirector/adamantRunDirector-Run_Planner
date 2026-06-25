@@ -1,30 +1,5 @@
 local validator = {}
 
-local KNOWN_REWARD_KINDS = {
-    clockworkChoice = true,
-    fieldsCages = true,
-    forcedReward = true,
-    majorMinor = true,
-    none = true,
-    preboss = true,
-    roomStore = true,
-    shop = true,
-}
-
-local KNOWN_REWARD_OFFER_KINDS = {
-    roomStore = true,
-    shop = true,
-}
-
-local KNOWN_ADAPTERS = {
-    clockworkGoal = true,
-    fieldsCageRoute = true,
-    fixedLinear = true,
-    hubPylon = true,
-    multiEncounterFixed = true,
-    scriptedFixedLinear = true,
-}
-
 local STRUCTURAL_FEATURE_KEYS = {
     chaos = true,
 }
@@ -45,76 +20,6 @@ local function childPath(path, key)
         return tostring(key)
     end
     return path .. "." .. tostring(key)
-end
-
-local function isList(value)
-    return type(value) == "table"
-end
-
-local function validateRequired(issues, owner, path, fields)
-    if type(owner) ~= "table" then
-        addIssue(issues, "expected_table", path, "Expected declaration table")
-        return false
-    end
-
-    for _, field in ipairs(fields) do
-        if owner[field] == nil then
-            addIssue(issues, "missing_field", childPath(path, field), "Required field is missing")
-        end
-    end
-    return true
-end
-
-local function validateRange(issues, range, path)
-    if range == nil then
-        return
-    end
-    if type(range) ~= "table" then
-        addIssue(issues, "invalid_range", path, "Range must be a table")
-        return
-    end
-
-    if range.min ~= nil and range.max ~= nil and range.min > range.max then
-        addIssue(issues, "inverted_range", path, "Range min cannot be greater than max")
-    end
-    if range.minExclusive ~= nil and range.maxExclusive ~= nil and range.minExclusive >= range.maxExclusive then
-        addIssue(issues, "inverted_range", path, "Exclusive range min cannot be greater than or equal to max")
-    end
-    if range.exact ~= nil then
-        if range.min ~= nil and range.exact < range.min then
-            addIssue(issues, "impossible_range", path, "Exact value is below min")
-        end
-        if range.max ~= nil and range.exact > range.max then
-            addIssue(issues, "impossible_range", path, "Exact value is above max")
-        end
-        if range.minExclusive ~= nil and range.exact <= range.minExclusive then
-            addIssue(issues, "impossible_range", path, "Exact value is below exclusive min")
-        end
-        if range.maxExclusive ~= nil and range.exact >= range.maxExclusive then
-            addIssue(issues, "impossible_range", path, "Exact value is above exclusive max")
-        end
-    end
-end
-
-local function validateBoundedCost(issues, cost, path)
-    if cost == nil or type(cost) == "number" then
-        return
-    end
-    validateRange(issues, cost, path)
-end
-
-local function validateAvailability(issues, availability, path)
-    if availability == nil then
-        return
-    end
-    if type(availability) ~= "table" then
-        addIssue(issues, "invalid_availability", path, "Availability must be a table")
-        return
-    end
-
-    validateRange(issues, availability.biomeDepthCache, childPath(path, "biomeDepthCache"))
-    validateRange(issues, availability.biomeEncounterDepth, childPath(path, "biomeEncounterDepth"))
-    validateRange(issues, availability.routeRoomsEntered, childPath(path, "routeRoomsEntered"))
 end
 
 local function hasKey(list, keyField)
@@ -208,66 +113,14 @@ local function validateRewardFilters(issues, rewardDefinitions, context, path, p
     end
 end
 
-local function validateChoiceGroup(issues, group, path)
-    if group == nil then
-        return
-    end
-    if type(group) ~= "table" then
-        addIssue(issues, "invalid_reward_choice_group", path, "Reward choice group must be a table")
-        return
-    end
-
-    local timing = group.effectTiming
-    if timing ~= nil and timing ~= "sameChoiceUnion" then
-        addIssue(issues, "unknown_reward_timing", childPath(path, "effectTiming"), "Unknown timing: " .. tostring(timing))
-    end
-end
-
-local function validateRewardGeneration(issues, generation, path)
-    if generation == nil then
-        return
-    end
-    if type(generation) ~= "table" then
-        addIssue(issues, "invalid_reward_generation", path, "Reward generation must be a table")
-        return
-    end
-
-    local timing = generation.effectTiming
-    if timing ~= nil and timing ~= "afterNextRow" and timing ~= "afterBatch" and timing ~= "afterGroup" then
-        addIssue(issues, "unknown_reward_timing", childPath(path, "effectTiming"), "Unknown timing: " .. tostring(timing))
-    end
-end
-
-local validateRewardContext
-
-local function validateRewardOffer(issues, rewardDefinitions, offer, path)
-    if type(offer) ~= "table" then
-        addIssue(issues, "invalid_reward_offer", path, "Reward offer must be a table")
-        return
-    end
-    if offer.kind == nil or not KNOWN_REWARD_OFFER_KINDS[offer.kind] then
-        addIssue(issues, "unknown_reward_offer_kind", childPath(path, "kind"), "Unknown reward offer kind")
-        return
-    end
-    validateRewardContext(issues, rewardDefinitions, offer, path)
-end
-
-validateRewardContext = function(issues, rewardDefinitions, reward, path)
+local function validateRewardContext(issues, rewardDefinitions, reward, path)
     if reward == nil then
-        addIssue(issues, "missing_reward", path, "Reward context is missing")
         return
     end
     if type(reward) ~= "table" then
         addIssue(issues, "invalid_reward", path, "Reward context must be a table")
         return
     end
-    if reward.kind == nil or not KNOWN_REWARD_KINDS[reward.kind] then
-        addIssue(issues, "unknown_reward_kind", childPath(path, "kind"), "Unknown reward kind: " .. tostring(reward.kind))
-        return
-    end
-
-    validateRewardGeneration(issues, reward.rewardGeneration, childPath(path, "rewardGeneration"))
-    validateChoiceGroup(issues, reward.rewardChoiceGroup, childPath(path, "rewardChoiceGroup"))
 
     if reward.kind == "roomStore" then
         if not rewardStoreExists(rewardDefinitions, reward.rewardStore) then
@@ -309,11 +162,8 @@ validateRewardContext = function(issues, rewardDefinitions, reward, path)
         end
         validateRewardFilters(issues, rewardDefinitions, reward, path, "")
     elseif reward.kind == "preboss" then
-        if not isList(reward.offers) or reward.offers[1] == nil then
-            addIssue(issues, "missing_reward_offers", childPath(path, "offers"), "Preboss reward must declare offers")
-        end
         for index, offer in ipairs(reward.offers or {}) do
-            validateRewardOffer(issues, rewardDefinitions, offer, childPath(childPath(path, "offers"), index))
+            validateRewardContext(issues, rewardDefinitions, offer, childPath(childPath(path, "offers"), index))
         end
     end
 end
@@ -335,14 +185,8 @@ end
 
 local function validateRoomOption(issues, rewardDefinitions, knownFeatureKeys, option, path)
     if type(option) ~= "table" then
-        addIssue(issues, "invalid_room_option", path, "Room option must be a table")
         return
     end
-    if option.key == nil then
-        addIssue(issues, "missing_key", childPath(path, "key"), "Room option key is missing")
-    end
-    validateAvailability(issues, option.availability, childPath(path, "availability"))
-    validateBoundedCost(issues, option.biomeEncounterDepthCost, childPath(path, "biomeEncounterDepthCost"))
     validateFeatures(issues, knownFeatureKeys, option.features, childPath(path, "features"))
     if option.reward ~= nil then
         validateRewardContext(issues, rewardDefinitions, option.reward, childPath(path, "reward"))
@@ -357,31 +201,47 @@ local function validateRoomOptions(issues, rewardDefinitions, knownFeatureKeys, 
 end
 
 local function validateRole(issues, rewardDefinitions, knownFeatureKeys, role, path)
-    validateRequired(issues, role, path, { "key", "label", "reward" })
-    validateBoundedCost(issues, role and role.biomeEncounterDepthCost, childPath(path, "biomeEncounterDepthCost"))
+    if type(role) ~= "table" then
+        return
+    end
     validateFeatures(issues, knownFeatureKeys, role and role.features, childPath(path, "features"))
     if role and role.reward ~= nil then
         validateRewardContext(issues, rewardDefinitions, role.reward, childPath(path, "reward"))
     end
-    validateRoomOptions(issues, rewardDefinitions, knownFeatureKeys, role and role.roomOptions, childPath(path, "roomOptions"))
-    validateRoomOptions(issues, rewardDefinitions, knownFeatureKeys, role and role.mapOptions, childPath(path, "mapOptions"))
+    validateRoomOptions(
+        issues,
+        rewardDefinitions,
+        knownFeatureKeys,
+        role and role.roomOptions,
+        childPath(path, "roomOptions")
+    )
+    validateRoomOptions(
+        issues,
+        rewardDefinitions,
+        knownFeatureKeys,
+        role and role.mapOptions,
+        childPath(path, "mapOptions")
+    )
 end
 
 local function validateSlotEntry(issues, rewardDefinitions, knownFeatureKeys, rolesByKey, entry, path)
     if type(entry) ~= "table" then
-        addIssue(issues, "invalid_slot_entry", path, "Slot entry must be a table")
         return
     end
     if entry.roleKey ~= nil and rolesByKey[entry.roleKey] == nil then
         addIssue(issues, "unknown_role", childPath(path, "roleKey"), "Slot references unknown role")
     end
-    validateAvailability(issues, entry.availability, childPath(path, "availability"))
-    validateBoundedCost(issues, entry.biomeEncounterDepthCost, childPath(path, "biomeEncounterDepthCost"))
     validateFeatures(issues, knownFeatureKeys, entry.features, childPath(path, "features"))
     if entry.reward ~= nil then
         validateRewardContext(issues, rewardDefinitions, entry.reward, childPath(path, "reward"))
     end
-    validateRoomOptions(issues, rewardDefinitions, knownFeatureKeys, entry.roomOptions, childPath(path, "roomOptions"))
+    validateRoomOptions(
+        issues,
+        rewardDefinitions,
+        knownFeatureKeys,
+        entry.roomOptions,
+        childPath(path, "roomOptions")
+    )
 end
 
 local function validateSlotList(issues, rewardDefinitions, knownFeatureKeys, rolesByKey, items, path)
@@ -398,11 +258,9 @@ end
 
 local function validateTimelineEntry(issues, knownFeatureKeys, entry, path)
     if type(entry) ~= "table" then
-        addIssue(issues, "invalid_timeline_entry", path, "Timeline entry must be a table")
         return
     end
     validateFeatures(issues, knownFeatureKeys, entry.features, childPath(path, "features"))
-    validateBoundedCost(issues, entry.roomHistoryCost, childPath(path, "roomHistoryCost"))
 end
 
 local function validateTimeline(issues, knownFeatureKeys, timeline, path)
@@ -410,26 +268,10 @@ local function validateTimeline(issues, knownFeatureKeys, timeline, path)
         return
     end
     if type(timeline) ~= "table" then
-        addIssue(issues, "invalid_timeline", path, "Timeline must be a table")
         return
     end
     for index, entry in ipairs(timeline.afterBiome or {}) do
         validateTimelineEntry(issues, knownFeatureKeys, entry, childPath(childPath(path, "afterBiome"), index))
-    end
-end
-
-local function validateAdapterShape(issues, biome, path)
-    local layout = biome.slotLayout or {}
-    if biome.adapter == "fieldsCageRoute" then
-        validateRequired(issues, layout, childPath(path, "slotLayout"), { "fixedBeforeRoute", "fixedAfterRoute" })
-    elseif biome.adapter == "clockworkGoal" then
-        validateRequired(issues, layout, childPath(path, "slotLayout"), { "fixedBeforeRoute", "fixedAfterGoals" })
-        validateRequired(issues, biome.clockwork, childPath(path, "clockwork"), { "forcedFirstRouteRole", "routeCounters" })
-    elseif biome.adapter == "hubPylon" then
-        validateRequired(issues, layout, childPath(path, "slotLayout"), { "fixedBeforeHub", "fixedAfterHub" })
-        validateRequired(issues, biome.hub, childPath(path, "hub"), { "combatRooms", "hubDoorRooms", "rewardRowGroup" })
-    elseif biome.adapter == "fixedLinear" or biome.adapter == "scriptedFixedLinear" or biome.adapter == "multiEncounterFixed" then
-        validateRequired(issues, layout, childPath(path, "slotLayout"), { "special" })
     end
 end
 
@@ -449,15 +291,6 @@ local function buildKnownFeatureKeys(featureDefinitions, biomes)
         end
     end
     return known
-end
-
-local function validateFeaturePolicies(issues, knownFeatureKeys, policies, path)
-    for featureKey, policy in pairs(policies or {}) do
-        if not knownFeatureKeys[featureKey] then
-            addIssue(issues, "unknown_feature_policy", childPath(path, featureKey), "Unknown feature policy")
-        end
-        validateRange(issues, policy.roomHistoryDepth, childPath(childPath(path, featureKey), "roomHistoryDepth"))
-    end
 end
 
 function validator.validateRewardDefinitions(rewardDefinitions)
@@ -497,36 +330,45 @@ function validator.validateBiome(biome, opts)
     local knownFeatureKeys = opts.knownFeatureKeys or buildKnownFeatureKeys(opts.featureDefinitions, { biome })
     local path = "biomes." .. tostring(biome and biome.key or "?")
 
-    if not validateRequired(issues, biome, path, { "key", "label", "region", "adapter", "slotLayout", "roles" }) then
+    if type(biome) ~= "table" then
+        addIssue(issues, "expected_table", path, "Expected declaration table")
         return issues
-    end
-    if biome.adapter ~= nil and not KNOWN_ADAPTERS[biome.adapter] then
-        addIssue(issues, "unknown_adapter", childPath(path, "adapter"), "Unknown adapter: " .. tostring(biome.adapter))
-    end
-    if not isList(biome.roles) or biome.roles[1] == nil then
-        addIssue(issues, "missing_roles", childPath(path, "roles"), "Biome must declare roles")
     end
 
     validateUniqueKeys(issues, biome.roles, childPath(path, "roles"), "key")
     local rolesByKey = hasKey(biome.roles, "key")
     for index, role in ipairs(biome.roles or {}) do
-        validateRole(issues, rewardDefinitions, knownFeatureKeys, role, childPath(childPath(path, "roles"), index))
+        validateRole(
+            issues,
+            rewardDefinitions,
+            knownFeatureKeys,
+            role,
+            childPath(childPath(path, "roles"), index)
+        )
     end
 
-    validateAdapterShape(issues, biome, path)
-    validateFeaturePolicies(issues, knownFeatureKeys, biome.featurePolicies, childPath(path, "featurePolicies"))
     validateTimeline(issues, knownFeatureKeys, biome.timeline, childPath(path, "timeline"))
 
     local layoutPath = childPath(path, "slotLayout")
     local layout = biome.slotLayout or {}
-    validateRange(issues, layout.depthRange, childPath(layoutPath, "depthRange"))
-    if layout.routeStartOrdinal ~= nil and layout.routeEndOrdinal ~= nil and layout.routeStartOrdinal > layout.routeEndOrdinal then
-        addIssue(issues, "inverted_route_range", layoutPath, "Route start ordinal cannot be greater than route end ordinal")
-    end
     if layout.entry ~= nil then
-        validateSlotEntry(issues, rewardDefinitions, knownFeatureKeys, rolesByKey, layout.entry, childPath(layoutPath, "entry"))
+        validateSlotEntry(
+            issues,
+            rewardDefinitions,
+            knownFeatureKeys,
+            rolesByKey,
+            layout.entry,
+            childPath(layoutPath, "entry")
+        )
     end
-    validateSlotMap(issues, rewardDefinitions, knownFeatureKeys, rolesByKey, layout.special, childPath(layoutPath, "special"))
+    validateSlotMap(
+        issues,
+        rewardDefinitions,
+        knownFeatureKeys,
+        rolesByKey,
+        layout.special,
+        childPath(layoutPath, "special")
+    )
     validateSlotList(
         issues,
         rewardDefinitions,

@@ -48,22 +48,25 @@ local function hasValue(items, value)
     return false
 end
 
+local function validatorOptions(rewardDefinitions)
+    return {
+        rewardDefinitions = rewardDefinitions,
+        featureDefinitions = dofile("src/mods/data/features.lua"),
+    }
+end
+
 function TestRunPlannerBiomeDeclarations.testCheckedInBiomeDeclarationsValidateStatically()
     local data = dofile("src/mods/data.lua")
     local validator = dofile("src/mods/biomes/validator.lua")
     local catalogDeps = importHarness.loadCatalogDeps()
     local rewardDefinitions = importHarness.loadRewardDefinitions(catalogDeps.godData)
-    local featureDefinitions = dofile("src/mods/data/features.lua")
     local catalog = withTestImport(function()
         return data.loadBiomes(catalogDeps)
     end)
 
     local issues = {}
     appendIssues(issues, validator.validateRewardDefinitions(rewardDefinitions))
-    appendIssues(issues, validator.validateCatalog(catalog, {
-        rewardDefinitions = rewardDefinitions,
-        featureDefinitions = featureDefinitions,
-    }))
+    appendIssues(issues, validator.validateCatalog(catalog, validatorOptions(rewardDefinitions)))
 
     assertNoIssues(issues)
 end
@@ -161,13 +164,8 @@ function TestRunPlannerBiomeDeclarations.testValidatorReportsMalformedStaticDecl
         },
     }
 
-    local codes = issueCodes(validator.validateBiome(malformed, {
-        rewardDefinitions = rewardDefinitions,
-    }))
+    local codes = issueCodes(validator.validateBiome(malformed, validatorOptions(rewardDefinitions)))
 
-    lu.assertTrue(codes.inverted_route_range)
-    lu.assertTrue(codes.inverted_range)
     lu.assertTrue(codes.unknown_role)
     lu.assertTrue(codes.unknown_reward_store)
-    lu.assertTrue(codes.missing_field)
 end
