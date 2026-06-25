@@ -1,3 +1,6 @@
+return function(deps)
+deps = deps or {}
+local godData = deps.godData
 local definitions = {}
 
 definitions.primitives = {
@@ -70,17 +73,7 @@ definitions.primitives = {
     ElementalBoost = { label = "Element" },
 }
 
-definitions.godLoot = {
-    "AphroditeUpgrade",
-    "ApolloUpgrade",
-    "AresUpgrade",
-    "DemeterUpgrade",
-    "HephaestusUpgrade",
-    "HestiaUpgrade",
-    "HeraUpgrade",
-    "PoseidonUpgrade",
-    "ZeusUpgrade",
-}
+definitions.godLoot = godData.godLootNames()
 
 definitions.rewardSets = {
     OpeningRoomBans = {
@@ -338,3 +331,4 @@ definitions.shops = {
 }
 
 return definitions
+end

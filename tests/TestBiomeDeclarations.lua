@@ -1,11 +1,9 @@
 local lu = require("luaunit")
+local importHarness = require("tests.support.import_harness")
+local withTestImport = importHarness.withTestImport
 
 -- luacheck: globals TestRunPlannerBiomeDeclarations
 TestRunPlannerBiomeDeclarations = {}
-
-local function testImport(path)
-    return dofile("src/" .. path)
-end
 
 local function appendIssues(target, source)
     for _, issue in ipairs(source or {}) do
@@ -41,12 +39,24 @@ local function issueCodes(issues)
     return codes
 end
 
+local function hasValue(items, value)
+    for _, item in ipairs(items or {}) do
+        if item == value then
+            return true
+        end
+    end
+    return false
+end
+
 function TestRunPlannerBiomeDeclarations.testCheckedInBiomeDeclarationsValidateStatically()
     local data = dofile("src/mods/data.lua")
     local validator = dofile("src/mods/biomes/validator.lua")
-    local rewardDefinitions = dofile("src/mods/rewards/declarations/definitions.lua")
-    local featureDefinitions = dofile("src/mods/features/definitions.lua")
-    local catalog = data.loadBiomes(testImport)
+    local catalogDeps = importHarness.loadCatalogDeps()
+    local rewardDefinitions = importHarness.loadRewardDefinitions(catalogDeps.godData)
+    local featureDefinitions = dofile("src/mods/data/features.lua")
+    local catalog = withTestImport(function()
+        return data.loadBiomes(catalogDeps)
+    end)
 
     local issues = {}
     appendIssues(issues, validator.validateRewardDefinitions(rewardDefinitions))
@@ -60,22 +70,56 @@ end
 
 function TestRunPlannerBiomeDeclarations.testGodListDuplicatesStayInSync()
     local validator = dofile("src/mods/biomes/validator.lua")
-    local gods = dofile("src/mods/data/gods.lua")
-    local rewardDefinitions = dofile("src/mods/rewards/declarations/definitions.lua")
-    local routeRules = dofile("src/mods/biomes/declaration_rules.lua")
-    local rewardConditions = dofile("src/mods/rewards/declarations/conditions.lua")
+    local godData = importHarness.loadGodData()
+    local routeRules = importHarness.loadRouteRules(godData)
+    local rewardDefinitions = importHarness.loadRewardDefinitions(godData)
+    local rewardConditions = importHarness.loadRewardConditions(godData)
 
     assertNoIssues(validator.validateGodLists(
-        gods.olympian(),
+        godData,
         rewardDefinitions,
         routeRules,
         rewardConditions
     ))
 end
 
+function TestRunPlannerBiomeDeclarations.testGodDataDerivesDevotionPrerequisiteSubset()
+    local gods = importHarness.loadGodData()
+
+    lu.assertTrue(hasValue(gods.godLootNames(), "AresUpgrade"))
+    lu.assertFalse(hasValue(gods.devotionPrerequisiteLootNames(), "AresUpgrade"))
+end
+
+function TestRunPlannerBiomeDeclarations.testRouteMembershipMatchesBiomeRegions()
+    local data = dofile("src/mods/data.lua")
+    local catalog = withTestImport(function()
+        return data.loadBiomes(importHarness.loadCatalogDeps())
+    end)
+    local seenBiomes = {}
+
+    for _, route in ipairs(catalog.routes.ordered or {}) do
+        local seenInRoute = {}
+        for _, biomeKey in ipairs(route.biomes or {}) do
+            lu.assertNil(seenInRoute[biomeKey], "Duplicate biome in route: " .. tostring(biomeKey))
+            lu.assertNil(seenBiomes[biomeKey], "Biome appears in multiple routes: " .. tostring(biomeKey))
+
+            local biome = catalog.lookup[biomeKey]
+            lu.assertNotNil(biome, "Route references unknown biome: " .. tostring(biomeKey))
+            lu.assertEquals(biome.region, route.key)
+
+            seenInRoute[biomeKey] = true
+            seenBiomes[biomeKey] = route.key
+        end
+    end
+
+    for _, biome in ipairs(catalog.ordered or {}) do
+        lu.assertNotNil(seenBiomes[biome.key], "Biome missing from routes: " .. tostring(biome.key))
+    end
+end
+
 function TestRunPlannerBiomeDeclarations.testValidatorReportsMalformedStaticDeclarations()
     local validator = dofile("src/mods/biomes/validator.lua")
-    local rewardDefinitions = dofile("src/mods/rewards/declarations/definitions.lua")
+    local rewardDefinitions = importHarness.loadRewardDefinitions()
     local malformed = {
         key = "X",
         label = "Broken",

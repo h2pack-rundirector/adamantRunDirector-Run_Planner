@@ -1,16 +1,8 @@
-local routeRules = {}
+return function(deps)
+deps = deps or {}
 
-local GOD_LOOT_NAMES = {
-    "AphroditeUpgrade",
-    "ApolloUpgrade",
-    "AresUpgrade",
-    "DemeterUpgrade",
-    "HephaestusUpgrade",
-    "HestiaUpgrade",
-    "HeraUpgrade",
-    "PoseidonUpgrade",
-    "ZeusUpgrade",
-}
+local routeRules = {}
+local GOD_LOOT_NAMES = deps.godData.godLootNames()
 
 local ROLE_RULES = {
     Story = {
@@ -99,3 +91,4 @@ function routeRules.devotionPick()
 end
 
 return routeRules
+end

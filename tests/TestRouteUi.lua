@@ -160,10 +160,18 @@ function TestRunPlannerRouteUi.testRouteStatusDrawsRelatedConflictParticipants()
 end
 
 function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
-    local catalog, data = loadCatalog()
-    local controls = data.buildControls(catalog, testImport)
+    local catalog = loadCatalog()
+    local controls
+    local routeControlNames
+    local routeControlTabs
+    withTestImport(function()
+        local controlCatalog = testImport("mods/controls/catalog.lua")
+        controls = controlCatalog.build(catalog)
+        routeControlNames = controlCatalog.routeControlNames(catalog)
+        routeControlTabs = controlCatalog.routeControlTabs(catalog)
+    end)
 
-    lu.assertEquals(data.routeControlNames(catalog, testImport), {
+    lu.assertEquals(routeControlNames, {
         "RouteGlobalUnderworld",
         "RouteF",
         "RouteG",
@@ -179,7 +187,7 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
         "RouteNpcsSurface",
         "RouteFeatureHermesShrineSurface",
     })
-    lu.assertEquals(data.routeControlTabs(catalog, testImport).Underworld, {
+    lu.assertEquals(routeControlTabs.Underworld, {
         { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
         { key = "F", label = "Erebus", controlName = "RouteF" },
         { key = "G", label = "Oceanus", controlName = "RouteG" },
@@ -195,7 +203,7 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
             },
         },
     })
-    lu.assertEquals(data.routeControlTabs(catalog, testImport).Surface, {
+    lu.assertEquals(routeControlTabs.Surface, {
         { key = "Global", label = "Global", controlName = "RouteGlobalSurface" },
         { key = "N", label = "Ephyra", controlName = "RouteN" },
         { key = "O", label = "Thessaly", controlName = "RouteO" },

@@ -1,6 +1,6 @@
 local routeFactory = {}
 
-local function createRewardPlanning(invalidLocations, routeMarkers)
+local function createRewardPlanning(invalidLocations, routeMarkers, legalityConditions)
     local rewardItems = import("mods/route/reward_planning/items.lua")
     local rewardSemantics = import("mods/route/reward_planning/semantics.lua")
     local rewardMarkers = import("mods/route/reward_planning/marker_targets.lua", nil, {
@@ -9,7 +9,7 @@ local function createRewardPlanning(invalidLocations, routeMarkers)
         invalidLocations = invalidLocations,
     })
     local rewardLegality = import("mods/route/reward_planning/legality.lua", nil, {
-        conditions = import("mods/rewards/declarations/conditions.lua"),
+        conditions = legalityConditions,
         rewardItems = rewardItems,
         semantics = rewardSemantics,
         invalidLocations = invalidLocations,
@@ -49,7 +49,7 @@ function routeFactory.create(opts)
     local routePosition = import("mods/route/position.lua")
     local invalidLocations = import("mods/route/invalid_locations.lua")
     local routeMarkers = import("mods/route/markers.lua")
-    local planning = createRewardPlanning(invalidLocations, routeMarkers)
+    local planning = createRewardPlanning(invalidLocations, routeMarkers, rewards.legalityConditions)
     local rows = import("mods/route/rows.lua", nil, {
         rewards = rewards,
         timeline = routeTimeline,

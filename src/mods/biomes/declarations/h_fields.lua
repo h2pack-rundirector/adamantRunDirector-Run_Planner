@@ -1,6 +1,6 @@
-return function(importer, deps)
-    local layout = importer("mods/biomes/declarations/h_fields_layout.lua")()
-    local rewardLayout = importer("mods/biomes/declarations/h_fields_rewards.lua")(importer, deps)
+return function(deps)
+    local layout = import("mods/biomes/declarations/h_fields_layout.lua")()
+    local rewardLayout = import("mods/biomes/declarations/h_fields_rewards.lua")(deps)
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules

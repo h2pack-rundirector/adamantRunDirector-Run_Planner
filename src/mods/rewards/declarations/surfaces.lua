@@ -1,6 +1,6 @@
-return function(importer)
-local routeRules = importer("mods/biomes/declaration_rules.lua")
-local rewardConstraints = importer("mods/rewards/declarations/constraints.lua")
+return function(deps)
+local routeRules = deps.routeRules
+local rewardConstraints = deps.rewardConstraints
 local rewards = {}
 
 local DEFAULT_SHOP_REWARD_GENERATION = {

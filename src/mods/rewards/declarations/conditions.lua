@@ -1,3 +1,7 @@
+return function(deps)
+deps = deps or {}
+local godData = deps.godData
+
 return {
     {
         targets = {
@@ -28,16 +32,7 @@ return {
             {
                 kind = "priorDistinctGodLoot",
                 minDistinct = 2,
-                countedLootNames = {
-                    "AphroditeUpgrade",
-                    "ApolloUpgrade",
-                    "DemeterUpgrade",
-                    "HephaestusUpgrade",
-                    "HestiaUpgrade",
-                    "HeraUpgrade",
-                    "PoseidonUpgrade",
-                    "ZeusUpgrade",
-                },
+                countedLootNames = godData.devotionPrerequisiteLootNames(),
                 code = "prior_distinct_god_loot",
                 message = "Trial requires at least two prior planned god rewards",
             },
@@ -321,3 +316,4 @@ return {
         },
     },
 }
+end

@@ -3,7 +3,7 @@ local route = deps.route
 local rewards = deps.rewards or (route and route.rewards) or nil
 local decorations = deps.decorations
 
-local godData = deps.godData or import("mods/data/gods.lua")
+local godData = deps.godData
 local rewardRatio = import("mods/controls/reward_ratio.lua")
 local sideRoomProbability = import("mods/controls/side_room_probability.lua")
 

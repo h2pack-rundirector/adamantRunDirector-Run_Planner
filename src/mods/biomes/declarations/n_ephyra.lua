@@ -1,6 +1,6 @@
-return function(importer, deps)
-    local layout = importer("mods/biomes/declarations/n_ephyra_layout.lua")(importer, deps)
-    local rewardLayout = importer("mods/biomes/declarations/n_ephyra_rewards.lua")(importer, deps)
+return function(deps)
+    local layout = import("mods/biomes/declarations/n_ephyra_layout.lua")(deps)
+    local rewardLayout = import("mods/biomes/declarations/n_ephyra_rewards.lua")(deps)
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules

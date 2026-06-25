@@ -1,10 +1,12 @@
 local lu = require("luaunit")
+local importHarness = require("tests.support.import_harness")
+local withTestImport = importHarness.withTestImport
 
 -- luacheck: globals TestRunPlannerFeatures
 TestRunPlannerFeatures = {}
 
 local function definitions()
-    return dofile("src/mods/features/definitions.lua")
+    return dofile("src/mods/data/features.lua")
 end
 
 function TestRunPlannerFeatures.testDefinesRouteFeatureRoster()
@@ -52,8 +54,8 @@ end
 
 function TestRunPlannerFeatures.testDataLoaderExposesFeatureDefinitions()
     local data = dofile("src/mods/data.lua")
-    local featureDefs = data.loadFeatures(function(path)
-        return dofile("src/" .. path)
+    local featureDefs = withTestImport(function()
+        return data.loadFeatures()
     end)
 
     lu.assertNil(featureDefs.byKey.ChaosGate)

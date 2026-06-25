@@ -1,55 +1,41 @@
 local systems = {}
 
-local function createRewards(decorations)
+local function createRouteRules(godData)
+    return import("mods/biomes/declaration_rules.lua")({
+        godData = godData,
+    })
+end
+
+local function createCatalogDeps(godData, routeRules, rewards)
+    return {
+        godData = godData,
+        routeRules = routeRules,
+        rewards = rewards,
+    }
+end
+
+local function createRewards(godData, routeRules, decorations)
     return import("mods/rewards/rewards.lua").create({
-        definitions = import("mods/rewards/declarations/definitions.lua"),
+        godData = godData,
+        routeRules = routeRules,
         decorations = decorations,
     })
 end
 
-local function createControlTemplates(route, decorations)
+local function createControlTemplates(route, decorations, godData)
     return import("mods/controls/templates.lua", nil, {
         route = route,
         rewards = route.rewards,
-        godData = import("mods/data/gods.lua"),
+        godData = godData,
         decorations = decorations,
     })
 end
 
-local function createLogic(catalog, route)
-    local runState = import("mods/logic/run_state.lua")
-    local routePlan = import("mods/logic/route_plan.lua", nil, {
-        executionPlan = import("mods/logic/execution_plan.lua", nil, {
-            timeline = route.timeline,
-            biomeLookup = catalog.lookup,
-        }),
-        routeContext = route.runContext,
-        runState = runState,
-    })
-    local roomRouting = import("mods/logic/room_routing.lua", nil, {
-        routePlan = routePlan,
-        runState = runState,
-    })
-    local rewardRouting = import("mods/logic/reward_routing.lua", nil, {
-        routePlan = routePlan,
-        runState = runState,
-    })
-    local npcRouting = import("mods/logic/npc_routing.lua", nil, {
-        routePlan = routePlan,
-        runState = runState,
-    })
-    local featureRouting = import("mods/logic/feature_routing.lua", nil, {
-        routePlan = routePlan,
-        runState = runState,
-    })
-    return import("mods/logic.lua", nil, {
+local function createLogic(catalog, route, rewards)
+    return import("mods/logic/assembly.lua").create({
         catalog = catalog,
-        routePlan = routePlan,
-        roomRouting = roomRouting,
-        rewardRouting = rewardRouting,
-        npcRouting = npcRouting,
-        featureRouting = featureRouting,
-        liveGameValidator = import("mods/biomes/live_validator.lua"),
+        route = route,
+        rewards = rewards,
     })
 end
 
@@ -65,13 +51,17 @@ end
 function systems.create(opts)
     opts = opts or {}
     local data = opts.data or import("mods/data.lua")
-    local catalog = opts.catalog or data.loadCatalog()
+    local controlCatalog = opts.controlCatalog or import("mods/controls/catalog.lua")
+    local godData = import("mods/data/gods.lua")
+    local routeRules = createRouteRules(godData)
     local decorations = opts.decorations or import("mods/ui/decorations.lua")
-    local rewards = opts.rewards or createRewards(decorations)
+    local rewards = opts.rewards or createRewards(godData, routeRules, decorations)
+    local catalogDeps = createCatalogDeps(godData, routeRules, rewards)
+    local catalog = opts.catalog or data.loadCatalog(catalogDeps)
     local route = opts.route or import("mods/route/route.lua").create({
         rewards = rewards,
     })
-    local routeControlTabs = opts.routeControlTabs or data.routeControlTabs(catalog)
+    local routeControlTabs = opts.routeControlTabs or controlCatalog.routeControlTabs(catalog)
 
     return {
         data = data,
@@ -79,10 +69,10 @@ function systems.create(opts)
         rewards = rewards,
         route = route,
         routeContext = route.runContext,
-        routeControls = opts.routeControls or data.buildControls(catalog),
+        routeControls = opts.routeControls or controlCatalog.build(catalog),
         routeControlTabs = routeControlTabs,
-        controlTemplates = opts.controlTemplates or createControlTemplates(route, decorations),
-        logic = opts.logic or createLogic(catalog, route),
+        controlTemplates = opts.controlTemplates or createControlTemplates(route, decorations, godData),
+        logic = opts.logic or createLogic(catalog, route, rewards),
         ui = opts.ui or createUi(catalog, route, routeControlTabs, decorations),
     }
 end

@@ -1,4 +1,4 @@
-return function(_, deps)
+return function(deps)
     local rewards = deps.rewards
 
     return {

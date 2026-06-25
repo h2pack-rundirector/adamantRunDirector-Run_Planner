@@ -1,5 +1,5 @@
-return function(importer, deps)
-    local layout = importer("mods/biomes/declarations/f_erebus_layout.lua")
+return function(deps)
+    local layout = import("mods/biomes/declarations/f_erebus_layout.lua")
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules

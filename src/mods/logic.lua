@@ -1,13 +1,14 @@
 local deps = ...
 local logic = {}
 
-local catalog = deps and deps.catalog or nil
-local routePlan = deps and deps.routePlan or nil
-local roomRouting = deps and deps.roomRouting or nil
-local rewardRouting = deps and deps.rewardRouting or nil
-local npcRouting = deps and deps.npcRouting or nil
-local featureRouting = deps and deps.featureRouting or nil
-local liveGameValidator = deps and deps.liveGameValidator or nil
+local catalog = deps.catalog
+local routePlan = deps.routePlan
+local roomRouting = deps.roomRouting
+local rewardRouting = deps.rewardRouting
+local npcRouting = deps.npcRouting
+local featureRouting = deps.featureRouting
+local liveGameValidator = deps.liveGameValidator
+local rewards = deps.rewards
 
 local function debugModeEnabled(runtime)
     return runtime.data.read("DebugMode") == true
@@ -18,6 +19,7 @@ local function registerLiveValidation(moduleRef)
         if debugModeEnabled(runtime) then
             liveGameValidator.run(catalog, {
                 host = host,
+                rewardDefinitions = rewards.definitions,
             })
         end
     end)

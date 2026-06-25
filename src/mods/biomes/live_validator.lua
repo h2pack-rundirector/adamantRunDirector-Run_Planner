@@ -208,8 +208,8 @@ end
 function liveValidator.validate(catalog, opts)
     opts = opts or {}
     local game = opts.game or _G
-    local rewardDefinitions = opts.rewardDefinitions or import("mods/rewards/declarations/definitions.lua")
-    local featureDefinitions = opts.featureDefinitions or import("mods/features/definitions.lua")
+    local rewardDefinitions = opts.rewardDefinitions
+    local featureDefinitions = opts.featureDefinitions or catalog.features
     local issues = {}
 
     validateRoomRefs(issues, game, catalog)

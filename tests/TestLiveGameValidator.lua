@@ -166,6 +166,8 @@ end
 
 function TestRunPlannerLiveGameValidator.testLogicAttachRunsLiveValidatorOnlyInDebugMode()
     local calls = 0
+    local passedRewardDefinitions
+    local definitions = rewardDefinitions()
     local activationCallback
     local logic = assert(loadfile("src/mods/logic.lua"))({
         catalog = {},
@@ -192,9 +194,13 @@ function TestRunPlannerLiveGameValidator.testLogicAttachRunsLiveValidatorOnlyInD
             end,
         },
         liveGameValidator = {
-            run = function()
+            run = function(_, opts)
                 calls = calls + 1
+                passedRewardDefinitions = opts.rewardDefinitions
             end,
+        },
+        rewards = {
+            definitions = definitions,
         },
     })
     logic.attach({
@@ -228,4 +234,5 @@ function TestRunPlannerLiveGameValidator.testLogicAttachRunsLiveValidatorOnlyInD
         },
     })
     lu.assertEquals(calls, 1)
+    lu.assertIs(passedRewardDefinitions, definitions)
 end

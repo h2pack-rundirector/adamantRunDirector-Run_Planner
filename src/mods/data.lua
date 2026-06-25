@@ -1,51 +1,32 @@
 local data = {}
 
-function data.loadControlTemplates(route, importer)
-    importer = importer or import
-    return importer("mods/controls/templates.lua", nil, {
+function data.loadControlTemplates(route, templateDeps)
+    return import("mods/controls/templates.lua", nil, {
         route = route,
         rewards = route.rewards,
-        decorations = importer("mods/ui/decorations.lua"),
+        godData = templateDeps.godData,
+        decorations = import("mods/ui/decorations.lua"),
     })
 end
 
-function data.loadBiomes(importer)
-    importer = importer or import
-    return importer("mods/biomes/catalog.lua").load(importer)
+function data.loadBiomes(catalogDeps)
+    return import("mods/biomes/catalog.lua").load(catalogDeps)
 end
 
-function data.loadRoutes(importer)
-    importer = importer or import
-    return importer("mods/data/routes.lua").load()
+function data.loadRoutes()
+    return import("mods/data/routes.lua").load()
 end
 
-function data.loadNpcs(importer)
-    importer = importer or import
-    return importer("mods/npcs/definitions.lua")
+function data.loadNpcs()
+    return import("mods/data/npcs.lua")
 end
 
-function data.loadFeatures(importer)
-    importer = importer or import
-    return importer("mods/features/definitions.lua")
+function data.loadFeatures()
+    return import("mods/data/features.lua")
 end
 
-function data.loadCatalog(importer)
-    return data.loadBiomes(importer)
-end
-
-function data.buildControls(catalog, importer)
-    importer = importer or import
-    return importer("mods/data/controls.lua").build(catalog)
-end
-
-function data.routeControlNames(catalog, importer)
-    importer = importer or import
-    return importer("mods/data/controls.lua").routeControlNames(catalog)
-end
-
-function data.routeControlTabs(catalog, importer)
-    importer = importer or import
-    return importer("mods/data/controls.lua").routeControlTabs(catalog)
+function data.loadCatalog(catalogDeps)
+    return data.loadBiomes(catalogDeps)
 end
 
 return data

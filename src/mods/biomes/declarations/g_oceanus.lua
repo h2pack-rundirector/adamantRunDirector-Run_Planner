@@ -1,5 +1,5 @@
-return function(importer, deps)
-    local layout = importer("mods/biomes/declarations/g_oceanus_layout.lua")
+return function(deps)
+    local layout = import("mods/biomes/declarations/g_oceanus_layout.lua")
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules

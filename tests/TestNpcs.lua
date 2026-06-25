@@ -1,10 +1,12 @@
 local lu = require("luaunit")
+local importHarness = require("tests.support.import_harness")
+local withTestImport = importHarness.withTestImport
 
 -- luacheck: globals TestRunPlannerNpcs
 TestRunPlannerNpcs = {}
 
 local function definitions()
-    return dofile("src/mods/npcs/definitions.lua")
+    return dofile("src/mods/data/npcs.lua")
 end
 
 local function sortedKeys(map)
@@ -253,8 +255,8 @@ end
 
 function TestRunPlannerNpcs.testDataLoaderExposesNpcDefinitions()
     local data = dofile("src/mods/data.lua")
-    local npcDefs = data.loadNpcs(function(path)
-        return dofile("src/" .. path)
+    local npcDefs = withTestImport(function()
+        return data.loadNpcs()
     end)
 
     lu.assertEquals(npcDefs.byKey.Athena.biomes.P.variants[1].encounterName, "AthenaCombatP")

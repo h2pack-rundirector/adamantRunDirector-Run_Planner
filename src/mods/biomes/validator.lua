@@ -598,14 +598,10 @@ function validator.validateCatalog(catalog, opts)
     return issues
 end
 
-function validator.validateGodLists(gods, rewardDefinitions, routeRules, rewardConditions)
+function validator.validateGodLists(godData, rewardDefinitions, routeRules, rewardConditions)
     local issues = {}
-    local expected = {}
-    for index, god in ipairs(gods or {}) do
-        expected[index] = god.key
-    end
 
-    local function assertSameList(name, actual)
+    local function assertSameList(name, expected, actual)
         for index, value in ipairs(expected) do
             if actual == nil or actual[index] ~= value then
                 addIssue(issues, "god_list_drift", name, "God list drift at index " .. tostring(index))
@@ -617,16 +613,26 @@ function validator.validateGodLists(gods, rewardDefinitions, routeRules, rewardC
         end
     end
 
-    assertSameList("definitions.godLoot", rewardDefinitions and rewardDefinitions.godLoot)
-    assertSameList("routeRules.boonSourcePick", routeRules and routeRules.boonSourcePick().allowedLootNames)
-    assertSameList("routeRules.devotionPick", routeRules and routeRules.devotionPick().allowedLootNames)
+    local godLootNames = godData.godLootNames()
+    local devotionPrerequisiteLootNames = godData.devotionPrerequisiteLootNames()
+
+    assertSameList("definitions.godLoot", godLootNames, rewardDefinitions and rewardDefinitions.godLoot)
+    assertSameList("routeRules.boonSourcePick", godLootNames, routeRules and routeRules.boonSourcePick().allowedLootNames)
+    assertSameList("routeRules.devotionPick", godLootNames, routeRules and routeRules.devotionPick().allowedLootNames)
 
     local godLookup = {}
-    for _, key in ipairs(expected) do
+    for _, key in ipairs(godLootNames) do
         godLookup[key] = true
     end
     for ruleIndex, rule in ipairs(rewardConditions or {}) do
         for reqIndex, requirement in ipairs(rule.requirements or {}) do
+            if requirement.kind == "priorDistinctGodLoot" then
+                assertSameList(
+                    "conditions[" .. tostring(ruleIndex) .. "].requirements[" .. tostring(reqIndex) .. "].countedLootNames",
+                    devotionPrerequisiteLootNames,
+                    requirement.countedLootNames
+                )
+            end
             for lootIndex, lootName in ipairs(requirement.countedLootNames or {}) do
                 if not godLookup[lootName] then
                     addIssue(

@@ -1,17 +1,6 @@
-local function testImport(path, _, deps)
-    local chunk = assert(loadfile("src/" .. path))
-    return chunk(deps)
-end
-
-local function withTestImport(callback)
-    local previousImport = _G.import
-    _G.import = testImport
-    local ok, err = pcall(callback)
-    _G.import = previousImport
-    if not ok then
-        error(err, 0)
-    end
-end
+local importHarness = require("tests.support.import_harness")
+local testImport = importHarness.testImport
+local withTestImport = importHarness.withTestImport
 
 local function normalizeRewardRows(rows)
     local rewardItems = testImport("mods/route/reward_planning/items.lua")
@@ -36,6 +25,15 @@ local function normalizeRewardRows(rows)
     return rows
 end
 
+local loadedCatalogDeps
+
+local function loadCatalogDeps()
+    if loadedCatalogDeps == nil then
+        loadedCatalogDeps = importHarness.loadCatalogDeps()
+    end
+    return loadedCatalogDeps
+end
+
 local function primaryRewardItem(row)
     return row and row.rewardItems and row.rewardItems[1] or nil
 end
@@ -51,14 +49,36 @@ end
 
 local function loadCatalog()
     local data = dofile("src/mods/data.lua")
-    return data.loadCatalog(testImport), data
+    local catalog
+    withTestImport(function()
+        catalog = data.loadCatalog(loadCatalogDeps())
+    end)
+    return catalog, data
+end
+
+local loadedRewardDefinitions
+
+local function loadRewardDefinitions()
+    if loadedRewardDefinitions == nil then
+        loadedRewardDefinitions = importHarness.loadRewardDefinitions()
+    end
+    return loadedRewardDefinitions
+end
+
+local loadedRewardConditions
+
+local function loadRewardConditions()
+    if loadedRewardConditions == nil then
+        loadedRewardConditions = importHarness.loadRewardConditions()
+    end
+    return loadedRewardConditions
 end
 
 local function loadRouteDeps()
     local route
     withTestImport(function()
         local rewards = testImport("mods/rewards/rewards.lua").create({
-            definitions = testImport("mods/rewards/declarations/definitions.lua"),
+            definitions = loadRewardDefinitions(),
         })
         local timeline = testImport("mods/route/timeline.lua")
         local rows = testImport("mods/route/rows.lua", nil, {
@@ -130,7 +150,7 @@ local function loadRewardLegality()
     local semantics = testImport("mods/route/reward_planning/semantics.lua")
     local invalidLocations = testImport("mods/route/invalid_locations.lua")
     return testImport("mods/route/reward_planning/legality.lua", nil, {
-        conditions = testImport("mods/rewards/declarations/conditions.lua"),
+        conditions = loadRewardConditions(),
         rewardItems = testImport("mods/route/reward_planning/items.lua"),
         semantics = semantics,
         invalidLocations = invalidLocations,

@@ -1,23 +1,18 @@
 local lu = require("luaunit")
+local importHarness = require("tests.support.import_harness")
+local withTestImport = importHarness.withTestImport
 
 -- luacheck: globals TestRunPlannerData
 TestRunPlannerData = {}
 
-local function testImport(path)
-    return dofile("src/" .. path)
-end
+local GOD_LOOT_NAMES = dofile("src/mods/data/gods.lua").godLootNames()
 
-local GOD_LOOT_NAMES = {
-    "AphroditeUpgrade",
-    "ApolloUpgrade",
-    "AresUpgrade",
-    "DemeterUpgrade",
-    "HephaestusUpgrade",
-    "HestiaUpgrade",
-    "HeraUpgrade",
-    "PoseidonUpgrade",
-    "ZeusUpgrade",
-}
+local function loadBiomes()
+    local data = dofile("src/mods/data.lua")
+    return withTestImport(function()
+        return data.loadBiomes(importHarness.loadCatalogDeps())
+    end)
+end
 
 local function noneReward()
     return { kind = "none" }
@@ -207,8 +202,7 @@ local function fieldsCagesReward(rewardStore, opts)
 end
 
 function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
 
     lu.assertEquals(#biomes.ordered, 8)
     lu.assertEquals(biomes.ordered[1].key, "F")
@@ -283,8 +277,7 @@ function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareRewardRatios()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
 
     lu.assertEquals(biomes.lookup.F.rewardRatio, { targetMetaProgress = 0.315 })
     lu.assertEquals(biomes.lookup.G.rewardRatio, { targetMetaProgress = 0.35 })
@@ -298,8 +291,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRewardRatios()
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareRoomHistoryTimeline()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
 
     lu.assertEquals(biomes.lookup.F.timeline.defaultRoomHistoryCost, 1)
     lu.assertEquals(biomes.lookup.F.timeline.afterBiome[1].key, "Boss")
@@ -327,8 +319,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoomHistoryTimeline()
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareNaturalChaosFeatures()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
     local chaos = { chaos = true }
     local chaosWell = { chaos = true, wellShop = true }
     local chaosSurface = { chaos = true, surfaceShop = true }
@@ -390,8 +381,7 @@ local function optionKeys(options)
 end
 
 function TestRunPlannerData.testBiomeDefinitionsLabelCombatRoomMetadata()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
 
     lu.assertEquals(
         optionByKey(biomes.lookup.F.rolesByKey.Combat.mapOptions, "F_Combat01").label,
@@ -436,8 +426,7 @@ function TestRunPlannerData.testBiomeDefinitionsLabelCombatRoomMetadata()
 end
 
 function TestRunPlannerData.testEphyraCombatRoomsDeclareLocationAndDifficulty()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
     local combat = biomes.lookup.N.rolesByKey.Combat.mapOptions
 
     lu.assertEquals(optionKeys(combat), {
@@ -533,8 +522,7 @@ local function assertSpecialSlotEncounterDepthCosts(slots, context)
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
 
     lu.assertEquals(biomes.lookup.F.slotLayout.special[0].biomeEncounterDepthCost, 1)
     lu.assertNil(biomes.lookup.F.slotLayout.default)
@@ -606,8 +594,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
 end
 
 function TestRunPlannerData.testBiomeDefinitionsResolveRouteEncounterDepthCosts()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
 
     for _, biome in ipairs(biomes.ordered) do
         local slotLayout = biome.slotLayout or {}
@@ -644,8 +631,7 @@ function TestRunPlannerData.testBiomeDefinitionsResolveRouteEncounterDepthCosts(
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareShopFeatureEligibility()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
     local chaos = { chaos = true }
     local chaosWell = { chaos = true, wellShop = true }
     local well = { wellShop = true }
@@ -686,8 +672,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareShopFeatureEligibility()
 end
 
 function TestRunPlannerData.testRewardTypeMetadataSeparatesBoonHermesAndDevotion()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
 
     lu.assertEquals(biomes.rewardTypes.lookup.Boon.pick, boonSourcePick())
     lu.assertEquals(biomes.rewardTypes.lookup.HermesUpgrade.kind, "standaloneLoot")
@@ -697,8 +682,7 @@ function TestRunPlannerData.testRewardTypeMetadataSeparatesBoonHermesAndDevotion
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
 
     local fOpening = biomes.lookup.F.slotLayout.special[0]
     lu.assertEquals(fOpening.kind, "opening")
@@ -772,8 +756,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareDepthSpecials()
 end
 
 function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
 
     lu.assertNil(biomes.lookup.F.rolesByKey.Trial)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.mapOptions[1].key, "F_Combat01")
@@ -888,8 +871,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
 end
 
 function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
 
     local erebus = biomes.lookup.F.rolesByKey
     lu.assertEquals(erebus.Combat.mapOptions[1].availability.biomeEncounterDepth, { max = 5 })
@@ -954,8 +936,7 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
 end
 
 function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
     local tartarus = biomes.lookup.I
 
     lu.assertEquals(tartarus.slotLayout.fixedBeforeRoute[1].roomKey, "I_Intro")
@@ -1015,8 +996,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
 end
 
 function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
     local ephyra = biomes.lookup.N
 
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].roomKey, "N_Opening01")
@@ -1079,8 +1059,7 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
 end
 
 function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
     local fields = biomes.lookup.H
 
     lu.assertEquals(fields.fields.routeCount.requiredBeforePreboss, 4)
@@ -1114,8 +1093,7 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
 end
 
 function TestRunPlannerData.testThessalyCombatPolicyModelsShipEncounters()
-    local data = dofile("src/mods/data.lua")
-    local biomes = data.loadBiomes(testImport)
+    local biomes = loadBiomes()
     local policy = biomes.lookup.O.combatEncounterPolicy
 
     lu.assertEquals(policy.key, "O_CombatData")

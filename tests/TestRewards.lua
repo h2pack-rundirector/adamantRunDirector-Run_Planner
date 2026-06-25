@@ -1,12 +1,9 @@
 local lu = require("luaunit")
+local importHarness = require("tests.support.import_harness")
+local testImport = importHarness.testImport
 
 -- luacheck: globals TestRunPlannerRewards
 TestRunPlannerRewards = {}
-
-local function testImport(path, _, deps)
-    local chunk = assert(loadfile("src/" .. path))
-    return chunk(deps)
-end
 
 local function loadCatalogFactory()
     local previousImport = _G.import
@@ -19,9 +16,13 @@ local function loadCatalogFactory()
     return factory
 end
 
+local function loadDefinitions()
+    return importHarness.loadRewardDefinitions()
+end
+
 local function loadCatalog()
     local factory = loadCatalogFactory()
-    local definitions = dofile("src/mods/rewards/declarations/definitions.lua")
+    local definitions = loadDefinitions()
     return factory.create(definitions)
 end
 
@@ -65,7 +66,7 @@ local function loadUi()
 end
 
 local function loadConditions()
-    return dofile("src/mods/rewards/declarations/conditions.lua")
+    return importHarness.loadRewardConditions()
 end
 
 local function loadSemantics()
@@ -531,7 +532,7 @@ function TestRunPlannerRewards.testConditionsBlockRoomHammerAfterShopHammer()
 end
 
 function TestRunPlannerRewards.testDefinitionsSeparateRewardStoresSetsAndShopOptionSets()
-    local definitions = dofile("src/mods/rewards/declarations/definitions.lua")
+    local definitions = loadDefinitions()
 
     lu.assertNotNil(definitions.rewardStores.RunProgress)
     lu.assertNotNil(definitions.rewardStores.HubRewards)
