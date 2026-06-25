@@ -737,7 +737,6 @@ function TestRunPlannerRewards.testCatalogNormalizesMajorMinorSurface()
     lu.assertEquals(surface.kind, "majorMinor")
     lu.assertEquals(surface.controls[1].key, "rewardClass")
     lu.assertEquals(surface.controls[1].values, {
-        "",
         "Major",
         "Minor",
     })

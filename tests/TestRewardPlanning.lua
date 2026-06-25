@@ -383,10 +383,10 @@ function TestRunPlannerRewardPlanning.testCombatRewardSurfaceHidesDevotionByDefa
 	                OptionKey = "F_Combat01",
 	            },
 	        }), instance)
-	    local surface = control:rewardSurface(2)
+    local surface = control:rewardSurface(2)
 
     lu.assertEquals(surface.kind, "majorMinor")
-    lu.assertEquals(surface.controls[1].values, { "", "Major", "Minor" })
+    lu.assertEquals(surface.controls[1].values, { "Major", "Minor" })
     lu.assertFalse(hasValue(surface.controls[2].values, "Devotion"))
     lu.assertTrue(hasValue(surface.controls[2].values, "RoomMoneyDrop"))
     lu.assertTrue(hasValue(surface.controls[4].values, "GiftDrop"))

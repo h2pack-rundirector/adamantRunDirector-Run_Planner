@@ -49,9 +49,8 @@ function majorMinor.create(definitions, context)
         end
     )
     local godValues, godLabels = common.godSourceOptions(definitions)
-    local rewardClassValues = { common.VANILLA_VALUE, common.MAJOR_VALUE, common.MINOR_VALUE }
+    local rewardClassValues = { common.MAJOR_VALUE, common.MINOR_VALUE }
     local rewardClassLabels = {
-        [common.VANILLA_VALUE] = "Vanilla",
         [common.MAJOR_VALUE] = common.optionsLabel(definitions, majorRewardStore, common.MAJOR_VALUE),
         [common.MINOR_VALUE] = common.optionsLabel(definitions, minorRewardStore, common.MINOR_VALUE),
     }
