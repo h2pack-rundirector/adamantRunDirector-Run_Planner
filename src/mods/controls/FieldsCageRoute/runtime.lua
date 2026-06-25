@@ -179,6 +179,11 @@ function runtime.create(fields, instance)
             return validation
         end
 
+        local topologyInvalid = data.validateOfferTopology(instance, routeRows, rowIndex)
+        if topologyInvalid ~= nil and not topologyInvalid.valid then
+            return topologyInvalid
+        end
+
         local rewardInvalid = routeRewardValidation(instance, rowIndex)
         if rewardInvalid ~= nil and not rewardInvalid.valid then
             return rewardInvalid
@@ -253,6 +258,7 @@ function runtime.create(fields, instance)
             rewardSourceCount = sourceCount,
             rewardGeneration = surface and surface.context and surface.context.rewardGeneration or nil,
             rewardConstraints = surface and surface.rewardConstraints or nil,
+            offerTopology = data.offerTopology(instance, routeRows, rowIndex, rewardsConfigured),
             rewardPicks = rewardsConfigured
                 and rewardSystem
                 and rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex), {

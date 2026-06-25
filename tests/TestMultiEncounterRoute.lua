@@ -60,7 +60,13 @@ function TestRunPlannerMultiEncounterRoute.testThessalyPriorShopSatisfiesDeadlin
         {},
         { RoleKey = "Combat", OptionKey = "O_Combat01" },
         { RoleKey = "Combat", OptionKey = "O_Combat02" },
-        { RoleKey = "Combat", OptionKey = "O_Combat03", VariantKey = "ThreeCombats" },
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat03",
+            VariantKey = "ThreeCombats",
+            WheelOffer1Key = "OneChoice",
+            WheelOffer2Key = "TwoChoices",
+        },
         { RoleKey = "Midshop", OptionKey = "O_Shop01" },
         { RoleKey = "Combat", OptionKey = "O_Combat06" },
     })
@@ -117,6 +123,8 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterStorageMatchesThess
     lu.assertEquals(storage[1].row[1].key, "RoleKey")
     lu.assertEquals(storage[1].row[2].key, "OptionKey")
     lu.assertEquals(storage[1].row[3].key, "VariantKey")
+    lu.assertEquals(storage[1].row[4].key, "WheelOffer1Key")
+    lu.assertEquals(storage[1].row[5].key, "WheelOffer2Key")
     lu.assertEquals(storage[2].key, "Rewards")
     lu.assertEquals(storage[2].minRows, 8)
     lu.assertEquals(storage[2].row[1].key, "Reward1Key")
@@ -253,6 +261,31 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterSnapshotUsesSelecte
     lu.assertEquals(snapshot.rows[2].roomKey, "O_Combat01")
 end
 
+function TestRunPlannerMultiEncounterRoute.testMultiEncounterRequiresWheelOfferCountWhenRewardsConfigured()
+    local catalog = loadCatalog()
+    local template = loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat01",
+            VariantKey = "TwoCombats",
+        },
+    }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(snapshot.invalidRows[1].code, "ship_wheel_offer_count_required")
+    lu.assertEquals(snapshot.rows[2].invalidCode, "ship_wheel_offer_count_required")
+    lu.assertNil(snapshot.rows[2].offerTopology)
+end
+
 function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValidatedSnapshot()
     local catalog = loadCatalog()
     local template = loadMultiEncounterTemplate()
@@ -271,11 +304,14 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
                 RoleKey = "Combat",
                 OptionKey = "O_Combat02",
                 VariantKey = "TwoCombats",
+                WheelOffer1Key = "TwoChoices",
             },
             {
                 RoleKey = "Combat",
                 OptionKey = "O_Combat03",
                 VariantKey = "ThreeCombats",
+                WheelOffer1Key = "OneChoice",
+                WheelOffer2Key = "TwoChoices",
             },
             {
                 RoleKey = "Fountain",
@@ -291,6 +327,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
                 RoleKey = "Combat",
                 OptionKey = "O_Combat05",
                 VariantKey = "TwoCombats",
+                WheelOffer1Key = "OneChoice",
             },
             {},
         }, nil, nil, {
@@ -362,6 +399,15 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
     lu.assertEquals(snapshot.rows[3].variant.label, "2 Combats")
     lu.assertEquals(snapshot.rows[3].realCombatCount, 2)
     lu.assertEquals(snapshot.rows[3].encounterPolicyKey, "O_CombatData")
+    lu.assertEquals(snapshot.rows[3].offerTopology, {
+        kind = "shipCombat",
+        encounters = {
+            {
+                address = "encounter:1",
+                wheelOfferCount = 2,
+            },
+        },
+    })
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardKind, "none")
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks, {})
     lu.assertEquals(#snapshot.rows[3].encounterRewardLegs, 1)
@@ -379,6 +425,19 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
     lu.assertEquals(snapshot.rows[4].variant.sourceKey, "ThreeCombats")
     lu.assertEquals(snapshot.rows[4].variant.label, "3 Combats")
     lu.assertEquals(snapshot.rows[4].realCombatCount, 3)
+    lu.assertEquals(snapshot.rows[4].offerTopology, {
+        kind = "shipCombat",
+        encounters = {
+            {
+                address = "encounter:1",
+                wheelOfferCount = 1,
+            },
+            {
+                address = "encounter:2",
+                wheelOfferCount = 2,
+            },
+        },
+    })
     lu.assertEquals(#snapshot.rows[4].encounterRewardLegs, 2)
     lu.assertEquals(snapshot.rows[4].encounterRewardLegs[1].key, "Encounter1")
     lu.assertEquals(rewardItemBySource(snapshot.rows[4], "encounter", 1).rewardPicks[3].value, "ZeusUpgrade")
@@ -405,6 +464,15 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
     lu.assertEquals(snapshot.rows[7].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[7].variantKey, "TwoCombats")
     lu.assertEquals(snapshot.rows[7].realCombatCount, 2)
+    lu.assertEquals(snapshot.rows[7].offerTopology, {
+        kind = "shipCombat",
+        encounters = {
+            {
+                address = "encounter:1",
+                wheelOfferCount = 1,
+            },
+        },
+    })
     lu.assertEquals(primaryRewardItem(snapshot.rows[7]).rewardKind, "none")
     lu.assertEquals(#snapshot.rows[7].encounterRewardLegs, 1)
     lu.assertEquals(snapshot.rows[7].encounterRewardLegs[1].key, "Encounter1")

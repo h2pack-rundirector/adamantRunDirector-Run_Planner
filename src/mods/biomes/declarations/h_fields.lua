@@ -60,6 +60,7 @@ return function(deps)
             minibossRooms = layout.minibossRooms,
             minibossRoomsByKey = layout.minibossRoomsByKey,
             cageRewardPolicy = layout.cageRewardPolicy,
+            offerTopology = layout.offerTopology,
         },
         roles = {
             {

@@ -8,9 +8,12 @@ local optionChanges = import("mods/controls/room_option_changes.lua")
 
 local ui = {}
 
-local function resetRoomDetails(fields, rowIndex)
+local function resetRoomDetails(fields, instance, rowIndex)
     fields.Rooms:reset(rowIndex, "OptionKey")
     fields.Rooms:reset(rowIndex, "VariantKey")
+    for legIndex = 1, data.maxEncounterRewardLegCount(instance) do
+        fields.Rooms:reset(rowIndex, data.wheelOfferAlias(instance, legIndex))
+    end
 end
 
 local function resetRewardDetails(fields, rowIndex)
@@ -27,7 +30,7 @@ local function resetEncounterRewardDetails(fields, instance, rowIndex)
 end
 
 local function resetRowDetails(fields, instance, rowIndex)
-    resetRoomDetails(fields, rowIndex)
+    resetRoomDetails(fields, instance, rowIndex)
     resetRewardDetails(fields, rowIndex)
     resetEncounterRewardDetails(fields, instance, rowIndex)
 end

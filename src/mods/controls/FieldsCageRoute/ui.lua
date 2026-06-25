@@ -12,13 +12,14 @@ local function resetRewardDetails(fields, rowIndex)
     rewardSystem.resetRows(fields.Rewards, rowIndex)
 end
 
-local function resetRoomDetails(fields, rowIndex)
+local function resetRoomDetails(fields, instance, rowIndex)
     fields.Rooms:reset(rowIndex, "OptionKey")
     fields.Rooms:reset(rowIndex, "VariantKey")
+    fields.Rooms:reset(rowIndex, data.siblingStructureAlias(instance))
 end
 
 local function resetRowDetails(fields, instance, rowIndex)
-    resetRoomDetails(fields, rowIndex)
+    resetRoomDetails(fields, instance, rowIndex)
     resetRewardDetails(fields, rowIndex)
 end
 

@@ -62,6 +62,27 @@ layout.prebossRoom = option("O_PreBoss01", "Preboss", {
 layout.combatEncounterPolicy = {
     key = "O_CombatData",
     label = "Ship Combat",
+    wheelOfferControl = {
+        key = "WheelOfferCount",
+        label = "Wheel Choices",
+        aliasPrefix = "WheelOffer",
+        options = {
+            {
+                key = "",
+                label = "Select Wheel",
+            },
+            {
+                key = "OneChoice",
+                label = "1 Choice",
+                wheelOfferCount = 1,
+            },
+            {
+                key = "TwoChoices",
+                label = "2 Choices",
+                wheelOfferCount = 2,
+            },
+        },
+    },
     countControl = {
         key = "CombatCount",
         label = "Combat Count",

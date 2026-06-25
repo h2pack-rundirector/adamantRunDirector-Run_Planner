@@ -27,6 +27,18 @@ local function copyMap(source)
     return copy
 end
 
+local function copyTree(source)
+    if type(source) ~= "table" then
+        return source
+    end
+
+    local copy = {}
+    for key, value in pairs(source) do
+        copy[key] = copyTree(value)
+    end
+    return copy
+end
+
 local function compactRewardPicks(source)
     local picks = {}
     for index, pick in ipairs(source or EMPTY_LIST) do
@@ -151,6 +163,7 @@ local function compactRoomRow(row)
         roomHistoryIdentity = row.roomHistoryIdentity,
         countsGoalReward = row.countsGoalReward,
         countsNonGoalReward = row.countsNonGoalReward,
+        offerTopology = copyTree(row.offerTopology),
         features = copyMap(row.features),
         rewardItems = compactRewardItems(row.rewardItems),
         sideRooms = compactSideRooms(row.sideRooms),

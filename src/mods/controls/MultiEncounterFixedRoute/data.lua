@@ -18,6 +18,8 @@ local applySlotDepthContext = common.applySlotDepthContext
 local clearList = common.clearList
 
 local data
+local EMPTY_VALUES = {}
+local EMPTY_LABELS = {}
 
 local function slotForRow(instance, rowIndex)
     return instance.routeSlots[math.floor(tonumber(rowIndex) or 0)]
@@ -144,6 +146,7 @@ local function prepareEncounterPolicy(policy)
     end
 
     local countControl = policy.countControl
+    local wheelOfferControl = policy.wheelOfferControl or {}
     local prepared = {
         key = policy.key,
         label = policy.label,
@@ -152,6 +155,14 @@ local function prepareEncounterPolicy(policy)
         labels = {},
         optionsByKey = {},
         rewardLegs = {},
+        wheelOfferControl = {
+            key = wheelOfferControl.key,
+            label = wheelOfferControl.label or wheelOfferControl.key,
+            aliasPrefix = wheelOfferControl.aliasPrefix or "WheelOffer",
+            values = {},
+            labels = {},
+            optionsByKey = {},
+        },
     }
 
     for _, option in ipairs(countControl.options or {}) do
@@ -177,6 +188,12 @@ local function prepareEncounterPolicy(policy)
             }
         end
     end
+    for _, option in ipairs(wheelOfferControl.options or {}) do
+        local key = option.key or ""
+        prepared.wheelOfferControl.values[#prepared.wheelOfferControl.values + 1] = key
+        prepared.wheelOfferControl.labels[key] = option.label or key
+        prepared.wheelOfferControl.optionsByKey[key] = option
+    end
 
     return prepared
 end
@@ -187,6 +204,7 @@ local function prepareEncounterPolicies(instance)
     local policy = prepareEncounterPolicy(instance.biome.combatEncounterPolicy)
     if policy ~= nil then
         instance.encounterPoliciesByKey[policy.key] = policy
+        instance.primaryEncounterPolicy = policy
     end
 end
 
@@ -444,12 +462,87 @@ function data.encounterRewardLegForRow(instance, rows, rowIndex, legIndex)
     return policy.rewardLegs and policy.rewardLegs[legIndex] or nil
 end
 
+function data.wheelOfferAlias(instance, legIndex)
+    local policy = instance and instance.primaryEncounterPolicy or nil
+    local prefix = policy and policy.wheelOfferControl and policy.wheelOfferControl.aliasPrefix or "WheelOffer"
+    return prefix .. tostring(math.floor(tonumber(legIndex) or 0)) .. "Key"
+end
+
+function data.wheelOfferLabels(instance, roleKey)
+    local policy = data.variantPolicyForRole(instance, roleKey)
+    return policy and policy.wheelOfferControl and policy.wheelOfferControl.labels or EMPTY_LABELS
+end
+
+function data.wheelOfferValues(instance, roleKey)
+    local policy = data.variantPolicyForRole(instance, roleKey)
+    return policy and policy.wheelOfferControl and policy.wheelOfferControl.values or EMPTY_VALUES
+end
+
+function data.resolveWheelOffer(instance, rows, rowIndex, roleKey, legIndex)
+    local policy = data.variantPolicyForRole(instance, roleKey)
+    local control = policy and policy.wheelOfferControl or nil
+    if control == nil then
+        return "", nil
+    end
+
+    local key = rows and rows:read(rowIndex, data.wheelOfferAlias(instance, legIndex)) or ""
+    key = key or ""
+    return key, control.optionsByKey[key]
+end
+
 function data.encounterRewardLegsForRow(instance, rows, rowIndex)
     local legs = {}
     for legIndex = 1, data.encounterRewardLegCountForRow(instance, rows, rowIndex) do
         legs[#legs + 1] = data.encounterRewardLegForRow(instance, rows, rowIndex, legIndex)
     end
     return legs
+end
+
+function data.validateOfferTopology(instance, rows, rowIndex)
+    local roleKey = data.resolveRole(instance, rows, rowIndex)
+    local policy = data.variantPolicyForRole(instance, roleKey)
+    if policy == nil then
+        return nil
+    end
+
+    for legIndex = 1, data.encounterRewardLegCountForRow(instance, rows, rowIndex) do
+        local wheelKey, wheel = data.resolveWheelOffer(instance, rows, rowIndex, roleKey, legIndex)
+        if wheel == nil or wheelKey == "" then
+            return invalidStatus("ship_wheel_offer_count_required", "Thessaly reward simulation needs wheel choice count")
+        end
+    end
+    return nil
+end
+
+function data.offerTopology(instance, rows, rowIndex, rewardsConfigured)
+    if not rewardsConfigured then
+        return nil
+    end
+
+    local roleKey = data.resolveRole(instance, rows, rowIndex)
+    if data.variantPolicyForRole(instance, roleKey) == nil then
+        return nil
+    end
+
+    local encounters = {}
+    for legIndex = 1, data.encounterRewardLegCountForRow(instance, rows, rowIndex) do
+        local _, wheel = data.resolveWheelOffer(instance, rows, rowIndex, roleKey, legIndex)
+        if wheel == nil or wheel.wheelOfferCount == nil then
+            return nil
+        end
+        encounters[#encounters + 1] = {
+            address = "encounter:" .. tostring(legIndex),
+            wheelOfferCount = wheel.wheelOfferCount,
+        }
+    end
+
+    if encounters[1] == nil then
+        return nil
+    end
+    return {
+        kind = "shipCombat",
+        encounters = encounters,
+    }
 end
 
 function data.biomeEncounterDepthCostForVariant(instance, rows, rowIndex, roleKey)
@@ -461,6 +554,15 @@ function data.biomeEncounterDepthCostForVariant(instance, rows, rowIndex, roleKe
 end
 
 function data.storage(instance)
+    local roomRows = data.buildRoomRows()
+    for legIndex = 1, data.maxEncounterRewardLegCount(instance) do
+        roomRows[#roomRows + 1] = {
+            key = data.wheelOfferAlias(instance, legIndex),
+            type = "string",
+            default = "",
+            maxLen = 32,
+        }
+    end
     return {
         {
             key = "Rooms",
@@ -468,7 +570,7 @@ function data.storage(instance)
             minRows = instance.routeRowCount,
             defaultRows = instance.routeRowCount,
             maxRows = instance.routeRowCount,
-            row = data.buildRoomRows(),
+            row = roomRows,
         },
         {
             key = "Rewards",

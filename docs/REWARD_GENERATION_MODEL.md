@@ -22,19 +22,118 @@ context. The route/timeline planning layer should derive generation context from
 the ordered route, rather than making reward bundle declarations infer it from
 their own room.
 
-Recommended shape:
+Recommended route-row shape:
 
 ```lua
-row.rewardGenerationContext = {
+row.offerTopology = {
     offerCount = previousResolvedRoom.exitCount,
     sourceRowIndex = previousRow.rowIndex,
     sourceRoomKey = previousRow.roomKey,
 }
 ```
 
-Reward items can consume that generated context later, but the biome declaration
-should keep topology as topology: exits, cage counts, wheel offer count, forced
-structure, and so on.
+Reward items can be checked against that generated context later, but the biome
+declaration should keep topology as topology: exits, cage counts, wheel offer
+count, forced structure, and so on.
+
+The row is the structural spine. Rewards are leaf metadata on that row, not the
+place where route topology should live.
+
+## Context Ownership Contract
+
+Keep these contexts separate:
+
+```text
+rowCtx
+  structural route state and generated-offer topology
+
+rewardCtx
+  selected reward legality state
+
+bagCtx
+  future store depletion, refill, reservation, and unknown-offer state
+
+reward leaf
+  the selected reward value at one address on the row
+```
+
+The current reward legality model should stay simple:
+
+```lua
+available = rewardSurface:choices(rowCtx, rewardCtx)
+```
+
+When reward-bag simulation is added, it should become another layer:
+
+```lua
+available = rewardSurface:choices(rowCtx, rewardCtx, bagCtx)
+```
+
+`bagCtx` must not own biome topology. It consumes normalized row topology plus
+the row's reward leaves:
+
+```lua
+bagCtx:consumeGeneratedOffers(rowCtx.offerTopology, row.rewardItems)
+```
+
+This keeps the direction of ownership clear:
+
+```text
+biome declaration -> rowCtx.offerTopology -> bagCtx
+reward declarations -> reward leaves -> rewardCtx / bagCtx checks
+```
+
+The route walker should not re-solve H, O, or any biome-specific generation
+rules. It should receive normalized row topology from the control snapshot and
+pass that through to reward planning.
+
+## Configuration Gate
+
+Generated-offer topology should always be representable in biome declarations,
+but the extra user-facing controls should be gated by `Configure Rewards`.
+
+Rationale:
+
+- The extra H/O fields are structural data.
+- They matter only when reward generation or reward bags are being simulated.
+- Room-only routing should not become invalid because reward-simulation
+  topology is unresolved.
+
+When `Configure Rewards` is disabled:
+
+- omit reward-bag topology requirements from validation,
+- ignore H sibling structure and O wheel offer count,
+- keep room routing focused on the picked path.
+
+When `Configure Rewards` is enabled:
+
+- ambiguous generated-offer structure must be concrete,
+- `Auto` / `Vanilla` should not be accepted for fields that the future bag
+  simulator needs,
+- invalid messages should point at the unresolved topology, for example
+  "Fields reward simulation needs sibling door structure for Row 3."
+
+This gate keeps `Configure Rooms` honest: it means "force the picked route."
+`Configure Rewards` means "make reward generation deterministic enough to
+force and simulate rewards."
+
+## Reward Availability Layers
+
+Reward nodes should continue to answer "what can this selector pick here?"
+through layered availability:
+
+1. Declaration layer:
+   what this reward surface can ever offer. Impossible options can be hidden.
+2. Reward legality layer:
+   route-context rules such as Hermes limit, hammer limit, Path of Stars
+   requiring Selene's Gift, devotion gods, and spacing. Context-invalid options
+   should remain visible and invalid-colored.
+3. Bag availability layer:
+   future store/bag state. A reward that the store cannot currently produce
+   should be context-invalid, not declaration-hidden.
+
+Bag availability is a filter/check on reward leaves. Bag mutation comes from
+row topology plus selected reward leaves.
 
 ## Vanilla Reward Store Facts
 
@@ -132,7 +231,8 @@ Bounded simulation is not good enough here:
 Current modeling direction:
 
 - H reward routing should force deterministic generated structure.
-- The user should select the second door structure, not its rewards.
+- The user should select the second door structure, not its rewards, when
+  `Configure Rewards` is enabled.
 - This is needed only for the ambiguous H choice rows, not as a global model.
 
 Structure enum:
@@ -150,11 +250,64 @@ Miniboss     -> 1 RunProgress offer, Boon-only
 Bridge       -> 0 RunProgress offers
 ```
 
-When the picked side is a combat cage and vanilla shares the same cage count
-across offered cage doors, the sibling cage count can match the picked cage
-count. When the picked side is Bridge or Miniboss, the sibling structure must
-say whether the other generated door was `CombatCage2`, `CombatCage3`,
-`Miniboss`, or `Bridge`.
+Miniboss topology should still use `structure = "Miniboss"` for reward-bag
+semantics, but it must also carry the exact room key, such as `H_MiniBoss01`
+or `H_MiniBoss02`. The exact room key keeps creation limits, planned-room
+reservation, and post-miniboss lockout expressible as simple room-key checks.
+
+Topology options with exact `roomKey` values participate in picked-route
+reservation. If a room is planned as a picked route room elsewhere, it should
+not be offered as an unpicked topology sibling. If stale storage still points at
+that room, snapshot validation should fail instead of exporting topology. After
+a picked miniboss row, later miniboss topology should also be blocked because
+the route has already committed to a miniboss branch.
+
+H minibosses also create forced-deadline pressure. Both miniboss rooms have a
+vanilla forced window ending at biome depth 4. If no miniboss has been picked
+before that deadline, generated topology through that row must include both
+exact miniboss room keys. A late picked miniboss with a combat sibling is
+therefore invalid unless the other miniboss was generated earlier as sibling
+topology. A picked miniboss before the deadline closes the group because vanilla
+then makes the other miniboss variant ineligible.
+
+Normalized row topology should live on the row context, not on the reward
+leaves:
+
+```lua
+row.offerTopology = {
+    kind = "fieldsChoice",
+    selected = {
+        structure = "CombatCage2",
+        rewardAddresses = { "cage:1", "cage:2" },
+    },
+    sibling = {
+        structure = "Miniboss",
+        roomKey = "H_MiniBoss02",
+        rewardStore = "RunProgress",
+        eligibleRewardTypes = { "Boon" },
+        offerCount = 1,
+    },
+}
+```
+
+Reward leaves remain simple:
+
+```text
+cage:1 -> selected reward value
+cage:2 -> selected reward value
+```
+
+The future bag context joins the two. It reads `row.offerTopology`, looks up
+the selected reward leaves by address, consumes those exact selected offers,
+and consumes unknown sibling offers according to the normalized sibling
+structure.
+
+When both offered H doors are combat cages, their cage reward counts must
+match. A picked `CombatCage2` must have `CombatCage2` sibling topology, and a
+picked `CombatCage3` must have `CombatCage3` sibling topology. When the picked
+side is Bridge or Miniboss, the sibling structure must say whether the other
+generated door was `CombatCage2`, `CombatCage3`, an exact miniboss room key, or
+`Bridge`.
 
 The planner should not ask reward validation to guess H randomness. It should
 make H generation deterministic first, then simulate that deterministic plan.
@@ -178,8 +331,35 @@ Meaning:
 - `1`: only the selected wheel reward was generated.
 - `2`: selected reward plus one unpicked sibling reward were generated.
 
-This belongs on the O encounter reward node. It should not be inferred from
-generic room exits.
+This belongs on the O row topology for each active encounter reward leg. It
+should not be inferred from generic room exits, and it should not be stored as
+topology owned by the reward leaf.
+
+Normalized shape:
+
+```lua
+row.offerTopology = {
+    kind = "shipCombat",
+    encounters = {
+        {
+            address = "encounter:1",
+            wheelOfferCount = 2,
+        },
+        {
+            address = "encounter:2",
+            wheelOfferCount = 1,
+        },
+    },
+}
+```
+
+The reward item at `encounter:1` still owns the selected reward value. The bag
+context interprets `wheelOfferCount = 2` as selected offer plus one unknown
+sibling offer from the same ship wheel batch.
+
+The 2-vs-3 combat-leg choice remains room structure. The 1-vs-2 wheel-offer
+choice is reward-generation structure and should be required only when
+`Configure Rewards` is enabled.
 
 ## Deferred Structural Detour: Chaos Gates
 

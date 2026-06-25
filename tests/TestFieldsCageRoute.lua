@@ -53,11 +53,11 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageStorageMatchesFieldsRouteRo
     lu.assertEquals(#storage, 2)
     lu.assertEquals(storage[1].key, "Rooms")
     lu.assertEquals(storage[1].minRows, 6)
+    lu.assertEquals(storage[1].row[4].key, "SiblingStructureKey")
     lu.assertEquals(storage[2].key, "Rewards")
     lu.assertEquals(storage[2].minRows, 6)
 
     lu.assertEquals(routeData.cageCountLabelsForRole(instance, "Combat"), {
-        [""] = "Vanilla",
         TwoRewards = "2 Rewards",
         ThreeRewards = "3 Rewards",
     })
@@ -68,7 +68,6 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageStorageMatchesFieldsRouteRo
             OptionKey = "H_Combat09",
         },
     }), 2, "Combat"), {
-        "",
         "TwoRewards",
     })
     lu.assertEquals(routeData.cageCountValuesForRow(instance, fakeRows({
@@ -78,10 +77,35 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageStorageMatchesFieldsRouteRo
             OptionKey = "H_Combat04",
         },
     }), 2, "Combat"), {
-        "",
         "TwoRewards",
         "ThreeRewards",
     })
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeResolvesOnlyConcreteCageCount()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat09",
+                SiblingStructureKey = "CombatCage2",
+                Reward1Key = "Boon",
+                Reward1LootKey = "HestiaUpgrade",
+                Reward2Key = "WeaponUpgrade",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertTrue(snapshot.valid)
+    lu.assertEquals(snapshot.rows[2].variantKey, "TwoRewards")
+    lu.assertEquals(snapshot.rows[2].cageRewardCount, 2)
+    lu.assertEquals(snapshot.rows[2].offerTopology.selected.structure, "CombatCage2")
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnapshot()
@@ -97,6 +121,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnaps
                 RoleKey = "Combat",
                 OptionKey = "H_Combat04",
                 VariantKey = "ThreeRewards",
+                SiblingStructureKey = "CombatCage3",
                 Reward1Key = "Boon",
                 Reward1LootKey = "PoseidonUpgrade",
                 Reward2Key = "HermesUpgrade",
@@ -106,6 +131,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnaps
                 RoleKey = "Combat",
                 OptionKey = "H_Combat09",
                 VariantKey = "TwoRewards",
+                SiblingStructureKey = "H_MiniBoss02",
                 Reward1Key = "Boon",
                 Reward1LootKey = "HestiaUpgrade",
                 Reward2Key = "WeaponUpgrade",
@@ -113,10 +139,12 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnaps
             {
                 RoleKey = "Bridge",
                 OptionKey = "",
+                SiblingStructureKey = "CombatCage3",
             },
             {
                 RoleKey = "Miniboss",
                 OptionKey = "H_MiniBoss01",
+                SiblingStructureKey = "CombatCage2",
                 Reward1Key = "ZeusUpgrade",
             },
             {},
@@ -144,6 +172,20 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnaps
     lu.assertEquals(snapshot.rows[2].variantKey, "ThreeRewards")
     lu.assertEquals(snapshot.rows[2].cagePolicyKey, "H_FieldsCageRewards")
     lu.assertEquals(snapshot.rows[2].cageRewardCount, 3)
+    lu.assertEquals(snapshot.rows[2].offerTopology, {
+        kind = "fieldsChoice",
+        selected = {
+            structure = "CombatCage3",
+            rewardStore = "RunProgress",
+            offerCount = 3,
+            rewardAddresses = { "cage:1", "cage:2", "cage:3" },
+        },
+        sibling = {
+            structure = "CombatCage3",
+            rewardStore = "RunProgress",
+            offerCount = 3,
+        },
+    })
     lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardKind, "fieldsCages")
     lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardSourceCount, 3)
     lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardPicks[1].value, "Boon")
@@ -155,6 +197,22 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnaps
     lu.assertEquals(snapshot.rows[3].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[3].optionKey, "H_Combat09")
     lu.assertEquals(snapshot.rows[3].cageRewardCount, 2)
+    lu.assertEquals(snapshot.rows[3].offerTopology, {
+        kind = "fieldsChoice",
+        selected = {
+            structure = "CombatCage2",
+            rewardStore = "RunProgress",
+            offerCount = 2,
+            rewardAddresses = { "cage:1", "cage:2" },
+        },
+        sibling = {
+            structure = "Miniboss",
+            roomKey = "H_MiniBoss02",
+            rewardStore = "RunProgress",
+            eligibleRewardTypes = { "Boon" },
+            offerCount = 1,
+        },
+    })
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardKind, "fieldsCages")
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardSourceCount, 2)
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[2].value, "HestiaUpgrade")
@@ -165,11 +223,39 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnaps
     lu.assertEquals(snapshot.rows[4].optionKey, "H_Bridge01")
     lu.assertEquals(snapshot.rows[4].roomKey, "H_Bridge01")
     lu.assertTrue(snapshot.rows[4].valid)
+    lu.assertEquals(snapshot.rows[4].offerTopology, {
+        kind = "fieldsChoice",
+        selected = {
+            structure = "Bridge",
+            offerCount = 0,
+        },
+        sibling = {
+            structure = "CombatCage3",
+            rewardStore = "RunProgress",
+            offerCount = 3,
+        },
+    })
     lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardKind, "none")
 
     lu.assertEquals(snapshot.rows[5].roleKey, "Miniboss")
     lu.assertEquals(snapshot.rows[5].optionKey, "H_MiniBoss01")
     lu.assertEquals(snapshot.rows[5].roomKey, "H_MiniBoss01")
+    lu.assertEquals(snapshot.rows[5].offerTopology, {
+        kind = "fieldsChoice",
+        selected = {
+            structure = "Miniboss",
+            roomKey = "H_MiniBoss01",
+            rewardStore = "RunProgress",
+            eligibleRewardTypes = { "Boon" },
+            offerCount = 1,
+            rewardAddresses = { "row" },
+        },
+        sibling = {
+            structure = "CombatCage2",
+            rewardStore = "RunProgress",
+            offerCount = 2,
+        },
+    })
     lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardKind, "boonSource")
     lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardPicks[1].value, "ZeusUpgrade")
 
@@ -232,6 +318,365 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeInvalidatesForcedCag
     lu.assertEquals(snapshot.rows[2].invalidCode, "cage_count_requires_map")
 end
 
+function TestRunPlannerFieldsCageRoute.testFieldsCageRequiresPickedCageCountWhenRewardsConfigured()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat04",
+                SiblingStructureKey = "CombatCage2",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fields_cage_count_required")
+    lu.assertEquals(snapshot.rows[2].invalidCode, "fields_cage_count_required")
+    lu.assertNil(snapshot.rows[2].offerTopology)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageRequiresSiblingStructureWhenRewardsConfigured()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat04",
+                VariantKey = "TwoRewards",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fields_sibling_structure_required")
+    lu.assertEquals(snapshot.rows[2].invalidCode, "fields_sibling_structure_required")
+    lu.assertNil(snapshot.rows[2].offerTopology)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsMismatchedSiblingCombatCageCount()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat04",
+                VariantKey = "ThreeRewards",
+                SiblingStructureKey = "CombatCage2",
+                Reward1Key = "Boon",
+                Reward1LootKey = "PoseidonUpgrade",
+                Reward2Key = "HermesUpgrade",
+                Reward3Key = "StackUpgrade",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fields_sibling_combat_cage_count_mismatch")
+    lu.assertEquals(snapshot.rows[2].invalidCode, "fields_sibling_combat_cage_count_mismatch")
+    lu.assertNil(snapshot.rows[2].offerTopology)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsUnresolvedForcedTopologyAtDeadline()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {},
+            {},
+            {},
+            {},
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fields_forced_topology_group_unresolved")
+    lu.assertEquals(snapshot.rows[5].invalidCode, "fields_forced_topology_group_unresolved")
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsLateSingleMinibossTopology()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {},
+            {},
+            {},
+            {
+                RoleKey = "Miniboss",
+                OptionKey = "H_MiniBoss01",
+                SiblingStructureKey = "CombatCage2",
+                Reward1Key = "ZeusUpgrade",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fields_forced_topology_group_unresolved")
+    lu.assertEquals(snapshot.rows[5].invalidCode, "fields_forced_topology_group_unresolved")
+    lu.assertNil(snapshot.rows[5].offerTopology)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageAllowsLatePairedMinibossTopology()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {},
+            {},
+            {},
+            {
+                RoleKey = "Miniboss",
+                OptionKey = "H_MiniBoss01",
+                SiblingStructureKey = "H_MiniBoss02",
+                Reward1Key = "ZeusUpgrade",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertTrue(snapshot.valid)
+    lu.assertEquals(snapshot.rows[5].offerTopology.sibling.roomKey, "H_MiniBoss02")
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageEarlyPickedMinibossClosesForcedTopologyGroup()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {},
+            {},
+            {
+                RoleKey = "Miniboss",
+                OptionKey = "H_MiniBoss01",
+                SiblingStructureKey = "CombatCage2",
+                Reward1Key = "ZeusUpgrade",
+            },
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat04",
+                VariantKey = "TwoRewards",
+                SiblingStructureKey = "CombatCage2",
+                Reward1Key = "Boon",
+                Reward1LootKey = "HestiaUpgrade",
+                Reward2Key = "WeaponUpgrade",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertTrue(snapshot.valid)
+    lu.assertEquals(snapshot.rows[5].offerTopology.selected.structure, "CombatCage2")
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsSiblingStructureOutsideDepthWindow()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {},
+            {},
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat04",
+                VariantKey = "TwoRewards",
+                SiblingStructureKey = "Bridge",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fields_sibling_structure_unavailable")
+    lu.assertEquals(snapshot.rows[5].invalidCode, "fields_sibling_structure_unavailable")
+    lu.assertNil(snapshot.rows[5].offerTopology)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsSiblingStructureMatchingSelectedRoom()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {},
+            {
+                RoleKey = "Miniboss",
+                OptionKey = "H_MiniBoss01",
+                SiblingStructureKey = "H_MiniBoss01",
+                Reward1Key = "ZeusUpgrade",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 3)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fields_sibling_same_room")
+    lu.assertEquals(snapshot.rows[3].invalidCode, "fields_sibling_same_room")
+    lu.assertNil(snapshot.rows[3].offerTopology)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageAllowsSiblingStructureWithDifferentMinibossRoom()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {},
+            {
+                RoleKey = "Miniboss",
+                OptionKey = "H_MiniBoss01",
+                SiblingStructureKey = "H_MiniBoss02",
+                Reward1Key = "ZeusUpgrade",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertTrue(snapshot.valid)
+    lu.assertEquals(snapshot.rows[3].offerTopology, {
+        kind = "fieldsChoice",
+        selected = {
+            structure = "Miniboss",
+            roomKey = "H_MiniBoss01",
+            rewardStore = "RunProgress",
+            eligibleRewardTypes = { "Boon" },
+            offerCount = 1,
+            rewardAddresses = { "row" },
+        },
+        sibling = {
+            structure = "Miniboss",
+            roomKey = "H_MiniBoss02",
+            rewardStore = "RunProgress",
+            eligibleRewardTypes = { "Boon" },
+            offerCount = 1,
+        },
+    })
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsSiblingRoomPlannedElsewhere()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat09",
+                VariantKey = "TwoRewards",
+                SiblingStructureKey = "H_MiniBoss02",
+                Reward1Key = "Boon",
+                Reward1LootKey = "HestiaUpgrade",
+                Reward2Key = "WeaponUpgrade",
+            },
+            {
+                RoleKey = "Miniboss",
+                OptionKey = "H_MiniBoss02",
+                SiblingStructureKey = "CombatCage2",
+                Reward1Key = "ZeusUpgrade",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 3)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fields_sibling_room_planned")
+    lu.assertEquals(snapshot.rows[3].invalidCode, "fields_sibling_room_planned")
+    lu.assertNil(snapshot.rows[3].offerTopology)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsMinibossSiblingAfterPickedMiniboss()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {},
+            {},
+            {
+                RoleKey = "Miniboss",
+                OptionKey = "H_MiniBoss02",
+                SiblingStructureKey = "CombatCage2",
+                Reward1Key = "ZeusUpgrade",
+            },
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat04",
+                VariantKey = "TwoRewards",
+                SiblingStructureKey = "H_MiniBoss01",
+                Reward1Key = "Boon",
+                Reward1LootKey = "HestiaUpgrade",
+                Reward2Key = "WeaponUpgrade",
+            },
+        }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.disabled)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fields_sibling_miniboss_after_selected")
+    lu.assertEquals(snapshot.rows[5].invalidCode, "fields_sibling_miniboss_after_selected")
+    lu.assertNil(snapshot.rows[5].offerTopology)
+end
+
 function TestRunPlannerFieldsCageRoute.testFieldsCagePolicyRejectsDuplicateBoonSourcesInSameCageSet()
     local catalog = loadCatalog()
     local template = loadFieldsCageTemplate()
@@ -245,6 +690,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCagePolicyRejectsDuplicateBoonS
                 RoleKey = "Combat",
                 OptionKey = "H_Combat04",
                 VariantKey = "ThreeRewards",
+                SiblingStructureKey = "CombatCage3",
                 Reward1Key = "Boon",
                 Reward1LootKey = "PoseidonUpgrade",
                 Reward2Key = "Boon",
@@ -276,6 +722,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimePolicyRejectsDuplica
                 RoleKey = "Combat",
                 OptionKey = "H_Combat04",
                 VariantKey = "TwoRewards",
+                SiblingStructureKey = "CombatCage2",
                 Reward1Key = "MaxHealthDrop",
                 Reward2Key = "MaxHealthDrop",
             },
@@ -322,4 +769,108 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageValueStatesEchoBeforeThirdP
     data.fillRoleValues(instance, rows, 4, values)
     lu.assertTrue(hasValue(values, "Bridge"))
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 4).Bridge)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesUseRoomAvailability()
+    local catalog = loadCatalog()
+    local data = loadFieldsCageData()
+    local instance = data.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local rows = fakeRows({})
+
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 2).H_MiniBoss01, valueStates.HIDDEN)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 2).H_MiniBoss02, valueStates.HIDDEN)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 2).Bridge, valueStates.HIDDEN)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).CombatCage2)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).CombatCage3)
+
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss01)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss02)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 3).Bridge, valueStates.HIDDEN)
+
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).H_MiniBoss01)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).H_MiniBoss02)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).Bridge)
+
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss01, valueStates.INVALID)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02, valueStates.INVALID)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).Bridge, valueStates.HIDDEN)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkMismatchedCombatCageCount()
+    local catalog = loadCatalog()
+    local data = loadFieldsCageData()
+    local instance = data.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local threeRewardRows = fakeRows({
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "H_Combat04",
+            VariantKey = "ThreeRewards",
+        },
+    })
+    local twoRewardRows = fakeRows({
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "H_Combat04",
+            VariantKey = "TwoRewards",
+        },
+    })
+
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, threeRewardRows, 2).CombatCage2, valueStates.INVALID)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, threeRewardRows, 2).CombatCage3)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, twoRewardRows, 2).CombatCage2)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, twoRewardRows, 2).CombatCage3, valueStates.INVALID)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkUnresolvedForcedTopology()
+    local catalog = loadCatalog()
+    local data = loadFieldsCageData()
+    local instance = data.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local rows = fakeRows({
+        {},
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "H_MiniBoss01",
+        },
+    })
+
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).CombatCage2, valueStates.INVALID)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).CombatCage3, valueStates.INVALID)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesHidePlannedTopologyRooms()
+    local catalog = loadCatalog()
+    local data = loadFieldsCageData()
+    local instance = data.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local rows = fakeRows({
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "H_MiniBoss02",
+        },
+    })
+
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss01)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss02, valueStates.HIDDEN)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss01, valueStates.HIDDEN)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02, valueStates.HIDDEN)
 end

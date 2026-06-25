@@ -1082,9 +1082,19 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
     lu.assertEquals(cagePolicy.rewardStore, "RunProgress")
     lu.assertEquals(cagePolicy.countControl.min, 2)
     lu.assertEquals(cagePolicy.countControl.max, 3)
-    lu.assertEquals(cagePolicy.countControl.options[2].cageRewardCount, 2)
-    lu.assertEquals(cagePolicy.countControl.options[3].cageRewardCount, 3)
-    lu.assertEquals(cagePolicy.countControl.options[3].requiresAllOfferedRoomsSupport, 3)
+    lu.assertEquals(cagePolicy.countControl.options[1].key, "TwoRewards")
+    lu.assertEquals(cagePolicy.countControl.options[1].cageRewardCount, 2)
+    lu.assertEquals(cagePolicy.countControl.options[2].key, "ThreeRewards")
+    lu.assertEquals(cagePolicy.countControl.options[2].cageRewardCount, 3)
+    lu.assertEquals(cagePolicy.countControl.options[2].requiresAllOfferedRoomsSupport, 3)
+    lu.assertEquals(fields.fields.offerTopology.rules[1].key, "matchingCombatCageRewardCount")
+    lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].key, "H_Minibosses")
+    lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].candidates, {
+        "H_MiniBoss01",
+        "H_MiniBoss02",
+    })
+    lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].forceAtBiomeDepthMax, 4)
+    lu.assertTrue(fields.fields.offerTopology.forcedGroups[1].pickedCandidateBeforeDeadlineClosesGroup)
     lu.assertEquals(cagePolicy.maxDoorDepthChanceTable[4], {
         maxDoorChance = 0.80,
         ceilingCheck = true,

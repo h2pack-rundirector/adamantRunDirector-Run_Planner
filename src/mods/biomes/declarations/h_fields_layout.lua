@@ -38,6 +38,12 @@ end
 local earlyCombatAvailability = {
     biomeDepthCache = { max = 3 },
 }
+local bridgeAvailability = {
+    biomeDepthCache = { exact = 3 },
+}
+local minibossAvailability = {
+    biomeDepthCache = { min = 2, max = 4 },
+}
 
 layout.wellShopFeatures = WELL_SHOP_FEATURES
 
@@ -54,9 +60,7 @@ layout.prebossRoom = option("H_PreBoss01", "Preboss Shop", {
 })
 
 layout.bridgeRoom = option("H_Bridge01", "Echo", {
-    availability = {
-        biomeDepthCache = { exact = 3 },
-    },
+    availability = bridgeAvailability,
     maxCreationsThisRun = 1,
     maxAppearancesThisBiome = 1,
 })
@@ -68,14 +72,9 @@ layout.cageRewardPolicy = {
     countControl = {
         key = "CageRewardCount",
         label = "Reward Count",
-        default = "Vanilla",
         min = 2,
         max = 3,
         options = {
-            {
-                key = "Vanilla",
-                label = "Vanilla",
-            },
             {
                 key = "TwoRewards",
                 label = "2 Rewards",
@@ -98,6 +97,75 @@ layout.cageRewardPolicy = {
     },
     maxDoorCageCeiling = 2,
     locationModel = "VanillaRandomLootPoint",
+}
+
+layout.offerTopology = {
+    rules = {
+        {
+            key = "matchingCombatCageRewardCount",
+        },
+    },
+    forcedGroups = {
+        {
+            key = "H_Minibosses",
+            candidates = { "H_MiniBoss01", "H_MiniBoss02" },
+            forceAtBiomeDepthMax = 4,
+            pickedCandidateBeforeDeadlineClosesGroup = true,
+        },
+    },
+    siblingStructureControl = {
+        key = "SiblingStructure",
+        alias = "SiblingStructureKey",
+        label = "Sibling Door",
+        options = {
+            {
+                key = "",
+                label = "Select Sibling",
+            },
+            {
+                key = "CombatCage2",
+                label = "Combat 2",
+                structure = "CombatCage2",
+                rewardStore = "RunProgress",
+                offerCount = 2,
+            },
+            {
+                key = "CombatCage3",
+                label = "Combat 3",
+                structure = "CombatCage3",
+                rewardStore = "RunProgress",
+                offerCount = 3,
+            },
+            {
+                key = "H_MiniBoss01",
+                label = "Vampire",
+                structure = "Miniboss",
+                roomKey = "H_MiniBoss01",
+                availability = minibossAvailability,
+                rewardStore = "RunProgress",
+                eligibleRewardTypes = { "Boon" },
+                offerCount = 1,
+            },
+            {
+                key = "H_MiniBoss02",
+                label = "Lamia",
+                structure = "Miniboss",
+                roomKey = "H_MiniBoss02",
+                availability = minibossAvailability,
+                rewardStore = "RunProgress",
+                eligibleRewardTypes = { "Boon" },
+                offerCount = 1,
+            },
+            {
+                key = "Bridge",
+                label = "Echo",
+                structure = "Bridge",
+                roomKey = "H_Bridge01",
+                availability = bridgeAvailability,
+                offerCount = 0,
+            },
+        },
+    },
 }
 
 layout.combatRooms = {
@@ -124,18 +192,14 @@ layout.minibossRooms = {
     option("H_MiniBoss01", "Vampire", {
         encounter = "MiniBossVampire",
         biomeEncounterDepthCost = 1,
-        availability = {
-            biomeDepthCache = { min = 2, max = 4 },
-        },
+        availability = minibossAvailability,
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),
     option("H_MiniBoss02", "Lamia", {
         encounter = "MiniBossLamia",
         biomeEncounterDepthCost = 1,
-        availability = {
-            biomeDepthCache = { min = 2, max = 4 },
-        },
+        availability = minibossAvailability,
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),

@@ -1,6 +1,7 @@
 -- luacheck: no unused args
 
 local deps = ...
+local data = deps.data
 local rewardSystem = deps.rewards
 local decorations = deps.decorations
 
@@ -10,6 +11,18 @@ local REWARD_COLUMN_X = 130
 local REWARD_DRAW_OPTS = {
     hideGenericRewardLabel = true,
 }
+local SIBLING_STRUCTURE_OPTS = {
+    label = "",
+    controlWidth = 130,
+}
+
+local function copyBaseOpts(base)
+    local copy = {}
+    for key, value in pairs(base or {}) do
+        copy[key] = value
+    end
+    return copy
+end
 
 local function rewardDrawOpts(control, rowIndex)
     local sourceCount = control:rewardSourceCount(rowIndex)
@@ -74,6 +87,48 @@ local function drawRewardSurface(draw, control, surface, fields, opts)
     end
 end
 
+local function shouldDrawSiblingStructure(control, instance, rowIndex)
+    local roleKey = data.resolveRole(instance, control:routeRows(), rowIndex)
+    return roleKey == "Combat" or roleKey == "Miniboss" or roleKey == "Bridge"
+end
+
+local function siblingStructureOpts(control, instance, rowIndex)
+    control._siblingStructureOptsByRow = control._siblingStructureOptsByRow or {}
+    local opts = control._siblingStructureOptsByRow[rowIndex]
+    if opts == nil then
+        opts = copyBaseOpts(SIBLING_STRUCTURE_OPTS)
+        opts.values = data.siblingStructureValues(instance)
+        opts.displayValues = data.siblingStructureLabels(instance)
+        control._siblingStructureOptsByRow[rowIndex] = opts
+    end
+    return decorations.decorateDropdown(
+        opts,
+        opts,
+        data.siblingStructureValueStatesForRow(instance, control:routeRows(), rowIndex)
+    )
+end
+
+local function drawSiblingStructure(draw, control, instance, rowIndex)
+    if not shouldDrawSiblingStructure(control, instance, rowIndex) then
+        return
+    end
+
+    local opts = siblingStructureOpts(control, instance, rowIndex)
+    if opts.values[1] == nil then
+        return
+    end
+
+    local imgui = draw.imgui
+    imgui.Spacing()
+    imgui.AlignTextToFramePadding()
+    imgui.Text("Sibling")
+    imgui.SameLine()
+    imgui.SetCursorPosX(REWARD_COLUMN_X)
+    if draw.widgets.dropdown(control:roomField(rowIndex, data.siblingStructureAlias(instance)), opts) then
+        control:invalidateReadPass()
+    end
+end
+
 local function drawRewardRow(draw, control, instance, rowIndex)
     local slot = control:slot(rowIndex)
     if slot == nil then
@@ -94,6 +149,7 @@ local function drawRewardRow(draw, control, instance, rowIndex)
         imgui.SetCursorPosX(REWARD_COLUMN_X)
         drawRewardSurface(draw, control, surface, rewardFields(control, rowIndex), rewardDrawOpts(control, rowIndex))
     end
+    drawSiblingStructure(draw, control, instance, rowIndex)
 end
 
 local function drawRouteRowSeparator(imgui)

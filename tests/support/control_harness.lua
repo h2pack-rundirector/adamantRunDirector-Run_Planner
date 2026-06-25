@@ -91,6 +91,7 @@ local function loadRouteDeps()
             readCache = rows.readCache,
             requirements = rows.requirements,
             biomeRules = rows.biomeRules,
+            valueStates = rows.valueStates,
             rowEngine = rows.engine,
             timeline = timeline,
             rewards = rewards,
