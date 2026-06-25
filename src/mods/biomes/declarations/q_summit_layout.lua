@@ -20,9 +20,15 @@ local SURFACE_SHOP_COMBAT_ROOMS = {
 
 local function option(key, label, opts)
     opts = opts or {}
+    local rewardDoorCount = opts.rewardDoorCount
+    if rewardDoorCount == nil then
+        rewardDoorCount = opts.exitCount
+    end
     return {
         key = key,
         label = label,
+        exitCount = opts.exitCount,
+        rewardDoorCount = rewardDoorCount,
         features = opts.features,
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
@@ -32,6 +38,7 @@ end
 
 local function combat(roomKey, opts)
     opts = opts or {}
+    opts.exitCount = opts.exitCount or 2
     opts.features = opts.features or (SURFACE_SHOP_COMBAT_ROOMS[roomKey] and SURFACE_SHOP_FEATURES or nil)
     opts.biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1
     opts.maxCreationsThisRun = opts.maxCreationsThisRun or 1
@@ -49,10 +56,12 @@ end
 layout.surfaceShopFeatures = SURFACE_SHOP_FEATURES
 
 layout.introRoom = option("Q_Intro", "Intro", {
+    exitCount = 2,
     availability = { biomeDepthCache = { exact = 1 } },
 })
 
 layout.prebossRoom = option("Q_PreBoss01", "Preboss", {
+    exitCount = 1,
     availability = { biomeDepthCache = { exact = 7 } },
 })
 
@@ -79,24 +88,28 @@ layout.combatRoomsByKey = indexByKey(layout.combatRooms)
 
 layout.minibossRooms = {
     option("Q_MiniBoss02", "Brute", {
+        exitCount = 2,
         biomeEncounterDepthCost = 1,
         availability = {
             biomeDepthCache = { exact = 3 },
         },
     }),
     option("Q_MiniBoss03", "Typhon Tail", {
+        exitCount = 2,
         biomeEncounterDepthCost = 1,
         availability = {
             biomeDepthCache = { exact = 6 },
         },
     }),
     option("Q_MiniBoss04", "Typhon Eye", {
+        exitCount = 2,
         biomeEncounterDepthCost = 0,
         availability = {
             biomeDepthCache = { exact = 6 },
         },
     }),
     option("Q_MiniBoss05", "Stalker", {
+        exitCount = 2,
         biomeEncounterDepthCost = 1,
         availability = {
             biomeDepthCache = { exact = 3 },

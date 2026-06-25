@@ -958,12 +958,16 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
 
     lu.assertEquals(#tartarus.rolesByKey.Combat.mapOptions, 24)
     lu.assertEquals(tartarus.rolesByKey.Combat.mapOptions[1].exitCount, 2)
+    lu.assertEquals(tartarus.rolesByKey.Combat.mapOptions[1].rewardDoorCount, 1)
     lu.assertTrue(tartarus.rolesByKey.Combat.mapOptions[1].supportsExtensionChoice)
     lu.assertEquals(tartarus.rolesByKey.Combat.mapOptions[2].exitCount, 1)
+    lu.assertEquals(tartarus.rolesByKey.Combat.mapOptions[2].rewardDoorCount, 0)
     lu.assertFalse(tartarus.rolesByKey.Combat.mapOptions[2].supportsExtensionChoice)
     lu.assertEquals(tartarus.rolesByKey.Combat.mapOptions[12].exitCount, 2)
+    lu.assertEquals(tartarus.rolesByKey.Combat.mapOptions[12].rewardDoorCount, 1)
     lu.assertTrue(tartarus.rolesByKey.Combat.mapOptions[12].supportsExtensionChoice)
     lu.assertEquals(tartarus.rolesByKey.Combat.mapOptions[24].exitCount, 1)
+    lu.assertEquals(tartarus.rolesByKey.Combat.mapOptions[24].rewardDoorCount, 0)
     lu.assertFalse(tartarus.rolesByKey.Combat.mapOptions[24].supportsExtensionChoice)
     lu.assertEquals(tartarus.rolesByKey.Combat.reward, clockworkChoiceReward("TartarusRewards", {
         goalRewardType = "ClockworkGoal",
@@ -977,6 +981,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].key, "I_Story01")
     lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].reward, noneReward())
     lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].exitCount, 1)
+    lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].rewardDoorCount, 0)
     lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].availability.biomeDepthCache, { min = 2 })
     lu.assertEquals(tartarus.rolesByKey.Fountain.roomOptions[1].key, "I_Reprieve01")
     lu.assertEquals(
@@ -984,6 +989,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
         roomStoreReward("TartarusRewards", { ineligibleRewardTypes = { "Devotion" } })
     )
     lu.assertEquals(tartarus.rolesByKey.Fountain.roomOptions[1].exitCount, 2)
+    lu.assertEquals(tartarus.rolesByKey.Fountain.roomOptions[1].rewardDoorCount, 1)
     lu.assertEquals(tartarus.rolesByKey.Story.increments, { clockworkStory = 1 })
     lu.assertEquals(tartarus.rolesByKey.Story.maxCreationsThisRun, 1)
     lu.assertEquals(tartarus.rolesByKey.Fountain.increments, { clockworkNonGoalReward = 1 })
@@ -992,6 +998,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.rolesByKey.Miniboss.maxCreationsThisRun, 1)
     lu.assertEquals(tartarus.rolesByKey.Miniboss.requiresPrevious, { supportsExtensionChoice = true })
     lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[2].exitCount, 2)
+    lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[2].rewardDoorCount, 1)
     lu.assertTrue(tartarus.rolesByKey.Miniboss.roomOptions[2].supportsExtensionChoice)
 end
 
@@ -1003,11 +1010,16 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].reward, roomStoreReward("RunProgress", {
         ineligibleRewardSet = "OpeningRoomBans",
     }))
+    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].exitCount, 1)
+    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].rewardDoorCount, 0)
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].roomKey, "N_PreHub01")
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].reward, roomStoreReward("RunProgress", {
         ineligibleRewardSet = "OpeningRoomBans",
     }))
+    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].exitCount, 1)
+    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].rewardDoorCount, 0)
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].roomKey, "N_Hub")
+    lu.assertEquals(ephyra.hub.generatedRewardDoorCount, 10)
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].reward, noneReward())
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].roomHistoryCost, 0)
     lu.assertEquals(ephyra.slotLayout.fixedAfterHub[1].roomKey, "N_PreBoss01")
@@ -1094,6 +1106,7 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
         "H_MiniBoss02",
     })
     lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].forceAtBiomeDepthMax, 4)
+    lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].generatedExitCount, 2)
     lu.assertTrue(fields.fields.offerTopology.forcedGroups[1].pickedCandidateBeforeDeadlineClosesGroup)
     lu.assertEquals(cagePolicy.maxDoorDepthChanceTable[4], {
         maxDoorChance = 0.80,
@@ -1104,7 +1117,15 @@ end
 
 function TestRunPlannerData.testThessalyCombatPolicyModelsShipEncounters()
     local biomes = loadBiomes()
+    local thessaly = biomes.lookup.O
+    local combat = thessaly.rolesByKey.Combat.mapOptions[1]
+    local fountain = thessaly.rolesByKey.Fountain.roomOptions[1]
     local policy = biomes.lookup.O.combatEncounterPolicy
+
+    lu.assertEquals(combat.exitCount, 1)
+    lu.assertEquals(combat.rewardDoorCount, 0)
+    lu.assertEquals(fountain.exitCount, 1)
+    lu.assertEquals(fountain.rewardDoorCount, 0)
 
     lu.assertEquals(policy.key, "O_CombatData")
     lu.assertEquals(policy.countControl.default, "Vanilla")

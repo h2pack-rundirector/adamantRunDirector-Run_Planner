@@ -22,9 +22,15 @@ local SURFACE_SHOP_COMBAT_ROOMS = {
 
 local function option(key, label, opts)
     opts = opts or {}
+    local rewardDoorCount = opts.rewardDoorCount
+    if rewardDoorCount == nil then
+        rewardDoorCount = opts.exitCount
+    end
     return {
         key = key,
         label = label,
+        exitCount = opts.exitCount,
+        rewardDoorCount = rewardDoorCount,
         features = opts.features,
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
@@ -35,6 +41,8 @@ end
 
 local function combat(roomKey, opts)
     opts = opts or {}
+    opts.exitCount = opts.exitCount or 1
+    opts.rewardDoorCount = opts.rewardDoorCount or 0
     opts.features = opts.features or (SURFACE_SHOP_COMBAT_ROOMS[roomKey] and SURFACE_SHOP_FEATURES or nil)
     opts.biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1
     opts.maxCreationsThisRun = opts.maxCreationsThisRun or 1
@@ -52,10 +60,14 @@ end
 layout.surfaceShopFeatures = SURFACE_SHOP_FEATURES
 
 layout.introRoom = option("O_Intro", "Intro", {
+    exitCount = 1,
+    rewardDoorCount = 0,
     availability = { biomeDepthCache = { exact = 1 } },
 })
 
 layout.prebossRoom = option("O_PreBoss01", "Preboss", {
+    exitCount = 1,
+    rewardDoorCount = 0,
     availability = { biomeDepthCache = { exact = 7 } },
 })
 
@@ -157,6 +169,8 @@ layout.combatRoomsByKey = indexByKey(layout.combatRooms)
 
 layout.storyRooms = {
     option("O_Story01", "Circe", {
+        exitCount = 1,
+        rewardDoorCount = 0,
         availability = {
             biomeEncounterDepth = { minExclusive = 3 },
             biomeDepthCache = { max = 5 },
@@ -167,6 +181,8 @@ layout.storyRooms = {
 
 layout.fountainRooms = {
     option("O_Reprieve01", "Fountain", {
+        exitCount = 1,
+        rewardDoorCount = 0,
         features = SURFACE_SHOP_FEATURES,
         availability = {
             biomeDepthCache = { min = 3, max = 5 },
@@ -177,6 +193,8 @@ layout.fountainRooms = {
 
 layout.shopRooms = {
     option("O_Shop01", "Shop", {
+        exitCount = 1,
+        rewardDoorCount = 0,
         availability = {
             biomeEncounterDepth = { minExclusive = 3 },
             biomeDepthCache = { max = 5 },
@@ -187,6 +205,8 @@ layout.shopRooms = {
 
 layout.devotionRooms = {
     option("O_Devotion01", "Trial", {
+        exitCount = 1,
+        rewardDoorCount = 0,
         biomeEncounterDepthCost = 1,
         features = SURFACE_SHOP_FEATURES,
         availability = {
@@ -198,6 +218,8 @@ layout.devotionRooms = {
 
 layout.minibossRooms = {
     option("O_MiniBoss01", "Charybdis", {
+        exitCount = 1,
+        rewardDoorCount = 0,
         biomeEncounterDepthCost = 0,
         availability = {
             biomeDepthCache = { min = 3, max = 5 },
@@ -206,6 +228,8 @@ layout.minibossRooms = {
         maxAppearancesThisBiome = 1,
     }),
     option("O_MiniBoss02", "Captain", {
+        exitCount = 1,
+        rewardDoorCount = 0,
         features = SURFACE_SHOP_FEATURES,
         biomeEncounterDepthCost = 1,
         availability = {

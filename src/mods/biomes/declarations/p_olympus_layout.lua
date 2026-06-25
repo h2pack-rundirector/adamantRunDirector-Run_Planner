@@ -28,9 +28,15 @@ local SURFACE_SHOP_COMBAT_ROOMS = {
 
 local function option(key, label, opts)
     opts = opts or {}
+    local rewardDoorCount = opts.rewardDoorCount
+    if rewardDoorCount == nil then
+        rewardDoorCount = opts.exitCount
+    end
     return {
         key = key,
         label = label,
+        exitCount = opts.exitCount,
+        rewardDoorCount = rewardDoorCount,
         tags = opts.tags,
         nextRoomTags = opts.nextRoomTags,
         features = opts.features,
@@ -48,7 +54,9 @@ local function combat(roomKey, opts)
     if tagLabel ~= "" then
         tagLabel = " (" .. tagLabel .. ")"
     end
+    local exitCount = opts.exitCount or 2
     return option(roomKey, "C" .. string.sub(roomKey, -2) .. tagLabel, {
+        exitCount = exitCount,
         tags = opts.tags,
         features = opts.features or (SURFACE_SHOP_COMBAT_ROOMS[roomKey] and CHAOS_SURFACE_FEATURES or CHAOS_FEATURES),
         availability = opts.availability,
@@ -70,12 +78,14 @@ layout.chaosFeatures = CHAOS_FEATURES
 layout.surfaceShopFeatures = CHAOS_SURFACE_FEATURES
 
 layout.introRoom = option("P_Intro", "Intro", {
+    exitCount = 1,
     tags = OUTDOOR_TAGS,
     features = CHAOS_FEATURES,
     availability = { biomeDepthCache = { exact = 1 } },
 })
 
 layout.prebossRoom = option("P_PreBoss01", "Preboss", {
+    exitCount = 1,
     tags = INDOOR_OUTDOOR_TAGS,
     availability = { biomeDepthCache = { exact = 9 } },
 })
@@ -112,6 +122,7 @@ layout.combatRoomsByKey = indexByKey(layout.combatRooms)
 
 layout.storyRooms = {
     option("P_Story01", "Dionysus", {
+        exitCount = 2,
         tags = INDOOR_TAGS,
         availability = {
             biomeEncounterDepth = { minExclusive = 2 },
@@ -123,6 +134,7 @@ layout.storyRooms = {
 
 layout.fountainRooms = {
     option("P_Reprieve01", "Fountain", {
+        exitCount = 2,
         tags = INDOOR_TAGS,
         features = CHAOS_SURFACE_FEATURES,
         availability = {
@@ -134,6 +146,7 @@ layout.fountainRooms = {
 
 layout.shopRooms = {
     option("P_Shop01", "Shop", {
+        exitCount = 2,
         tags = OUTDOOR_TAGS,
         features = CHAOS_FEATURES,
         availability = {
@@ -146,6 +159,7 @@ layout.shopRooms = {
 
 layout.minibossRooms = {
     option("P_MiniBoss01", "Talos", {
+        exitCount = 2,
         tags = INDOOR_TAGS,
         biomeEncounterDepthCost = 0,
         availability = {
@@ -156,6 +170,7 @@ layout.minibossRooms = {
         maxAppearancesThisBiome = 1,
     }),
     option("P_MiniBoss02", "Mega-Dracon", {
+        exitCount = 1,
         tags = INDOOR_TAGS,
         nextRoomTags = OUTDOOR_TAGS,
         biomeEncounterDepthCost = 1,

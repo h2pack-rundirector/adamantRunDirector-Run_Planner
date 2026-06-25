@@ -5,10 +5,15 @@ local CHAOS_WELL_FEATURES = { chaos = true, wellShop = true }
 
 local function option(key, label, opts)
     opts = opts or {}
+    local rewardDoorCount = opts.rewardDoorCount
+    if rewardDoorCount == nil then
+        rewardDoorCount = opts.exitCount
+    end
     return {
         key = key,
         label = label,
         exitCount = opts.exitCount,
+        rewardDoorCount = rewardDoorCount,
         features = opts.features,
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
@@ -22,7 +27,7 @@ local function combat(roomKey, opts)
     local exitCount = opts.exitCount or 1
     local exitLabel = exitCount == 1 and "1 Exit" or tostring(exitCount) .. " Exits"
     return option(roomKey, "C" .. string.sub(roomKey, -2) .. " (" .. exitLabel .. ")", {
-        exitCount = opts.exitCount,
+        exitCount = exitCount,
         features = opts.features or CHAOS_WELL_FEATURES,
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,

@@ -5,9 +5,15 @@ local WELL_SHOP_FEATURES = { wellShop = true }
 
 local function option(key, label, opts)
     opts = opts or {}
+    local rewardDoorCount = opts.rewardDoorCount
+    if rewardDoorCount == nil then
+        rewardDoorCount = opts.exitCount
+    end
     return {
         key = key,
         label = label,
+        exitCount = opts.exitCount,
+        rewardDoorCount = rewardDoorCount,
         features = opts.features,
         availability = opts.availability,
         encounter = opts.encounter,
@@ -21,6 +27,7 @@ end
 local function combat(roomKey, maxCageRewards, opts)
     opts = opts or {}
     opts.maxCageRewards = maxCageRewards
+    opts.exitCount = opts.exitCount or 2
     opts.features = opts.features or WELL_SHOP_FEATURES
     opts.biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1
     opts.maxCreationsThisRun = opts.maxCreationsThisRun or 1
@@ -48,18 +55,21 @@ local minibossAvailability = {
 layout.wellShopFeatures = WELL_SHOP_FEATURES
 
 layout.introRoom = option("H_Intro", "Intro", {
+    exitCount = 2,
     availability = {
         biomeDepthCache = { min = 0, max = 1 },
     },
 })
 
 layout.prebossRoom = option("H_PreBoss01", "Preboss Shop", {
+    exitCount = 1,
     availability = {
         routeRoomsEntered = { min = 4 },
     },
 })
 
 layout.bridgeRoom = option("H_Bridge01", "Echo", {
+    exitCount = 2,
     availability = bridgeAvailability,
     maxCreationsThisRun = 1,
     maxAppearancesThisBiome = 1,
@@ -109,6 +119,7 @@ layout.offerTopology = {
         {
             key = "H_Minibosses",
             candidates = { "H_MiniBoss01", "H_MiniBoss02" },
+            generatedExitCount = 2,
             forceAtBiomeDepthMax = 4,
             pickedCandidateBeforeDeadlineClosesGroup = true,
         },
@@ -190,6 +201,7 @@ layout.combatRoomsByKey = indexByKey(layout.combatRooms)
 
 layout.minibossRooms = {
     option("H_MiniBoss01", "Vampire", {
+        exitCount = 2,
         encounter = "MiniBossVampire",
         biomeEncounterDepthCost = 1,
         availability = minibossAvailability,
@@ -197,6 +209,7 @@ layout.minibossRooms = {
         maxAppearancesThisBiome = 1,
     }),
     option("H_MiniBoss02", "Lamia", {
+        exitCount = 2,
         encounter = "MiniBossLamia",
         biomeEncounterDepthCost = 1,
         availability = minibossAvailability,

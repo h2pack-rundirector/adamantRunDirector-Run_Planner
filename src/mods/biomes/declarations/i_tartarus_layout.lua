@@ -9,12 +9,21 @@ local function combatLabel(roomKey, exitCount)
     return "C" .. string.sub(roomKey, -2) .. " (" .. exitLabel .. ")"
 end
 
+local function clockworkRewardDoorCount(exitCount)
+    return math.max((exitCount or 0) - 1, 0)
+end
+
 local function combatRoom(roomKey, exitCount, opts)
     opts = opts or {}
+    local rewardDoorCount = opts.rewardDoorCount
+    if rewardDoorCount == nil then
+        rewardDoorCount = clockworkRewardDoorCount(exitCount)
+    end
     return {
         key = roomKey,
         label = combatLabel(roomKey, exitCount),
         exitCount = exitCount,
+        rewardDoorCount = rewardDoorCount,
         supportsExtensionChoice = exitCount > 1,
         features = opts.features or WELL_SHOP_FEATURES,
         reward = opts.reward,
@@ -26,6 +35,10 @@ end
 
 local function roomOption(roomKey, label, opts)
     opts = opts or {}
+    local rewardDoorCount = opts.rewardDoorCount
+    if rewardDoorCount == nil then
+        rewardDoorCount = clockworkRewardDoorCount(opts.exitCount)
+    end
     return {
         key = roomKey,
         label = label,
@@ -34,6 +47,7 @@ local function roomOption(roomKey, label, opts)
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         exitCount = opts.exitCount,
+        rewardDoorCount = rewardDoorCount,
         supportsExtensionChoice = opts.exitCount ~= nil and opts.exitCount > 1,
     }
 end

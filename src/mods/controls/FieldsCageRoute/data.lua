@@ -242,8 +242,14 @@ local function prepareOfferTopologyPolicies(instance)
 
     for _, group in ipairs(topology and topology.forcedGroups or EMPTY_VALUES) do
         local prepared = shallowCopyMap(group)
+        local generatedExitCount = math.floor(tonumber(group.generatedExitCount) or 0)
+        local requiredGeneratedCount = group.requiredGeneratedCount
+        if requiredGeneratedCount == nil then
+            requiredGeneratedCount = math.min(#(group.candidates or EMPTY_VALUES), generatedExitCount)
+        end
         prepared.candidatesByKey = buildKeyLookup(group.candidates or EMPTY_VALUES)
-        prepared.requiredGeneratedCount = group.requiredGeneratedCount or #(group.candidates or EMPTY_VALUES)
+        prepared.generatedExitCount = generatedExitCount
+        prepared.requiredGeneratedCount = requiredGeneratedCount
         instance.forcedTopologyGroups[#instance.forcedTopologyGroups + 1] = prepared
     end
 end
