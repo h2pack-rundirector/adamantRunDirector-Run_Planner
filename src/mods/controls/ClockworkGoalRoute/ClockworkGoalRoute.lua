@@ -1,17 +1,19 @@
 local deps = ...
-local data = import("mods/controls/ClockworkGoalRoute/data.lua", nil, deps.route)
+local biomeHelpers = deps.biomeHelpers
+local data = import("mods/controls/ClockworkGoalRoute/data/data.lua", nil, deps.route)
 local runtime = import("mods/controls/ClockworkGoalRoute/runtime.lua", nil, {
     data = data,
     common = deps.route.common,
     rewards = deps.rewards,
     rewardItems = deps.route.rewardItems,
-    roomStructure = deps.roomStructure,
+    roomStructure = biomeHelpers.roomStructure,
     invalidLocations = deps.route.invalidLocations,
 })
-local ui = import("mods/controls/ClockworkGoalRoute/ui.lua", nil, {
+local ui = import("mods/controls/ClockworkGoalRoute/ui/ui.lua", nil, {
     data = data,
     rewards = deps.rewards,
     runtime = runtime,
+    roomOptionChanges = biomeHelpers.roomOptionChanges,
     decorations = deps.decorations,
 })
 

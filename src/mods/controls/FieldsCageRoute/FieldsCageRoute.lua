@@ -1,24 +1,26 @@
 local deps = ...
+local biomeHelpers = deps.biomeHelpers
 local dataDeps = {}
 for key, value in pairs(deps.route) do
     dataDeps[key] = value
 end
-dataDeps.roomTopology = deps.roomTopology
-dataDeps.roomStructure = deps.roomStructure
+dataDeps.roomTopology = biomeHelpers.roomTopology
+dataDeps.roomStructure = biomeHelpers.roomStructure
 
-local data = import("mods/controls/FieldsCageRoute/data.lua", nil, dataDeps)
+local data = import("mods/controls/FieldsCageRoute/data/data.lua", nil, dataDeps)
 local runtime = import("mods/controls/FieldsCageRoute/runtime.lua", nil, {
     data = data,
     common = deps.route.common,
     rewards = deps.rewards,
     rewardItems = deps.route.rewardItems,
-    roomStructure = deps.roomStructure,
+    roomStructure = biomeHelpers.roomStructure,
     invalidLocations = deps.route.invalidLocations,
 })
-local ui = import("mods/controls/FieldsCageRoute/ui.lua", nil, {
+local ui = import("mods/controls/FieldsCageRoute/ui/ui.lua", nil, {
     data = data,
     rewards = deps.rewards,
     runtime = runtime,
+    roomOptionChanges = biomeHelpers.roomOptionChanges,
     decorations = deps.decorations,
 })
 

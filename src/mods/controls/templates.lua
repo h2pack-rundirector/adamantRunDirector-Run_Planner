@@ -4,49 +4,39 @@ local rewards = deps.rewards or (route and route.rewards) or nil
 local decorations = deps.decorations
 
 local godData = deps.godData
-local rewardRatio = import("mods/controls/reward_ratio.lua")
-local sideRoomProbability = import("mods/controls/side_room_probability.lua")
-local roomStructure = import("mods/controls/room_structure.lua")
-local roomTopology = import("mods/controls/room_topology.lua", nil, {
-    common = route.common,
-    availability = route.availability,
-    valueStates = route.valueStates,
+local biomeHelpers = import("mods/controls/biome_helpers/biome_helpers.lua", nil, {
+    route = route,
 })
 
 return {
     ClockworkGoalRoute = import("mods/controls/ClockworkGoalRoute/ClockworkGoalRoute.lua", nil, {
         route = route,
         rewards = rewards,
-        roomStructure = roomStructure,
+        biomeHelpers = biomeHelpers,
         decorations = decorations,
     }),
     FieldsCageRoute = import("mods/controls/FieldsCageRoute/FieldsCageRoute.lua", nil, {
         route = route,
         rewards = rewards,
-        roomStructure = roomStructure,
-        roomTopology = roomTopology,
+        biomeHelpers = biomeHelpers,
         decorations = decorations,
     }),
     FixedLinearRoute = import("mods/controls/FixedLinearRoute/FixedLinearRoute.lua", nil, {
         route = route,
         rewards = rewards,
-        roomStructure = roomStructure,
-        roomTopology = roomTopology,
-        rewardRatio = rewardRatio,
+        biomeHelpers = biomeHelpers,
         decorations = decorations,
     }),
     HubPylonRoute = import("mods/controls/HubPylonRoute/HubPylonRoute.lua", nil, {
         route = route,
         rewards = rewards,
-        roomStructure = roomStructure,
-        sideRoomProbability = sideRoomProbability,
+        biomeHelpers = biomeHelpers,
         decorations = decorations,
     }),
     MultiEncounterFixedRoute = import("mods/controls/MultiEncounterFixedRoute/MultiEncounterFixedRoute.lua", nil, {
         route = route,
         rewards = rewards,
-        roomStructure = roomStructure,
-        rewardRatio = rewardRatio,
+        biomeHelpers = biomeHelpers,
         decorations = decorations,
     }),
     RouteNpcs = import("mods/controls/RouteNpcs/RouteNpcs.lua", nil, {

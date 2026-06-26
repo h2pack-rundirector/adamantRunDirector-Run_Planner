@@ -5,7 +5,7 @@ local data = deps.data
 local rewardSystem = deps.rewards
 local runtime = deps.runtime
 local sideRoomProbability = deps.sideRoomProbability
-local optionChanges = import("mods/controls/room_option_changes.lua")
+local optionChanges = deps.roomOptionChanges
 
 local ui = {}
 
@@ -45,23 +45,23 @@ local function resetRowDetails(fields, instance, rowIndex)
     resetAllSideRoomDetails(fields, instance, rowIndex)
 end
 
-local rooms = import("mods/controls/HubPylonRoute/views/rooms.lua", nil, {
+local rooms = import("mods/controls/HubPylonRoute/ui/rooms.lua", nil, {
     data = data,
     resetRowDetails = resetRowDetails,
     decorations = deps.decorations,
 })
-local rewards = import("mods/controls/HubPylonRoute/views/rewards.lua", nil, {
+local rewards = import("mods/controls/HubPylonRoute/ui/rewards.lua", nil, {
     rewards = deps.rewards,
     decorations = deps.decorations,
 })
-local sideRooms = import("mods/controls/HubPylonRoute/views/side_rooms.lua", nil, {
+local sideRooms = import("mods/controls/HubPylonRoute/ui/side_rooms.lua", nil, {
     data = data,
     resetSideRewardDetails = resetSideRewardDetails,
     rewards = deps.rewards,
     sideRoomProbability = sideRoomProbability,
     decorations = deps.decorations,
 })
-local planner = import("mods/controls/HubPylonRoute/views/planner.lua", nil, {
+local planner = import("mods/controls/HubPylonRoute/ui/planner.lua", nil, {
     rooms = rooms,
     rewards = rewards,
     sideRooms = sideRooms,

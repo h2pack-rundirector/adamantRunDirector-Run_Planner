@@ -4,35 +4,36 @@ local deps = ...
 local data = deps.data
 local rewardSystem = deps.rewards
 local runtime = deps.runtime
-local optionChanges = import("mods/controls/room_option_changes.lua")
+local optionChanges = deps.roomOptionChanges
 
 local ui = {}
-
-local function resetRoomDetails(fields, rowIndex)
-    fields.Rooms:reset(rowIndex, "OptionKey")
-    fields.Rooms:reset(rowIndex, "VariantKey")
-end
 
 local function resetRewardDetails(fields, rowIndex)
     rewardSystem.resetRows(fields.Rewards, rowIndex)
 end
 
-local function resetRowDetails(fields, rowIndex)
-    resetRoomDetails(fields, rowIndex)
+local function resetRoomDetails(fields, instance, rowIndex)
+    fields.Rooms:reset(rowIndex, "OptionKey")
+    fields.Rooms:reset(rowIndex, "VariantKey")
+    fields.Rooms:reset(rowIndex, data.siblingStructureAlias(instance))
+end
+
+local function resetRowDetails(fields, instance, rowIndex)
+    resetRoomDetails(fields, instance, rowIndex)
     resetRewardDetails(fields, rowIndex)
 end
 
-local rooms = import("mods/controls/ClockworkGoalRoute/views/rooms.lua", nil, {
+local rooms = import("mods/controls/FieldsCageRoute/ui/rooms.lua", nil, {
     data = data,
     resetRowDetails = resetRowDetails,
     decorations = deps.decorations,
 })
-local rewards = import("mods/controls/ClockworkGoalRoute/views/rewards.lua", nil, {
+local rewards = import("mods/controls/FieldsCageRoute/ui/rewards.lua", nil, {
     data = data,
     rewards = deps.rewards,
     decorations = deps.decorations,
 })
-local planner = import("mods/controls/ClockworkGoalRoute/views/planner.lua", nil, {
+local planner = import("mods/controls/FieldsCageRoute/ui/planner.lua", nil, {
     rooms = rooms,
     rewards = rewards,
     decorations = deps.decorations,
@@ -59,7 +60,7 @@ function ui.create(fields, instance)
 
     function control:resetRow(rowIndex)
         fields.Rooms:reset(rowIndex, "RoleKey")
-        resetRowDetails(fields, rowIndex)
+        resetRowDetails(fields, instance, rowIndex)
     end
 
     function control:resetAllRows()

@@ -4,7 +4,7 @@ local deps = ...
 local data = deps.data
 local rewardSystem = deps.rewards
 local runtime = deps.runtime
-local optionChanges = import("mods/controls/room_option_changes.lua")
+local optionChanges = deps.roomOptionChanges
 
 local ui = {}
 
@@ -27,17 +27,17 @@ local function resetRowDetails(fields, instance, rowIndex)
     resetRewardDetails(fields, rowIndex)
 end
 
-local rooms = import("mods/controls/FixedLinearRoute/views/rooms.lua", nil, {
+local rooms = import("mods/controls/FixedLinearRoute/ui/rooms.lua", nil, {
     data = data,
     resetRowDetails = resetRowDetails,
     decorations = deps.decorations,
 })
-local rewards = import("mods/controls/FixedLinearRoute/views/rewards.lua", nil, {
+local rewards = import("mods/controls/FixedLinearRoute/ui/rewards.lua", nil, {
     rewards = deps.rewards,
     rewardRatio = deps.rewardRatio,
     decorations = deps.decorations,
 })
-local planner = import("mods/controls/FixedLinearRoute/views/planner.lua", nil, {
+local planner = import("mods/controls/FixedLinearRoute/ui/planner.lua", nil, {
     rooms = rooms,
     rewards = rewards,
     decorations = deps.decorations,

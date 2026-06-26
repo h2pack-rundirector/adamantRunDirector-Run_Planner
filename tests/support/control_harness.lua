@@ -186,17 +186,21 @@ local function loadFixedLinearData()
     for key, value in pairs(routeDeps) do
         deps[key] = value
     end
-    deps.roomTopology = testImport("mods/controls/room_topology.lua", nil, {
+    deps.roomTopology = testImport("mods/controls/biome_helpers/room_topology.lua", nil, {
         common = routeDeps.common,
         availability = routeDeps.availability,
         valueStates = routeDeps.valueStates,
     })
-    deps.roomStructure = testImport("mods/controls/room_structure.lua")
-    return testImport("mods/controls/FixedLinearRoute/data.lua", nil, deps)
+    deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
+    return withTestImport(function()
+        return testImport("mods/controls/FixedLinearRoute/data/data.lua", nil, deps)
+    end)
 end
 
 local function loadClockworkGoalData()
-    return testImport("mods/controls/ClockworkGoalRoute/data.lua", nil, loadRouteDeps())
+    return withTestImport(function()
+        return testImport("mods/controls/ClockworkGoalRoute/data/data.lua", nil, loadRouteDeps())
+    end)
 end
 
 local function loadHubPylonData()
@@ -213,17 +217,19 @@ local function loadFieldsCageDeps()
     for key, value in pairs(routeDeps) do
         deps[key] = value
     end
-    deps.roomTopology = testImport("mods/controls/room_topology.lua", nil, {
+    deps.roomTopology = testImport("mods/controls/biome_helpers/room_topology.lua", nil, {
         common = routeDeps.common,
         availability = routeDeps.availability,
         valueStates = routeDeps.valueStates,
     })
-    deps.roomStructure = testImport("mods/controls/room_structure.lua")
+    deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     return deps
 end
 
 local function loadFieldsCageData()
-    return testImport("mods/controls/FieldsCageRoute/data.lua", nil, loadFieldsCageDeps())
+    return withTestImport(function()
+        return testImport("mods/controls/FieldsCageRoute/data/data.lua", nil, loadFieldsCageDeps())
+    end)
 end
 
 local function loadRunContext()
