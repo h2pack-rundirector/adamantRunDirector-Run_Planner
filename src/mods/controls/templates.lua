@@ -7,6 +7,11 @@ local godData = deps.godData
 local rewardRatio = import("mods/controls/reward_ratio.lua")
 local sideRoomProbability = import("mods/controls/side_room_probability.lua")
 local roomStructure = import("mods/controls/room_structure.lua")
+local roomTopology = import("mods/controls/room_topology.lua", nil, {
+    common = route.common,
+    availability = route.availability,
+    valueStates = route.valueStates,
+})
 
 return {
     ClockworkGoalRoute = import("mods/controls/ClockworkGoalRoute/ClockworkGoalRoute.lua", nil, {
@@ -19,6 +24,7 @@ return {
         route = route,
         rewards = rewards,
         roomStructure = roomStructure,
+        roomTopology = roomTopology,
         decorations = decorations,
     }),
     FixedLinearRoute = import("mods/controls/FixedLinearRoute/FixedLinearRoute.lua", nil, {

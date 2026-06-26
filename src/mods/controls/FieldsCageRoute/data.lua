@@ -1,18 +1,15 @@
 local deps = ...
 local common = deps.common
-local availability = deps.availability
 local readCache = deps.readCache
 local timeline = deps.timeline
-local valueStates = deps.valueStates
 local rowEngine = deps.rowEngine
+local roomTopology = deps.roomTopology
 
 local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
-local buildKeyLookup = common.buildKeyLookup
 local buildOptionChoices = common.buildOptionChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
-local availabilityStatus = availability.status
 local activeReadCache = readCache.active
 local rowRecord = readCache.rowRecord
 local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
@@ -27,12 +24,6 @@ local fixedRoomField = common.fixedRoomField
 local data
 local EMPTY_VALUES = {}
 local EMPTY_LABELS = {}
-
-local function clearMap(map)
-    for key in pairs(map) do
-        map[key] = nil
-    end
-end
 
 local function shallowCopyMap(source)
     local copy = {}
@@ -214,55 +205,12 @@ local function prepareCagePolicies(instance)
 end
 
 local function prepareSiblingStructurePolicy(instance)
-    local control = instance.biome.fields
-        and instance.biome.fields.roomTopology
-        and instance.biome.fields.roomTopology.siblingStructureControl
-        or nil
-    if control == nil then
-        instance.siblingStructurePolicy = nil
-        return
-    end
-
-    local policy = {
-        key = control.key,
-        label = control.label or control.key,
-        alias = control.alias or "SiblingStructureKey",
-        availability = instance.biome.fields
-            and instance.biome.fields.roomTopology
-            and instance.biome.fields.roomTopology.siblingStructureWindow
-            or nil,
-        values = {},
-        labels = {},
-        optionsByKey = {},
-    }
-    for _, option in ipairs(control.options or {}) do
-        local key = option.key or ""
-        policy.values[#policy.values + 1] = key
-        policy.labels[key] = option.label or key
-        policy.optionsByKey[key] = option
-    end
-    instance.siblingStructurePolicy = policy
-end
-
-local function prepareRoomTopologyPolicies(instance)
     local topology = instance.biome.fields
         and instance.biome.fields.roomTopology
         or nil
-    instance.roomTopologyRules = topology and topology.rules or EMPTY_VALUES
-    instance.forcedTopologyGroups = {}
-
-    for _, group in ipairs(topology and topology.forcedGroups or EMPTY_VALUES) do
-        local prepared = shallowCopyMap(group)
-        local generatedExitCount = math.floor(tonumber(group.generatedExitCount) or 0)
-        local requiredGeneratedCount = group.requiredGeneratedCount
-        if requiredGeneratedCount == nil then
-            requiredGeneratedCount = math.min(#(group.candidates or EMPTY_VALUES), generatedExitCount)
-        end
-        prepared.candidatesByKey = buildKeyLookup(group.candidates or EMPTY_VALUES)
-        prepared.generatedExitCount = generatedExitCount
-        prepared.requiredGeneratedCount = requiredGeneratedCount
-        instance.forcedTopologyGroups[#instance.forcedTopologyGroups + 1] = prepared
-    end
+    instance.siblingStructurePolicy = roomTopology.prepareSiblingPolicy(topology, {
+        namespace = "fields",
+    })
 end
 
 local function cagePolicyForRole(instance, role)
@@ -320,39 +268,8 @@ local function selectedRoomTopology(roleKey, option, cageCount)
     return nil
 end
 
-local function topologyRoomKey(option)
-    if option == nil then
-        return nil
-    end
-    return option.roomKey or (option.structure == "Miniboss" and option.key or nil)
-end
-
 local function rowRoomKey(instance, rows, rowIndex)
     return data.rowRoomKey(instance, rows, rowIndex)
-end
-
-local function selectedMinibossBeforeRow(instance, rows, rowIndex)
-    for priorIndex = 1, rowIndex - 1 do
-        local priorRoleKey = data.resolveRole(instance, rows, priorIndex)
-        if priorRoleKey == "Miniboss" and rowRoomKey(instance, rows, priorIndex) ~= nil then
-            return true
-        end
-    end
-    return false
-end
-
-local function plannedRoomRowIndex(instance, rows, roomKey, currentRowIndex)
-    if roomKey == nil then
-        return nil
-    end
-    for plannedIndex = 1, instance.routeRowCount or 0 do
-        if plannedIndex ~= currentRowIndex
-            and rowRoomKey(instance, rows, plannedIndex) == roomKey
-        then
-            return plannedIndex
-        end
-    end
-    return nil
 end
 
 local function siblingRoomTopology(option)
@@ -361,19 +278,11 @@ local function siblingRoomTopology(option)
     end
     return {
         structure = option.structure,
-        roomKey = topologyRoomKey(option),
+        roomKey = roomTopology.roomKey(option),
         rewardStore = option.rewardStore,
         eligibleRewardTypes = option.eligibleRewardTypes,
         offerCount = option.offerCount,
     }
-end
-
-local function roomTopologyRules(instance)
-    return instance.roomTopologyRules or EMPTY_VALUES
-end
-
-local function forcedTopologyGroups(instance)
-    return instance.forcedTopologyGroups or EMPTY_VALUES
 end
 
 local function isCombatCageStructure(structure)
@@ -414,88 +323,6 @@ local function matchingCombatCageRewardCountStatus(instance, rows, rowIndex, sib
     )
 end
 
-local function candidateInGroup(group, roomKey)
-    return roomKey ~= nil and group.candidatesByKey ~= nil and group.candidatesByKey[roomKey] == true
-end
-
-local function pickedCandidateBeforeRow(instance, rows, rowIndex, group)
-    for priorIndex = 1, rowIndex - 1 do
-        if candidateInGroup(group, rowRoomKey(instance, rows, priorIndex)) then
-            return true
-        end
-    end
-    return false
-end
-
-local function siblingCandidateRoomKey(instance, rows, rowIndex, siblingOverride)
-    local sibling = siblingOverride
-    if sibling == nil then
-        local _, resolvedSibling = data.resolveSiblingStructure(instance, rows, rowIndex)
-        sibling = resolvedSibling
-    end
-    return topologyRoomKey(sibling)
-end
-
-local function generatedCandidateThroughRow(instance, rows, rowIndex, candidate, siblingOverride)
-    for currentRowIndex = 1, rowIndex do
-        if rowRoomKey(instance, rows, currentRowIndex) == candidate then
-            return true
-        end
-
-        local sibling = currentRowIndex == rowIndex and siblingOverride or nil
-        if siblingCandidateRoomKey(instance, rows, currentRowIndex, sibling) == candidate then
-            return true
-        end
-    end
-    return false
-end
-
-local function generatedCandidateCountThroughRow(instance, rows, rowIndex, group, siblingOverride)
-    local count = 0
-    for _, candidate in ipairs(group.candidates or EMPTY_VALUES) do
-        if generatedCandidateThroughRow(instance, rows, rowIndex, candidate, siblingOverride) then
-            count = count + 1
-        end
-    end
-    return count
-end
-
-local function forcedTopologyGroupStatus(instance, rows, rowIndex, group, siblingOverride)
-    local deadline = group.forceAtBiomeDepthMax
-    if deadline == nil then
-        return validStatus()
-    end
-
-    local context = data.rowContext(instance, rows, rowIndex)
-    if (context.biomeDepthCache or 0) < deadline then
-        return validStatus()
-    end
-    if group.pickedCandidateBeforeDeadlineClosesGroup
-        and pickedCandidateBeforeRow(instance, rows, rowIndex, group)
-    then
-        return validStatus()
-    end
-
-    local generatedCount = generatedCandidateCountThroughRow(instance, rows, rowIndex, group, siblingOverride)
-    if generatedCount >= (group.requiredGeneratedCount or 0) then
-        return validStatus()
-    end
-    return invalidStatus(
-        "fields_forced_topology_group_unresolved",
-        "Forced " .. tostring(group.key or "topology") .. " deadline needs generated forced doors"
-    )
-end
-
-local function forcedTopologyGroupsStatus(instance, rows, rowIndex, siblingOverride)
-    for _, group in ipairs(forcedTopologyGroups(instance)) do
-        local status = forcedTopologyGroupStatus(instance, rows, rowIndex, group, siblingOverride)
-        if not status.valid then
-            return status
-        end
-    end
-    return validStatus()
-end
-
 local function topologyRuleStatus(instance, rows, rowIndex, sibling, rule)
     if rule.key == "matchingCombatCageRewardCount" then
         return matchingCombatCageRewardCountStatus(instance, rows, rowIndex, sibling)
@@ -504,13 +331,37 @@ local function topologyRuleStatus(instance, rows, rowIndex, sibling, rule)
 end
 
 local function topologyRulesStatus(instance, rows, rowIndex, sibling)
-    for _, rule in ipairs(roomTopologyRules(instance)) do
+    local policy = instance.siblingStructurePolicy
+    for _, rule in ipairs(policy and policy.rules or EMPTY_VALUES) do
         local status = topologyRuleStatus(instance, rows, rowIndex, sibling, rule)
         if not status.valid then
             return status
         end
     end
-    return forcedTopologyGroupsStatus(instance, rows, rowIndex, sibling)
+    return validStatus()
+end
+
+local function siblingCandidateRoomKey(instance, rows, rowIndex)
+    local _, sibling = data.resolveSiblingStructure(instance, rows, rowIndex)
+    return roomTopology.roomKey(sibling)
+end
+
+local function siblingPolicyContext(instance, rows, rowIndex)
+    return {
+        rowIndex = rowIndex,
+        routeRowCount = instance.routeRowCount,
+        rowContext = data.rowContext(instance, rows, rowIndex),
+        selectedRoomKey = rowRoomKey(instance, rows, rowIndex),
+        roomKeyAt = function(index)
+            return rowRoomKey(instance, rows, index)
+        end,
+        siblingRoomKeyAt = function(index)
+            return siblingCandidateRoomKey(instance, rows, index)
+        end,
+        extraRuleStatus = function(sibling)
+            return topologyRulesStatus(instance, rows, rowIndex, sibling)
+        end,
+    }
 end
 
 local function maxCageRewardCount(instance)
@@ -626,7 +477,6 @@ function data.prepare(instance)
     data.prepareRoles(instance)
     prepareCagePolicies(instance)
     prepareSiblingStructurePolicy(instance)
-    prepareRoomTopologyPolicies(instance)
     prepareCageRewardContexts(instance)
 
     buildRouteSlots(instance)
@@ -698,9 +548,7 @@ function data.siblingStructureStatus(instance, rows, rowIndex)
     if policy == nil then
         return validStatus()
     end
-    return availabilityStatus({
-        availability = policy.availability,
-    }, data.rowContext(instance, rows, rowIndex))
+    return roomTopology.siblingWindowStatus(policy, data.rowContext(instance, rows, rowIndex))
 end
 
 function data.shouldDrawSiblingStructure(instance, rows, rowIndex)
@@ -724,62 +572,23 @@ function data.resolveSiblingStructure(instance, rows, rowIndex)
 end
 
 local function siblingAvailabilityStatus(instance, rows, rowIndex, sibling)
-    if sibling == nil or sibling.key == nil or sibling.key == "" then
-        return validStatus()
-    end
-    local status = availabilityStatus(sibling, data.rowContext(instance, rows, rowIndex))
-    if not status.valid then
-        return status
-    end
-    local roomKey = topologyRoomKey(sibling)
-    if roomKey ~= nil and roomKey == rowRoomKey(instance, rows, rowIndex) then
-        return invalidStatus("fields_sibling_same_room", "Sibling cannot use the selected room")
-    end
-    if sibling.structure == "Miniboss" and selectedMinibossBeforeRow(instance, rows, rowIndex) then
-        return invalidStatus("fields_sibling_miniboss_after_selected", "Sibling miniboss cannot appear after a picked miniboss")
-    end
-    local plannedIndex = plannedRoomRowIndex(instance, rows, roomKey, rowIndex)
-    if plannedIndex ~= nil then
-        return invalidStatus("fields_sibling_room_planned", "Sibling room is already planned on this route")
-    end
-    return topologyRulesStatus(instance, rows, rowIndex, sibling)
+    return roomTopology.siblingCandidateStatus(
+        instance.siblingStructurePolicy,
+        siblingPolicyContext(instance, rows, rowIndex),
+        sibling
+    )
 end
 
-local function valueStateForSiblingStatus(status)
-    if status == nil or status.valid then
-        return valueStates.NORMAL
-    end
-    if status.code == "fields_sibling_same_room"
-        or status.code == "fields_sibling_room_planned"
-        or status.code == "fields_sibling_miniboss_after_selected"
-    then
-        return valueStates.HIDDEN
-    end
-    return valueStates.forStatus(status)
-end
-
-local function isSiblingTopologyStatus(status)
-    local code = tostring(status and status.code or "")
-    return string.match(code, "^fields_sibling_") ~= nil
-        or string.match(code, "^fields_forced_topology_") ~= nil
+local function isSiblingTopologyStatus(instance, status)
+    return roomTopology.isSiblingTopologyStatus(instance.siblingStructurePolicy, status)
 end
 
 local function fillSiblingStructureValueStates(instance, rows, rowIndex, states)
-    clearMap(states)
-    local policy = instance.siblingStructurePolicy
-    if policy == nil then
-        return states
-    end
-    if not data.siblingStructureStatus(instance, rows, rowIndex).valid then
-        return states
-    end
-    for _, key in ipairs(policy.values or EMPTY_VALUES) do
-        local sibling = policy.optionsByKey[key]
-        valueStates.set(states, key, valueStateForSiblingStatus(
-            siblingAvailabilityStatus(instance, rows, rowIndex, sibling)
-        ))
-    end
-    return states
+    return roomTopology.fillSiblingValueStates(
+        instance.siblingStructurePolicy,
+        siblingPolicyContext(instance, rows, rowIndex),
+        states
+    )
 end
 
 function data.siblingStructureValueStatesForRow(instance, rows, rowIndex)
@@ -810,7 +619,10 @@ function data.validateRoomTopology(instance, rows, rowIndex)
     end
 
     if roleKey == "Vanilla" then
-        local forcedStatus = forcedTopologyGroupsStatus(instance, rows, rowIndex)
+        local forcedStatus = roomTopology.forcedGroupsStatus(
+            instance.siblingStructurePolicy,
+            siblingPolicyContext(instance, rows, rowIndex)
+        )
         if not forcedStatus.valid then
             return forcedStatus
         end
@@ -831,7 +643,7 @@ function data.validateRoomTopology(instance, rows, rowIndex)
     end
     local siblingStatus = siblingAvailabilityStatus(instance, rows, rowIndex, sibling)
     if not siblingStatus.valid then
-        if isSiblingTopologyStatus(siblingStatus) then
+        if isSiblingTopologyStatus(instance, siblingStatus) then
             return siblingStatus
         end
         return invalidStatus(

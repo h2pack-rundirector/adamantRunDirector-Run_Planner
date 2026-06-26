@@ -1,5 +1,11 @@
 local deps = ...
-local data = import("mods/controls/FieldsCageRoute/data.lua", nil, deps.route)
+local dataDeps = {}
+for key, value in pairs(deps.route) do
+    dataDeps[key] = value
+end
+dataDeps.roomTopology = deps.roomTopology
+
+local data = import("mods/controls/FieldsCageRoute/data.lua", nil, dataDeps)
 local runtime = import("mods/controls/FieldsCageRoute/runtime.lua", nil, {
     data = data,
     common = deps.route.common,

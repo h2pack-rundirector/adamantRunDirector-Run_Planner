@@ -1,0 +1,267 @@
+local deps = ...
+local common = deps.common
+local availability = deps.availability
+local valueStates = deps.valueStates
+
+local buildKeyLookup = common.buildKeyLookup
+local validStatus = common.validStatus
+local invalidStatus = common.invalidStatus
+local availabilityStatus = availability.status
+
+local roomTopology = {}
+
+local EMPTY_VALUES = {}
+
+local function clearMap(map)
+    for key in pairs(map) do
+        map[key] = nil
+    end
+end
+
+local function shallowCopyMap(source)
+    local copy = {}
+    for key, value in pairs(source or {}) do
+        copy[key] = value
+    end
+    return copy
+end
+
+local function statusCode(policy, suffix)
+    return tostring(policy.namespace or "topology") .. "_" .. suffix
+end
+
+function roomTopology.roomKey(candidate)
+    if candidate == nil then
+        return nil
+    end
+    return candidate.roomKey or (candidate.structure == "Miniboss" and candidate.key or nil)
+end
+
+local function prepareForcedGroups(groups)
+    local preparedGroups = {}
+    for _, group in ipairs(groups or EMPTY_VALUES) do
+        local prepared = shallowCopyMap(group)
+        local generatedExitCount = math.floor(tonumber(group.generatedExitCount) or 0)
+        local requiredGeneratedCount = group.requiredGeneratedCount
+        if requiredGeneratedCount == nil then
+            requiredGeneratedCount = math.min(#(group.candidates or EMPTY_VALUES), generatedExitCount)
+        end
+        prepared.candidatesByKey = buildKeyLookup(group.candidates or EMPTY_VALUES)
+        prepared.generatedExitCount = generatedExitCount
+        prepared.requiredGeneratedCount = requiredGeneratedCount
+        preparedGroups[#preparedGroups + 1] = prepared
+    end
+    return preparedGroups
+end
+
+function roomTopology.prepareSiblingPolicy(topology, opts)
+    local control = topology and topology.siblingStructureControl or nil
+    if control == nil then
+        return nil
+    end
+
+    local policy = {
+        namespace = opts and opts.namespace or "topology",
+        key = control.key,
+        label = control.label or control.key,
+        alias = control.alias or "SiblingStructureKey",
+        availability = topology.siblingStructureWindow,
+        rules = topology.rules or EMPTY_VALUES,
+        forcedGroups = prepareForcedGroups(topology.forcedGroups),
+        values = {},
+        labels = {},
+        optionsByKey = {},
+    }
+
+    for _, option in ipairs(control.options or EMPTY_VALUES) do
+        local key = option.key or ""
+        policy.values[#policy.values + 1] = key
+        policy.labels[key] = option.label or key
+        policy.optionsByKey[key] = option
+    end
+    return policy
+end
+
+function roomTopology.siblingWindowStatus(policy, rowContext)
+    if policy == nil then
+        return validStatus()
+    end
+    return availabilityStatus({
+        availability = policy.availability,
+    }, rowContext)
+end
+
+local function candidateInGroup(group, roomKey)
+    return roomKey ~= nil and group.candidatesByKey ~= nil and group.candidatesByKey[roomKey] == true
+end
+
+local function pickedCandidateBeforeRow(ctx, group)
+    for priorIndex = 1, ctx.rowIndex - 1 do
+        if candidateInGroup(group, ctx.roomKeyAt(priorIndex)) then
+            return true
+        end
+    end
+    return false
+end
+
+local function pickedCandidateClosesGroup(policy, ctx, candidateRoomKey)
+    for _, group in ipairs(policy.forcedGroups or EMPTY_VALUES) do
+        if group.pickedCandidateBeforeDeadlineClosesGroup
+            and candidateInGroup(group, candidateRoomKey)
+            and pickedCandidateBeforeRow(ctx, group)
+        then
+            return true
+        end
+    end
+    return false
+end
+
+local function siblingRoomKeyAt(ctx, index, candidateOverride)
+    if index == ctx.rowIndex and candidateOverride ~= nil then
+        return roomTopology.roomKey(candidateOverride)
+    end
+    if ctx.siblingRoomKeyAt == nil then
+        return nil
+    end
+    return ctx.siblingRoomKeyAt(index)
+end
+
+local function generatedCandidateThroughRow(ctx, candidate, candidateOverride)
+    for currentRowIndex = 1, ctx.rowIndex do
+        if ctx.roomKeyAt(currentRowIndex) == candidate then
+            return true
+        end
+
+        if siblingRoomKeyAt(ctx, currentRowIndex, candidateOverride) == candidate then
+            return true
+        end
+    end
+    return false
+end
+
+local function generatedCandidateCountThroughRow(ctx, group, candidateOverride)
+    local count = 0
+    for _, candidate in ipairs(group.candidates or EMPTY_VALUES) do
+        if generatedCandidateThroughRow(ctx, candidate, candidateOverride) then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function forcedGroupStatus(policy, ctx, group, candidateOverride)
+    local deadline = group.forceAtBiomeDepthMax
+    if deadline == nil then
+        return validStatus()
+    end
+
+    if (ctx.rowContext.biomeDepthCache or 0) < deadline then
+        return validStatus()
+    end
+    if group.pickedCandidateBeforeDeadlineClosesGroup and pickedCandidateBeforeRow(ctx, group) then
+        return validStatus()
+    end
+
+    local generatedCount = generatedCandidateCountThroughRow(ctx, group, candidateOverride)
+    if generatedCount >= (group.requiredGeneratedCount or 0) then
+        return validStatus()
+    end
+    return invalidStatus(
+        statusCode(policy, "forced_topology_group_unresolved"),
+        "Forced " .. tostring(group.key or "topology") .. " deadline needs generated forced doors"
+    )
+end
+
+function roomTopology.forcedGroupsStatus(policy, ctx, candidateOverride)
+    for _, group in ipairs(policy and policy.forcedGroups or EMPTY_VALUES) do
+        local status = forcedGroupStatus(policy, ctx, group, candidateOverride)
+        if not status.valid then
+            return status
+        end
+    end
+    return validStatus()
+end
+
+local function plannedRoomRowIndex(ctx, roomKey)
+    if roomKey == nil then
+        return nil
+    end
+    for plannedIndex = 1, ctx.routeRowCount or 0 do
+        if plannedIndex ~= ctx.rowIndex and ctx.roomKeyAt(plannedIndex) == roomKey then
+            return plannedIndex
+        end
+    end
+    return nil
+end
+
+function roomTopology.siblingCandidateStatus(policy, ctx, candidate)
+    if candidate == nil or candidate.key == nil or candidate.key == "" then
+        return validStatus()
+    end
+
+    local status = availabilityStatus(candidate, ctx.rowContext)
+    if not status.valid then
+        return status
+    end
+
+    local roomKey = roomTopology.roomKey(candidate)
+    if roomKey ~= nil and roomKey == ctx.selectedRoomKey then
+        return invalidStatus(statusCode(policy, "sibling_same_room"), "Sibling cannot use the selected room")
+    end
+    if pickedCandidateClosesGroup(policy, ctx, roomKey) then
+        return invalidStatus(
+            statusCode(policy, "sibling_miniboss_after_selected"),
+            "Sibling miniboss cannot appear after a picked miniboss"
+        )
+    end
+    if plannedRoomRowIndex(ctx, roomKey) ~= nil then
+        return invalidStatus(statusCode(policy, "sibling_room_planned"), "Sibling room is already planned on this route")
+    end
+    if ctx.extraRuleStatus ~= nil then
+        status = ctx.extraRuleStatus(candidate)
+        if not status.valid then
+            return status
+        end
+    end
+    return roomTopology.forcedGroupsStatus(policy, ctx, candidate)
+end
+
+function roomTopology.isSiblingTopologyStatus(policy, status)
+    local code = tostring(status and status.code or "")
+    local namespace = tostring(policy and policy.namespace or "topology")
+    return string.match(code, "^" .. namespace .. "_sibling_") ~= nil
+        or string.match(code, "^" .. namespace .. "_forced_topology_") ~= nil
+end
+
+function roomTopology.valueStateForSiblingStatus(policy, status)
+    if status == nil or status.valid then
+        return valueStates.NORMAL
+    end
+    if status.code == statusCode(policy, "sibling_same_room")
+        or status.code == statusCode(policy, "sibling_room_planned")
+        or status.code == statusCode(policy, "sibling_miniboss_after_selected")
+    then
+        return valueStates.HIDDEN
+    end
+    return valueStates.forStatus(status)
+end
+
+function roomTopology.fillSiblingValueStates(policy, ctx, states)
+    clearMap(states)
+    if policy == nil then
+        return states
+    end
+    if not roomTopology.siblingWindowStatus(policy, ctx.rowContext).valid then
+        return states
+    end
+    for _, key in ipairs(policy.values or EMPTY_VALUES) do
+        local candidate = policy.optionsByKey[key]
+        valueStates.set(states, key, roomTopology.valueStateForSiblingStatus(
+            policy,
+            roomTopology.siblingCandidateStatus(policy, ctx, candidate)
+        ))
+    end
+    return states
+end
+
+return roomTopology

@@ -196,8 +196,22 @@ local function loadMultiEncounterData()
     return testImport("mods/controls/MultiEncounterFixedRoute/data.lua", nil, loadRouteDeps())
 end
 
+local function loadFieldsCageDeps()
+    local routeDeps = loadRouteDeps()
+    local deps = {}
+    for key, value in pairs(routeDeps) do
+        deps[key] = value
+    end
+    deps.roomTopology = testImport("mods/controls/room_topology.lua", nil, {
+        common = routeDeps.common,
+        availability = routeDeps.availability,
+        valueStates = routeDeps.valueStates,
+    })
+    return deps
+end
+
 local function loadFieldsCageData()
-    return testImport("mods/controls/FieldsCageRoute/data.lua", nil, loadRouteDeps())
+    return testImport("mods/controls/FieldsCageRoute/data.lua", nil, loadFieldsCageDeps())
 end
 
 local function loadRunContext()
