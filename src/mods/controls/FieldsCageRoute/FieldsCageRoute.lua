@@ -5,6 +5,7 @@ for key, value in pairs(deps.route) do
     dataDeps[key] = value
 end
 dataDeps.roomTopology = biomeHelpers.roomTopology
+dataDeps.roomTopologyAdapter = biomeHelpers.roomTopologyAdapter
 dataDeps.roomStructure = biomeHelpers.roomStructure
 
 local data = import("mods/controls/FieldsCageRoute/data/data.lua", nil, dataDeps)

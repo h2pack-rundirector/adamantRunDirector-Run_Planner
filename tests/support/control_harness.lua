@@ -192,6 +192,12 @@ local function loadFixedLinearData()
         valueStates = routeDeps.valueStates,
     })
     deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
+    deps.roomTopologyAdapter = testImport("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
+        common = routeDeps.common,
+        readCache = routeDeps.readCache,
+        roomTopology = deps.roomTopology,
+        roomStructure = deps.roomStructure,
+    })
     return withTestImport(function()
         return testImport("mods/controls/FixedLinearRoute/data/data.lua", nil, deps)
     end)
@@ -223,6 +229,12 @@ local function loadFieldsCageDeps()
         valueStates = routeDeps.valueStates,
     })
     deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
+    deps.roomTopologyAdapter = testImport("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
+        common = routeDeps.common,
+        readCache = routeDeps.readCache,
+        roomTopology = deps.roomTopology,
+        roomStructure = deps.roomStructure,
+    })
     return deps
 end
 

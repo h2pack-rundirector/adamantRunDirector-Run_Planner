@@ -7,9 +7,8 @@ local slots = import("mods/controls/FieldsCageRoute/data/slots.lua", nil, {
 })
 local topologyFactory = import("mods/controls/FieldsCageRoute/data/topology.lua", nil, {
     common = common,
-    readCache = deps.readCache,
+    roomTopologyAdapter = deps.roomTopologyAdapter,
     roomTopology = deps.roomTopology,
-    roomStructure = deps.roomStructure,
     slots = slots,
 })
 
