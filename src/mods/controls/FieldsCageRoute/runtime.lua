@@ -5,6 +5,7 @@ local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
 local rewardItems = deps.rewardItems
+local roomStructure = deps.roomStructure
 local invalidLocations = deps.invalidLocations
 
 local runtime = {}
@@ -175,7 +176,11 @@ function runtime.create(fields, instance)
 
     function control:rowValidation(rowIndex)
         local validation = data.validateRow(instance, routeRows, rowIndex)
-        if not validation.valid or not self:rewardsConfigured() then
+        if not validation.valid then
+            return validation
+        end
+
+        if not self:rewardsConfigured() then
             return validation
         end
 
@@ -242,6 +247,8 @@ function runtime.create(fields, instance)
             option = option,
             features = data.rowFeatures(slot, role, option),
             roomKey = selectedRoomKey(slot, option),
+            exitCount = roomStructure.exitCount(slot, role, option),
+            rewardExitCount = roomStructure.rewardExitCount(slot, role, option),
             roomOfferCount = slot.roomOfferCount,
             valid = validation.valid,
             invalidCode = validation.code,
@@ -258,7 +265,7 @@ function runtime.create(fields, instance)
             rewardSourceCount = sourceCount,
             rewardGeneration = surface and surface.context and surface.context.rewardGeneration or nil,
             rewardConstraints = surface and surface.rewardConstraints or nil,
-            offerTopology = data.offerTopology(instance, routeRows, rowIndex, rewardsConfigured),
+            offerTopology = rewardsConfigured and data.offerTopology(instance, routeRows, rowIndex) or nil,
             rewardPicks = rewardsConfigured
                 and rewardSystem
                 and rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex), {

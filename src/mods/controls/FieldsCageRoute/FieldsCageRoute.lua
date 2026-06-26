@@ -5,6 +5,7 @@ local runtime = import("mods/controls/FieldsCageRoute/runtime.lua", nil, {
     common = deps.route.common,
     rewards = deps.rewards,
     rewardItems = deps.route.rewardItems,
+    roomStructure = deps.roomStructure,
     invalidLocations = deps.route.invalidLocations,
 })
 local ui = import("mods/controls/FieldsCageRoute/ui.lua", nil, {

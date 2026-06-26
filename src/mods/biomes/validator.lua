@@ -235,6 +235,13 @@ local function validateSlotEntry(issues, rewardDefinitions, knownFeatureKeys, ro
     if entry.reward ~= nil then
         validateRewardContext(issues, rewardDefinitions, entry.reward, childPath(path, "reward"))
     end
+    validateRoomOption(
+        issues,
+        rewardDefinitions,
+        knownFeatureKeys,
+        entry.room,
+        childPath(path, "room")
+    )
     validateRoomOptions(
         issues,
         rewardDefinitions,

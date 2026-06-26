@@ -9,21 +9,21 @@ local function combatLabel(roomKey, exitCount)
     return "C" .. string.sub(roomKey, -2) .. " (" .. exitLabel .. ")"
 end
 
-local function clockworkRewardDoorCount(exitCount)
+local function clockworkRewardExitCount(exitCount)
     return math.max((exitCount or 0) - 1, 0)
 end
 
 local function combatRoom(roomKey, exitCount, opts)
     opts = opts or {}
-    local rewardDoorCount = opts.rewardDoorCount
-    if rewardDoorCount == nil then
-        rewardDoorCount = clockworkRewardDoorCount(exitCount)
+    local rewardExitCount = opts.rewardExitCount
+    if rewardExitCount == nil then
+        rewardExitCount = clockworkRewardExitCount(exitCount)
     end
     return {
         key = roomKey,
         label = combatLabel(roomKey, exitCount),
         exitCount = exitCount,
-        rewardDoorCount = rewardDoorCount,
+        rewardExitCount = rewardExitCount,
         supportsExtensionChoice = exitCount > 1,
         features = opts.features or WELL_SHOP_FEATURES,
         reward = opts.reward,
@@ -36,9 +36,9 @@ end
 
 local function roomOption(roomKey, label, opts)
     opts = opts or {}
-    local rewardDoorCount = opts.rewardDoorCount
-    if rewardDoorCount == nil then
-        rewardDoorCount = clockworkRewardDoorCount(opts.exitCount)
+    local rewardExitCount = opts.rewardExitCount
+    if rewardExitCount == nil then
+        rewardExitCount = clockworkRewardExitCount(opts.exitCount)
     end
     return {
         key = roomKey,
@@ -49,7 +49,7 @@ local function roomOption(roomKey, label, opts)
         force = opts.force,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         exitCount = opts.exitCount,
-        rewardDoorCount = rewardDoorCount,
+        rewardExitCount = rewardExitCount,
         supportsExtensionChoice = opts.exitCount ~= nil and opts.exitCount > 1,
     }
 end
@@ -63,6 +63,10 @@ local function indexByKey(items)
 end
 
 layout.wellShopFeatures = WELL_SHOP_FEATURES
+
+layout.introRoom = roomOption("I_Intro", "Intro", {
+    exitCount = 1,
+})
 
 layout.combatRooms = {
     combatRoom("I_Combat01", 2),

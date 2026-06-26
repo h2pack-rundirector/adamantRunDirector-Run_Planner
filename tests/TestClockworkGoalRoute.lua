@@ -38,8 +38,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalStorageMatchesTartaru
     lu.assertEquals(instance.routeSlots[14].kind, "preboss")
     lu.assertEquals(instance.routeSlots[14].label, "Preboss Shop")
     lu.assertEquals(instance.routeSlots[14].roleKey, "Preboss")
-    lu.assertEquals(instance.routeSlots[14].roomOptions[1].key, "I_PreBoss01")
-    lu.assertEquals(instance.routeSlots[14].roomOptions[2].key, "I_PreBoss02")
+    lu.assertNil(instance.routeSlots[14].roomKey)
     lu.assertEquals(instance.roleValues, {
         "Vanilla",
         "Combat",
@@ -162,6 +161,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRuntimeBuildsValidate
     lu.assertEquals(snapshot.rows[1].slotKind, "intro")
     lu.assertEquals(snapshot.rows[1].roomKey, "I_Intro")
     lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
+    lu.assertEquals(snapshot.rows[1].exitCount, 1)
+    lu.assertEquals(snapshot.rows[1].rewardExitCount, 0)
     lu.assertEquals(primaryRewardItem(snapshot.rows[1]).rewardKind, "none")
     lu.assertTrue(snapshot.rows[1].valid)
 
@@ -170,6 +171,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRuntimeBuildsValidate
     lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[2].optionKey, "I_Combat01")
     lu.assertEquals(snapshot.rows[2].roomKey, "I_Combat01")
+    lu.assertEquals(snapshot.rows[2].exitCount, 2)
+    lu.assertEquals(snapshot.rows[2].rewardExitCount, 1)
     lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardKind, "fixedReward")
     lu.assertTrue(snapshot.rows[2].countsGoalReward)
     lu.assertFalse(snapshot.rows[2].countsNonGoalReward)
@@ -183,6 +186,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRuntimeBuildsValidate
     lu.assertEquals(snapshot.rows[12].roleKey, "Story")
     lu.assertEquals(snapshot.rows[12].optionKey, "I_Story01")
     lu.assertEquals(snapshot.rows[12].roomKey, "I_Story01")
+    lu.assertEquals(snapshot.rows[12].exitCount, 1)
+    lu.assertEquals(snapshot.rows[12].rewardExitCount, 0)
     lu.assertEquals(primaryRewardItem(snapshot.rows[12]).rewardKind, "none")
     lu.assertFalse(snapshot.rows[12].countsGoalReward)
     lu.assertFalse(snapshot.rows[12].countsNonGoalReward)
@@ -191,8 +196,9 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRuntimeBuildsValidate
     lu.assertEquals(snapshot.rows[14].slotKind, "preboss")
     lu.assertEquals(snapshot.rows[14].slotLabel, "Preboss Shop")
     lu.assertEquals(snapshot.rows[14].roleKey, "Preboss")
-    lu.assertEquals(snapshot.rows[14].roomOptions[1].key, "I_PreBoss01")
-    lu.assertEquals(snapshot.rows[14].roomOptions[2].key, "I_PreBoss02")
+    lu.assertNil(snapshot.rows[14].roomKey)
+    lu.assertNil(snapshot.rows[14].exitCount)
+    lu.assertNil(snapshot.rows[14].rewardExitCount)
     lu.assertEquals(primaryRewardItem(snapshot.rows[14]).rewardKind, "shop")
     lu.assertTrue(snapshot.rows[14].valid)
 end

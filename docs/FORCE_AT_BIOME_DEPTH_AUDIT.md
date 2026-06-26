@@ -196,7 +196,7 @@ For generated offers after a force window has reached max:
 
 ```lua
 requiredForcedCountAtRow =
-    min(unresolvedForcedCandidates, generatedRewardDoorCountAtRow)
+min(unresolvedForcedCandidates, generatedRewardExitCountAtRow)
 ```
 
 The generated forced count should include both:

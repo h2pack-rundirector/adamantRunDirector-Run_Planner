@@ -13,6 +13,9 @@ local routeStartOrdinal = common.routeStartOrdinal
 local routeEndOrdinal = common.routeEndOrdinal
 local routeRowLabel = common.routeRowLabel
 local applySlotDepthContext = common.applySlotDepthContext
+local fixedRoomKey = common.fixedRoomKey
+local fixedRoomField = common.fixedRoomField
+local fixedRoomFeatures = common.fixedRoomFeatures
 
 local data
 
@@ -35,14 +38,18 @@ end
 local function buildFixedRoleSlot(instance, ordinal, special)
     local kind = special.kind
     local roomOptions = shallowCopyList(special.roomOptions)
+    local roomKey = fixedRoomKey(special)
+    local features = fixedRoomFeatures(special)
     local role = {
         key = special.key or kind,
         label = special.label or special.key or kind,
-        roomKey = special.roomKey,
+        roomKey = roomKey,
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
         reward = special.reward,
-        features = special.features,
+        features = features,
+        exitCount = fixedRoomField(special, "exitCount"),
+        rewardExitCount = fixedRoomField(special, "rewardExitCount"),
         biomeDepthCacheCost = special.biomeDepthCacheCost,
         biomeEncounterDepthCost = special.biomeEncounterDepthCost,
     }
@@ -55,11 +62,13 @@ local function buildFixedRoleSlot(instance, ordinal, special)
         kind = kind,
         isBiomeEntry = special.isBiomeEntry == true,
         label = special.label or role.label,
-        roomKey = special.roomKey,
+        roomKey = roomKey,
+        exitCount = role.exitCount,
+        rewardExitCount = role.rewardExitCount,
         roomOfferCount = special.roomOfferCount or common.rewardOfferCount(special.reward),
         roleKey = role.key,
         role = role,
-        features = special.features,
+        features = features,
     }, {
         biomeDepthCache = special.biomeDepthCache,
         biomeDepthCacheCost = fixedBiomeDepthCacheCost(instance.biome.slotLayout, special),
@@ -76,10 +85,13 @@ local function buildEntrySlot(instance, entry)
         kind = entry.kind or "intro",
         key = entry.key or "Intro",
         label = entry.label or "Intro",
+        room = entry.room,
         roomKey = entry.roomKey,
         roomOptions = entry.roomOptions,
         reward = entry.reward,
         features = entry.features,
+        exitCount = entry.exitCount,
+        rewardExitCount = entry.rewardExitCount,
         isBiomeEntry = entry.isBiomeEntry == true,
         biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,

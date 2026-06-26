@@ -5,6 +5,7 @@ local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
 local rewardItems = deps.rewardItems
+local roomStructure = deps.roomStructure
 local sideRoomProbability = deps.sideRoomProbability
 local invalidLocations = deps.invalidLocations
 
@@ -340,6 +341,8 @@ function runtime.create(fields, instance)
             option = option,
             features = data.rowFeatures(slot, role, option),
             roomKey = selectedRoomKey(slot, option),
+            exitCount = roomStructure.exitCount(slot, role, option),
+            rewardExitCount = roomStructure.rewardExitCount(slot, role, option),
             hubDoorId = option and option.hubDoorId or slot.hubDoorId,
             sideDoors = option and option.sideDoors or slot.sideDoors,
             sideRooms = sideRoomSnapshots(instance, fields, routeRows, rowIndex, rewardsConfigured),

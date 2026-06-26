@@ -5,15 +5,15 @@ local CHAOS_WELL_FEATURES = { chaos = true, wellShop = true }
 
 local function option(key, label, opts)
     opts = opts or {}
-    local rewardDoorCount = opts.rewardDoorCount
-    if rewardDoorCount == nil then
-        rewardDoorCount = opts.exitCount
+    local rewardExitCount = opts.rewardExitCount
+    if rewardExitCount == nil then
+        rewardExitCount = opts.exitCount
     end
     return {
         key = key,
         label = label,
         exitCount = opts.exitCount,
-        rewardDoorCount = rewardDoorCount,
+        rewardExitCount = rewardExitCount,
         features = opts.features,
         availability = opts.availability,
         force = opts.force,
@@ -61,13 +61,6 @@ layout.openingRooms = {
     option("F_Opening02", "Opening 2", { exitCount = 1, features = CHAOS_FEATURES }),
     option("F_Opening03", "Opening 3", { exitCount = 1, features = CHAOS_FEATURES }),
 }
-
-layout.prebossRoom = option("F_PreBoss01", "Preboss", {
-    exitCount = 1,
-    availability = {
-        biomeDepthCache = { exact = 10 },
-    },
-})
 
 layout.combatRooms = {
     combat("F_Combat01", { exitCount = 1, availability = { biomeEncounterDepth = { max = 5 } } }),

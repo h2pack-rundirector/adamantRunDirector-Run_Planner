@@ -48,7 +48,6 @@ return function(deps)
                     kind = "preboss",
                     key = "Preboss",
                     label = "Preboss",
-                    roomKey = layout.prebossRoom.key,
                     biomeDepthCache = 10,
                     biomeEncounterDepthCost = 0,
                     reward = rewards.preboss("WorldShop", "RunProgress", {

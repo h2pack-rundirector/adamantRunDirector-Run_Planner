@@ -21,6 +21,8 @@ local routeStartOrdinal = common.routeStartOrdinal
 local routeEndOrdinal = common.routeEndOrdinal
 local routeRowLabel = common.routeRowLabel
 local applySlotDepthContext = common.applySlotDepthContext
+local fixedRoomKey = common.fixedRoomKey
+local fixedRoomField = common.fixedRoomField
 
 local data
 local EMPTY_VALUES = {}
@@ -50,13 +52,16 @@ end
 
 local function buildFixedSlot(instance, entry, section)
     local roomOptions = shallowCopyList(entry.roomOptions)
+    local roomKey = fixedRoomKey(entry)
     local role = {
         key = entry.key,
         label = entry.label or entry.key,
-        roomKey = entry.roomKey,
+        roomKey = roomKey,
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
         reward = entry.reward,
+        exitCount = fixedRoomField(entry, "exitCount"),
+        rewardExitCount = fixedRoomField(entry, "rewardExitCount"),
         biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
     }
@@ -69,7 +74,9 @@ local function buildFixedSlot(instance, entry, section)
         kind = entry.kind or section or "fixed",
         isBiomeEntry = entry.isBiomeEntry == true,
         label = entry.label or entry.key,
-        roomKey = entry.roomKey,
+        roomKey = roomKey,
+        exitCount = role.exitCount,
+        rewardExitCount = role.rewardExitCount,
         roomOfferCount = entry.roomOfferCount or common.rewardOfferCount(entry.reward),
         roleKey = role.key,
         role = role,
@@ -804,11 +811,7 @@ function data.validateOfferTopology(instance, rows, rowIndex)
     return nil
 end
 
-function data.offerTopology(instance, rows, rowIndex, rewardsConfigured)
-    if not rewardsConfigured then
-        return nil
-    end
-
+function data.offerTopology(instance, rows, rowIndex)
     local roleKey = data.resolveRole(instance, rows, rowIndex)
     if roleKey == "Vanilla" or data.isFixedIdentityRow(instance, rowIndex) then
         return nil

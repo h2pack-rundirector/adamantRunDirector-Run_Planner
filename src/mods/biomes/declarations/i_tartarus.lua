@@ -33,7 +33,7 @@ return function(deps)
                     key = "Intro",
                     label = "Intro",
                     isBiomeEntry = true,
-                    roomKey = "I_Intro",
+                    room = layout.introRoom,
                     reward = rewards.none(),
                     biomeEncounterDepthCost = 0,
                     locked = true,
@@ -43,10 +43,6 @@ return function(deps)
                 {
                     key = "Preboss",
                     label = "Preboss Shop",
-                    roomOptions = {
-                        { key = "I_PreBoss01", label = "Chronos Shop" },
-                        { key = "I_PreBoss02", label = "Chronos Shop Restored" },
-                    },
                     reward = rewards.shop("I_WorldShop"),
                     biomeEncounterDepthCost = 0,
                 },

@@ -5,6 +5,7 @@ local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
 local rewardItems = deps.rewardItems
+local roomStructure = deps.roomStructure
 local invalidLocations = deps.invalidLocations
 
 local runtime = {}
@@ -209,6 +210,8 @@ function runtime.create(fields, instance)
             slotKind = slot.kind or "biomeRow",
             isBiomeEntry = slot.isBiomeEntry == true,
             roomKey = rowRoomKey(slot, option),
+            exitCount = roomStructure.exitCount(slot, role, option),
+            rewardExitCount = roomStructure.rewardExitCount(slot, role, option),
             roomOptions = roomOptions(slot),
             slotLabel = slot.label,
             roomHistoryCost = context.roomHistoryCost,

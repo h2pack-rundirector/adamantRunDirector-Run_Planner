@@ -179,7 +179,8 @@ The current room declaration should continue to own `exitCount`; the planning
 walk derives the reward generation pressure for the next row from that prior
 room.
 
-Preboss is different. F/G/P preboss rooms expose both:
+Preboss is different. The planner models it as a logical reward marker, while
+vanilla owns the concrete `_PreBoss` room. F/G/H/P preboss markers expose both:
 
 - shop offers
 - a free RunProgress reward branch

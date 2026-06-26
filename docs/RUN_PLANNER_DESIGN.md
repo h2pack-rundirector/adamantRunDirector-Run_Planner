@@ -36,7 +36,9 @@ the user must make prior rows concrete enough for the planner to prove the
 counter.
 
 - The boss room is excluded.
-- The preboss room is included at its vanilla force depth.
+- The preboss stage is included as a logical reward marker at its vanilla force
+  depth. Concrete `_PreBoss` room keys are detected at runtime, not declared as
+  route targets.
 - Post-boss transition rooms are excluded. Boss rooms link to them, and they
   hand off to the next biome with `NextRoomSet`.
 - Non-starter biome intros are locked entry rooms outside the planned row list.
@@ -58,7 +60,7 @@ Current working depths:
 | --- | --- | --- | --- | --- |
 | `F` | Erebus | `0..10` | `0, 1..9` | Starter biome. Depth `0` is one of `F_Opening01/02/03` with `RunProgress` reward controls. Preboss offers shop and non-shop `RunProgress` branches. |
 | `G` | Oceanus | `1..8` | `1..7` | `G_Intro` is a locked entry before the planned row list. Preboss offers shop and non-shop `RunProgress` branches. |
-| `H` | Fields | Route picks | Picks `1..4` | `H_Intro`, then four preboss picks, then `H_PreBoss01`. Combat maps expose reward cages rather than a single room reward. |
+| `H` | Fields | Route picks | Picks `1..4` | `H_Intro`, then four preboss picks, then the logical preboss reward marker. Combat maps expose reward cages rather than a single room reward. |
 | `I` | Tartarus | Clockwork | Rows `1..12` | `I_Intro` initializes five required `ClockworkGoal` rewards and a vanilla non-goal reward budget of `3..6`; story can consume a route row without advancing either counter. Post-goal extensions remain possible only behind a planned room that can offer an I exit. |
 | `N` | Ephyra | Hub pylon | Picks `1..6` | Fixed `N_Opening01` into `N_PreHub01`, then hub pylon picks from `N_Hub`. Preboss is shop-only after six pylons. |
 | `O` | Thessaly | `1..7` | `1..6` | `O_Intro` is a locked entry before the planned row list. Combat route depths use ship multi-encounter policy. Preboss is shop-only. |
@@ -82,8 +84,9 @@ Relevant vanilla behavior:
 - `CreateRoom(...)` increments `CurrentRun.RoomCreations[room.Name]`.
 - `IsRoomEligible(...)` rejects rooms whose `MaxCreationsThisRun` has already
   been reached.
-- `F/G/O/P/Q` preboss rooms are selected by vanilla depth gates. The planner
-  should use those same depth values as its stable route identity.
+- Preboss rooms are selected by vanilla depth gates. The planner uses those
+  depth values to place a logical preboss reward marker, while runtime reward
+  hooks match the live room by `_PreBoss`.
 - F/G room maps can expose one, two, or three offered exit doors. A planned
   target can therefore be valid by depth but invalid from the previous room if
   vanilla requires multiple offered exits.
@@ -508,57 +511,31 @@ rewriting the biome adapters.
 
 ## Preboss Depths
 
-Preboss should be treated as a special depth type, not just another normal room
-role.
+Preboss should be treated as a special reward stage, not as a normal routeable
+room. Vanilla forces the concrete preboss room; the planner declares a logical
+`preboss` marker and runtime reward hooks resolve it by observing the live room
+name contains `_PreBoss`.
 
-For `F/G/P`, the preboss depth has two branches:
-
-```lua
-{
-    shop = {
-        kind = "PrebossShop",
-        shopOptions = {
-            Boon = "ZeusUpgrade",
-            MajorNonBoon = "WeaponUpgradeDrop",
-            Minor = "MaxManaDrop",
-        },
-    },
-    runProgressReward = {
-        kind = "PrebossNoShop",
-        rewardPick = {
-            rewardType = "StackUpgrade",
-        },
-    },
-}
-```
-
-For `Q` and `O`, the preboss depth only has the shop branch:
+For `F/G/H/P`, the logical marker exposes two reward nodes:
 
 ```lua
-{
-    shop = {
-        kind = "PrebossShop",
-        shopOptions = {
-            Group1Offer1 = "ZeusUpgrade",
-            Group1Offer2 = "BlindBoxLoot",
-            Group2Offer1 = "HealBigDrop",
-            Group3Offer1 = "RoomRewardHealDrop",
-            Group4Offer1 = "WeaponUpgradeDrop",
-            Group5Offer1 = "CharonPointsDrop",
-        },
-    },
-}
+reward = rewards.preboss("WorldShop", "RunProgress", {
+    ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
+})
 ```
 
-`PrebossShop` is shop inventory control. `PrebossNoShop` is normal
-`RunProgress` reward control on the non-shop branch, narrowed by the room's
-`IneligibleRewards` so `RoomMoneyDrop` and `Devotion` are not exposed there.
+The shop node controls preboss shop inventory. The free reward node controls the
+non-shop `RunProgress` branch, narrowed by the same ineligible reward types
+vanilla uses. Both nodes are evaluated against prior reward context and then
+unioned for later reward-context effects.
 
-Fixed-linear route controls render each declared preboss branch as its own
-terminal row instead of rendering one depth with a branch selector. In the UI,
-`Shop` is labeled `Preboss Shop`; `MajorReward` is labeled `Preboss Room`.
-The row snapshot keeps the mechanical `branchKey` so runtime logic does not
-depend on the display label.
+For `N/O`, the marker is shop-only with `WorldShop`. `I` uses `I_WorldShop` and
+`Q` uses `Q_WorldShop`.
+
+Preboss marker rows are included in row snapshots and execution plans so reward
+logic can act on them, but they do not carry `roomKey`, do not reserve a room,
+and do not participate in room routing. Room routing leaves preboss forcing to
+vanilla.
 
 ## Shop Surfaces
 
@@ -799,9 +776,10 @@ paths. `I_Intro` initializes:
 }
 ```
 
-The player must take five `ClockworkGoal` rewards before `I_PreBoss01` or
-`I_PreBoss02` can appear. The planner should therefore render a flat route
-tape of up to 12 storage rows:
+The player must take five `ClockworkGoal` rewards before the Tartarus preboss
+shop can appear. Vanilla chooses either `I_PreBoss01` or `I_PreBoss02` from
+meta-progression state; the planner treats both as the same shop marker and
+renders a flat route tape of up to 12 storage rows:
 
 ```text
 Row 1: Goal (forced by the biome declaration)
@@ -833,8 +811,9 @@ Extension rows can be:
 
 `I_Shop01` is not modeled as a reachable extension shop. It declares
 `DebugOnly = true` directly, and `IsRoomEligible(...)` rejects debug-only rooms
-after inheritance is processed. The reachable Tartarus shop surface is the
-preboss shop using `I_PreBoss01/I_PreBoss02` and the `I_WorldShop` profile.
+after inheritance is processed. The reachable Tartarus shop surface is one
+logical preboss marker using the `I_WorldShop` profile; vanilla can resolve that
+marker to `I_PreBoss01` or `I_PreBoss02`.
 
 The extension budget is vanilla-random by default. The data records the vanilla
 range and plans against the maximum budget. Two-exit room maps become invalid
@@ -844,7 +823,8 @@ the final extension, if used, must be a one-exit room.
 ## Fields Cage Route
 
 `H` is not a normal linear reward route. The planner should model four
-preboss route picks after `H_Intro`, followed by `H_PreBoss01`.
+preboss route picks after `H_Intro`, followed by the logical preboss reward
+marker.
 
 The common vanilla shape is:
 
@@ -853,7 +833,7 @@ Pick 1: Combat or Miniboss
 Pick 2: Combat or Miniboss
 Pick 3: Bridge, Combat, or Miniboss
 Pick 4: Combat or Miniboss
-Preboss: H_PreBoss01
+Preboss: logical preboss reward marker
 ```
 
 `H_Bridge01` is a forced vanilla candidate once its requirements are met, but

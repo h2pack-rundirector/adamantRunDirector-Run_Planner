@@ -5,6 +5,7 @@ local runtime = import("mods/controls/FixedLinearRoute/runtime.lua", nil, {
     common = deps.route.common,
     rewards = deps.rewards,
     rewardItems = deps.route.rewardItems,
+    roomStructure = deps.roomStructure,
     rewardRatio = deps.rewardRatio,
     invalidLocations = deps.route.invalidLocations,
 })

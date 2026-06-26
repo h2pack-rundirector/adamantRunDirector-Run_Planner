@@ -24,6 +24,8 @@ local routeStartOrdinal = common.routeStartOrdinal
 local routeEndOrdinal = common.routeEndOrdinal
 local routeRowLabel = common.routeRowLabel
 local applySlotDepthContext = common.applySlotDepthContext
+local fixedRoomKey = common.fixedRoomKey
+local fixedRoomField = common.fixedRoomField
 
 local data
 local routeTerminatedBeforeRow
@@ -54,13 +56,16 @@ end
 local function buildFixedSlot(instance, entry, kind, defaultKey)
     local roomOptions = shallowCopyList(entry.roomOptions)
     local key = entry.key or defaultKey or kind
+    local roomKey = fixedRoomKey(entry)
     local role = {
         key = key,
         label = entry.label or key,
-        roomKey = entry.roomKey,
+        roomKey = roomKey,
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
         reward = entry.reward,
+        exitCount = fixedRoomField(entry, "exitCount"),
+        rewardExitCount = fixedRoomField(entry, "rewardExitCount"),
         biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
     }
@@ -78,8 +83,10 @@ local function buildFixedSlot(instance, entry, kind, defaultKey)
         kind = kind or entry.kind or "fixed",
         isBiomeEntry = entry.isBiomeEntry == true,
         label = entry.label or key,
-        roomKey = entry.roomKey,
+        roomKey = roomKey,
         roomOptions = roomOptions,
+        exitCount = role.exitCount,
+        rewardExitCount = role.rewardExitCount,
         roleKey = role.key,
         role = role,
         locked = entry.locked,

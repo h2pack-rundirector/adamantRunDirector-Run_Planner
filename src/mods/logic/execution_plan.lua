@@ -75,12 +75,21 @@ local function compactRewardItem(item)
     }
 end
 
-local function hasConfiguredRoom(row)
+local function hasConfiguredPlanRow(row)
+    if row == nil
+        or row.valid == false
+        or row.roleKey == nil
+        or row.roleKey == ""
+        or row.roleKey == VANILLA_ROLE_KEY
+    then
+        return false
+    end
+
+    if row.slotKind == "preboss" then
+        return true
+    end
+
     return row ~= nil
-        and row.valid ~= false
-        and row.roleKey ~= nil
-        and row.roleKey ~= ""
-        and row.roleKey ~= VANILLA_ROLE_KEY
         and row.roomKey ~= nil
         and row.roomKey ~= ""
 end
@@ -88,7 +97,6 @@ end
 local function isRoutableRoom(row)
     local kind = row and row.slotKind
     return kind == "biomeRow"
-        or kind == "preboss"
 end
 
 local function compactRewardItems(source)
@@ -151,6 +159,8 @@ local function compactRoomRow(row)
         slotKind = row.slotKind,
         isBiomeEntry = row.isBiomeEntry == true,
         roomKey = row.roomKey,
+        exitCount = row.exitCount,
+        rewardExitCount = row.rewardExitCount,
         roomOfferCount = row.roomOfferCount,
         hubDoorId = row.hubDoorId,
         roleKey = row.roleKey,
@@ -297,14 +307,15 @@ local function reservationBucket(globalReservations, roomKey)
     return bucket
 end
 
-local function addGlobalReservation(globalReservations, biomeKey, planned)
-    local bucket = reservationBucket(globalReservations, planned.roomKey)
+local function addGlobalReservation(globalReservations, biomeKey, planned, roomKey)
+    local bucket = reservationBucket(globalReservations, roomKey)
     local entry = {
         biomeKey = biomeKey,
         rowIndex = planned.rowIndex,
         routeOrdinal = planned.routeOrdinal,
         biomeDepthCache = planned.biomeDepthCache,
-        roomKey = planned.roomKey,
+        roomKey = roomKey,
+        primaryRoomKey = planned.roomKey,
         slotKind = planned.slotKind,
         roleKey = planned.roleKey,
         optionKey = planned.optionKey,
@@ -317,24 +328,35 @@ end
 
 local function addPlannedRoom(biome, globalReservations, row)
     local planned = compactRoomRow(row)
+    local roomKey = planned.roomKey
     biome.plannedRows[#biome.plannedRows + 1] = planned
     biome.plannedByRowIndex[planned.rowIndex] = planned
     if planned.biomeDepthCache ~= nil then
         local bucket = biomeDepthCacheBucket(biome, planned.biomeDepthCache)
         addPlannedToBucket(bucket, planned)
-        addPlannedToBucket(routeOrdinalRoomBucket(bucket, planned.roomKey), planned)
+        if roomKey ~= nil and roomKey ~= "" then
+            addPlannedToBucket(routeOrdinalRoomBucket(bucket, roomKey), planned)
+        end
         if isRoutableRoom(planned) then
             local routeBucket = routableBiomeDepthCacheBucket(biome, planned.biomeDepthCache)
             addPlannedToBucket(routeBucket, planned)
-            addPlannedToBucket(routeOrdinalRoomBucket(routeBucket, planned.roomKey), planned)
+            if roomKey ~= nil and roomKey ~= "" then
+                addPlannedToBucket(routeOrdinalRoomBucket(routeBucket, roomKey), planned)
+            end
         end
     end
     if planned.isBiomeEntry and biome.plannedEntryRoom == nil then
         biome.plannedEntryRoom = planned
     end
 
-    addPlannedToBucket(roomBucket(biome, planned.roomKey), planned)
-    addGlobalReservation(globalReservations, biome.biomeKey, planned)
+    if planned.slotKind == "preboss" and biome.plannedPrebossRow == nil then
+        biome.plannedPrebossRow = planned
+    end
+
+    if roomKey ~= nil and roomKey ~= "" then
+        addPlannedToBucket(roomBucket(biome, roomKey), planned)
+        addGlobalReservation(globalReservations, biome.biomeKey, planned, roomKey)
+    end
 end
 
 local function compileBiome(snapshot, globalReservations)
@@ -346,12 +368,13 @@ local function compileBiome(snapshot, globalReservations)
         plannedByBiomeDepthCache = {},
         plannedRoutableByBiomeDepthCache = {},
         plannedEntryRoom = nil,
+        plannedPrebossRow = nil,
         plannedByRoomKey = {},
         reservedRoomKeys = {},
     }
 
     for _, row in ipairs(snapshot.rows or EMPTY_LIST) do
-        if hasConfiguredRoom(row) then
+        if hasConfiguredPlanRow(row) then
             addPlannedRoom(biome, globalReservations, row)
         end
     end
@@ -484,6 +507,6 @@ function executionPlan.compile(snapshot, opts)
     return plan
 end
 
-executionPlan.hasConfiguredRoom = hasConfiguredRoom
+executionPlan.hasConfiguredRoom = hasConfiguredPlanRow
 
 return executionPlan

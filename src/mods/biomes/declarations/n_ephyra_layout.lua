@@ -10,6 +10,7 @@ local HARD_SUBROOMS = {
 }
 
 local SURFACE_SHOP_FEATURES = { surfaceShop = true }
+local CHAOS_FEATURES = { chaos = true }
 local SURFACE_SHOP_SUBROOMS = {
     N_Sub01 = true,
     N_Sub02 = true,
@@ -92,6 +93,8 @@ local function combatRoom(roomKey, hubDoorId, sideDoors, opts)
         enrichmentColor = DIFFICULTY_COLORS[meta.difficulty],
         hubDoorId = hubDoorId,
         sideDoors = sideDoors or {},
+        exitCount = 1,
+        rewardExitCount = 0,
     }
     if opts.reward ~= nil then
         room.reward = opts.reward
@@ -110,6 +113,26 @@ local function indexByKey(items)
 end
 
 layout.surfaceShopFeatures = SURFACE_SHOP_FEATURES
+
+layout.openingRoom = {
+    key = "N_Opening01",
+    label = "Opening",
+    features = CHAOS_FEATURES,
+    exitCount = 1,
+    rewardExitCount = 0,
+}
+
+layout.preHubRoom = {
+    key = "N_PreHub01",
+    label = "Pre-Hub",
+    exitCount = 1,
+    rewardExitCount = 0,
+}
+
+layout.hubRoom = {
+    key = "N_Hub",
+    label = "Hub",
+}
 
 local function buildHubDoorRooms()
     local rooms = {}
@@ -222,6 +245,8 @@ layout.minibossRooms = {
         label = "Satyr Crossbow",
         hubDoorId = 617043,
         encounter = "MiniBossSatyrCrossbow",
+        exitCount = 1,
+        rewardExitCount = 0,
         biomeEncounterDepthCost = 1,
     },
     {
@@ -229,6 +254,8 @@ layout.minibossRooms = {
         label = "Boar",
         hubDoorId = 560889,
         encounter = "MiniBossBoar",
+        exitCount = 1,
+        rewardExitCount = 0,
         biomeEncounterDepthCost = 1,
     },
 }
@@ -238,6 +265,8 @@ layout.storyRooms = {
         key = "N_Story01",
         label = "Medea",
         hubDoorId = 560848,
+        exitCount = 1,
+        rewardExitCount = 0,
     },
 }
 

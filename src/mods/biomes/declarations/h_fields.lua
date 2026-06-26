@@ -30,7 +30,7 @@ return function(deps)
                     key = "Intro",
                     label = "Intro",
                     isBiomeEntry = true,
-                    roomKey = layout.introRoom.key,
+                    room = layout.introRoom,
                     reward = rewards.none(),
                     biomeEncounterDepthCost = 0,
                     locked = true,
@@ -41,7 +41,6 @@ return function(deps)
                     kind = "preboss",
                     key = "Preboss",
                     label = "Preboss",
-                    roomKey = layout.prebossRoom.key,
                     reward = rewards.preboss("WorldShop", "RunProgress", {
                         ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
                     }),

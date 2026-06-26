@@ -20,15 +20,15 @@ local SURFACE_SHOP_COMBAT_ROOMS = {
 
 local function option(key, label, opts)
     opts = opts or {}
-    local rewardDoorCount = opts.rewardDoorCount
-    if rewardDoorCount == nil then
-        rewardDoorCount = opts.exitCount
+    local rewardExitCount = opts.rewardExitCount
+    if rewardExitCount == nil then
+        rewardExitCount = opts.exitCount
     end
     return {
         key = key,
         label = label,
         exitCount = opts.exitCount,
-        rewardDoorCount = rewardDoorCount,
+        rewardExitCount = rewardExitCount,
         features = opts.features,
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
@@ -58,11 +58,6 @@ layout.surfaceShopFeatures = SURFACE_SHOP_FEATURES
 layout.introRoom = option("Q_Intro", "Intro", {
     exitCount = 2,
     availability = { biomeDepthCache = { exact = 1 } },
-})
-
-layout.prebossRoom = option("Q_PreBoss01", "Preboss", {
-    exitCount = 1,
-    availability = { biomeDepthCache = { exact = 7 } },
 })
 
 layout.combatRooms = {

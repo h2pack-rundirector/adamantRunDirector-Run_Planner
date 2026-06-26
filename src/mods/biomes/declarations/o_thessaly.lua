@@ -42,7 +42,7 @@ return function(deps)
             entry = {
                 kind = "intro",
                 isBiomeEntry = true,
-                roomKey = layout.introRoom.key,
+                room = layout.introRoom,
                 biomeEncounterDepthCost = 0,
                 locked = true,
             },
@@ -51,7 +51,6 @@ return function(deps)
                     kind = "preboss",
                     key = "Preboss",
                     label = "Preboss Shop",
-                    roomKey = layout.prebossRoom.key,
                     biomeEncounterDepthCost = 0,
                     reward = rewards.shop("WorldShop"),
                 },

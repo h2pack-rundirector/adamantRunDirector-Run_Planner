@@ -117,8 +117,8 @@ room or encounter policy.
   `biomeEncounterDepth`.
 - `I_MiniBoss01/02`: `roomHistoryCost = 1`; `biomeDepthCache = route row`;
   selected miniboss encounter counts for `biomeEncounterDepth`.
-- `I_PreBoss01`: `roomHistoryCost = 1`; selected encounter does not count for
-  `biomeEncounterDepth`.
+- Tartarus preboss shop (`I_PreBoss01` or `I_PreBoss02`): `roomHistoryCost = 1`;
+  selected encounter does not count for `biomeEncounterDepth`.
 
 ### N - Ephyra
 
@@ -201,7 +201,7 @@ Route surface:
   `F_Combat12`, `F_Combat13`, `F_Combat14`, `F_Combat15`, `F_Combat16`,
   `F_Combat17`, `F_Combat18`, `F_Combat20`
 - Miniboss: `F_MiniBoss01`, `F_MiniBoss02`, `F_MiniBoss03`
-- Preboss: `F_PreBoss01`
+- Preboss: logical reward marker; vanilla resolves `F_PreBoss01`
 
 Depth facts:
 
@@ -229,7 +229,7 @@ Route surface:
   `G_Combat11`, `G_Combat12`, `G_Combat13`, `G_Combat14`, `G_Combat15`,
   `G_Combat16`, `G_Combat17`
 - Miniboss: `G_MiniBoss01`, `G_MiniBoss02`, `G_MiniBoss03`
-- Preboss: `G_PreBoss01`
+- Preboss: logical reward marker; vanilla resolves `G_PreBoss01`
 
 Depth facts:
 
@@ -250,7 +250,7 @@ Route surface:
 - Cage combat maps: `H_Combat01` through `H_Combat15`
 - Bridge/story: `H_Bridge01`
 - Miniboss: `H_MiniBoss01`, `H_MiniBoss02`
-- Preboss: `H_PreBoss01`
+- Preboss: logical reward marker; vanilla resolves `H_PreBoss01`
 
 Depth facts:
 
@@ -270,7 +270,7 @@ Route surface:
 - Story: `I_Story01`
 - Fountain: `I_Reprieve01`
 - Miniboss: `I_MiniBoss01`, `I_MiniBoss02`
-- Preboss: `I_PreBoss01`
+- Preboss: logical shop marker; vanilla resolves `I_PreBoss01` or `I_PreBoss02`
 
 Depth facts:
 
@@ -292,7 +292,7 @@ Route surface:
 - Story: `N_Story01`
 - Miniboss: `N_MiniBoss01`, `N_MiniBoss02`
 - Side rooms: `N_Sub*` rooms behind combat-room doors
-- Preboss: `N_PreBoss01`
+- Preboss: logical shop marker; vanilla resolves `N_PreBoss01`
 
 Depth facts:
 
@@ -319,7 +319,7 @@ Route surface:
 - Midshop: `O_Shop01`
 - Devotion room: `O_Devotion01`
 - Miniboss: `O_MiniBoss01`, `O_MiniBoss02`
-- Preboss: `O_PreBoss01`
+- Preboss: logical shop marker; vanilla resolves `O_PreBoss01`
 
 Depth facts:
 
@@ -343,7 +343,7 @@ Route surface:
 - Fountain: `P_Reprieve01`
 - Midshop: `P_Shop01`
 - Miniboss: `P_MiniBoss01`, `P_MiniBoss02`
-- Preboss: `P_PreBoss01`
+- Preboss: logical reward marker; vanilla resolves `P_PreBoss01`
 
 Depth facts:
 
@@ -363,7 +363,7 @@ Route surface:
 - Entry: `Q_Intro`
 - Combat maps: `Q_Combat01` through `Q_Combat16`
 - Miniboss: `Q_MiniBoss02`, `Q_MiniBoss03`, `Q_MiniBoss04`, `Q_MiniBoss05`
-- Preboss: `Q_PreBoss01`
+- Preboss: logical shop marker; vanilla resolves `Q_PreBoss01`
 
 Depth facts:
 

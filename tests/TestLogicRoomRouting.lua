@@ -146,7 +146,7 @@ function TestRunPlannerLogicRoomRouting.testRoomRoutingDoesNotDuplicateNormalPla
     lu.assertEquals(args.ExcludedNames.F_Story01, true)
 end
 
-function TestRunPlannerLogicRoomRouting.testRoomRoutingForcesPlannedPrebossRoom()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingLeavesPrebossToVanillaForce()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan, {
@@ -162,7 +162,6 @@ function TestRunPlannerLogicRoomRouting.testRoomRoutingForcesPlannedPrebossRoom(
                 biomeDepthCache = 10,
                 biomeDepthCacheCost = 0,
                 slotKind = "preboss",
-                roomKey = "F_PreBoss01",
                 roomOfferCount = 2,
                 roleKey = "Preboss",
                 valid = true,
@@ -190,7 +189,7 @@ function TestRunPlannerLogicRoomRouting.testRoomRoutingForcesPlannedPrebossRoom(
         },
     })
 
-    lu.assertEquals(args.ForceNextRoom, "F_PreBoss01")
+    lu.assertNil(args)
 end
 
 function TestRunPlannerLogicRoomRouting.testRoomRoutingSupportsSummitLinearAdapter()

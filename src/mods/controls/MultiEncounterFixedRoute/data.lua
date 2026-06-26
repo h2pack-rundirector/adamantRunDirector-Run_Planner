@@ -16,6 +16,8 @@ local routeEndOrdinal = common.routeEndOrdinal
 local routeRowLabel = common.routeRowLabel
 local applySlotDepthContext = common.applySlotDepthContext
 local clearList = common.clearList
+local fixedRoomKey = common.fixedRoomKey
+local fixedRoomField = common.fixedRoomField
 
 local data
 local EMPTY_VALUES = {}
@@ -40,13 +42,16 @@ end
 local function buildFixedRoleSlot(instance, ordinal, special)
     local kind = special.kind
     local roomOptions = shallowCopyList(special.roomOptions)
+    local roomKey = fixedRoomKey(special)
     local role = {
         key = special.key or kind,
         label = special.label or special.key or kind,
-        roomKey = special.roomKey,
+        roomKey = roomKey,
         roomOptions = roomOptions,
         optionsByKey = buildLookup(roomOptions),
         reward = special.reward,
+        exitCount = fixedRoomField(special, "exitCount"),
+        rewardExitCount = fixedRoomField(special, "rewardExitCount"),
         biomeDepthCacheCost = special.biomeDepthCacheCost,
         biomeEncounterDepthCost = special.biomeEncounterDepthCost,
     }
@@ -59,7 +64,9 @@ local function buildFixedRoleSlot(instance, ordinal, special)
         kind = kind,
         isBiomeEntry = special.isBiomeEntry == true,
         label = special.label or role.label,
-        roomKey = special.roomKey,
+        roomKey = roomKey,
+        exitCount = role.exitCount,
+        rewardExitCount = role.rewardExitCount,
         roomOfferCount = special.roomOfferCount or common.rewardOfferCount(special.reward),
         roleKey = role.key,
         role = role,
@@ -79,9 +86,12 @@ local function buildEntrySlot(instance, entry)
         kind = entry.kind or "intro",
         key = entry.key or "Intro",
         label = entry.label or "Intro",
+        room = entry.room,
         roomKey = entry.roomKey,
         roomOptions = entry.roomOptions,
         reward = entry.reward,
+        exitCount = entry.exitCount,
+        rewardExitCount = entry.rewardExitCount,
         isBiomeEntry = entry.isBiomeEntry == true,
         biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,

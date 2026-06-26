@@ -327,7 +327,7 @@ function TestRunPlannerLogicRoutePlan.testExecutionPlanPreservesFeatureTargetRoo
     lu.assertEquals(row.target.sideIndex, 1)
 end
 
-function TestRunPlannerLogicRoutePlan.testRoutePlanKeepsCompositePrebossRewardsOnOneRoom()
+function TestRunPlannerLogicRoutePlan.testRoutePlanKeepsCompositePrebossRewardsOnPrebossMarker()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local runtime = runtimeForCatalog(routePlan, catalog, {
@@ -345,7 +345,6 @@ function TestRunPlannerLogicRoutePlan.testRoutePlanKeepsCompositePrebossRewardsO
                     biomeDepthCache = 10,
                     biomeDepthCacheCost = 0,
                     slotKind = "preboss",
-                    roomKey = "F_PreBoss01",
                     roomOfferCount = 2,
                     roleKey = "Preboss",
                     optionKey = "",
@@ -369,28 +368,67 @@ function TestRunPlannerLogicRoutePlan.testRoutePlanKeepsCompositePrebossRewardsO
 
     local biome = plan.executionPlan.biomes.F
     local depthBucket = biome.plannedByBiomeDepthCache[10]
-    local room = depthBucket.byRoomKey.F_PreBoss01
-    local reservation = plan.executionPlan.reservedRoomKeys.F_PreBoss01
+    local row = depthBucket.primary
 
     lu.assertEquals(#depthBucket.rows, 1)
+    lu.assertEquals(row.roleKey, "Preboss")
+    lu.assertEquals(row.roomOfferCount, 2)
+    lu.assertNil(row.roomKey)
+    lu.assertEquals(biome.plannedPrebossRow, row)
+    lu.assertNil(depthBucket.byRoomKey.F_PreBoss01)
+    lu.assertNil(biome.plannedByRoomKey.F_PreBoss01)
+    lu.assertNil(plan.executionPlan.reservedRoomKeys.F_PreBoss01)
+    lu.assertEquals(primaryRewardItem(row).kind, "shop")
+    lu.assertEquals(primaryRewardItem(row).rewardChoiceGroup, {
+        key = "prebossChoice",
+        effectTiming = "sameChoiceUnion",
+    })
+    lu.assertEquals(row.rewardItems[2].address, "prebossReward")
+    lu.assertEquals(row.rewardItems[2].kind, "roomStore")
+    lu.assertEquals(row.rewardItems[2].rewards[1], "Boon")
+    lu.assertEquals(row.rewardItems[2].rewards[2], "ZeusUpgrade")
+    lu.assertEquals(row.rewardItems[2].rewardChoiceGroup, {
+        key = "prebossChoice",
+        effectTiming = "sameChoiceUnion",
+    })
+end
+
+function TestRunPlannerLogicRoutePlan.testRoutePlanIndexesPrebossMarkerWithoutRoomReservation()
+    local executionPlan = testImport("mods/logic/execution_plan.lua")
+    local plan = executionPlan.compile({
+        routeKey = "Underworld",
+        biomes = {
+            {
+                biomeKey = "I",
+                adapter = "ClockworkGoalRoute",
+                rows = {
+                    {
+                        rowIndex = 14,
+                        biomeDepthCache = 12,
+                        slotKind = "preboss",
+                        roleKey = "Preboss",
+                        valid = true,
+                    },
+                },
+            },
+        },
+    }, {
+        layers = {
+            rooms = true,
+        },
+    })
+
+    local biome = plan.biomes.I
+    local depthBucket = biome.plannedByBiomeDepthCache[12]
+
+    lu.assertNil(depthBucket.primary.roomKey)
     lu.assertEquals(depthBucket.primary.roleKey, "Preboss")
-    lu.assertEquals(depthBucket.primary.roomOfferCount, 2)
-    lu.assertEquals(#room.rows, 1)
-    lu.assertEquals(primaryRewardItem(room.primary).kind, "shop")
-    lu.assertEquals(primaryRewardItem(room.primary).rewardChoiceGroup, {
-        key = "prebossChoice",
-        effectTiming = "sameChoiceUnion",
-    })
-    lu.assertEquals(room.primary.rewardItems[2].address, "prebossReward")
-    lu.assertEquals(room.primary.rewardItems[2].kind, "roomStore")
-    lu.assertEquals(room.primary.rewardItems[2].rewards[1], "Boon")
-    lu.assertEquals(room.primary.rewardItems[2].rewards[2], "ZeusUpgrade")
-    lu.assertEquals(room.primary.rewardItems[2].rewardChoiceGroup, {
-        key = "prebossChoice",
-        effectTiming = "sameChoiceUnion",
-    })
-    lu.assertEquals(#biome.plannedByRoomKey.F_PreBoss01.rows, 1)
-    lu.assertEquals(#reservation.entries, 1)
+    lu.assertEquals(biome.plannedPrebossRow, depthBucket.primary)
+    lu.assertNil(biome.plannedByRoomKey.I_PreBoss01)
+    lu.assertNil(biome.plannedByRoomKey.I_PreBoss02)
+    lu.assertNil(plan.reservedRoomKeys.I_PreBoss01)
+    lu.assertNil(plan.reservedRoomKeys.I_PreBoss02)
+    lu.assertNil(biome.plannedRoutableByBiomeDepthCache[12])
 end
 
 function TestRunPlannerLogicRoutePlan.testRoutePlanDefersDreamDive()

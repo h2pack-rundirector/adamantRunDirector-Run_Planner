@@ -5,15 +5,15 @@ local WELL_SHOP_FEATURES = { wellShop = true }
 
 local function option(key, label, opts)
     opts = opts or {}
-    local rewardDoorCount = opts.rewardDoorCount
-    if rewardDoorCount == nil then
-        rewardDoorCount = opts.exitCount
+    local rewardExitCount = opts.rewardExitCount
+    if rewardExitCount == nil then
+        rewardExitCount = opts.exitCount
     end
     return {
         key = key,
         label = label,
         exitCount = opts.exitCount,
-        rewardDoorCount = rewardDoorCount,
+        rewardExitCount = rewardExitCount,
         features = opts.features,
         availability = opts.availability,
         force = opts.force,
@@ -62,13 +62,6 @@ layout.introRoom = option("H_Intro", "Intro", {
     exitCount = 2,
     availability = {
         biomeDepthCache = { min = 0, max = 1 },
-    },
-})
-
-layout.prebossRoom = option("H_PreBoss01", "Preboss Shop", {
-    exitCount = 1,
-    availability = {
-        routeRoomsEntered = { min = 4 },
     },
 })
 

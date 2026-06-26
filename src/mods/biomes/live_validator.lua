@@ -37,11 +37,17 @@ end
 
 local collectSlotList
 
+local function collectRoomOption(refs, option, path)
+    if type(option) ~= "table" then
+        return
+    end
+    addRoomRef(refs, option.key, childPath(path, "key"))
+    collectSlotList(refs, option.sideDoors, childPath(path, "sideDoors"))
+end
+
 local function collectRoomOptions(refs, options, path)
     for index, option in ipairs(options or {}) do
-        local optionPath = childPath(path, index)
-        addRoomRef(refs, option.key, childPath(optionPath, "key"))
-        collectSlotList(refs, option.sideDoors, childPath(optionPath, "sideDoors"))
+        collectRoomOption(refs, option, childPath(path, index))
     end
 end
 
@@ -50,6 +56,7 @@ local function collectSlotEntry(refs, entry, path)
         return
     end
     addRoomRef(refs, entry.roomKey, childPath(path, "roomKey"))
+    collectRoomOption(refs, entry.room, childPath(path, "room"))
     collectRoomOptions(refs, entry.roomOptions, childPath(path, "roomOptions"))
 end
 

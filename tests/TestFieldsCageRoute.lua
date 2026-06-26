@@ -35,7 +35,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageStorageMatchesFieldsRouteRo
     lu.assertEquals(instance.routeSlots[5].label, "Pick 4")
     lu.assertEquals(instance.routeSlots[6].kind, "preboss")
     lu.assertEquals(instance.routeSlots[6].label, "Preboss")
-    lu.assertEquals(instance.routeSlots[6].roomKey, "H_PreBoss01")
+    lu.assertNil(instance.routeSlots[6].roomKey)
     lu.assertEquals(instance.routeSlots[6].roleKey, "Preboss")
     lu.assertEquals(instance.roleValues, {
         "Vanilla",
@@ -108,6 +108,58 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeResolvesOnlyConcrete
     lu.assertEquals(snapshot.rows[2].offerTopology.selected.structure, "CombatCage2")
 end
 
+function TestRunPlannerFieldsCageRoute.testFieldsCageSharedStructureSurvivesWhenRewardsDisabled()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat04",
+                VariantKey = "ThreeRewards",
+                SiblingStructureKey = "CombatCage3",
+            },
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat09",
+                VariantKey = "TwoRewards",
+                SiblingStructureKey = "H_MiniBoss02",
+            },
+            {
+                RoleKey = "Bridge",
+                SiblingStructureKey = "CombatCage3",
+            },
+            {
+                RoleKey = "Miniboss",
+                OptionKey = "H_MiniBoss01",
+                SiblingStructureKey = "CombatCage2",
+            },
+            {},
+        }), instance)
+
+    control:setRouteContext({
+        isLayerConfigured = function(_, _, layer)
+            return layer ~= "rewards"
+        end,
+        markDirty = function()
+        end,
+    }, "Underworld")
+
+    local snapshot = control:buildSnapshot()
+
+    lu.assertTrue(snapshot.valid)
+    lu.assertEquals(snapshot.rows[2].exitCount, 2)
+    lu.assertEquals(snapshot.rows[2].rewardExitCount, 2)
+    lu.assertNil(snapshot.rows[2].rewardKind)
+    lu.assertEquals(snapshot.rows[2].rewardItems[1].rewardKind, "vanilla")
+    lu.assertNil(snapshot.rows[2].rewardItems[2])
+    lu.assertNil(snapshot.rows[2].offerTopology)
+end
+
 function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnapshot()
     local catalog = loadCatalog()
     local template = loadFieldsCageTemplate()
@@ -161,6 +213,8 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnaps
     lu.assertEquals(snapshot.rows[1].slotLabel, "Intro")
     lu.assertEquals(snapshot.rows[1].roomKey, "H_Intro")
     lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
+    lu.assertEquals(snapshot.rows[1].exitCount, 2)
+    lu.assertEquals(snapshot.rows[1].rewardExitCount, 2)
     lu.assertTrue(snapshot.rows[1].valid)
     lu.assertEquals(primaryRewardItem(snapshot.rows[1]).rewardKind, "none")
 
@@ -169,6 +223,8 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnaps
     lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
     lu.assertEquals(snapshot.rows[2].optionKey, "H_Combat04")
     lu.assertEquals(snapshot.rows[2].roomKey, "H_Combat04")
+    lu.assertEquals(snapshot.rows[2].exitCount, 2)
+    lu.assertEquals(snapshot.rows[2].rewardExitCount, 2)
     lu.assertEquals(snapshot.rows[2].variantKey, "ThreeRewards")
     lu.assertEquals(snapshot.rows[2].cagePolicyKey, "H_FieldsCageRewards")
     lu.assertEquals(snapshot.rows[2].cageRewardCount, 3)
@@ -261,7 +317,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnaps
 
     lu.assertEquals(snapshot.rows[6].slotKind, "preboss")
     lu.assertEquals(snapshot.rows[6].slotLabel, "Preboss")
-    lu.assertEquals(snapshot.rows[6].roomKey, "H_PreBoss01")
+    lu.assertNil(snapshot.rows[6].roomKey)
     lu.assertEquals(snapshot.rows[6].roleKey, "Preboss")
     lu.assertEquals(primaryRewardItem(snapshot.rows[6]).rewardKind, "shop")
     lu.assertEquals(snapshot.rows[6].rewardItems[2].address, "prebossReward")

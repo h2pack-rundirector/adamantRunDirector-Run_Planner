@@ -160,6 +160,11 @@ local function roomName(room)
     return runState.roomName(room)
 end
 
+local function isPrebossRoom(room)
+    local key = roomName(room)
+    return type(key) == "string" and string.find(key, "_PreBoss", 1, true) ~= nil
+end
+
 local function rowFromDepthBucket(biomePlan, roomKey, biomeDepthCache)
     local bucket = biomePlan.plannedByBiomeDepthCache[biomeDepthCache]
     local roomBucket = bucket and bucket.byRoomKey and bucket.byRoomKey[roomKey] or nil
@@ -215,6 +220,16 @@ function rewardRouting.plannedRewardRow(runtime, currentRun, room)
     end
 
     local biomeDepthCache = runState.biomeDepthCache(currentRun)
+    if isPrebossRoom(room) and biomePlan.plannedPrebossRow ~= nil then
+        return biomePlan.plannedPrebossRow, {
+            active = true,
+            biomeKey = biomeKey,
+            roomKey = roomKey,
+            biomeDepthCache = biomeDepthCache,
+            source = "preboss",
+        }
+    end
+
     local row, source = rowFromDepthBucket(biomePlan, roomKey, biomeDepthCache)
     if row ~= nil then
         return row, {

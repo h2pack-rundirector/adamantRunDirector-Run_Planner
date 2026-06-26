@@ -2,7 +2,6 @@ local layout = {}
 
 local INDOOR_TAGS = { "Indoor" }
 local OUTDOOR_TAGS = { "Outdoor" }
-local INDOOR_OUTDOOR_TAGS = { "Indoor", "Outdoor" }
 local CHAOS_FEATURES = { chaos = true }
 local CHAOS_SURFACE_FEATURES = { chaos = true, surfaceShop = true }
 local SURFACE_SHOP_COMBAT_ROOMS = {
@@ -28,15 +27,15 @@ local SURFACE_SHOP_COMBAT_ROOMS = {
 
 local function option(key, label, opts)
     opts = opts or {}
-    local rewardDoorCount = opts.rewardDoorCount
-    if rewardDoorCount == nil then
-        rewardDoorCount = opts.exitCount
+    local rewardExitCount = opts.rewardExitCount
+    if rewardExitCount == nil then
+        rewardExitCount = opts.exitCount
     end
     return {
         key = key,
         label = label,
         exitCount = opts.exitCount,
-        rewardDoorCount = rewardDoorCount,
+        rewardExitCount = rewardExitCount,
         tags = opts.tags,
         nextRoomTags = opts.nextRoomTags,
         features = opts.features,
@@ -83,12 +82,6 @@ layout.introRoom = option("P_Intro", "Intro", {
     tags = OUTDOOR_TAGS,
     features = CHAOS_FEATURES,
     availability = { biomeDepthCache = { exact = 1 } },
-})
-
-layout.prebossRoom = option("P_PreBoss01", "Preboss", {
-    exitCount = 1,
-    tags = INDOOR_OUTDOOR_TAGS,
-    availability = { biomeDepthCache = { exact = 9 } },
 })
 
 layout.combatRooms = {

@@ -119,6 +119,35 @@ function common.rewardOfferCount(reward)
     return nil
 end
 
+function common.fixedRoomKey(entry)
+    local room = entry and entry.room or nil
+    return entry and entry.roomKey or room and room.key or nil
+end
+
+function common.fixedRoomField(entry, field)
+    if entry == nil then
+        return nil
+    end
+    if entry[field] ~= nil then
+        return entry[field]
+    end
+    if entry.room ~= nil then
+        return entry.room[field]
+    end
+    return nil
+end
+
+function common.fixedRoomFeatures(entry)
+    if entry == nil then
+        return nil
+    end
+    if entry.features ~= nil then
+        return entry.features
+    end
+    local room = entry.room
+    return room and room.features or nil
+end
+
 function common.isOnlyEligible(values, expected)
     if values == nil or values[1] == nil then
         return false
