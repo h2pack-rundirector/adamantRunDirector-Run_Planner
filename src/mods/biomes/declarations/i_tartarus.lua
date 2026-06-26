@@ -1,9 +1,11 @@
 return function(deps)
-    local clockworkGoalReward = "ClockworkGoal"
+    local goalCombatRole = "GoalCombat"
+    local rewardCombatRole = "RewardCombat"
     local layout = import("mods/biomes/declarations/i_tartarus_layout.lua")(deps)
     local topology = import("mods/biomes/declarations/i_tartarus_topology.lua")({
         layout = layout,
-        clockworkGoalReward = clockworkGoalReward,
+        goalCombatRole = goalCombatRole,
+        rewardCombatRole = rewardCombatRole,
     })
     local parser = deps.parser
     local rewards = deps.rewards
@@ -53,11 +55,10 @@ return function(deps)
             },
         },
         clockwork = {
-            forcedFirstRouteRole = "Combat",
+            forcedFirstRouteRole = goalCombatRole,
             routeCounters = {
                 clockworkGoal = {
                     maxCreationsThisRun = 5,
-                    rewardType = clockworkGoalReward,
                 },
                 clockworkNonGoalReward = {
                     maxCreationsThisRun = 6,
@@ -66,13 +67,24 @@ return function(deps)
         },
         roles = {
             {
-                key = "Combat",
-                label = "Combat",
+                key = goalCombatRole,
+                label = "Goal",
                 mapOptions = layout.combatRooms,
-                reward = rewards.clockworkChoice("TartarusRewards", {
-                    goalRewardType = clockworkGoalReward,
-                    ineligibleRewardTypes = { "Boon" },
-                }),
+                reward = rewards.none(),
+                increments = { clockworkGoal = 1 },
+                npcRoleKeys = { "Combat" },
+                targetKinds = { combatSlot = true },
+                biomeEncounterDepthCost = 1,
+            },
+            {
+                key = rewardCombatRole,
+                label = "Reward Combat",
+                mapOptions = layout.combatRooms,
+                reward = rewards.roomStore("TartarusRewards", { ineligibleRewardTypes = { "Boon" } }),
+                increments = { clockworkNonGoalReward = 1 },
+                requiresPrevious = { supportsExtensionChoice = true },
+                npcRoleKeys = { "Combat" },
+                targetKinds = { combatSlot = true },
                 biomeEncounterDepthCost = 1,
             },
             {

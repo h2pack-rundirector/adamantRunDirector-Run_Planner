@@ -3,11 +3,14 @@ local common = deps.common
 local slots = deps.slots
 
 local VANILLA_ROLE_KEY = common.VANILLA_ROLE_KEY
-local COMBAT_ROLE_KEY = "Combat"
 local GOAL_COUNTER_KEY = "clockworkGoal"
 local NON_GOAL_COUNTER_KEY = "clockworkNonGoalReward"
 local STORY_COUNTER_KEY = "clockworkStory"
-local REWARD_TYPE_ALIAS = "Reward1Key"
+local ROUTE_KIND_ALIAS = "RouteKindKey"
+local NON_GOAL_KIND_ALIAS = "NonGoalKindKey"
+local GOAL_KIND = "Goal"
+local NON_GOAL_KIND = "NonGoal"
+local GOAL_COMBAT_ROLE_KEY = "GoalCombat"
 
 local optionListForRole = common.optionListForRole
 local shouldOfferAutoOption = common.shouldOfferAutoOption
@@ -41,26 +44,12 @@ local function routeCounter(instance, key)
     return counters[key] or {}
 end
 
-local function goalRewardType(instance)
-    return routeCounter(instance, GOAL_COUNTER_KEY).rewardType
-end
-
 local function routeCounterLimit(instance, key, fallback)
     local counter = routeCounter(instance, key)
     return tonumber(counter.maxCreationsThisRun) or fallback or 0
 end
 
-function state.prepareForcedFirstRouteReward(instance)
-    local rewardType = goalRewardType(instance)
-    if rewardType ~= nil then
-        instance.clockwork.forcedFirstRouteReward = {
-            kind = "forcedReward",
-            rewardType = rewardType,
-        }
-    end
-end
-
-function state.requiredGoalRewards(instance)
+function state.requiredGoals(instance)
     return routeCounterLimit(instance, GOAL_COUNTER_KEY)
 end
 
@@ -68,39 +57,11 @@ function state.maxNonGoalRewards(instance)
     return routeCounterLimit(instance, NON_GOAL_COUNTER_KEY)
 end
 
-local function forcedFirstRouteReward(instance, slot)
-    if not slots.isRouteSlot(slot) or slot.routeOrdinal ~= 1 then
-        return nil
-    end
-    return instance.clockwork.forcedFirstRouteReward
-end
-
-function state.rewardContextForRow(instance, rowIndex, role, option, slot)
-    local forcedReward = forcedFirstRouteReward(instance, slot or slots.slotForRow(instance, rowIndex))
-    if forcedReward ~= nil then
-        return forcedReward
-    end
+function state.rewardContextForRow(_instance, _rowIndex, role, option, _slot)
     if option ~= nil and option.reward ~= nil then
         return option.reward
     end
     return role and role.reward or nil
-end
-
-local function rewardTypeForRow(instance, rows, rowIndex, role, option, slot)
-    local rewardContext = state.rewardContextForRow(instance, rowIndex, role, option, slot)
-    if rewardContext == nil then
-        return nil
-    end
-    if rewardContext.kind == "forcedReward" then
-        return rewardContext.rewardType
-    end
-    if rewardContext.kind == "clockworkChoice" or rewardContext.kind == "roomStore" then
-        local rewardType = rows and rows:read(rowIndex, REWARD_TYPE_ALIAS) or nil
-        if rewardType ~= nil and rewardType ~= "" then
-            return rewardType
-        end
-    end
-    return nil
 end
 
 local function counterIncrement(source, counterKey)
@@ -115,24 +76,11 @@ local function rowCounterIncrement(role, option, counterKey)
     return counterIncrement(role, counterKey) + counterIncrement(option, counterKey)
 end
 
-local function rowGoalIncrement(instance, rows, rowIndex, role, option, slot)
-    local rewardType = goalRewardType(instance)
-    if rewardType ~= nil and rewardTypeForRow(instance, rows, rowIndex, role, option, slot) == rewardType then
-        return 1
-    end
+local function rowGoalIncrement(_instance, _rows, _rowIndex, role, option, _slot)
     return rowCounterIncrement(role, option, GOAL_COUNTER_KEY)
 end
 
-local function rowNonGoalIncrement(instance, rows, rowIndex, role, option, slot)
-    local rewardType = rewardTypeForRow(instance, rows, rowIndex, role, option, slot)
-    local goalReward = goalRewardType(instance)
-    if role ~= nil
-        and role.key == COMBAT_ROLE_KEY
-        and rewardType ~= nil
-        and rewardType ~= goalReward
-    then
-        return 1
-    end
+local function rowNonGoalIncrement(_instance, _rows, _rowIndex, role, option, _slot)
     return rowCounterIncrement(role, option, NON_GOAL_COUNTER_KEY)
 end
 
@@ -163,17 +111,8 @@ local function requiresPreviousExtensionChoice(role)
     return requiresPrevious ~= nil and requiresPrevious.supportsExtensionChoice == true
 end
 
-local function isCombatNonGoalReward(instance, rows, rowIndex, role, option, slot)
-    if role == nil or role.key ~= COMBAT_ROLE_KEY then
-        return false
-    end
-    local rewardType = rewardTypeForRow(instance, rows, rowIndex, role, option, slot)
-    return rewardType ~= nil and rewardType ~= goalRewardType(instance)
-end
-
-local function rowRequiresPreviousExtensionChoice(instance, rows, rowIndex, role, option, slot)
+local function rowRequiresPreviousExtensionChoice(_instance, _rows, _rowIndex, role, _option, _slot)
     return requiresPreviousExtensionChoice(role)
-        or isCombatNonGoalReward(instance, rows, rowIndex, role, option, slot)
 end
 
 local function activeReadPass(instance)
@@ -192,11 +131,18 @@ local function rawRoleKey(instance, rows, rowIndex, slot)
     if forcedRoleKey ~= nil and forcedRoleKey ~= "" then
         return forcedRoleKey
     end
-    local roleKey = rows and rows:read(rowIndex, "RoleKey") or nil
-    if roleKey == nil or roleKey == "" then
-        return VANILLA_ROLE_KEY
+    local routeKind = rows and rows:read(rowIndex, ROUTE_KIND_ALIAS) or nil
+    if routeKind == GOAL_KIND then
+        return GOAL_COMBAT_ROLE_KEY
     end
-    return roleKey
+    if routeKind == NON_GOAL_KIND then
+        local nonGoalKind = rows and rows:read(rowIndex, NON_GOAL_KIND_ALIAS) or nil
+        if nonGoalKind ~= nil and nonGoalKind ~= "" then
+            return nonGoalKind
+        end
+        return ""
+    end
+    return VANILLA_ROLE_KEY
 end
 
 local function rawRoleForKey(instance, _rowIndex, roleKey, slot)
@@ -278,7 +224,7 @@ local function buildClockworkState(instance, rows, cache)
         return cache
     end
 
-    local goalLimit = state.requiredGoalRewards(instance)
+    local goalLimit = state.requiredGoals(instance)
     local nonGoalLimit = state.maxNonGoalRewards(instance)
     local goalCount = 0
     local nonGoalCount = 0
@@ -396,6 +342,10 @@ function state.routeTerminatedBeforeRow(instance, rows, rowIndex, slot)
     return slots.isRouteSlot(slot) and clockworkRowState(instance, rows, rowIndex).inactive == true
 end
 
+function state.priorGoalCount(instance, rows, rowIndex)
+    return countPriorGoals(instance, rows, rowIndex)
+end
+
 local function roleIsAllowedByCounters(instance, rows, rowIndex, roleKey, role)
     if roleKey == VANILLA_ROLE_KEY then
         return true
@@ -407,7 +357,7 @@ local function roleIsAllowedByCounters(instance, rows, rowIndex, roleKey, role)
     local _, option = rawOptionForRole(role, rows, rowIndex)
     local goalIncrement = rowGoalIncrement(instance, rows, rowIndex, role, option, slot)
     if goalIncrement > 0 then
-        return countPriorGoals(instance, rows, rowIndex) + goalIncrement <= state.requiredGoalRewards(instance)
+        return countPriorGoals(instance, rows, rowIndex) + goalIncrement <= state.requiredGoals(instance)
     end
     local nonGoalIncrement = rowNonGoalIncrement(instance, rows, rowIndex, role, option, slot)
     if nonGoalIncrement > 0 then
@@ -461,7 +411,7 @@ function state.roleDisallowedStatus(instance, rows, rowIndex, roleKey, role)
     if rowGoalIncrement(instance, rows, rowIndex, role, option, slot) > 0 then
         return invalidStatus(
             "clockwork_goal_limit",
-            "Clockwork Goal is already planned " .. tostring(state.requiredGoalRewards(instance)) .. " times"
+            "Clockwork Goal is already planned " .. tostring(state.requiredGoals(instance)) .. " times"
         )
     end
     if rowNonGoalIncrement(instance, rows, rowIndex, role, option, slot) > 0 then

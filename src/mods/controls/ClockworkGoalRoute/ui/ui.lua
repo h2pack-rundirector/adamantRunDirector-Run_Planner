@@ -9,7 +9,7 @@ local optionChanges = deps.roomOptionChanges
 local ui = {}
 
 local function resetRoomDetails(fields, instance, rowIndex)
-    fields.Rooms:reset(rowIndex, "OptionKey")
+    fields.Rooms:reset(rowIndex, data.optionAlias())
     fields.Rooms:reset(rowIndex, "VariantKey")
     if instance.siblingStructurePolicy ~= nil then
         for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
@@ -63,7 +63,8 @@ function ui.create(fields, instance)
     end
 
     function control:resetRow(rowIndex)
-        fields.Rooms:reset(rowIndex, "RoleKey")
+        fields.Rooms:reset(rowIndex, data.routeKindAlias())
+        fields.Rooms:reset(rowIndex, data.nonGoalKindAlias())
         resetRowDetails(fields, instance, rowIndex)
     end
 

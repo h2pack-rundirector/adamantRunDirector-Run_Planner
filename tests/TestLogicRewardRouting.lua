@@ -1545,7 +1545,7 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingDoesNotForceLaterThes
     lu.assertEquals(currentRun.RewardPriorities[1], "WeaponUpgrade")
 end
 
-function TestRunPlannerLogicRewardRouting.testRewardRoutingPrioritizesTartarusGoalOnlyOnFirstReward()
+function TestRunPlannerLogicRewardRouting.testRewardRoutingLeavesTartarusGoalRowsVanilla()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local rewardRouting = loadRewardRouting(routePlan, {
@@ -1561,11 +1561,10 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingPrioritizesTartarusGo
                 biomeDepthCacheCost = 1,
                 slotKind = "biomeRow",
                 roomKey = "I_Combat01",
-                roleKey = "Combat",
+                roleKey = "GoalCombat",
                 optionKey = "I_Combat01",
                 valid = true,
-                rewardKind = "fixedReward",
-                fixedRewardType = "ClockworkGoal",
+                rewardKind = "none",
             },
         }),
     })
@@ -1586,30 +1585,17 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingPrioritizesTartarusGo
         StartingBiome = "F",
     })
 
-    local firstRewardType = rewardRouting.chooseRoomReward(runtime, function()
-        lu.assertEquals(currentRun.RewardPriorities[1], "ClockworkGoal")
-        lu.assertEquals(currentRun.RewardPriorities[2], "Boon")
-        return "ClockworkGoal"
+    local rewardType = rewardRouting.chooseRoomReward(runtime, function()
+        lu.assertEquals(currentRun.RewardPriorities[1], "Boon")
+        return "Boon"
     end, currentRun, room, "TartarusRewards", {}, {})
 
-    lu.assertEquals(firstRewardType, "ClockworkGoal")
+    lu.assertEquals(rewardType, "Boon")
     lu.assertEquals(currentRun.RewardPriorities[1], "Boon")
     lu.assertNil(currentRun.RewardPriorities[2])
-
-    local secondRewardType = rewardRouting.chooseRoomReward(runtime, function()
-        lu.assertEquals(currentRun.RewardPriorities[1], "Boon")
-        return "StackUpgradeTriple"
-    end, currentRun, room, "TartarusRewards", {
-        {
-            RewardType = "ClockworkGoal",
-        },
-    }, {})
-
-    lu.assertEquals(secondRewardType, "StackUpgradeTriple")
-    lu.assertEquals(currentRun.RewardPriorities[1], "Boon")
 end
 
-function TestRunPlannerLogicRewardRouting.testRewardRoutingPrioritizesTartarusExtensionOnlyAfterGoalReward()
+function TestRunPlannerLogicRewardRouting.testRewardRoutingPrioritizesTartarusRewardCombat()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local rewardRouting = loadRewardRouting(routePlan, {
@@ -1625,7 +1611,7 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingPrioritizesTartarusEx
                 biomeDepthCacheCost = 1,
                 slotKind = "biomeRow",
                 roomKey = "I_Combat02",
-                roleKey = "Combat",
+                roleKey = "RewardCombat",
                 optionKey = "I_Combat02",
                 valid = true,
                 rewardKind = "roomStore",
@@ -1658,25 +1644,13 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingPrioritizesTartarusEx
         StartingBiome = "F",
     })
 
-    local firstRewardType = rewardRouting.chooseRoomReward(runtime, function()
-        lu.assertEquals(currentRun.RewardPriorities[1], "Boon")
-        return "ClockworkGoal"
-    end, currentRun, room, "TartarusRewards", {}, {})
-
-    lu.assertEquals(firstRewardType, "ClockworkGoal")
-    lu.assertEquals(currentRun.RewardPriorities[1], "Boon")
-
-    local secondRewardType = rewardRouting.chooseRoomReward(runtime, function()
+    local rewardType = rewardRouting.chooseRoomReward(runtime, function()
         lu.assertEquals(currentRun.RewardPriorities[1], "StackUpgradeTriple")
         lu.assertEquals(currentRun.RewardPriorities[2], "Boon")
         return "StackUpgradeTriple"
-    end, currentRun, room, "TartarusRewards", {
-        {
-            RewardType = "ClockworkGoal",
-        },
-    }, {})
+    end, currentRun, room, "TartarusRewards", {}, {})
 
-    lu.assertEquals(secondRewardType, "StackUpgradeTriple")
+    lu.assertEquals(rewardType, "StackUpgradeTriple")
     lu.assertEquals(currentRun.RewardPriorities[1], "Boon")
     lu.assertNil(currentRun.RewardPriorities[2])
 end

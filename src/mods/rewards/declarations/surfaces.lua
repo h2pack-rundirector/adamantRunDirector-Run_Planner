@@ -114,17 +114,6 @@ function rewards.forcedReward(rewardType, opts)
     return context
 end
 
-function rewards.clockworkChoice(rewardStore, opts)
-    opts = opts or {}
-    local context = {
-        kind = "clockworkChoice",
-        rewardStore = rewardStore,
-        goalRewardType = opts.goalRewardType,
-    }
-    copyRewardFilters(context, opts, "", "")
-    return context
-end
-
 function rewards.devotion()
     local context = rewards.forcedReward("Devotion")
     context.pick = routeRules.devotionPick()

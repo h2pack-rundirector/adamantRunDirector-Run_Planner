@@ -1,6 +1,7 @@
 return function(deps)
     local layout = deps.layout
-    local clockworkGoalReward = deps.clockworkGoalReward
+    local goalCombatRole = deps.goalCombatRole
+    local rewardCombatRole = deps.rewardCombatRole
 
     local function roomSibling(room, structure, opts)
         opts = opts or {}
@@ -15,6 +16,7 @@ return function(deps)
             rewardStore = opts.rewardStore,
             rewardClass = opts.rewardClass,
             rewardType = opts.rewardType,
+            isClockworkGoal = opts.isClockworkGoal,
             eligibleRewardTypes = opts.eligibleRewardTypes,
             ineligibleRewardTypes = opts.ineligibleRewardTypes,
             offerCount = opts.offerCount or 0,
@@ -41,19 +43,26 @@ return function(deps)
         {
             key = "CombatGoal",
             label = "Goal Room",
-            structure = "Combat",
-            roleKey = "Combat",
-            rewardType = clockworkGoalReward,
+            structure = goalCombatRole,
+            roleKey = goalCombatRole,
+            isClockworkGoal = true,
             offerCount = 0,
         },
         {
             key = "CombatReward",
             label = "Reward Combat",
-            structure = "Combat",
-            roleKey = "Combat",
+            structure = rewardCombatRole,
+            roleKey = rewardCombatRole,
             rewardStore = "TartarusRewards",
             ineligibleRewardTypes = { "Boon" },
             offerCount = 1,
+        },
+        {
+            key = "Preboss",
+            label = "Preboss",
+            structure = "Preboss",
+            isPreboss = true,
+            offerCount = 0,
         },
         roomSibling(story, "Story", {
             roleKey = "Story",
@@ -81,7 +90,7 @@ return function(deps)
         },
         rules = {
             {
-                key = "exactlyOneClockworkGoalDoor",
+                key = "clockworkProgressionDoor",
             },
             {
                 key = "matchingSiblingRewardStore",

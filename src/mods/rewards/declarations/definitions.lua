@@ -17,7 +17,6 @@ definitions.primitives = {
 
     Boon = { label = "Boon" },
     Devotion = { label = "Trial" },
-    ClockworkGoal = { label = "Clockwork Goal" },
     RandomLoot = { label = "Boon" },
     BoostedRandomLoot = { label = "Boosted Boon" },
     BlindBoxLoot = { label = "Mystery Boon" },

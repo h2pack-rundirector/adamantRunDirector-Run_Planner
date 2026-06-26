@@ -144,14 +144,6 @@ local function validateRewardContext(issues, rewardDefinitions, reward, path)
         if reward.rewardStore ~= nil and not rewardStoreExists(rewardDefinitions, reward.rewardStore) then
             addIssue(issues, "unknown_reward_store", childPath(path, "rewardStore"), "Unknown reward store")
         end
-    elseif reward.kind == "clockworkChoice" then
-        if not rewardStoreExists(rewardDefinitions, reward.rewardStore) then
-            addIssue(issues, "unknown_reward_store", childPath(path, "rewardStore"), "Unknown reward store")
-        end
-        if not primitiveExists(rewardDefinitions, reward.goalRewardType) then
-            addIssue(issues, "unknown_reward_type", childPath(path, "goalRewardType"), "Unknown goal reward type")
-        end
-        validateRewardFilters(issues, rewardDefinitions, reward, path, "")
     elseif reward.kind == "shop" then
         if not shopProfileExists(rewardDefinitions, reward.shopProfile) then
             addIssue(issues, "unknown_shop_profile", childPath(path, "shopProfile"), "Unknown shop profile")

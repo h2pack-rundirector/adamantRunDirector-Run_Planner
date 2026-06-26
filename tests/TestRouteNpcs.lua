@@ -379,7 +379,7 @@ function TestRunPlannerRouteNpcs.testRouteContextDisablesNpcTargetsWhenRewardsAr
     lu.assertNil(targets.byNpcBiome.Artemis)
 end
 
-function TestRunPlannerRouteNpcs.testRouteContextTargetsNemesisOnTartarusClockworkCombat()
+function TestRunPlannerRouteNpcs.testRouteContextTargetsNemesisOnTartarusRewardCombat()
     local catalog = loadCatalog()
     local route = {
         key = "Underworld",
@@ -404,14 +404,19 @@ function TestRunPlannerRouteNpcs.testRouteContextTargetsNemesisOnTartarusClockwo
                                         rowIndex = 5,
                                         routeOrdinal = 4,
                                         slotLabel = "Step 4",
-                                        roleKey = "Combat",
+                                        roleKey = "RewardCombat",
+                                        role = {
+                                            npcRoleKeys = { "Combat" },
+                                            targetKinds = { combatSlot = true },
+                                        },
                                         option = { key = "I_Combat09", label = "C09" },
                                         biomeDepthCache = 4,
                                         biomeEncounterDepthMin = 4,
                                         biomeEncounterDepthMax = 4,
                                         valid = true,
-                                        rewardKind = "fixedReward",
-                                        fixedRewardType = "ClockworkGoal",
+                                        rewardKind = "roomStore",
+                                        rewardStore = "TartarusRewards",
+                                        rewards = { "MaxHealthDrop" },
                                     },
                                 }),
                             }

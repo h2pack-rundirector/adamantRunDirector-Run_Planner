@@ -7,9 +7,13 @@ local decorations = deps.decorations
 
 local rooms = {}
 
-local ROLE_OPTS = {
+local ROUTE_KIND_OPTS = {
     label = "",
-    controlWidth = 145,
+    controlWidth = 120,
+}
+local NON_GOAL_KIND_OPTS = {
+    label = "",
+    controlWidth = 150,
 }
 local OPTION_OPTS = {
     label = "",
@@ -19,9 +23,12 @@ local SIBLING_STRUCTURE_OPTS = {
     label = "",
     controlWidth = 150,
 }
-local ROLE_COLUMN_X = 80
-local OPTION_COLUMN_X = 245
-local SIBLING_STRUCTURE_COLUMN_X = 455
+local ROUTE_KIND_COLUMN_X = 80
+local NON_GOAL_KIND_COLUMN_X = 220
+local GOAL_OPTION_COLUMN_X = 220
+local NON_GOAL_OPTION_COLUMN_X = 390
+local GOAL_SIBLING_STRUCTURE_COLUMN_X = 430
+local NON_GOAL_SIBLING_STRUCTURE_COLUMN_X = 600
 
 local function copyBaseOpts(base)
     local copy = {}
@@ -31,18 +38,34 @@ local function copyBaseOpts(base)
     return copy
 end
 
-local function getRoleOpts(control, instance, rowIndex)
-    control._roleOptsByRow = control._roleOptsByRow or {}
-    local opts = control._roleOptsByRow[rowIndex]
+local function getRouteKindOpts(control, instance, rowIndex)
+    control._routeKindOptsByRow = control._routeKindOptsByRow or {}
+    local opts = control._routeKindOptsByRow[rowIndex]
     if opts == nil then
-        opts = copyBaseOpts(ROLE_OPTS)
+        opts = copyBaseOpts(ROUTE_KIND_OPTS)
         opts.values = {}
-        opts.displayValues = instance.roleLabels
-        control._roleOptsByRow[rowIndex] = opts
+        opts.displayValues = data.routeKindLabels(instance)
+        control._routeKindOptsByRow[rowIndex] = opts
     end
     local rows = control:routeRows()
-    opts.values = data.roleValuesForRow(instance, rows, rowIndex)
-    return decorations.decorateDropdown(opts, opts, data.roleValueStatesForRow(instance, rows, rowIndex))
+    opts.values = data.routeKindValuesForRow(instance, rows, rowIndex)
+    return decorations.decorateDropdown(opts, opts, data.routeKindValueStatesForRow(instance, rows, rowIndex))
+end
+
+local function getNonGoalKindOpts(control, instance, rowIndex)
+    control._nonGoalKindOptsByRow = control._nonGoalKindOptsByRow or {}
+    local opts = control._nonGoalKindOptsByRow[rowIndex]
+    if opts == nil then
+        opts = copyBaseOpts(NON_GOAL_KIND_OPTS)
+        opts.values = data.nonGoalKindValuesForRow(instance)
+        opts.displayValues = data.nonGoalKindLabels(instance)
+        control._nonGoalKindOptsByRow[rowIndex] = opts
+    end
+    return decorations.decorateDropdown(
+        opts,
+        opts,
+        data.nonGoalKindValueStatesForRow(instance, control:routeRows(), rowIndex)
+    )
 end
 
 local function optionOptsByRole(control, rowIndex)
@@ -105,7 +128,7 @@ local function drawStaticOptionLabel(draw, role, option, columnX)
     end
 
     draw.imgui.SameLine()
-    draw.imgui.SetCursorPosX(columnX or OPTION_COLUMN_X)
+    draw.imgui.SetCursorPosX(columnX or GOAL_OPTION_COLUMN_X)
     draw.imgui.AlignTextToFramePadding()
     draw.imgui.Text(tostring(option.label or option.key or ""))
 end
@@ -121,7 +144,7 @@ local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey, co
     if optionOpts.values[1] == nil then
         return
     end
-    local storedOptionKey = control:fields().Rooms:read(rowIndex, "OptionKey") or ""
+    local storedOptionKey = control:fields().Rooms:read(rowIndex, data.optionAlias()) or ""
     if optionOpts.values[2] == nil
         and optionOpts.values[1] ~= ""
         and (storedOptionKey == "" or storedOptionKey == optionOpts.values[1])
@@ -131,15 +154,15 @@ local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey, co
     end
 
     draw.imgui.SameLine()
-    draw.imgui.SetCursorPosX(columnX or OPTION_COLUMN_X)
+    draw.imgui.SetCursorPosX(columnX or GOAL_OPTION_COLUMN_X)
     local changed = draw.widgets.dropdown(
-        control:roomField(rowIndex, "OptionKey"),
+        control:roomField(rowIndex, data.optionAlias()),
         optionOpts
     )
     return changed, storedOptionKey
 end
 
-local function drawSiblingStructureDropdown(draw, control, instance, rowIndex, siblingIndex)
+local function drawSiblingStructureDropdown(draw, control, instance, rowIndex, siblingIndex, columnX)
     if not data.shouldDrawSiblingStructure(instance, control:routeRows(), rowIndex, siblingIndex) then
         return false
     end
@@ -150,14 +173,14 @@ local function drawSiblingStructureDropdown(draw, control, instance, rowIndex, s
     end
 
     draw.imgui.SameLine()
-    draw.imgui.SetCursorPosX(SIBLING_STRUCTURE_COLUMN_X)
+    draw.imgui.SetCursorPosX(columnX)
     return draw.widgets.dropdown(control:roomField(rowIndex, data.siblingStructureAlias(instance, siblingIndex)), opts)
 end
 
-local function drawSiblingStructureDropdowns(draw, control, instance, rowIndex)
+local function drawSiblingStructureDropdowns(draw, control, instance, rowIndex, columnX)
     local changed = false
     for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
-        if drawSiblingStructureDropdown(draw, control, instance, rowIndex, siblingIndex) then
+        if drawSiblingStructureDropdown(draw, control, instance, rowIndex, siblingIndex, columnX) then
             changed = true
         end
     end
@@ -169,6 +192,34 @@ local function drawRouteRowHeader(imgui, slot)
     imgui.Text(slot.label)
 end
 
+local function drawRouteKindControl(draw, control, instance, rowIndex)
+    local opts = getRouteKindOpts(control, instance, rowIndex)
+    if opts.values[1] == nil then
+        return false
+    end
+    if opts.values[2] == nil and opts.values[1] ~= "" then
+        draw.imgui.SameLine()
+        draw.imgui.SetCursorPosX(ROUTE_KIND_COLUMN_X)
+        draw.imgui.AlignTextToFramePadding()
+        draw.imgui.Text(tostring(opts.displayValues[opts.values[1]] or opts.values[1]))
+        return false
+    end
+
+    draw.imgui.SameLine()
+    draw.imgui.SetCursorPosX(ROUTE_KIND_COLUMN_X)
+    return draw.widgets.dropdown(control:roomField(rowIndex, data.routeKindAlias()), opts)
+end
+
+local function drawNonGoalKindControl(draw, control, instance, rowIndex)
+    local opts = getNonGoalKindOpts(control, instance, rowIndex)
+    if opts.values[1] == nil then
+        return false
+    end
+    draw.imgui.SameLine()
+    draw.imgui.SetCursorPosX(NON_GOAL_KIND_COLUMN_X)
+    return draw.widgets.dropdown(control:roomField(rowIndex, data.nonGoalKindAlias()), opts)
+end
+
 local function drawRoomRow(draw, control, instance, rowIndex)
     local slot = control:slot(rowIndex)
     if slot == nil then
@@ -176,30 +227,47 @@ local function drawRoomRow(draw, control, instance, rowIndex)
     end
 
     local imgui = draw.imgui
-    local currentRoleKey = data.readRoleKey(instance, control:routeRows(), rowIndex)
+    local rows = control:routeRows()
+    local currentRoleKey = data.readRoleKey(instance, rows, rowIndex)
 
     drawRouteRowHeader(imgui, slot)
     if data.isFixedIdentityRow(instance, rowIndex) then
-        local changed, previousOptionKey = drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey, ROLE_COLUMN_X)
+        local changed, previousOptionKey = drawOptionDropdown(
+            draw,
+            control,
+            instance,
+            rowIndex,
+            currentRoleKey,
+            ROUTE_KIND_COLUMN_X
+        )
         if changed then
             control:invalidateReadPass()
             control:onRoomOptionChanged(rowIndex, previousOptionKey)
         end
     else
-        local roleField = control:roomField(rowIndex, "RoleKey")
-        imgui.SameLine()
-        imgui.SetCursorPosX(ROLE_COLUMN_X)
-        if draw.widgets.dropdown(roleField, getRoleOpts(control, instance, rowIndex)) then
+        if drawRouteKindControl(draw, control, instance, rowIndex) then
+            resetRowDetails(control:fields(), instance, rowIndex)
+            control:fields().Rooms:reset(rowIndex, data.nonGoalKindAlias())
+            control:invalidateReadPass()
+            currentRoleKey = data.readRoleKey(instance, rows, rowIndex)
+        end
+        local routeKind = data.readRouteKind(instance, rows, rowIndex)
+        if routeKind == "NonGoal" and drawNonGoalKindControl(draw, control, instance, rowIndex) then
             resetRowDetails(control:fields(), instance, rowIndex)
             control:invalidateReadPass()
-            currentRoleKey = data.readRoleKey(instance, control:routeRows(), rowIndex)
+            currentRoleKey = data.readRoleKey(instance, rows, rowIndex)
         end
-        local changed, previousOptionKey = drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey)
+
+        local optionColumnX = routeKind == "NonGoal" and NON_GOAL_OPTION_COLUMN_X or GOAL_OPTION_COLUMN_X
+        local siblingColumnX = routeKind == "NonGoal"
+            and NON_GOAL_SIBLING_STRUCTURE_COLUMN_X
+            or GOAL_SIBLING_STRUCTURE_COLUMN_X
+        local changed, previousOptionKey = drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey, optionColumnX)
         if changed then
             control:invalidateReadPass()
             control:onRoomOptionChanged(rowIndex, previousOptionKey)
         end
-        if drawSiblingStructureDropdowns(draw, control, instance, rowIndex) then
+        if drawSiblingStructureDropdowns(draw, control, instance, rowIndex, siblingColumnX) then
             control:invalidateReadPass()
         end
     end

@@ -11,24 +11,18 @@ local invalidStatus = common.invalidStatus
 
 local EMPTY_VALUES = {}
 
-local function goalRewardType(instance)
-    local counters = instance.clockwork and instance.clockwork.routeCounters or nil
-    local goal = counters and counters.clockworkGoal or nil
-    return goal and goal.rewardType or nil
-end
-
 local function selectedRoomTopology(data, instance, rows, rowIndex, roleKey, option)
-    if roleKey == "Combat" then
-        if data.rowCountsGoalReward(instance, rows, rowIndex, instance.rolesByKey.Combat, option) then
-            return {
-                structure = "Combat",
-                roomKey = option and option.key or nil,
-                rewardType = goalRewardType(instance),
-                offerCount = 0,
-            }
-        end
+    if data.rowCountsGoal(instance, rows, rowIndex, instance.rolesByKey[roleKey], option) then
         return {
-            structure = "Combat",
+            structure = roleKey,
+            roomKey = option and option.key or nil,
+            isClockworkGoal = true,
+            offerCount = 0,
+        }
+    end
+    if roleKey == "RewardCombat" then
+        return {
+            structure = roleKey,
             roomKey = option and option.key or nil,
             rewardStore = "TartarusRewards",
             ineligibleRewardTypes = { "Boon" },
@@ -73,7 +67,8 @@ local function selectedRoomTopologyForRow(data, instance, rows, rowIndex)
 end
 
 local function hasSelectableSiblingStructure(roleKey, option)
-    return roleKey == "Combat"
+    return roleKey == "GoalCombat"
+        or roleKey == "RewardCombat"
         or roleKey == "Story"
         or roleKey == "Fountain"
         or (roleKey == "Miniboss" and option ~= nil)
@@ -86,13 +81,14 @@ local function siblingRoomTopology(option)
     return {
         structure = option.structure,
         roomKey = roomTopology.roomKey(option),
-        rewardStore = option.rewardStore,
-        rewardType = option.rewardType,
-        eligibleRewardTypes = option.eligibleRewardTypes,
-        ineligibleRewardTypes = option.ineligibleRewardTypes,
-        offerCount = option.offerCount,
-    }
-end
+            rewardStore = option.rewardStore,
+            isClockworkGoal = option.isClockworkGoal,
+            isPreboss = option.isPreboss,
+            eligibleRewardTypes = option.eligibleRewardTypes,
+            ineligibleRewardTypes = option.ineligibleRewardTypes,
+            offerCount = option.offerCount,
+        }
+    end
 
 local function selectedRewardStoreForRow(data, instance, rows, rowIndex)
     local roleKey = data.resolveRole(instance, rows, rowIndex)
@@ -101,8 +97,12 @@ local function selectedRewardStoreForRow(data, instance, rows, rowIndex)
     return selected and selected.rewardStore or nil
 end
 
-local function isGoalDoor(instance, topologyNode)
-    return topologyNode ~= nil and topologyNode.rewardType == goalRewardType(instance)
+local function isGoalDoor(topologyNode)
+    return topologyNode ~= nil and topologyNode.isClockworkGoal == true
+end
+
+local function isPrebossDoor(topologyNode)
+    return topologyNode ~= nil and topologyNode.isPreboss == true
 end
 
 function topology.create(data)
@@ -137,9 +137,25 @@ function topology.create(data)
         return validStatus()
     end
 
-    local function exactlyOneClockworkGoalDoorStatus(instance, rows, rowIndex, sibling)
+    local function progressionDoorStatus(instance, rows, rowIndex, sibling)
         local selected = selectedRoomTopologyForRow(data, instance, rows, rowIndex)
-        if isGoalDoor(instance, selected) ~= isGoalDoor(instance, sibling) then
+        if data.priorGoalCount(instance, rows, rowIndex) >= data.requiredGoals(instance) then
+            if not isGoalDoor(selected)
+                and not isGoalDoor(sibling)
+                and isPrebossDoor(selected) ~= isPrebossDoor(sibling)
+            then
+                return validStatus()
+            end
+            return invalidStatus(
+                "clockwork_sibling_preboss_required",
+                "Tartarus post-goal doors need Preboss"
+            )
+        end
+
+        if not isPrebossDoor(selected)
+            and not isPrebossDoor(sibling)
+            and isGoalDoor(selected) ~= isGoalDoor(sibling)
+        then
             return validStatus()
         end
         return invalidStatus(
@@ -154,7 +170,7 @@ function topology.create(data)
         end
 
         local selected = selectedRoomTopologyForRow(data, instance, rows, rowIndex)
-        if isGoalDoor(instance, selected) then
+        if isGoalDoor(selected) then
             return validStatus()
         end
         return invalidStatus(
@@ -164,8 +180,8 @@ function topology.create(data)
     end
 
     local function topologyRuleStatus(instance, rows, rowIndex, sibling, rule)
-        if rule.key == "exactlyOneClockworkGoalDoor" then
-            return exactlyOneClockworkGoalDoorStatus(instance, rows, rowIndex, sibling)
+        if rule.key == "clockworkProgressionDoor" then
+            return progressionDoorStatus(instance, rows, rowIndex, sibling)
         end
         if rule.key == "matchingSiblingRewardStore" then
             return matchingSiblingRewardStoreStatus(instance, rows, rowIndex, sibling)

@@ -227,7 +227,7 @@ function runtime.create(fields, instance)
             optionKey = optionKey,
             option = option,
             features = data.rowFeatures(slot, role, option),
-            countsGoalReward = data.rowCountsGoalReward(instance, routeRows, rowIndex, role, option),
+            countsGoal = data.rowCountsGoal(instance, routeRows, rowIndex, role, option),
             countsNonGoalReward = data.rowCountsNonGoalReward(instance, routeRows, rowIndex, role, option),
             valid = validation.valid,
             invalidCode = validation.code,
@@ -276,7 +276,7 @@ function runtime.create(fields, instance)
             invalidRows = invalidRows,
             clockwork = {
                 goalCount = goalCount,
-                requiredGoalRewards = data.requiredGoalRewards(instance),
+                requiredGoals = data.requiredGoals(instance),
                 nonGoalRewardCount = nonGoalCount,
                 maxNonGoalRewards = data.maxNonGoalRewards(instance),
                 storyCount = storyCount,

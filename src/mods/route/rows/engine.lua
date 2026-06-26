@@ -429,8 +429,9 @@ function rowEngine.create(adapter)
 
         local count = 0
         for priorIndex = 1, rowIndex - 1 do
-            if rows:read(priorIndex, "RoleKey") == roleKey
-                and data.isRoleAvailable(instance, rows, priorIndex, roleKey)
+            local priorRoleKey = data.resolveRole(instance, rows, priorIndex)
+            if priorRoleKey == roleKey
+                and data.isRoleAvailable(instance, rows, priorIndex, priorRoleKey)
             then
                 count = count + 1
             end

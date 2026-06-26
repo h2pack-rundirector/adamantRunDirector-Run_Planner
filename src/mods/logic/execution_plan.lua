@@ -171,7 +171,7 @@ local function compactRoomRow(row)
         realCombatCount = row.realCombatCount,
         roomHistoryCost = row.roomHistoryCost,
         roomHistoryIdentity = row.roomHistoryIdentity,
-        countsGoalReward = row.countsGoalReward,
+        countsGoal = row.countsGoal,
         countsNonGoalReward = row.countsNonGoalReward,
         roomTopology = copyTree(row.roomTopology),
         features = copyMap(row.features),

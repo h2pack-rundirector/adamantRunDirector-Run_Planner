@@ -51,7 +51,15 @@ local function roleMatches(context, npc, row)
         lookup = common.buildKeyLookup(npc.roleKeys)
         context.npcRoleLookups[npc.key] = lookup
     end
-    return lookup[row and row.roleKey or ""] == true
+    if lookup[row and row.roleKey or ""] == true then
+        return true
+    end
+    for _, roleKey in ipairs(row and row.role and row.role.npcRoleKeys or EMPTY_LIST) do
+        if lookup[roleKey] == true then
+            return true
+        end
+    end
+    return false
 end
 
 local function rewardItemsConcreteStateForSource(items, sourceKind)
@@ -127,7 +135,11 @@ end
 local function targetKindMatches(_npc, _biomeEntry, variant, row)
     local targetKind = variant.targetKind or "combatSlot"
     if targetKind == "combatSlot" then
-        return row ~= nil and row.roleKey == "Combat"
+        return row ~= nil
+            and (
+                row.roleKey == "Combat"
+                or row.role and row.role.targetKinds and row.role.targetKinds.combatSlot == true
+            )
     end
     return true
 end

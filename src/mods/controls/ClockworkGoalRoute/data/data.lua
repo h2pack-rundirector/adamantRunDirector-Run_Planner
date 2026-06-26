@@ -2,6 +2,7 @@ local deps = ...
 local common = deps.common
 local timeline = deps.timeline
 local rowEngine = deps.rowEngine
+local valueStates = deps.valueStates
 local slots = import("mods/controls/ClockworkGoalRoute/data/slots.lua", nil, {
     common = common,
 })
@@ -20,14 +21,86 @@ local VANILLA_ROLE_KEY = common.VANILLA_ROLE_KEY
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
 
+local ROUTE_KIND_ALIAS = "RouteKindKey"
+local NON_GOAL_KIND_ALIAS = "NonGoalKindKey"
+local OPTION_ALIAS = "OptionKey"
+local VARIANT_ALIAS = "VariantKey"
+local GOAL_KIND = "Goal"
+local NON_GOAL_KIND = "NonGoal"
+local GOAL_COMBAT_ROLE_KEY = "GoalCombat"
+local REWARD_COMBAT_ROLE_KEY = "RewardCombat"
+
+local ROUTE_KIND_VALUES = { GOAL_KIND, NON_GOAL_KIND }
+local GOAL_KIND_VALUES = { GOAL_KIND }
+local VANILLA_KIND_VALUES = { VANILLA_ROLE_KEY }
+local ROUTE_KIND_LABELS = {
+    Goal = "Goal",
+    NonGoal = "Non Goal",
+}
+local NON_GOAL_KIND_VALUES = {
+    REWARD_COMBAT_ROLE_KEY,
+    "Story",
+    "Fountain",
+    "Miniboss",
+}
+
 local data
 local topology
+
+local function roleKeyForRouteChoice(rows, rowIndex)
+    local routeKind = rows and rows:read(rowIndex, ROUTE_KIND_ALIAS) or ""
+    if routeKind == GOAL_KIND then
+        return GOAL_COMBAT_ROLE_KEY
+    end
+    if routeKind == NON_GOAL_KIND then
+        return rows and rows:read(rowIndex, NON_GOAL_KIND_ALIAS) or ""
+    end
+    return ""
+end
+
+local function routeKindForRoleKey(roleKey)
+    if roleKey == GOAL_COMBAT_ROLE_KEY then
+        return GOAL_KIND
+    end
+    if roleKey ~= nil and roleKey ~= "" and roleKey ~= VANILLA_ROLE_KEY then
+        return NON_GOAL_KIND
+    end
+    return roleKey or ""
+end
+
+local function buildRoomRows()
+    return {
+        { key = ROUTE_KIND_ALIAS, type = "string", default = "", maxLen = 32 },
+        { key = NON_GOAL_KIND_ALIAS, type = "string", default = "", maxLen = 32 },
+        { key = OPTION_ALIAS, type = "string", default = "", maxLen = 64 },
+        { key = VARIANT_ALIAS, type = "string", default = "", maxLen = 64 },
+    }
+end
+
+local function aggregateAlternativeValueState(states, values)
+    local mergedState = nil
+    local allHidden = true
+    for _, key in ipairs(values) do
+        local valueState = states[key]
+        if valueState == nil or valueState == valueStates.NORMAL then
+            return nil
+        end
+        if valueState ~= valueStates.HIDDEN then
+            allHidden = false
+            mergedState = valueStates.merge(mergedState, valueState)
+        end
+    end
+    if allHidden then
+        return valueStates.HIDDEN
+    end
+    return mergedState
+end
 
 local adapter = {
     slotForRow = slots.slotForRow,
     isFixedIdentitySlot = slots.isFixedSlot,
 
-    readRoleKey = function(instance, rows, rowIndex, slot, defaultReadRoleKey)
+    readRoleKey = function(instance, rows, rowIndex, slot, _defaultReadRoleKey)
         if slots.isFixedSlot(slot) then
             return slot.roleKey
         end
@@ -38,7 +111,7 @@ local adapter = {
         if state.routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
             return VANILLA_ROLE_KEY
         end
-        return defaultReadRoleKey(instance, rows, rowIndex, slot)
+        return roleKeyForRouteChoice(rows, rowIndex)
     end,
 
     roleForRow = function(instance, rowIndex, roleKey, slot, defaultRoleForRow, rows)
@@ -132,10 +205,10 @@ local adapter = {
     validateSlot = function(instance, rows, rowIndex, roleKey, role, slot)
         if slots.isPrebossSlot(slot) then
             local goalCount = data.countGoals(instance, rows)
-            if goalCount ~= state.requiredGoalRewards(instance) then
+            if goalCount ~= state.requiredGoals(instance) then
                 return invalidStatus(
                     "clockwork_goal_count",
-                    "Preboss requires exactly " .. tostring(state.requiredGoalRewards(instance)) .. " Clockwork Goal rows"
+                    "Preboss requires exactly " .. tostring(state.requiredGoals(instance)) .. " Clockwork Goal rows"
                 )
             end
             return validStatus()
@@ -161,7 +234,6 @@ function data.prepare(instance)
     instance.clockwork = instance.biome.clockwork or {}
     instance.biomeKey = instance.biome.key or instance.biomeKey or instance.name
     instance.label = instance.label or instance.biome.label or instance.biomeKey
-    state.prepareForcedFirstRouteReward(instance)
     data.prepareRoles(instance)
     slots.buildRouteSlots(instance)
     timeline.applyRouteSlots(instance)
@@ -174,7 +246,7 @@ function data.prepare(instance)
 end
 
 function data.storage(instance)
-    local roomRows = data.buildRoomRows()
+    local roomRows = buildRoomRows()
     if instance.siblingStructurePolicy ~= nil then
         for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
             roomRows[#roomRows + 1] = {
@@ -205,8 +277,77 @@ function data.storage(instance)
     }
 end
 
-function data.requiredGoalRewards(instance)
-    return state.requiredGoalRewards(instance)
+function data.routeKindAlias()
+    return ROUTE_KIND_ALIAS
+end
+
+function data.nonGoalKindAlias()
+    return NON_GOAL_KIND_ALIAS
+end
+
+function data.optionAlias()
+    return OPTION_ALIAS
+end
+
+function data.routeKindLabels()
+    return ROUTE_KIND_LABELS
+end
+
+function data.nonGoalKindLabels(instance)
+    return instance.roleLabels
+end
+
+function data.readRouteKind(instance, rows, rowIndex)
+    local routeKind = rows and rows:read(rowIndex, ROUTE_KIND_ALIAS) or ""
+    if routeKind == GOAL_KIND or routeKind == NON_GOAL_KIND then
+        return routeKind
+    end
+    return routeKindForRoleKey(data.readRoleKey(instance, rows, rowIndex))
+end
+
+function data.readNonGoalKind(_instance, rows, rowIndex)
+    return rows and rows:read(rowIndex, NON_GOAL_KIND_ALIAS) or ""
+end
+
+function data.routeKindValuesForRow(instance, rows, rowIndex)
+    local roleValues = data.roleValuesForRow(instance, rows, rowIndex)
+    if roleValues[1] == VANILLA_ROLE_KEY then
+        return VANILLA_KIND_VALUES
+    end
+    if roleValues[1] == GOAL_COMBAT_ROLE_KEY and roleValues[2] == nil then
+        return GOAL_KIND_VALUES
+    end
+    return ROUTE_KIND_VALUES
+end
+
+function data.nonGoalKindValuesForRow()
+    return NON_GOAL_KIND_VALUES
+end
+
+function data.routeKindValueStatesForRow(instance, rows, rowIndex)
+    local roleStates = data.roleValueStatesForRow(instance, rows, rowIndex)
+    instance.clockworkRouteKindValueStatesByRow = instance.clockworkRouteKindValueStatesByRow or {}
+    local states = instance.clockworkRouteKindValueStatesByRow[rowIndex]
+    if states == nil then
+        states = {}
+        instance.clockworkRouteKindValueStatesByRow[rowIndex] = states
+    end
+    states[GOAL_KIND] = roleStates[GOAL_COMBAT_ROLE_KEY]
+    states[NON_GOAL_KIND] = aggregateAlternativeValueState(roleStates, NON_GOAL_KIND_VALUES)
+    states[VANILLA_ROLE_KEY] = roleStates[VANILLA_ROLE_KEY]
+    return states
+end
+
+function data.nonGoalKindValueStatesForRow(instance, rows, rowIndex)
+    return data.roleValueStatesForRow(instance, rows, rowIndex)
+end
+
+function data.requiredGoals(instance)
+    return state.requiredGoals(instance)
+end
+
+function data.priorGoalCount(instance, rows, rowIndex)
+    return state.priorGoalCount(instance, rows, rowIndex)
 end
 
 function data.maxNonGoalRewards(instance)
@@ -217,7 +358,7 @@ function data.rewardContext(instance, _rows, rowIndex, role, option)
     return state.rewardContextForRow(instance, rowIndex, role, option, slots.slotForRow(instance, rowIndex))
 end
 
-function data.rowCountsGoalReward(instance, rows, rowIndex, role, option)
+function data.rowCountsGoal(instance, rows, rowIndex, role, option)
     return state.rowCountsGoal(instance, rows, rowIndex, role, option, slots.slotForRow(instance, rowIndex))
 end
 
