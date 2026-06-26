@@ -41,6 +41,7 @@ local function option(key, label, opts)
         nextRoomTags = opts.nextRoomTags,
         features = opts.features,
         availability = opts.availability,
+        force = opts.force,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
@@ -163,8 +164,11 @@ layout.minibossRooms = {
         tags = INDOOR_TAGS,
         biomeEncounterDepthCost = 0,
         availability = {
-            biomeDepthCache = { min = 4, max = 7 },
+            biomeDepthCache = { min = 4 },
             requiresMultipleOfferedDoors = true,
+        },
+        force = {
+            biomeDepthCache = { min = 4, max = 7 },
         },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
@@ -175,8 +179,11 @@ layout.minibossRooms = {
         nextRoomTags = OUTDOOR_TAGS,
         biomeEncounterDepthCost = 1,
         availability = {
-            biomeDepthCache = { min = 4, max = 7 },
+            biomeDepthCache = { min = 4 },
             requiresMultipleOfferedDoors = true,
+        },
+        force = {
+            biomeDepthCache = { min = 4, max = 7 },
         },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,

@@ -881,11 +881,14 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(erebus.Story.roomOptions[1].availability.biomeDepthCache, { min = 4, max = 8 })
     lu.assertEquals(erebus.Story.roomOptions[1].exitCount, 2)
     lu.assertEquals(erebus.Midshop.roomOptions[1].availability.biomeDepthCache, { min = 4, max = 6 })
+    lu.assertEquals(erebus.Midshop.roomOptions[1].force.biomeDepthCache, { min = 4, max = 6 })
     lu.assertEquals(erebus.Midshop.routeRequirements, midshopRequirements())
     lu.assertEquals(optionByKey(erebus.Combat.mapOptions, "F_Combat05").availability.biomeEncounterDepth, { min = 5 })
     lu.assertEquals(optionByKey(erebus.Combat.mapOptions, "F_Combat05").reward, majorMinorReward({
         allowDevotion = true,
     }))
+    lu.assertEquals(erebus.Miniboss.roomOptions[1].availability.biomeDepthCache, { min = 4 })
+    lu.assertEquals(erebus.Miniboss.roomOptions[1].force.biomeDepthCache, { min = 4, max = 6 })
     lu.assertEquals(erebus.Miniboss.roomOptions[3].exitCount, 1)
 
     local oceanus = biomes.lookup.G.rolesByKey
@@ -895,11 +898,14 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(oceanus.Story.roomOptions[1].availability.biomeDepthCache, { min = 3, max = 6 })
     lu.assertEquals(oceanus.Story.roomOptions[1].exitCount, 1)
     lu.assertEquals(oceanus.Midshop.roomOptions[1].availability.biomeDepthCache, { min = 3, max = 5 })
+    lu.assertEquals(oceanus.Midshop.roomOptions[1].force.biomeDepthCache, { min = 3, max = 6 })
     lu.assertEquals(oceanus.Midshop.routeRequirements, midshopRequirements())
     lu.assertEquals(optionByKey(oceanus.Combat.mapOptions, "G_Combat03").availability.biomeEncounterDepth, { min = 3 })
     lu.assertEquals(optionByKey(oceanus.Combat.mapOptions, "G_Combat03").reward, majorMinorReward({
         allowDevotion = true,
     }))
+    lu.assertEquals(oceanus.Miniboss.roomOptions[1].availability.biomeDepthCache, { min = 4 })
+    lu.assertEquals(oceanus.Miniboss.roomOptions[1].force.biomeDepthCache, { min = 4, max = 7 })
     lu.assertEquals(oceanus.Miniboss.roomOptions[2].exitCount, 1)
 
     local fields = biomes.lookup.H.rolesByKey
@@ -908,7 +914,8 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(fields.Combat.mapOptions[9].maxCageRewards, 2)
     lu.assertEquals(fields.Combat.mapOptions[9].availability.biomeDepthCache, { max = 3 })
     lu.assertEquals(fields.Combat.mapOptions[15].availability.biomeDepthCache, { max = 3 })
-    lu.assertEquals(fields.Miniboss.roomOptions[1].availability.biomeDepthCache, { min = 2, max = 4 })
+    lu.assertEquals(fields.Miniboss.roomOptions[1].availability.biomeDepthCache, { min = 2 })
+    lu.assertEquals(fields.Miniboss.roomOptions[1].force.biomeDepthCache, { min = 2, max = 4 })
     lu.assertEquals(fields.Miniboss.routeRules, oneShotRouteRules())
     lu.assertEquals(fields.Bridge.roomOptions[1].availability.biomeDepthCache, { exact = 3 })
 
@@ -924,7 +931,8 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(olympus.Combat.mapOptions[3].availability.biomeEncounterDepth, { max = 4 })
     lu.assertEquals(olympus.Story.roomOptions[1].availability.biomeEncounterDepth, { minExclusive = 2 })
     lu.assertEquals(olympus.Midshop.roomOptions[1].availability.biomeEncounterDepth, { minExclusive = 4 })
-    lu.assertEquals(olympus.Miniboss.roomOptions[1].availability.biomeDepthCache, { min = 4, max = 7 })
+    lu.assertEquals(olympus.Miniboss.roomOptions[1].availability.biomeDepthCache, { min = 4 })
+    lu.assertEquals(olympus.Miniboss.roomOptions[1].force.biomeDepthCache, { min = 4, max = 7 })
     lu.assertTrue(olympus.Miniboss.roomOptions[1].availability.requiresMultipleOfferedDoors)
 
     local summit = biomes.lookup.Q.rolesByKey
@@ -983,6 +991,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].exitCount, 1)
     lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].rewardDoorCount, 0)
     lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].availability.biomeDepthCache, { min = 2 })
+    lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].force.biomeDepthCache, { min = 2, max = 4 })
     lu.assertEquals(tartarus.rolesByKey.Fountain.roomOptions[1].key, "I_Reprieve01")
     lu.assertEquals(
         tartarus.rolesByKey.Fountain.roomOptions[1].reward,
@@ -997,6 +1006,8 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.rolesByKey.Miniboss.increments, { clockworkNonGoalReward = 1 })
     lu.assertEquals(tartarus.rolesByKey.Miniboss.maxCreationsThisRun, 1)
     lu.assertEquals(tartarus.rolesByKey.Miniboss.requiresPrevious, { supportsExtensionChoice = true })
+    lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[1].availability.biomeDepthCache, { min = 3 })
+    lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[1].force.biomeDepthCache, { min = 3, max = 7 })
     lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[2].exitCount, 2)
     lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[2].rewardDoorCount, 1)
     lu.assertTrue(tartarus.rolesByKey.Miniboss.roomOptions[2].supportsExtensionChoice)
@@ -1106,6 +1117,7 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
         "H_MiniBoss02",
     })
     lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].forceAtBiomeDepthMax, 4)
+    lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].force.biomeDepthCache, { min = 2, max = 4 })
     lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].generatedExitCount, 2)
     lu.assertTrue(fields.fields.offerTopology.forcedGroups[1].pickedCandidateBeforeDeadlineClosesGroup)
     lu.assertEquals(cagePolicy.maxDoorDepthChanceTable[4], {

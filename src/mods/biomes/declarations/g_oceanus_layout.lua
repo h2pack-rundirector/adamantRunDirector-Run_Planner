@@ -35,6 +35,7 @@ local function option(key, label, opts)
         rewardDoorCount = rewardDoorCount,
         features = opts.features,
         availability = opts.availability,
+        force = opts.force,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
@@ -152,6 +153,9 @@ layout.shopRooms = {
         availability = {
             biomeDepthCache = { min = 3, max = 5 },
         },
+        force = {
+            biomeDepthCache = { min = 3, max = 6 },
+        },
         maxCreationsThisRun = 1,
     }),
 }
@@ -161,7 +165,8 @@ layout.minibossRooms = {
         exitCount = 2,
         features = CHAOS_FEATURES,
         biomeEncounterDepthCost = 1,
-        availability = { biomeDepthCache = { min = 4, max = 7 } },
+        availability = { biomeDepthCache = { min = 4 } },
+        force = { biomeDepthCache = { min = 4, max = 7 } },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),
@@ -170,6 +175,9 @@ layout.minibossRooms = {
         features = CHAOS_FEATURES,
         biomeEncounterDepthCost = 0,
         availability = {
+            biomeDepthCache = { min = 4 },
+        },
+        force = {
             biomeDepthCache = { min = 4, max = 7 },
         },
         maxCreationsThisRun = 1,
@@ -179,7 +187,8 @@ layout.minibossRooms = {
         exitCount = 2,
         features = CHAOS_FEATURES,
         biomeEncounterDepthCost = 1,
-        availability = { biomeDepthCache = { min = 4, max = 7 } },
+        availability = { biomeDepthCache = { min = 4 } },
+        force = { biomeDepthCache = { min = 4, max = 7 } },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),

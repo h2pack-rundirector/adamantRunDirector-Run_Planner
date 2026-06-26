@@ -16,6 +16,7 @@ local function option(key, label, opts)
         rewardDoorCount = rewardDoorCount,
         features = opts.features,
         availability = opts.availability,
+        force = opts.force,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         maxCreationsThisRun = opts.maxCreationsThisRun,
         maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
@@ -131,6 +132,9 @@ layout.shopRooms = {
         availability = {
             biomeDepthCache = { min = 4, max = 6 },
         },
+        force = {
+            biomeDepthCache = { min = 4, max = 6 },
+        },
         maxCreationsThisRun = 1,
     }),
 }
@@ -139,7 +143,8 @@ layout.minibossRooms = {
     option("F_MiniBoss01", "Root-Stalker", {
         exitCount = 1,
         biomeEncounterDepthCost = 1,
-        availability = { biomeDepthCache = { min = 4, max = 6 } },
+        availability = { biomeDepthCache = { min = 4 } },
+        force = { biomeDepthCache = { min = 4, max = 6 } },
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),
@@ -147,6 +152,9 @@ layout.minibossRooms = {
         exitCount = 1,
         biomeEncounterDepthCost = 1,
         availability = {
+            biomeDepthCache = { min = 4 },
+        },
+        force = {
             biomeDepthCache = { min = 4, max = 6 },
         },
         maxCreationsThisRun = 1,
@@ -156,6 +164,9 @@ layout.minibossRooms = {
         exitCount = 1,
         biomeEncounterDepthCost = 1,
         availability = {
+            biomeDepthCache = { min = 4 },
+        },
+        force = {
             biomeDepthCache = { min = 4, max = 6 },
         },
         maxCreationsThisRun = 1,

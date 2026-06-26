@@ -16,6 +16,7 @@ local function option(key, label, opts)
         rewardDoorCount = rewardDoorCount,
         features = opts.features,
         availability = opts.availability,
+        force = opts.force,
         encounter = opts.encounter,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         maxCageRewards = opts.maxCageRewards,
@@ -49,6 +50,9 @@ local bridgeAvailability = {
     biomeDepthCache = { exact = 3 },
 }
 local minibossAvailability = {
+    biomeDepthCache = { min = 2 },
+}
+local minibossForce = {
     biomeDepthCache = { min = 2, max = 4 },
 }
 
@@ -121,6 +125,7 @@ layout.offerTopology = {
             candidates = { "H_MiniBoss01", "H_MiniBoss02" },
             generatedExitCount = 2,
             forceAtBiomeDepthMax = 4,
+            force = minibossForce,
             pickedCandidateBeforeDeadlineClosesGroup = true,
         },
     },
@@ -153,6 +158,7 @@ layout.offerTopology = {
                 structure = "Miniboss",
                 roomKey = "H_MiniBoss01",
                 availability = minibossAvailability,
+                force = minibossForce,
                 rewardStore = "RunProgress",
                 eligibleRewardTypes = { "Boon" },
                 offerCount = 1,
@@ -163,6 +169,7 @@ layout.offerTopology = {
                 structure = "Miniboss",
                 roomKey = "H_MiniBoss02",
                 availability = minibossAvailability,
+                force = minibossForce,
                 rewardStore = "RunProgress",
                 eligibleRewardTypes = { "Boon" },
                 offerCount = 1,
@@ -205,6 +212,7 @@ layout.minibossRooms = {
         encounter = "MiniBossVampire",
         biomeEncounterDepthCost = 1,
         availability = minibossAvailability,
+        force = minibossForce,
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),
@@ -213,6 +221,7 @@ layout.minibossRooms = {
         encounter = "MiniBossLamia",
         biomeEncounterDepthCost = 1,
         availability = minibossAvailability,
+        force = minibossForce,
         maxCreationsThisRun = 1,
         maxAppearancesThisBiome = 1,
     }),

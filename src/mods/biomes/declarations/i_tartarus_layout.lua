@@ -28,6 +28,7 @@ local function combatRoom(roomKey, exitCount, opts)
         features = opts.features or WELL_SHOP_FEATURES,
         reward = opts.reward,
         availability = opts.availability,
+        force = opts.force,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
         maxCreationsThisRun = opts.maxCreationsThisRun or 1,
     }
@@ -45,6 +46,7 @@ local function roomOption(roomKey, label, opts)
         reward = opts.reward,
         features = opts.features,
         availability = opts.availability,
+        force = opts.force,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         exitCount = opts.exitCount,
         rewardDoorCount = rewardDoorCount,
@@ -110,6 +112,9 @@ layout.specialExtensionRooms = {
             availability = {
                 biomeDepthCache = { min = 2 },
             },
+            force = {
+                biomeDepthCache = { min = 2, max = 4 },
+            },
         }),
     },
     miniboss = {
@@ -119,6 +124,9 @@ layout.specialExtensionRooms = {
             biomeEncounterDepthCost = 1,
             exitCount = 2,
             availability = {
+                biomeDepthCache = { min = 3 },
+            },
+            force = {
                 biomeDepthCache = { min = 3, max = 7 },
             },
         }),
@@ -128,6 +136,9 @@ layout.specialExtensionRooms = {
             biomeEncounterDepthCost = 1,
             exitCount = 2,
             availability = {
+                biomeDepthCache = { min = 3 },
+            },
+            force = {
                 biomeDepthCache = { min = 3, max = 7 },
             },
         }),
