@@ -508,7 +508,7 @@ function data.encounterRewardLegsForRow(instance, rows, rowIndex)
     return legs
 end
 
-function data.validateOfferTopology(instance, rows, rowIndex)
+function data.validateRoomTopology(instance, rows, rowIndex)
     local roleKey = data.resolveRole(instance, rows, rowIndex)
     local policy = data.variantPolicyForRole(instance, roleKey)
     if policy == nil then
@@ -518,17 +518,13 @@ function data.validateOfferTopology(instance, rows, rowIndex)
     for legIndex = 1, data.encounterRewardLegCountForRow(instance, rows, rowIndex) do
         local wheelKey, wheel = data.resolveWheelOffer(instance, rows, rowIndex, roleKey, legIndex)
         if wheel == nil or wheelKey == "" then
-            return invalidStatus("ship_wheel_offer_count_required", "Thessaly reward simulation needs wheel choice count")
+            return invalidStatus("ship_wheel_offer_count_required", "Thessaly topology needs wheel choice count")
         end
     end
     return nil
 end
 
-function data.offerTopology(instance, rows, rowIndex, rewardsConfigured)
-    if not rewardsConfigured then
-        return nil
-    end
-
+function data.roomTopology(instance, rows, rowIndex)
     local roleKey = data.resolveRole(instance, rows, rowIndex)
     if data.variantPolicyForRole(instance, roleKey) == nil then
         return nil

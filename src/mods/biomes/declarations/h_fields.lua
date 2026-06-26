@@ -1,5 +1,8 @@
 return function(deps)
     local layout = import("mods/biomes/declarations/h_fields_layout.lua")()
+    local topology = import("mods/biomes/declarations/h_fields_topology.lua")({
+        layout = layout,
+    })
     local rewardLayout = import("mods/biomes/declarations/h_fields_rewards.lua")(deps)
     local parser = deps.parser
     local rewards = deps.rewards
@@ -59,7 +62,7 @@ return function(deps)
             minibossRooms = layout.minibossRooms,
             minibossRoomsByKey = layout.minibossRoomsByKey,
             cageRewardPolicy = layout.cageRewardPolicy,
-            offerTopology = layout.offerTopology,
+            roomTopology = topology,
         },
         roles = {
             {

@@ -19,9 +19,16 @@ local VARIANT_OPTS = {
     label = "",
     controlWidth = 130,
 }
+local WHEEL_OFFER_OPTS = {
+    label = "",
+    controlWidth = 110,
+}
 local ROLE_COLUMN_X = 80
 local OPTION_COLUMN_X = 230
 local VARIANT_COLUMN_X = 430
+local WHEEL_LABEL_BASE_X = 565
+local WHEEL_CONTROL_BASE_X = 590
+local WHEEL_COLUMN_SPACING = 145
 
 local function copyBaseOpts(base)
     local copy = {}
@@ -92,6 +99,23 @@ local function getVariantOpts(control, instance, rowIndex, roleKey)
     return opts
 end
 
+local function wheelOfferOptsByRole(control)
+    control._wheelOfferOptsByRole = control._wheelOfferOptsByRole or {}
+    return control._wheelOfferOptsByRole
+end
+
+local function wheelOfferOpts(control, instance, roleKey)
+    local optsByRole = wheelOfferOptsByRole(control)
+    local opts = optsByRole[roleKey]
+    if opts == nil then
+        opts = copyBaseOpts(WHEEL_OFFER_OPTS)
+        opts.values = data.wheelOfferValues(instance, roleKey)
+        opts.displayValues = data.wheelOfferLabels(instance, roleKey)
+        optsByRole[roleKey] = opts
+    end
+    return opts
+end
+
 local function optionLabelAddsInformation(role, option)
     if role == nil or option == nil then
         return false
@@ -153,6 +177,29 @@ local function drawVariantDropdown(draw, control, instance, rowIndex, roleKey)
     )
 end
 
+local function drawWheelOfferControls(draw, control, instance, rowIndex, roleKey)
+    local opts = wheelOfferOpts(control, instance, roleKey)
+    if opts.values[1] == nil then
+        return false
+    end
+
+    local changed = false
+    local imgui = draw.imgui
+    for legIndex = 1, data.encounterRewardLegCountForRow(instance, control:routeRows(), rowIndex) do
+        local columnOffset = (legIndex - 1) * WHEEL_COLUMN_SPACING
+        imgui.SameLine()
+        imgui.SetCursorPosX(WHEEL_LABEL_BASE_X + columnOffset)
+        imgui.AlignTextToFramePadding()
+        imgui.Text("W" .. tostring(legIndex))
+        imgui.SameLine()
+        imgui.SetCursorPosX(WHEEL_CONTROL_BASE_X + columnOffset)
+        if draw.widgets.dropdown(control:roomField(rowIndex, data.wheelOfferAlias(instance, legIndex)), opts) then
+            changed = true
+        end
+    end
+    return changed
+end
+
 local function drawRouteRowHeader(imgui, slot)
     imgui.AlignTextToFramePadding()
     imgui.Text(slot.label)
@@ -189,6 +236,9 @@ local function drawRoomRow(draw, control, instance, rowIndex)
             control:onRoomOptionChanged(rowIndex, previousOptionKey)
         end
         if drawVariantDropdown(draw, control, instance, rowIndex, currentRoleKey) then
+            control:invalidateReadPass()
+        end
+        if drawWheelOfferControls(draw, control, instance, rowIndex, currentRoleKey) then
             control:invalidateReadPass()
         end
     end

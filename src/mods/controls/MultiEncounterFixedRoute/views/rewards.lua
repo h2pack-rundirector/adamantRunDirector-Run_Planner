@@ -10,23 +10,9 @@ local rewards = {}
 
 local REWARD_COLUMN_X = 130
 local ENCOUNTER_REWARD_COLUMN_X = 260
-local TOPOLOGY_LABEL_COLUMN_X = 130
-local TOPOLOGY_COLUMN_X = 260
 local REWARD_DRAW_OPTS = {
     hideGenericRewardLabel = true,
 }
-local WHEEL_OFFER_OPTS = {
-    label = "",
-    controlWidth = 110,
-}
-
-local function copyBaseOpts(base)
-    local copy = {}
-    for key, value in pairs(base or {}) do
-        copy[key] = value
-    end
-    return copy
-end
 
 local function rewardDrawOpts(control)
     if control.rewardDrawOpts ~= nil then
@@ -100,44 +86,8 @@ local function drawRewardSurface(draw, control, surface, fields, opts)
     end
 end
 
-local function wheelOfferOptsByRole(control)
-    control._wheelOfferOptsByRole = control._wheelOfferOptsByRole or {}
-    return control._wheelOfferOptsByRole
-end
-
-local function wheelOfferOpts(control, instance, roleKey)
-    local optsByRole = wheelOfferOptsByRole(control)
-    local opts = optsByRole[roleKey]
-    if opts == nil then
-        opts = copyBaseOpts(WHEEL_OFFER_OPTS)
-        opts.values = data.wheelOfferValues(instance, roleKey)
-        opts.displayValues = data.wheelOfferLabels(instance, roleKey)
-        optsByRole[roleKey] = opts
-    end
-    return opts
-end
-
-local function drawWheelOfferControl(draw, control, instance, rowIndex, roleKey, legIndex)
-    local opts = wheelOfferOpts(control, instance, roleKey)
-    if opts.values[1] == nil then
-        return
-    end
-
-    local imgui = draw.imgui
-    imgui.Spacing()
-    imgui.SetCursorPosX(TOPOLOGY_LABEL_COLUMN_X)
-    imgui.AlignTextToFramePadding()
-    imgui.Text("Wheel")
-    imgui.SameLine()
-    imgui.SetCursorPosX(TOPOLOGY_COLUMN_X)
-    if draw.widgets.dropdown(control:roomField(rowIndex, data.wheelOfferAlias(instance, legIndex)), opts) then
-        control:invalidateReadPass()
-    end
-end
-
 local function drawEncounterRewardRows(draw, control, instance, rowIndex)
     local imgui = draw.imgui
-    local roleKey = data.resolveRole(instance, control:routeRows(), rowIndex)
     for legIndex = 1, data.encounterRewardLegCountForRow(instance, control:routeRows(), rowIndex) do
         local leg = data.encounterRewardLegForRow(instance, control:routeRows(), rowIndex, legIndex)
         local encounterRewardRowIndex = data.encounterRewardRowIndex(instance, rowIndex, legIndex)
@@ -164,7 +114,6 @@ local function drawEncounterRewardRows(draw, control, instance, rowIndex)
                 encounterRewardFields(control, encounterRewardRowIndex, rowIndex, legIndex),
                 rewardDrawOpts(control)
             )
-            drawWheelOfferControl(draw, control, instance, rowIndex, roleKey, legIndex)
         end
     end
 end

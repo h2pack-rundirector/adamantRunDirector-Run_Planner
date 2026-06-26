@@ -62,7 +62,7 @@ local function rewardRowContext(rowContext, routeControlName)
         biomeEncounterDepth = rowContext.biomeEncounterDepth,
         biomeEncounterDepthMin = rowContext.biomeEncounterDepthMin,
         biomeEncounterDepthMax = rowContext.biomeEncounterDepthMax,
-        offerTopology = rowContext.row and rowContext.row.offerTopology or nil,
+        roomTopology = rowContext.row and rowContext.row.roomTopology or nil,
     }
 end
 

@@ -173,7 +173,7 @@ local function compactRoomRow(row)
         roomHistoryIdentity = row.roomHistoryIdentity,
         countsGoalReward = row.countsGoalReward,
         countsNonGoalReward = row.countsNonGoalReward,
-        offerTopology = copyTree(row.offerTopology),
+        roomTopology = copyTree(row.roomTopology),
         features = copyMap(row.features),
         rewardItems = compactRewardItems(row.rewardItems),
         sideRooms = compactSideRooms(row.sideRooms),

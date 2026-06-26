@@ -1116,16 +1116,19 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
     lu.assertEquals(cagePolicy.countControl.options[2].key, "ThreeRewards")
     lu.assertEquals(cagePolicy.countControl.options[2].cageRewardCount, 3)
     lu.assertEquals(cagePolicy.countControl.options[2].requiresAllOfferedRoomsSupport, 3)
-    lu.assertEquals(fields.fields.offerTopology.rules[1].key, "matchingCombatCageRewardCount")
-    lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].key, "H_Minibosses")
-    lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].candidates, {
+    lu.assertEquals(fields.fields.roomTopology.siblingStructureWindow, {
+        biomeDepthCache = { min = 2, max = 4 },
+    })
+    lu.assertEquals(fields.fields.roomTopology.rules[1].key, "matchingCombatCageRewardCount")
+    lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].key, "H_Minibosses")
+    lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].candidates, {
         "H_MiniBoss01",
         "H_MiniBoss02",
     })
-    lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].forceAtBiomeDepthMax, 4)
-    lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].force.biomeDepthCache, { min = 2, max = 4 })
-    lu.assertEquals(fields.fields.offerTopology.forcedGroups[1].generatedExitCount, 2)
-    lu.assertTrue(fields.fields.offerTopology.forcedGroups[1].pickedCandidateBeforeDeadlineClosesGroup)
+    lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].forceAtBiomeDepthMax, 4)
+    lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].force.biomeDepthCache, { min = 2, max = 4 })
+    lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].generatedExitCount, 2)
+    lu.assertTrue(fields.fields.roomTopology.forcedGroups[1].pickedCandidateBeforeDeadlineClosesGroup)
     lu.assertEquals(cagePolicy.maxDoorDepthChanceTable[4], {
         maxDoorChance = 0.80,
         ceilingCheck = true,

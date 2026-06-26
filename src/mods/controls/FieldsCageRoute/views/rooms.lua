@@ -19,9 +19,14 @@ local CAGE_COUNT_OPTS = {
     label = "",
     controlWidth = 120,
 }
+local SIBLING_STRUCTURE_OPTS = {
+    label = "",
+    controlWidth = 130,
+}
 local ROLE_COLUMN_X = 80
 local OPTION_COLUMN_X = 230
 local CAGE_COUNT_COLUMN_X = 430
+local SIBLING_STRUCTURE_COLUMN_X = 560
 
 local function copyBaseOpts(base)
     local copy = {}
@@ -92,6 +97,29 @@ local function getCageCountOpts(control, instance, rowIndex, roleKey)
     return opts
 end
 
+local function siblingStructureOpts(control, instance, rowIndex)
+    control._siblingStructureOptsByRow = control._siblingStructureOptsByRow or {}
+    local opts = control._siblingStructureOptsByRow[rowIndex]
+    if opts == nil then
+        opts = copyBaseOpts(SIBLING_STRUCTURE_OPTS)
+        opts.values = data.siblingStructureValues(instance)
+        opts.displayValues = data.siblingStructureLabels(instance)
+        control._siblingStructureOptsByRow[rowIndex] = opts
+    end
+    return decorations.decorateDropdown(
+        opts,
+        opts,
+        data.siblingStructureValueStatesForRow(instance, control:routeRows(), rowIndex)
+    )
+end
+
+local function siblingStructureColumnX(roleKey)
+    if roleKey == "Combat" then
+        return SIBLING_STRUCTURE_COLUMN_X
+    end
+    return CAGE_COUNT_COLUMN_X
+end
+
 local function optionLabelAddsInformation(role, option)
     if role == nil or option == nil then
         return false
@@ -153,6 +181,21 @@ local function drawCageCountDropdown(draw, control, instance, rowIndex, roleKey)
     )
 end
 
+local function drawSiblingStructureDropdown(draw, control, instance, rowIndex, roleKey)
+    if not data.shouldDrawSiblingStructure(instance, control:routeRows(), rowIndex) then
+        return false
+    end
+
+    local opts = siblingStructureOpts(control, instance, rowIndex)
+    if opts.values[1] == nil then
+        return false
+    end
+
+    draw.imgui.SameLine()
+    draw.imgui.SetCursorPosX(siblingStructureColumnX(roleKey))
+    return draw.widgets.dropdown(control:roomField(rowIndex, data.siblingStructureAlias(instance)), opts)
+end
+
 local function drawRouteRowHeader(imgui, slot)
     imgui.AlignTextToFramePadding()
     imgui.Text(slot.label)
@@ -189,6 +232,9 @@ local function drawRoomRow(draw, control, instance, rowIndex)
             control:onRoomOptionChanged(rowIndex, previousOptionKey)
         end
         if drawCageCountDropdown(draw, control, instance, rowIndex, currentRoleKey) then
+            control:invalidateReadPass()
+        end
+        if drawSiblingStructureDropdown(draw, control, instance, rowIndex, currentRoleKey) then
             control:invalidateReadPass()
         end
     end

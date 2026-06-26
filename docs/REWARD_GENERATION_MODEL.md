@@ -2,8 +2,8 @@
 
 This note records the current reward-generation findings for Run Planner. It
 focuses on reward bag pressure: how many rewards vanilla generates, when those
-rewards are removed from a store, and where the planner needs explicit
-structure to make simulation deterministic.
+rewards are removed from a store, and where the planner needs explicit room
+topology to make simulation deterministic.
 
 ## Core Direction
 
@@ -25,7 +25,7 @@ their own room.
 Recommended route-row shape:
 
 ```lua
-row.offerTopology = {
+row.roomTopology = {
     offerCount = previousResolvedRoom.exitCount,
     sourceRowIndex = previousRow.rowIndex,
     sourceRoomKey = previousRow.roomKey,
@@ -73,13 +73,13 @@ available = rewardSurface:choices(rowCtx, rewardCtx, bagCtx)
 the row's reward leaves:
 
 ```lua
-bagCtx:consumeGeneratedOffers(rowCtx.offerTopology, row.rewardItems)
+bagCtx:consumeGeneratedOffers(rowCtx.roomTopology, row.rewardItems)
 ```
 
 This keeps the direction of ownership clear:
 
 ```text
-biome declaration -> rowCtx.offerTopology -> bagCtx
+biome declaration -> rowCtx.roomTopology -> bagCtx
 reward declarations -> reward leaves -> rewardCtx / bagCtx checks
 ```
 
@@ -87,35 +87,33 @@ The route walker should not re-solve H, O, or any biome-specific generation
 rules. It should receive normalized row topology from the control snapshot and
 pass that through to reward planning.
 
-## Configuration Gate
+## Topology Boundary
 
-Generated-offer topology should always be representable in biome declarations,
-but the extra user-facing controls should be gated by `Configure Rewards`.
+Generated-offer topology is inherent row/room structure. It should always be
+representable in biome declarations and exported as `row.roomTopology` when the
+selected route row needs extra generated structure beyond `exitCount` /
+`rewardExitCount`.
 
 Rationale:
 
-- The extra H/O fields are structural data.
-- They matter only when reward generation or reward bags are being simulated.
-- Room-only routing should not become invalid because reward-simulation
-  topology is unresolved.
+- H sibling doors and O ship wheel choices describe what vanilla generated
+  around the room.
+- Reward bag simulation consumes that structure, but does not own it.
+- Disabling `Configure Rewards` disables selected reward forcing and reward
+  legality, not the structural facts needed to make the route coherent.
 
-When `Configure Rewards` is disabled:
+Current policy:
 
-- omit reward-bag topology requirements from validation,
-- ignore H sibling structure and O wheel offer count,
-- keep room routing focused on the picked path.
-
-When `Configure Rewards` is enabled:
-
-- ambiguous generated-offer structure must be concrete,
-- `Auto` / `Vanilla` should not be accepted for fields that the future bag
-  simulator needs,
+- ambiguous generated-offer structure must be concrete when the row type needs
+  it,
+- `Auto` / `Vanilla` should not be accepted for topology fields that determine
+  generated offers,
 - invalid messages should point at the unresolved topology, for example
-  "Fields reward simulation needs sibling door structure for Row 3."
+  "Fields topology needs sibling door structure for Row 3."
 
-This gate keeps `Configure Rooms` honest: it means "force the picked route."
-`Configure Rewards` means "make reward generation deterministic enough to
-force and simulate rewards."
+This keeps `Configure Rooms` honest: it means "force and describe the picked
+route structure." `Configure Rewards` means "force selected reward values on
+top of that structure."
 
 ## Reward Availability Layers
 
@@ -169,7 +167,7 @@ the user planned later.
 
 ### F, G, P
 
-These can use the previous room's offer topology for normal route rows:
+These can use the previous room's room topology for normal route rows:
 
 ```text
 next reward offer count = previous room exitCount
@@ -233,7 +231,7 @@ Current modeling direction:
 
 - H reward routing should force deterministic generated structure.
 - The user should select the second door structure, not its rewards, when
-  `Configure Rewards` is enabled.
+  the selected row has an ambiguous sibling door.
 - This is needed only for the ambiguous H choice rows, not as a global model.
 
 Structure enum:
@@ -275,7 +273,7 @@ Normalized row topology should live on the row context, not on the reward
 leaves:
 
 ```lua
-row.offerTopology = {
+row.roomTopology = {
     kind = "fieldsChoice",
     selected = {
         structure = "CombatCage2",
@@ -298,7 +296,7 @@ cage:1 -> selected reward value
 cage:2 -> selected reward value
 ```
 
-The future bag context joins the two. It reads `row.offerTopology`, looks up
+The future bag context joins the two. It reads `row.roomTopology`, looks up
 the selected reward leaves by address, consumes those exact selected offers,
 and consumes unknown sibling offers according to the normalized sibling
 structure.
@@ -339,7 +337,7 @@ topology owned by the reward leaf.
 Normalized shape:
 
 ```lua
-row.offerTopology = {
+row.roomTopology = {
     kind = "shipCombat",
     encounters = {
         {
@@ -359,8 +357,9 @@ context interprets `wheelOfferCount = 2` as selected offer plus one unknown
 sibling offer from the same ship wheel batch.
 
 The 2-vs-3 combat-leg choice remains room structure. The 1-vs-2 wheel-offer
-choice is reward-generation structure and should be required only when
-`Configure Rewards` is enabled.
+choice is also row topology: it describes how many reward choices vanilla
+generated for that active ship encounter. Reward bag simulation consumes it
+later, but the value is configured and validated with room structure.
 
 ## Deferred Structural Detour: Chaos Gates
 

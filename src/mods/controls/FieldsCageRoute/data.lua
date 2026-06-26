@@ -215,8 +215,8 @@ end
 
 local function prepareSiblingStructurePolicy(instance)
     local control = instance.biome.fields
-        and instance.biome.fields.offerTopology
-        and instance.biome.fields.offerTopology.siblingStructureControl
+        and instance.biome.fields.roomTopology
+        and instance.biome.fields.roomTopology.siblingStructureControl
         or nil
     if control == nil then
         instance.siblingStructurePolicy = nil
@@ -227,6 +227,10 @@ local function prepareSiblingStructurePolicy(instance)
         key = control.key,
         label = control.label or control.key,
         alias = control.alias or "SiblingStructureKey",
+        availability = instance.biome.fields
+            and instance.biome.fields.roomTopology
+            and instance.biome.fields.roomTopology.siblingStructureWindow
+            or nil,
         values = {},
         labels = {},
         optionsByKey = {},
@@ -240,11 +244,11 @@ local function prepareSiblingStructurePolicy(instance)
     instance.siblingStructurePolicy = policy
 end
 
-local function prepareOfferTopologyPolicies(instance)
+local function prepareRoomTopologyPolicies(instance)
     local topology = instance.biome.fields
-        and instance.biome.fields.offerTopology
+        and instance.biome.fields.roomTopology
         or nil
-    instance.offerTopologyRules = topology and topology.rules or EMPTY_VALUES
+    instance.roomTopologyRules = topology and topology.rules or EMPTY_VALUES
     instance.forcedTopologyGroups = {}
 
     for _, group in ipairs(topology and topology.forcedGroups or EMPTY_VALUES) do
@@ -286,7 +290,7 @@ local function rewardAddresses(count)
     return addresses
 end
 
-local function selectedOfferTopology(roleKey, option, cageCount)
+local function selectedRoomTopology(roleKey, option, cageCount)
     if roleKey == "Combat" then
         local count = math.floor(tonumber(cageCount and cageCount.cageRewardCount) or 0)
         if count <= 0 then
@@ -351,7 +355,7 @@ local function plannedRoomRowIndex(instance, rows, roomKey, currentRowIndex)
     return nil
 end
 
-local function siblingOfferTopology(option)
+local function siblingRoomTopology(option)
     if option == nil or option.key == nil or option.key == "" then
         return nil
     end
@@ -364,8 +368,8 @@ local function siblingOfferTopology(option)
     }
 end
 
-local function offerTopologyRules(instance)
-    return instance.offerTopologyRules or EMPTY_VALUES
+local function roomTopologyRules(instance)
+    return instance.roomTopologyRules or EMPTY_VALUES
 end
 
 local function forcedTopologyGroups(instance)
@@ -500,7 +504,7 @@ local function topologyRuleStatus(instance, rows, rowIndex, sibling, rule)
 end
 
 local function topologyRulesStatus(instance, rows, rowIndex, sibling)
-    for _, rule in ipairs(offerTopologyRules(instance)) do
+    for _, rule in ipairs(roomTopologyRules(instance)) do
         local status = topologyRuleStatus(instance, rows, rowIndex, sibling, rule)
         if not status.valid then
             return status
@@ -622,7 +626,7 @@ function data.prepare(instance)
     data.prepareRoles(instance)
     prepareCagePolicies(instance)
     prepareSiblingStructurePolicy(instance)
-    prepareOfferTopologyPolicies(instance)
+    prepareRoomTopologyPolicies(instance)
     prepareCageRewardContexts(instance)
 
     buildRouteSlots(instance)
@@ -689,6 +693,25 @@ function data.siblingStructureValues(instance)
     return policy and policy.values or EMPTY_VALUES
 end
 
+function data.siblingStructureStatus(instance, rows, rowIndex)
+    local policy = instance.siblingStructurePolicy
+    if policy == nil then
+        return validStatus()
+    end
+    return availabilityStatus({
+        availability = policy.availability,
+    }, data.rowContext(instance, rows, rowIndex))
+end
+
+function data.shouldDrawSiblingStructure(instance, rows, rowIndex)
+    local status = data.siblingStructureStatus(instance, rows, rowIndex)
+    if not status.valid then
+        return false
+    end
+    local roleKey = data.resolveRole(instance, rows, rowIndex)
+    return roleKey == "Combat" or roleKey == "Miniboss" or roleKey == "Bridge"
+end
+
 function data.resolveSiblingStructure(instance, rows, rowIndex)
     local policy = instance.siblingStructurePolicy
     if policy == nil then
@@ -747,6 +770,9 @@ local function fillSiblingStructureValueStates(instance, rows, rowIndex, states)
     if policy == nil then
         return states
     end
+    if not data.siblingStructureStatus(instance, rows, rowIndex).valid then
+        return states
+    end
     for _, key in ipairs(policy.values or EMPTY_VALUES) do
         local sibling = policy.optionsByKey[key]
         valueStates.set(states, key, valueStateForSiblingStatus(
@@ -772,9 +798,14 @@ function data.siblingStructureValueStatesForRow(instance, rows, rowIndex)
     return record.states
 end
 
-function data.validateOfferTopology(instance, rows, rowIndex)
+function data.validateRoomTopology(instance, rows, rowIndex)
     local roleKey = data.resolveRole(instance, rows, rowIndex)
     if data.isFixedIdentityRow(instance, rowIndex) then
+        return nil
+    end
+
+    local structureStatus = data.siblingStructureStatus(instance, rows, rowIndex)
+    if not structureStatus.valid then
         return nil
     end
 
@@ -791,12 +822,12 @@ function data.validateOfferTopology(instance, rows, rowIndex)
 
     local _, cageCount = data.resolveCageCount(instance, rows, rowIndex, roleKey)
     if roleKey == "Combat" and (cageCount == nil or (cageCount.cageRewardCount or 0) <= 0) then
-        return invalidStatus("fields_cage_count_required", "Fields reward simulation needs picked cage reward count")
+        return invalidStatus("fields_cage_count_required", "Fields topology needs picked cage reward count")
     end
 
     local siblingKey, sibling = data.resolveSiblingStructure(instance, rows, rowIndex)
     if sibling == nil or siblingKey == "" then
-        return invalidStatus("fields_sibling_structure_required", "Fields reward simulation needs sibling door structure")
+        return invalidStatus("fields_sibling_structure_required", "Fields topology needs sibling door structure")
     end
     local siblingStatus = siblingAvailabilityStatus(instance, rows, rowIndex, sibling)
     if not siblingStatus.valid then
@@ -811,9 +842,12 @@ function data.validateOfferTopology(instance, rows, rowIndex)
     return nil
 end
 
-function data.offerTopology(instance, rows, rowIndex)
+function data.roomTopology(instance, rows, rowIndex)
     local roleKey = data.resolveRole(instance, rows, rowIndex)
     if roleKey == "Vanilla" or data.isFixedIdentityRow(instance, rowIndex) then
+        return nil
+    end
+    if not data.siblingStructureStatus(instance, rows, rowIndex).valid then
         return nil
     end
 
@@ -823,8 +857,8 @@ function data.offerTopology(instance, rows, rowIndex)
     if not siblingAvailabilityStatus(instance, rows, rowIndex, sibling).valid then
         return nil
     end
-    local selected = selectedOfferTopology(roleKey, option, cageCount)
-    local siblingTopology = siblingOfferTopology(sibling)
+    local selected = selectedRoomTopology(roleKey, option, cageCount)
+    local siblingTopology = siblingRoomTopology(sibling)
     if selected == nil or siblingTopology == nil then
         return nil
     end
