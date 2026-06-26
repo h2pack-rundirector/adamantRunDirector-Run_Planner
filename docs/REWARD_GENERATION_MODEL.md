@@ -203,6 +203,19 @@ optional reward offer count = max(exitCount - 1, 0)
 The reserved clockwork goal path should not be treated as a normal RunProgress
 or TartarusRewards bag offer.
 
+For forced-room pressure, Tartarus should use the same physical `exitCount`
+sibling model as other biomes, but with a different capacity interpretation:
+
+- `exitCount = 1`: the only generated door is the clockwork goal, so there is
+  no non-goal capacity where Story/Fountain/Miniboss could have appeared.
+- `exitCount = 2`: exactly one generated door is the clockwork goal, and the
+  other generated door is the single non-goal force-pressure slot.
+
+This means a sequence of one-exit goal rooms can remain structurally valid even
+past a force deadline. Nothing was missed until a non-goal generated slot exists.
+Tartarus forced groups should therefore use non-goal generated capacity rather
+than raw generated exit count.
+
 ## Ambiguous Biomes That Need Explicit Structure
 
 ### H Fields

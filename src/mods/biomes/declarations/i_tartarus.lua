@@ -1,14 +1,19 @@
 return function(deps)
+    local clockworkGoalReward = "ClockworkGoal"
     local layout = import("mods/biomes/declarations/i_tartarus_layout.lua")(deps)
+    local topology = import("mods/biomes/declarations/i_tartarus_topology.lua")({
+        layout = layout,
+        clockworkGoalReward = clockworkGoalReward,
+    })
     local parser = deps.parser
     local rewards = deps.rewards
-    local clockworkGoalReward = "ClockworkGoal"
 
     return {
         key = "I",
         label = "Tartarus",
         region = "Underworld",
         adapter = "clockworkGoal",
+        roomTopology = topology,
         timeline = parser.standardTimeline("I", {
             bossRooms = {
                 { key = "I_Boss01", label = "Boss" },

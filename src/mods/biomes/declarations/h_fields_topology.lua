@@ -18,7 +18,7 @@ return function(deps)
             {
                 key = "H_Minibosses",
                 candidates = { "H_MiniBoss01", "H_MiniBoss02" },
-                generatedExitCount = 2,
+                generatedCapacityKind = "sourceExitCount",
                 forceAtBiomeDepthMax = 4,
                 force = miniboss01.force,
                 pickedCandidateBeforeDeadlineClosesGroup = true,

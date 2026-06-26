@@ -8,17 +8,22 @@ local optionChanges = deps.roomOptionChanges
 
 local ui = {}
 
-local function resetRoomDetails(fields, rowIndex)
+local function resetRoomDetails(fields, instance, rowIndex)
     fields.Rooms:reset(rowIndex, "OptionKey")
     fields.Rooms:reset(rowIndex, "VariantKey")
+    if instance.siblingStructurePolicy ~= nil then
+        for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
+            fields.Rooms:reset(rowIndex, data.siblingStructureAlias(instance, siblingIndex))
+        end
+    end
 end
 
 local function resetRewardDetails(fields, rowIndex)
     rewardSystem.resetRows(fields.Rewards, rowIndex)
 end
 
-local function resetRowDetails(fields, rowIndex)
-    resetRoomDetails(fields, rowIndex)
+local function resetRowDetails(fields, instance, rowIndex)
+    resetRoomDetails(fields, instance, rowIndex)
     resetRewardDetails(fields, rowIndex)
 end
 
@@ -59,7 +64,7 @@ function ui.create(fields, instance)
 
     function control:resetRow(rowIndex)
         fields.Rooms:reset(rowIndex, "RoleKey")
-        resetRowDetails(fields, rowIndex)
+        resetRowDetails(fields, instance, rowIndex)
     end
 
     function control:resetAllRows()

@@ -214,9 +214,15 @@ local function generatedCandidateCountThroughRow(ctx, group, candidateOverride)
     return count
 end
 
-local function generatedExitCountForGroup(ctx, group)
+local function generatedCapacityForGroup(ctx, group)
     if group.generatedExitCount ~= nil then
         return group.generatedExitCount
+    end
+    if group.generatedCapacityKind == "sourceSiblingCount" then
+        return roomTopology.siblingCountForExitCount(roomTopology.generatedStructuralCount(ctx, "exitCount"))
+    end
+    if group.generatedCapacityKind == "sourceExitCount" then
+        return roomTopology.generatedStructuralCount(ctx, "exitCount")
     end
     if group.generatedExitCountField ~= nil and ctx.structuralCountAt ~= nil then
         return roomTopology.generatedStructuralCount(ctx, group.generatedExitCountField)
@@ -228,7 +234,7 @@ local function requiredGeneratedCountForGroup(ctx, group)
     if group.requiredGeneratedCount ~= nil then
         return group.requiredGeneratedCount
     end
-    return math.min(#(group.candidates or EMPTY_VALUES), generatedExitCountForGroup(ctx, group))
+    return math.min(#(group.candidates or EMPTY_VALUES), generatedCapacityForGroup(ctx, group))
 end
 
 local function forcedGroupStatus(policy, ctx, group, candidateOverride)

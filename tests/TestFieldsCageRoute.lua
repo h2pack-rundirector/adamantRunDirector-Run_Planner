@@ -1054,6 +1054,12 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesUseRoomAv
         biome = catalog.lookup.H,
     })
     local rows = fakeRows({})
+    local unresolvedForceRows = fakeRows({
+        {},
+        hCombatTwoRewardRow("H_Combat13"),
+        hCombatTwoRewardRow("H_Combat04", "PoseidonUpgrade"),
+        hCombatTwoRewardRow("H_Combat05", "ApolloUpgrade"),
+    })
 
     lu.assertTrue(data.siblingStructureStatus(instance, rows, 2).valid)
     lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 2).H_MiniBoss01, valueStates.HIDDEN)
@@ -1070,9 +1076,9 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesUseRoomAv
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).H_MiniBoss02)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).Bridge)
 
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss01, valueStates.INVALID)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02, valueStates.INVALID)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).Bridge, valueStates.HIDDEN)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, unresolvedForceRows, 5).H_MiniBoss01, valueStates.INVALID)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, unresolvedForceRows, 5).H_MiniBoss02, valueStates.INVALID)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, unresolvedForceRows, 5).Bridge, valueStates.HIDDEN)
     lu.assertEquals(data.siblingStructureStatus(instance, rows, 6).code, "biome_depth_unavailable")
 end
 

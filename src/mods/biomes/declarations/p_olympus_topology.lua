@@ -105,7 +105,7 @@ return function(deps)
             {
                 key = "P_Minibosses",
                 candidates = roomKeys(layout.minibossRooms),
-                generatedExitCountField = "exitCount",
+                generatedCapacityKind = "sourceExitCount",
                 forceAtBiomeDepthMax = 7,
                 force = layout.minibossRooms[1].force,
                 pickedCandidateBeforeDeadlineClosesGroup = true,

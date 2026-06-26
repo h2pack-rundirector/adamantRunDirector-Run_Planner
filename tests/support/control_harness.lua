@@ -204,8 +204,25 @@ local function loadFixedLinearData()
 end
 
 local function loadClockworkGoalData()
+    local routeDeps = loadRouteDeps()
+    local deps = {}
+    for key, value in pairs(routeDeps) do
+        deps[key] = value
+    end
+    deps.roomTopology = testImport("mods/controls/biome_helpers/room_topology.lua", nil, {
+        common = routeDeps.common,
+        availability = routeDeps.availability,
+        valueStates = routeDeps.valueStates,
+    })
+    deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
+    deps.roomTopologyAdapter = testImport("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
+        common = routeDeps.common,
+        readCache = routeDeps.readCache,
+        roomTopology = deps.roomTopology,
+        roomStructure = deps.roomStructure,
+    })
     return withTestImport(function()
-        return testImport("mods/controls/ClockworkGoalRoute/data/data.lua", nil, loadRouteDeps())
+        return testImport("mods/controls/ClockworkGoalRoute/data/data.lua", nil, deps)
     end)
 end
 

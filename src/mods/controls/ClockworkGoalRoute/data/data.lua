@@ -9,12 +9,19 @@ local state = import("mods/controls/ClockworkGoalRoute/data/state.lua", nil, {
     common = common,
     slots = slots,
 })
+local topologyFactory = import("mods/controls/ClockworkGoalRoute/data/topology.lua", nil, {
+    common = common,
+    roomTopologyAdapter = deps.roomTopologyAdapter,
+    roomTopology = deps.roomTopology,
+    slots = slots,
+})
 
 local VANILLA_ROLE_KEY = common.VANILLA_ROLE_KEY
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
 
 local data
+local topology
 
 local adapter = {
     slotForRow = slots.slotForRow,
@@ -147,6 +154,7 @@ local adapter = {
 }
 
 data = rowEngine.create(adapter)
+topology = topologyFactory.create(data)
 
 function data.prepare(instance)
     instance.biome = instance.biome or {}
@@ -160,10 +168,23 @@ function data.prepare(instance)
     data.buildRoleChoices(instance)
     state.addFixedRoleLabels(instance)
     data.prepareSlots(instance)
+    topology.prepareSiblingStructurePolicy(instance)
+    topology.prepareSiblingStructureCount(instance)
     return instance
 end
 
 function data.storage(instance)
+    local roomRows = data.buildRoomRows()
+    if instance.siblingStructurePolicy ~= nil then
+        for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
+            roomRows[#roomRows + 1] = {
+                key = data.siblingStructureAlias(instance, siblingIndex),
+                type = "string",
+                default = "",
+                maxLen = 32,
+            }
+        end
+    end
     return {
         {
             key = "Rooms",
@@ -171,7 +192,7 @@ function data.storage(instance)
             minRows = instance.routeRowCount,
             defaultRows = instance.routeRowCount,
             maxRows = instance.routeRowCount,
-            row = data.buildRoomRows(),
+            row = roomRows,
         },
         {
             key = "Rewards",
@@ -222,6 +243,50 @@ end
 
 function data.isInactiveRouteRow(instance, rows, rowIndex)
     return state.routeTerminatedBeforeRow(instance, rows, rowIndex, slots.slotForRow(instance, rowIndex))
+end
+
+function data.maxSiblingStructureCount(instance)
+    return topology.maxSiblingStructureCount(instance)
+end
+
+function data.siblingStructureAlias(instance, siblingIndex)
+    return topology.siblingStructureAlias(instance, siblingIndex)
+end
+
+function data.siblingStructureLabels(instance)
+    return topology.siblingStructureLabels(instance)
+end
+
+function data.siblingStructureValues(instance)
+    return topology.siblingStructureValues(instance)
+end
+
+function data.siblingStructureStatus(instance, rows, rowIndex)
+    return topology.siblingStructureStatus(instance, rows, rowIndex)
+end
+
+function data.activeSiblingStructureCount(instance, rows, rowIndex)
+    return topology.activeSiblingStructureCount(instance, rows, rowIndex)
+end
+
+function data.shouldDrawSiblingStructure(instance, rows, rowIndex, siblingIndex)
+    return topology.shouldDrawSiblingStructure(instance, rows, rowIndex, siblingIndex)
+end
+
+function data.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
+    return topology.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
+end
+
+function data.siblingStructureValueStatesForRow(instance, rows, rowIndex, siblingIndex)
+    return topology.siblingStructureValueStatesForRow(instance, rows, rowIndex, siblingIndex)
+end
+
+function data.validateRoomTopology(instance, rows, rowIndex)
+    return topology.validateRoomTopology(instance, rows, rowIndex)
+end
+
+function data.roomTopology(instance, rows, rowIndex)
+    return topology.roomTopology(instance, rows, rowIndex)
 end
 
 return data

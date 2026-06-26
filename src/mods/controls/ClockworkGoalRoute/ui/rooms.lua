@@ -15,8 +15,13 @@ local OPTION_OPTS = {
     label = "",
     controlWidth = 190,
 }
+local SIBLING_STRUCTURE_OPTS = {
+    label = "",
+    controlWidth = 150,
+}
 local ROLE_COLUMN_X = 80
 local OPTION_COLUMN_X = 245
+local SIBLING_STRUCTURE_COLUMN_X = 455
 
 local function copyBaseOpts(base)
     local copy = {}
@@ -62,6 +67,29 @@ local function getOptionOpts(control, instance, rowIndex, roleKey)
     local rows = control:routeRows()
     opts.values = data.optionValuesForRow(instance, rows, rowIndex, roleKey)
     return decorations.decorateDropdown(opts, opts, data.optionValueStatesForRow(instance, rows, rowIndex, roleKey))
+end
+
+local function siblingStructureOpts(control, instance, rowIndex, siblingIndex)
+    control._siblingStructureOptsByRow = control._siblingStructureOptsByRow or {}
+    local optsBySibling = control._siblingStructureOptsByRow[rowIndex]
+    if optsBySibling == nil then
+        optsBySibling = {}
+        control._siblingStructureOptsByRow[rowIndex] = optsBySibling
+    end
+
+    siblingIndex = siblingIndex or 1
+    local opts = optsBySibling[siblingIndex]
+    if opts == nil then
+        opts = copyBaseOpts(SIBLING_STRUCTURE_OPTS)
+        opts.values = data.siblingStructureValues(instance)
+        opts.displayValues = data.siblingStructureLabels(instance)
+        optsBySibling[siblingIndex] = opts
+    end
+    return decorations.decorateDropdown(
+        opts,
+        opts,
+        data.siblingStructureValueStatesForRow(instance, control:routeRows(), rowIndex, siblingIndex)
+    )
 end
 
 local function optionLabelAddsInformation(role, option)
@@ -111,6 +139,31 @@ local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey, co
     return changed, storedOptionKey
 end
 
+local function drawSiblingStructureDropdown(draw, control, instance, rowIndex, siblingIndex)
+    if not data.shouldDrawSiblingStructure(instance, control:routeRows(), rowIndex, siblingIndex) then
+        return false
+    end
+
+    local opts = siblingStructureOpts(control, instance, rowIndex, siblingIndex)
+    if opts.values[1] == nil then
+        return false
+    end
+
+    draw.imgui.SameLine()
+    draw.imgui.SetCursorPosX(SIBLING_STRUCTURE_COLUMN_X)
+    return draw.widgets.dropdown(control:roomField(rowIndex, data.siblingStructureAlias(instance, siblingIndex)), opts)
+end
+
+local function drawSiblingStructureDropdowns(draw, control, instance, rowIndex)
+    local changed = false
+    for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
+        if drawSiblingStructureDropdown(draw, control, instance, rowIndex, siblingIndex) then
+            changed = true
+        end
+    end
+    return changed
+end
+
 local function drawRouteRowHeader(imgui, slot)
     imgui.AlignTextToFramePadding()
     imgui.Text(slot.label)
@@ -137,7 +190,7 @@ local function drawRoomRow(draw, control, instance, rowIndex)
         imgui.SameLine()
         imgui.SetCursorPosX(ROLE_COLUMN_X)
         if draw.widgets.dropdown(roleField, getRoleOpts(control, instance, rowIndex)) then
-            resetRowDetails(control:fields(), rowIndex)
+            resetRowDetails(control:fields(), instance, rowIndex)
             control:invalidateReadPass()
             currentRoleKey = data.readRoleKey(instance, control:routeRows(), rowIndex)
         end
@@ -145,6 +198,9 @@ local function drawRoomRow(draw, control, instance, rowIndex)
         if changed then
             control:invalidateReadPass()
             control:onRoomOptionChanged(rowIndex, previousOptionKey)
+        end
+        if drawSiblingStructureDropdowns(draw, control, instance, rowIndex) then
+            control:invalidateReadPass()
         end
     end
 end

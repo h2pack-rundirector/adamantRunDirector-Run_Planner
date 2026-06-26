@@ -482,6 +482,7 @@ function TestRunPlannerRewardPlanning.testRouteContextDevotionRewardUsesPriorUnd
         {
             RoleKey = "Combat",
             OptionKey = "I_Combat03",
+            SiblingStructureKey = "CombatGoal",
             Reward1Key = "Devotion",
             Reward3Key = "ZeusUpgrade",
             Reward4Key = "ApolloUpgrade",
@@ -581,6 +582,7 @@ function TestRunPlannerRewardPlanning.testRouteContextScopesPriorGodLootByRoute(
         {
             RoleKey = "Combat",
             OptionKey = "I_Combat03",
+            SiblingStructureKey = "CombatGoal",
             Reward1Key = "Devotion",
             Reward3Key = "ZeusUpgrade",
             Reward4Key = "ApolloUpgrade",

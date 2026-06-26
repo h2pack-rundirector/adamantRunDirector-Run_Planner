@@ -1,6 +1,14 @@
 local deps = ...
 local biomeHelpers = deps.biomeHelpers
-local data = import("mods/controls/ClockworkGoalRoute/data/data.lua", nil, deps.route)
+local dataDeps = {}
+for key, value in pairs(deps.route) do
+    dataDeps[key] = value
+end
+dataDeps.roomTopology = biomeHelpers.roomTopology
+dataDeps.roomTopologyAdapter = biomeHelpers.roomTopologyAdapter
+dataDeps.roomStructure = biomeHelpers.roomStructure
+
+local data = import("mods/controls/ClockworkGoalRoute/data/data.lua", nil, dataDeps)
 local runtime = import("mods/controls/ClockworkGoalRoute/runtime.lua", nil, {
     data = data,
     common = deps.route.common,

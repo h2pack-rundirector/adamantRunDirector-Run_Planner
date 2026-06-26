@@ -444,9 +444,10 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
         minibossKeys = { "F_MiniBoss01", "F_MiniBoss02", "F_MiniBoss03" },
     })
     lu.assertEquals(erebus.forcedGroups[1].key, "F_Shop")
-    lu.assertEquals(erebus.forcedGroups[1].generatedExitCountField, "exitCount")
+    lu.assertEquals(erebus.forcedGroups[1].generatedCapacityKind, "sourceExitCount")
     lu.assertEquals(erebus.forcedGroups[1].requiredGeneratedCount, 1)
     lu.assertEquals(erebus.forcedGroups[2].key, "F_Minibosses")
+    lu.assertEquals(erebus.forcedGroups[2].generatedCapacityKind, "sourceExitCount")
     lu.assertEquals(erebus.forcedGroups[2].candidates, {
         "F_MiniBoss01",
         "F_MiniBoss02",
@@ -476,8 +477,10 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
         minibossKeys = { "G_MiniBoss01", "G_MiniBoss02", "G_MiniBoss03" },
     })
     lu.assertEquals(oceanus.forcedGroups[1].key, "G_Shop")
+    lu.assertEquals(oceanus.forcedGroups[1].generatedCapacityKind, "sourceExitCount")
     lu.assertEquals(oceanus.forcedGroups[1].forceAtBiomeDepthMax, 6)
     lu.assertEquals(oceanus.forcedGroups[2].key, "G_Minibosses")
+    lu.assertEquals(oceanus.forcedGroups[2].generatedCapacityKind, "sourceExitCount")
     lu.assertEquals(oceanus.forcedGroups[2].forceAtBiomeDepthMax, 7)
 
     lu.assertEquals(olympus.siblingStructureWindow, { biomeDepthCache = { min = 2, max = 7 } })
@@ -500,6 +503,7 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
         minibossKeys = { "P_MiniBoss01", "P_MiniBoss02" },
     })
     lu.assertEquals(olympus.forcedGroups[1].key, "P_Minibosses")
+    lu.assertEquals(olympus.forcedGroups[1].generatedCapacityKind, "sourceExitCount")
     lu.assertEquals(olympus.forcedGroups[1].candidates, {
         "P_MiniBoss01",
         "P_MiniBoss02",
@@ -1135,6 +1139,15 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[2].exitCount, 2)
     lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[2].rewardExitCount, 1)
     lu.assertTrue(tartarus.rolesByKey.Miniboss.roomOptions[2].supportsExtensionChoice)
+
+    local storyForceGroup = tartarus.roomTopology.forcedGroups[1]
+    lu.assertEquals(storyForceGroup.key, "I_Story")
+    lu.assertEquals(storyForceGroup.generatedCapacityKind, "sourceSiblingCount")
+    lu.assertNil(storyForceGroup.requiredGeneratedCount)
+
+    local minibossForceGroup = tartarus.roomTopology.forcedGroups[2]
+    lu.assertEquals(minibossForceGroup.key, "I_Minibosses")
+    lu.assertEquals(minibossForceGroup.generatedCapacityKind, "sourceSiblingCount")
 end
 
 function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
@@ -1246,7 +1259,7 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
     })
     lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].forceAtBiomeDepthMax, 4)
     lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].force.biomeDepthCache, { min = 2, max = 4 })
-    lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].generatedExitCount, 2)
+    lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].generatedCapacityKind, "sourceExitCount")
     lu.assertTrue(fields.fields.roomTopology.forcedGroups[1].pickedCandidateBeforeDeadlineClosesGroup)
     lu.assertEquals(cagePolicy.maxDoorDepthChanceTable[4], {
         maxDoorChance = 0.80,
