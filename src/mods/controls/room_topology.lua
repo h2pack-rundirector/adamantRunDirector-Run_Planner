@@ -41,9 +41,11 @@ local function prepareForcedGroups(groups)
     local preparedGroups = {}
     for _, group in ipairs(groups or EMPTY_VALUES) do
         local prepared = shallowCopyMap(group)
-        local generatedExitCount = math.floor(tonumber(group.generatedExitCount) or 0)
+        local generatedExitCount = group.generatedExitCount
+            and math.floor(tonumber(group.generatedExitCount) or 0)
+            or nil
         local requiredGeneratedCount = group.requiredGeneratedCount
-        if requiredGeneratedCount == nil then
+        if requiredGeneratedCount == nil and generatedExitCount ~= nil then
             requiredGeneratedCount = math.min(#(group.candidates or EMPTY_VALUES), generatedExitCount)
         end
         prepared.candidatesByKey = buildKeyLookup(group.candidates or EMPTY_VALUES)
@@ -116,14 +118,34 @@ local function pickedCandidateClosesGroup(policy, ctx, candidateRoomKey)
     return false
 end
 
-local function siblingRoomKeyAt(ctx, index, candidateOverride)
-    if index == ctx.rowIndex and candidateOverride ~= nil then
+local function siblingCountAt(ctx, index)
+    if ctx.siblingCountAt == nil then
+        return 1
+    end
+    return math.floor(tonumber(ctx.siblingCountAt(index)) or 0)
+end
+
+local function siblingRoomKeyForSlot(ctx, index, siblingIndex, candidateOverride)
+    if index == ctx.rowIndex
+        and candidateOverride ~= nil
+        and siblingIndex == (ctx.candidateSiblingIndex or 1)
+    then
         return roomTopology.roomKey(candidateOverride)
     end
     if ctx.siblingRoomKeyAt == nil then
         return nil
     end
-    return ctx.siblingRoomKeyAt(index)
+    return ctx.siblingRoomKeyAt(index, siblingIndex)
+end
+
+local function generatedSiblingCandidateAt(ctx, index, candidate, candidateOverride)
+    local count = siblingCountAt(ctx, index)
+    for siblingIndex = 1, count do
+        if siblingRoomKeyForSlot(ctx, index, siblingIndex, candidateOverride) == candidate then
+            return true
+        end
+    end
+    return false
 end
 
 local function generatedCandidateThroughRow(ctx, candidate, candidateOverride)
@@ -132,7 +154,7 @@ local function generatedCandidateThroughRow(ctx, candidate, candidateOverride)
             return true
         end
 
-        if siblingRoomKeyAt(ctx, currentRowIndex, candidateOverride) == candidate then
+        if generatedSiblingCandidateAt(ctx, currentRowIndex, candidate, candidateOverride) then
             return true
         end
     end
@@ -149,6 +171,23 @@ local function generatedCandidateCountThroughRow(ctx, group, candidateOverride)
     return count
 end
 
+local function generatedExitCountForGroup(ctx, group)
+    if group.generatedExitCount ~= nil then
+        return group.generatedExitCount
+    end
+    if ctx.generatedExitCountAt ~= nil then
+        return math.floor(tonumber(ctx.generatedExitCountAt(ctx.rowIndex, group)) or 0)
+    end
+    return 0
+end
+
+local function requiredGeneratedCountForGroup(ctx, group)
+    if group.requiredGeneratedCount ~= nil then
+        return group.requiredGeneratedCount
+    end
+    return math.min(#(group.candidates or EMPTY_VALUES), generatedExitCountForGroup(ctx, group))
+end
+
 local function forcedGroupStatus(policy, ctx, group, candidateOverride)
     local deadline = group.forceAtBiomeDepthMax
     if deadline == nil then
@@ -163,7 +202,8 @@ local function forcedGroupStatus(policy, ctx, group, candidateOverride)
     end
 
     local generatedCount = generatedCandidateCountThroughRow(ctx, group, candidateOverride)
-    if generatedCount >= (group.requiredGeneratedCount or 0) then
+    local requiredGeneratedCount = requiredGeneratedCountForGroup(ctx, group)
+    if generatedCount >= requiredGeneratedCount then
         return validStatus()
     end
     return invalidStatus(
@@ -194,6 +234,21 @@ local function plannedRoomRowIndex(ctx, roomKey)
     return nil
 end
 
+local function siblingRoomAlreadySelected(ctx, roomKey)
+    if roomKey == nil or ctx.siblingRoomKeyAt == nil then
+        return false
+    end
+    local candidateSiblingIndex = ctx.candidateSiblingIndex or 1
+    for siblingIndex = 1, siblingCountAt(ctx, ctx.rowIndex) do
+        if siblingIndex ~= candidateSiblingIndex
+            and ctx.siblingRoomKeyAt(ctx.rowIndex, siblingIndex) == roomKey
+        then
+            return true
+        end
+    end
+    return false
+end
+
 function roomTopology.siblingCandidateStatus(policy, ctx, candidate)
     if candidate == nil or candidate.key == nil or candidate.key == "" then
         return validStatus()
@@ -207,6 +262,9 @@ function roomTopology.siblingCandidateStatus(policy, ctx, candidate)
     local roomKey = roomTopology.roomKey(candidate)
     if roomKey ~= nil and roomKey == ctx.selectedRoomKey then
         return invalidStatus(statusCode(policy, "sibling_same_room"), "Sibling cannot use the selected room")
+    end
+    if siblingRoomAlreadySelected(ctx, roomKey) then
+        return invalidStatus(statusCode(policy, "sibling_same_sibling_room"), "Sibling cannot duplicate another sibling")
     end
     if pickedCandidateClosesGroup(policy, ctx, roomKey) then
         return invalidStatus(
@@ -240,6 +298,7 @@ function roomTopology.valueStateForSiblingStatus(policy, status)
     if status.code == statusCode(policy, "sibling_same_room")
         or status.code == statusCode(policy, "sibling_room_planned")
         or status.code == statusCode(policy, "sibling_miniboss_after_selected")
+        or status.code == statusCode(policy, "sibling_same_sibling_room")
     then
         return valueStates.HIDDEN
     end

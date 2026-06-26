@@ -181,7 +181,18 @@ local function loadRouteTargets(timeline, rewardItems, semantics)
 end
 
 local function loadFixedLinearData()
-    return testImport("mods/controls/FixedLinearRoute/data.lua", nil, loadRouteDeps())
+    local routeDeps = loadRouteDeps()
+    local deps = {}
+    for key, value in pairs(routeDeps) do
+        deps[key] = value
+    end
+    deps.roomTopology = testImport("mods/controls/room_topology.lua", nil, {
+        common = routeDeps.common,
+        availability = routeDeps.availability,
+        valueStates = routeDeps.valueStates,
+    })
+    deps.roomStructure = testImport("mods/controls/room_structure.lua")
+    return testImport("mods/controls/FixedLinearRoute/data.lua", nil, deps)
 end
 
 local function loadClockworkGoalData()

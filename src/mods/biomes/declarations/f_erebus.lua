@@ -1,5 +1,8 @@
 return function(deps)
     local layout = import("mods/biomes/declarations/f_erebus_layout.lua")
+    local topology = import("mods/biomes/declarations/f_erebus_topology.lua")({
+        layout = layout,
+    })
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules
@@ -17,6 +20,7 @@ return function(deps)
         rewardRatio = {
             targetMetaProgress = 0.315,
         },
+        roomTopology = topology,
         timeline = parser.standardTimeline("F", {
             postBossFeatures = { wellShop = true },
         }),

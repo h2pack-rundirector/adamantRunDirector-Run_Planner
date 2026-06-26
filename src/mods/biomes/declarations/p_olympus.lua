@@ -1,5 +1,8 @@
 return function(deps)
     local layout = import("mods/biomes/declarations/p_olympus_layout.lua")
+    local topology = import("mods/biomes/declarations/p_olympus_topology.lua")({
+        layout = layout,
+    })
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules
@@ -12,6 +15,7 @@ return function(deps)
         rewardRatio = {
             targetMetaProgress = 0.20,
         },
+        roomTopology = topology,
         timeline = parser.standardTimeline("P", {
             bossRooms = {
                 { key = "P_Boss01", label = "Boss" },

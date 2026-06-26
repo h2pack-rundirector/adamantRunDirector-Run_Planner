@@ -14,6 +14,15 @@ local function loadBiomes()
     end)
 end
 
+local function loadTopology(layoutPath, topologyPath)
+    return withTestImport(function()
+        local layout = importHarness.testImport(layoutPath)
+        return importHarness.testImport(topologyPath)({
+            layout = layout,
+        })
+    end)
+end
+
 local function noneReward()
     return { kind = "none" }
 end
@@ -378,6 +387,125 @@ local function optionKeys(options)
         keys[#keys + 1] = option.key
     end
     return keys
+end
+
+local function assertFixedLinearSiblingOptions(topology, expected)
+    lu.assertEquals(topology.siblingStructureControl.key, "SiblingStructure")
+    lu.assertEquals(topology.siblingStructureControl.alias, "SiblingStructureKey")
+    lu.assertEquals(topology.rules, {
+        {
+            key = "matchingSiblingRewardStore",
+            onlyWhenBothHaveRewardStore = true,
+        },
+    })
+    lu.assertEquals(optionKeys(topology.siblingStructureControl.options), expected.keys)
+    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, "CombatMajor").rewardStore, "RunProgress")
+    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, "CombatMinor").rewardStore, "MetaProgress")
+    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.storyKey).structure, "Story")
+    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.shopKey).structure, "Midshop")
+    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.fountainMajorKey).rewardClass, "Major")
+    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.fountainMinorKey).rewardClass, "Minor")
+    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.minibossKeys[1]).structure, "Miniboss")
+    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.minibossKeys[1]).rewardStore, "RunProgress")
+end
+
+function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure()
+    local erebus = loadTopology(
+        "mods/biomes/declarations/f_erebus_layout.lua",
+        "mods/biomes/declarations/f_erebus_topology.lua"
+    )
+    local oceanus = loadTopology(
+        "mods/biomes/declarations/g_oceanus_layout.lua",
+        "mods/biomes/declarations/g_oceanus_topology.lua"
+    )
+    local olympus = loadTopology(
+        "mods/biomes/declarations/p_olympus_layout.lua",
+        "mods/biomes/declarations/p_olympus_topology.lua"
+    )
+
+    lu.assertEquals(erebus.siblingStructureWindow, { biomeDepthCache = { min = 4, max = 8 } })
+    assertFixedLinearSiblingOptions(erebus, {
+        keys = {
+            "",
+            "CombatMajor",
+            "CombatMinor",
+            "F_Story01",
+            "F_Shop01",
+            "F_Reprieve01_Major",
+            "F_Reprieve01_Minor",
+            "F_MiniBoss01",
+            "F_MiniBoss02",
+            "F_MiniBoss03",
+        },
+        storyKey = "F_Story01",
+        shopKey = "F_Shop01",
+        fountainMajorKey = "F_Reprieve01_Major",
+        fountainMinorKey = "F_Reprieve01_Minor",
+        minibossKeys = { "F_MiniBoss01", "F_MiniBoss02", "F_MiniBoss03" },
+    })
+    lu.assertEquals(erebus.forcedGroups[1].key, "F_Shop")
+    lu.assertEquals(erebus.forcedGroups[1].generatedExitCountField, "rewardExitCount")
+    lu.assertEquals(erebus.forcedGroups[1].requiredGeneratedCount, 1)
+    lu.assertEquals(erebus.forcedGroups[2].key, "F_Minibosses")
+    lu.assertEquals(erebus.forcedGroups[2].candidates, {
+        "F_MiniBoss01",
+        "F_MiniBoss02",
+        "F_MiniBoss03",
+    })
+    lu.assertEquals(erebus.forcedGroups[2].forceAtBiomeDepthMax, 6)
+    lu.assertTrue(erebus.forcedGroups[2].pickedCandidateBeforeDeadlineClosesGroup)
+
+    lu.assertEquals(oceanus.siblingStructureWindow, { biomeDepthCache = { min = 3, max = 7 } })
+    assertFixedLinearSiblingOptions(oceanus, {
+        keys = {
+            "",
+            "CombatMajor",
+            "CombatMinor",
+            "G_Story01",
+            "G_Shop01",
+            "G_Reprieve01_Major",
+            "G_Reprieve01_Minor",
+            "G_MiniBoss01",
+            "G_MiniBoss02",
+            "G_MiniBoss03",
+        },
+        storyKey = "G_Story01",
+        shopKey = "G_Shop01",
+        fountainMajorKey = "G_Reprieve01_Major",
+        fountainMinorKey = "G_Reprieve01_Minor",
+        minibossKeys = { "G_MiniBoss01", "G_MiniBoss02", "G_MiniBoss03" },
+    })
+    lu.assertEquals(oceanus.forcedGroups[1].key, "G_Shop")
+    lu.assertEquals(oceanus.forcedGroups[1].forceAtBiomeDepthMax, 6)
+    lu.assertEquals(oceanus.forcedGroups[2].key, "G_Minibosses")
+    lu.assertEquals(oceanus.forcedGroups[2].forceAtBiomeDepthMax, 7)
+
+    lu.assertEquals(olympus.siblingStructureWindow, { biomeDepthCache = { min = 2, max = 7 } })
+    assertFixedLinearSiblingOptions(olympus, {
+        keys = {
+            "",
+            "CombatMajor",
+            "CombatMinor",
+            "P_Story01",
+            "P_Shop01",
+            "P_Reprieve01_Major",
+            "P_Reprieve01_Minor",
+            "P_MiniBoss01",
+            "P_MiniBoss02",
+        },
+        storyKey = "P_Story01",
+        shopKey = "P_Shop01",
+        fountainMajorKey = "P_Reprieve01_Major",
+        fountainMinorKey = "P_Reprieve01_Minor",
+        minibossKeys = { "P_MiniBoss01", "P_MiniBoss02" },
+    })
+    lu.assertEquals(olympus.forcedGroups[1].key, "P_Minibosses")
+    lu.assertEquals(olympus.forcedGroups[1].candidates, {
+        "P_MiniBoss01",
+        "P_MiniBoss02",
+    })
+    lu.assertEquals(olympus.forcedGroups[1].forceAtBiomeDepthMax, 7)
+    lu.assertEquals(optionByKey(olympus.siblingStructureControl.options, "P_MiniBoss02").nextRoomTags, { "Outdoor" })
 end
 
 function TestRunPlannerData.testBiomeDefinitionsLabelCombatRoomMetadata()

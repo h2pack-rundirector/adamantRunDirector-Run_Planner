@@ -75,6 +75,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(storage[1].row[1].default, "")
     lu.assertEquals(storage[1].row[2].key, "OptionKey")
     lu.assertEquals(storage[1].row[3].key, "VariantKey")
+    lu.assertEquals(storage[1].row[4].key, "SiblingStructureKey")
     lu.assertEquals(storage[2].key, "Rewards")
     lu.assertEquals(storage[2].type, "table")
     lu.assertEquals(storage[2].minRows, 12)
@@ -84,6 +85,304 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(storage[2].row[6].key, "Reward6Key")
     lu.assertEquals(storage[2].row[7].key, "Reward1LootKey")
     lu.assertEquals(storage[2].row[12].key, "Reward6LootKey")
+
+    instance = template.prepare({
+        name = "RouteG",
+        biome = catalog.lookup.G,
+    })
+    storage = template.storage(instance)
+    lu.assertEquals(storage[1].row[4].key, "SiblingStructureKey")
+    lu.assertEquals(storage[1].row[5].key, "SiblingStructure2Key")
+
+    instance = template.prepare({
+        name = "RouteQ",
+        biome = catalog.lookup.Q,
+    })
+    storage = template.storage(instance)
+    lu.assertEquals(#storage[1].row, 3)
+    lu.assertEquals(storage[1].row[3].key, "VariantKey")
+end
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingTopologyExportsSelectedAndSiblingDoors()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local template = loadFixedLinearTemplate()
+    local instance = data.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local rows = fakeRows({
+        {},
+        {},
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat05",
+            SiblingStructureKey = "F_Story01",
+            Reward1Key = "Major",
+        },
+    })
+
+    lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 6))
+    lu.assertEquals(data.siblingStructureValues(instance), {
+        "",
+        "CombatMajor",
+        "CombatMinor",
+        "F_Story01",
+        "F_Shop01",
+        "F_Reprieve01_Major",
+        "F_Reprieve01_Minor",
+        "F_MiniBoss01",
+        "F_MiniBoss02",
+        "F_MiniBoss03",
+    })
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 6).F_Story01)
+
+    instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        {},
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat05",
+            SiblingStructureKey = "F_Story01",
+            Reward1Key = "Major",
+        },
+    }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertEquals(snapshot.rows[6].roomTopology, {
+        kind = "fixedLinearSiblingChoice",
+        selected = {
+            structure = "Combat",
+            roomKey = "F_Combat05",
+            rewardStore = "RunProgress",
+            rewardClass = "Major",
+            offerCount = 1,
+            rewardAddresses = { "row" },
+        },
+        sibling = {
+            structure = "Story",
+            roomKey = "F_Story01",
+            offerCount = 0,
+        },
+        siblings = {
+            {
+                structure = "Story",
+                roomKey = "F_Story01",
+                offerCount = 0,
+            },
+        },
+    })
+end
+
+function TestRunPlannerFixedLinearRoute.testOceanusThreeExitRoomsExportTwoSiblingDoors()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local template = loadFixedLinearTemplate()
+    local instance = data.prepare({
+        name = "RouteG",
+        biome = catalog.lookup.G,
+    })
+    local rows = fakeRows({
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat02",
+            SiblingStructureKey = "G_Story01",
+            SiblingStructure2Key = "G_Shop01",
+            Reward1Key = "Major",
+        },
+    })
+
+    lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 4), 2)
+    lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 4, 1))
+    lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 4, 2))
+    lu.assertFalse(data.shouldDrawSiblingStructure(instance, rows, 4, 3))
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4, 1).G_Story01)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4, 2).G_Shop01)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 4, 2).G_Story01, valueStates.HIDDEN)
+
+    local mismatchRows = fakeRows({
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat02",
+            SiblingStructureKey = "CombatMajor",
+            Reward1Key = "Major",
+        },
+    })
+    lu.assertEquals(
+        data.siblingStructureValueStatesForRow(instance, mismatchRows, 4, 2).CombatMinor,
+        valueStates.INVALID
+    )
+
+    instance = template.prepare({
+        name = "RouteG",
+        biome = catalog.lookup.G,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat02",
+            SiblingStructureKey = "G_Story01",
+            SiblingStructure2Key = "G_Shop01",
+            Reward1Key = "Major",
+        },
+    }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertEquals(snapshot.rows[4].roomTopology.siblings, {
+        {
+            structure = "Story",
+            roomKey = "G_Story01",
+            offerCount = 0,
+        },
+        {
+            structure = "Midshop",
+            roomKey = "G_Shop01",
+            offerCount = 0,
+        },
+    })
+end
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyInvalidatesMissingAndMismatchedSiblings()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteG",
+        biome = catalog.lookup.G,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat02",
+            SiblingStructureKey = "CombatMajor",
+            Reward1Key = "Major",
+        },
+    }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 4)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fixed_sibling_structure_required")
+    lu.assertEquals(snapshot.rows[4].invalidCode, "fixed_sibling_structure_required")
+
+    instance = template.prepare({
+        name = "RouteG",
+        biome = catalog.lookup.G,
+    })
+    control = template.createRuntime(routeFields({
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat02",
+            SiblingStructureKey = "CombatMajor",
+            SiblingStructure2Key = "CombatMinor",
+            Reward1Key = "Major",
+        },
+    }), instance)
+    snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 4)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fixed_sibling_reward_store_mismatch")
+    lu.assertEquals(snapshot.rows[4].invalidCode, "fixed_sibling_reward_store_mismatch")
+end
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoorPressure()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        {},
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat06",
+            Reward1Key = "Major",
+            SiblingStructureKey = "F_Shop01",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat07",
+            Reward1Key = "Major",
+            SiblingStructureKey = "CombatMajor",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat13",
+            Reward1Key = "Major",
+            SiblingStructureKey = "CombatMajor",
+        },
+    }), instance)
+    attachSingleBiomeRouteContext(control, "Underworld", "F")
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 8)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fixed_forced_topology_group_unresolved")
+    lu.assertEquals(snapshot.rows[8].invalidCode, "fixed_forced_topology_group_unresolved")
+
+    instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    control = template.createRuntime(routeFields({
+        {},
+        {},
+        {},
+        {},
+        {},
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "F_MiniBoss01",
+            Reward1Key = "Boon",
+            Reward2Key = "ZeusUpgrade",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat07",
+            Reward1Key = "Major",
+            SiblingStructureKey = "F_Shop01",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat13",
+            Reward1Key = "Major",
+            SiblingStructureKey = "CombatMajor",
+        },
+    }), instance)
+    attachSingleBiomeRouteContext(control, "Underworld", "F")
+    snapshot = control:buildSnapshot()
+
+    lu.assertTrue(snapshot.valid)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRewardRatioSummaryCountsMajorMinorChoices()
@@ -1280,6 +1579,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesOutOfRa
             {
                 RoleKey = "Story",
                 OptionKey = "F_Story01",
+                SiblingStructureKey = "CombatMajor",
             },
             {
                 RoleKey = "Story",

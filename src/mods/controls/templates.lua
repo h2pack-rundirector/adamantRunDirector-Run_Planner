@@ -31,6 +31,7 @@ return {
         route = route,
         rewards = rewards,
         roomStructure = roomStructure,
+        roomTopology = roomTopology,
         rewardRatio = rewardRatio,
         decorations = decorations,
     }),

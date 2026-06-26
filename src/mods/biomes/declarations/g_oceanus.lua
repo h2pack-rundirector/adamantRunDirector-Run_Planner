@@ -1,5 +1,8 @@
 return function(deps)
     local layout = import("mods/biomes/declarations/g_oceanus_layout.lua")
+    local topology = import("mods/biomes/declarations/g_oceanus_topology.lua")({
+        layout = layout,
+    })
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules
@@ -17,6 +20,7 @@ return function(deps)
         rewardRatio = {
             targetMetaProgress = 0.35,
         },
+        roomTopology = topology,
         timeline = parser.standardTimeline("G", {
             postBossFeatures = { wellShop = true },
         }),
