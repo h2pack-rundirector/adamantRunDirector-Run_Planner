@@ -444,7 +444,7 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
         minibossKeys = { "F_MiniBoss01", "F_MiniBoss02", "F_MiniBoss03" },
     })
     lu.assertEquals(erebus.forcedGroups[1].key, "F_Shop")
-    lu.assertEquals(erebus.forcedGroups[1].generatedExitCountField, "rewardExitCount")
+    lu.assertEquals(erebus.forcedGroups[1].generatedExitCountField, "exitCount")
     lu.assertEquals(erebus.forcedGroups[1].requiredGeneratedCount, 1)
     lu.assertEquals(erebus.forcedGroups[2].key, "F_Minibosses")
     lu.assertEquals(erebus.forcedGroups[2].candidates, {
@@ -654,26 +654,18 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
 
     lu.assertEquals(biomes.lookup.F.slotLayout.special[0].biomeEncounterDepthCost, 1)
     lu.assertNil(biomes.lookup.F.slotLayout.default)
-    assertEncounterDepthCostRange(biomes.lookup.F.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.biomeEncounterDepthCost, 1)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Combat.mapOptions[1].biomeEncounterDepthCost, 1)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Story.biomeEncounterDepthCost, 0)
     lu.assertEquals(biomes.lookup.F.rolesByKey.Fountain.biomeEncounterDepthCost, 0)
     lu.assertEquals(optionByKey(biomes.lookup.F.rolesByKey.Combat.mapOptions, "F_Combat05").biomeEncounterDepthCost, 1)
-    assertEncounterDepthCostRange(biomes.lookup.G.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
     lu.assertEquals(biomes.lookup.G.rolesByKey.Combat.biomeEncounterDepthCost, 1)
-    assertEncounterDepthCostRange(biomes.lookup.H.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
     lu.assertEquals(biomes.lookup.H.rolesByKey.Combat.biomeEncounterDepthCost, 1)
-    assertEncounterDepthCostRange(biomes.lookup.I.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
     lu.assertEquals(biomes.lookup.I.rolesByKey.Combat.biomeEncounterDepthCost, 1)
-    assertEncounterDepthCostRange(biomes.lookup.N.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
     lu.assertEquals(biomes.lookup.N.rolesByKey.Combat.biomeEncounterDepthCost, 1)
-    assertEncounterDepthCostRange(biomes.lookup.O.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 2)
     assertEncounterDepthCostRange(biomes.lookup.O.rolesByKey.Combat.biomeEncounterDepthCost, 1, 2)
     lu.assertEquals(biomes.lookup.O.rolesByKey.Devotion.biomeEncounterDepthCost, 1)
-    assertEncounterDepthCostRange(biomes.lookup.P.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
     lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.biomeEncounterDepthCost, 1)
-    assertEncounterDepthCostRange(biomes.lookup.Q.rolesByKey.Vanilla.biomeEncounterDepthCost, 0, 1)
     lu.assertEquals(biomes.lookup.Q.rolesByKey.Combat.biomeEncounterDepthCost, 1)
 
     assertMinibossCosts(biomes.lookup.F.rolesByKey.Miniboss, {
@@ -716,9 +708,8 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
     lu.assertEquals(biomes.lookup.F.slotLayout.special[11].biomeEncounterDepthCost, 0)
 
     local thessalyPolicy = biomes.lookup.O.combatEncounterPolicy.countControl.options
-    assertEncounterDepthCostRange(thessalyPolicy[1].biomeEncounterDepthCost, 1, 2)
-    lu.assertEquals(thessalyPolicy[2].biomeEncounterDepthCost, 1)
-    lu.assertEquals(thessalyPolicy[3].biomeEncounterDepthCost, 2)
+    lu.assertEquals(thessalyPolicy[1].biomeEncounterDepthCost, 1)
+    lu.assertEquals(thessalyPolicy[2].biomeEncounterDepthCost, 2)
 end
 
 function TestRunPlannerData.testBiomeDefinitionsResolveRouteEncounterDepthCosts()
@@ -1245,7 +1236,7 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
     lu.assertEquals(cagePolicy.countControl.options[2].cageRewardCount, 3)
     lu.assertEquals(cagePolicy.countControl.options[2].requiresAllOfferedRoomsSupport, 3)
     lu.assertEquals(fields.fields.roomTopology.siblingStructureWindow, {
-        biomeDepthCache = { min = 2, max = 4 },
+        biomeDepthCache = { min = 1, max = 4 },
     })
     lu.assertEquals(fields.fields.roomTopology.rules[1].key, "matchingCombatCageRewardCount")
     lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].key, "H_Minibosses")
@@ -1277,12 +1268,12 @@ function TestRunPlannerData.testThessalyCombatPolicyModelsShipEncounters()
     lu.assertEquals(fountain.rewardExitCount, 0)
 
     lu.assertEquals(policy.key, "O_CombatData")
-    lu.assertEquals(policy.countControl.default, "Vanilla")
-    lu.assertEquals(policy.countControl.options[2].key, "TwoCombats")
-    lu.assertEquals(policy.countControl.options[2].realCombatCount, 2)
-    lu.assertEquals(policy.countControl.options[3].key, "ThreeCombats")
-    lu.assertEquals(policy.countControl.options[3].realCombatCount, 3)
-    lu.assertEquals(policy.countControl.options[3].availableAtBiomeEncounterDepth, { min = 2, max = 5 })
+    lu.assertNil(policy.countControl.default)
+    lu.assertEquals(policy.countControl.options[1].key, "TwoCombats")
+    lu.assertEquals(policy.countControl.options[1].realCombatCount, 2)
+    lu.assertEquals(policy.countControl.options[2].key, "ThreeCombats")
+    lu.assertEquals(policy.countControl.options[2].realCombatCount, 3)
+    lu.assertEquals(policy.countControl.options[2].availableAtBiomeEncounterDepth, { min = 2, max = 5 })
 
     lu.assertEquals(policy.legs[1].key, "Intro")
     lu.assertEquals(policy.legs[1].reward, noneReward())

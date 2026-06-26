@@ -103,7 +103,7 @@ return function(deps)
             {
                 key = "G_Shop",
                 candidates = { layout.shopRooms[1].key },
-                generatedExitCountField = "rewardExitCount",
+                generatedExitCountField = "exitCount",
                 requiredGeneratedCount = 1,
                 forceAtBiomeDepthMax = 6,
                 force = layout.shopRooms[1].force,
@@ -111,7 +111,7 @@ return function(deps)
             {
                 key = "G_Minibosses",
                 candidates = roomKeys(layout.minibossRooms),
-                generatedExitCountField = "rewardExitCount",
+                generatedExitCountField = "exitCount",
                 forceAtBiomeDepthMax = 7,
                 force = layout.minibossRooms[1].force,
                 pickedCandidateBeforeDeadlineClosesGroup = true,

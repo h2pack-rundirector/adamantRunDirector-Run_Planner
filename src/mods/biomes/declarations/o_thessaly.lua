@@ -59,12 +59,6 @@ return function(deps)
         combatEncounterPolicy = layout.combatEncounterPolicy,
         roles = {
             {
-                key = "Vanilla",
-                label = "Vanilla",
-                reward = rewards.none(),
-                biomeEncounterDepthCost = routeRules.encounterDepthCost(0, 2),
-            },
-            {
                 key = "Combat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,

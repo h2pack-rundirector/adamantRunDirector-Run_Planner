@@ -19,14 +19,28 @@ local attachSingleBiomeRouteContext = h.attachSingleBiomeRouteContext
 -- luacheck: globals TestRunPlannerMultiEncounterRoute
 TestRunPlannerMultiEncounterRoute = {}
 
+local function thessalyCombat(optionKey, variantKey)
+    variantKey = variantKey or "TwoCombats"
+    local row = {
+        RoleKey = "Combat",
+        OptionKey = optionKey,
+        VariantKey = variantKey,
+        WheelOffer1Key = "OneChoice",
+    }
+    if variantKey == "ThreeCombats" then
+        row.WheelOffer2Key = "TwoChoices"
+    end
+    return row
+end
+
 function TestRunPlannerMultiEncounterRoute.testThessalyRequiresStoryOrShopByDepthFive()
     local control = buildThessalyRuntime({
         {},
-        { RoleKey = "Combat", OptionKey = "O_Combat01" },
-        { RoleKey = "Combat", OptionKey = "O_Combat02" },
-        { RoleKey = "Combat", OptionKey = "O_Combat03" },
-        { RoleKey = "Combat", OptionKey = "O_Combat05" },
-        { RoleKey = "Combat", OptionKey = "O_Combat06" },
+        thessalyCombat("O_Combat01"),
+        thessalyCombat("O_Combat02"),
+        thessalyCombat("O_Combat03"),
+        thessalyCombat("O_Combat05"),
+        thessalyCombat("O_Combat06"),
     })
     local snapshot = control:buildSnapshot()
 
@@ -43,10 +57,10 @@ end
 function TestRunPlannerMultiEncounterRoute.testThessalyDepthFiveStorySatisfiesDeadline()
     local control = buildThessalyRuntime({
         {},
-        { RoleKey = "Combat", OptionKey = "O_Combat01" },
-        { RoleKey = "Combat", OptionKey = "O_Combat02" },
-        { RoleKey = "Combat", OptionKey = "O_Combat03" },
-        { RoleKey = "Combat", OptionKey = "O_Combat05" },
+        thessalyCombat("O_Combat01"),
+        thessalyCombat("O_Combat02"),
+        thessalyCombat("O_Combat03"),
+        thessalyCombat("O_Combat05"),
         { RoleKey = "Story", OptionKey = "O_Story01" },
     })
     local snapshot = control:buildSnapshot()
@@ -59,17 +73,11 @@ end
 function TestRunPlannerMultiEncounterRoute.testThessalyPriorShopSatisfiesDeadline()
     local control = buildThessalyRuntime({
         {},
-        { RoleKey = "Combat", OptionKey = "O_Combat01" },
-        { RoleKey = "Combat", OptionKey = "O_Combat02" },
-        {
-            RoleKey = "Combat",
-            OptionKey = "O_Combat03",
-            VariantKey = "ThreeCombats",
-            WheelOffer1Key = "OneChoice",
-            WheelOffer2Key = "TwoChoices",
-        },
+        thessalyCombat("O_Combat01"),
+        thessalyCombat("O_Combat02"),
+        thessalyCombat("O_Combat03", "ThreeCombats"),
         { RoleKey = "Midshop", OptionKey = "O_Shop01" },
-        { RoleKey = "Combat", OptionKey = "O_Combat06" },
+        thessalyCombat("O_Combat06"),
     })
     local snapshot = control:buildSnapshot()
 
@@ -104,7 +112,6 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterStorageMatchesThess
     lu.assertEquals(instance.routeSlots[8].label, "Preboss Shop")
     lu.assertEquals(instance.routeSlots[8].roleKey, "Preboss")
     lu.assertEquals(instance.roleValues, {
-        "Vanilla",
         "Combat",
         "Story",
         "Fountain",
@@ -113,7 +120,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterStorageMatchesThess
         "Miniboss",
     })
     lu.assertEquals(instance.optionValuesByRole.Story, { "O_Story01" })
-    lu.assertEquals(instance.optionValuesByRole.Combat[1], "")
+    lu.assertEquals(instance.optionValuesByRole.Combat[1], "O_Combat01")
 
     lu.assertEquals(#storage, 3)
     lu.assertEquals(storage[1].key, "Rooms")
@@ -143,7 +150,6 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterStorageMatchesThess
     lu.assertNil(routeData.encounterRewardRowIndex(instance, 8, 1))
 
     lu.assertEquals(routeData.variantLabelsForRow(instance, "Combat"), {
-        [""] = "Vanilla",
         TwoCombats = "2 Combats",
         ThreeCombats = "3 Combats",
     })
@@ -168,25 +174,20 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterStorageMatchesThess
     })
 
     lu.assertEquals(routeData.variantValuesForRow(instance, rows, 2, "Combat"), {
-        "",
         "TwoCombats",
     })
     lu.assertEquals(routeData.variantValuesForRow(instance, rows, 3, "Combat"), {
-        "",
         "TwoCombats",
         "ThreeCombats",
     })
     lu.assertEquals(routeData.variantValuesForRow(instance, rows, 4, "Combat"), {
-        "",
         "TwoCombats",
         "ThreeCombats",
     })
     lu.assertEquals(routeData.variantValuesForRow(instance, rows, 6, "Combat"), {
-        "",
         "TwoCombats",
     })
     lu.assertEquals(routeData.variantValuesForRow(instance, rows, 7, "Combat"), {
-        "",
         "TwoCombats",
     })
     lu.assertEquals(routeData.variantValuesForRow(instance, rows, 3, "Story"), {})
@@ -390,7 +391,8 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
             {
                 RoleKey = "Combat",
                 OptionKey = "O_Combat01",
-                VariantKey = "",
+                VariantKey = "TwoCombats",
+                WheelOffer1Key = "OneChoice",
             },
             {
                 RoleKey = "Combat",
@@ -480,12 +482,21 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
     lu.assertEquals(snapshot.rows[2].optionKey, "O_Combat01")
     lu.assertEquals(snapshot.rows[2].exitCount, 1)
     lu.assertEquals(snapshot.rows[2].rewardExitCount, 0)
-    lu.assertEquals(snapshot.rows[2].variantKey, "")
-    lu.assertEquals(snapshot.rows[2].variant.sourceKey, "Vanilla")
-    lu.assertNil(snapshot.rows[2].realCombatCount)
+    lu.assertEquals(snapshot.rows[2].variantKey, "TwoCombats")
+    lu.assertEquals(snapshot.rows[2].variant.sourceKey, "TwoCombats")
+    lu.assertEquals(snapshot.rows[2].realCombatCount, 2)
     lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardKind, "none")
     lu.assertEquals(primaryRewardItem(snapshot.rows[2]).rewardPicks, {})
-    lu.assertEquals(snapshot.rows[2].encounterRewardLegs, {})
+    lu.assertEquals(snapshot.rows[2].roomTopology, {
+        kind = "shipCombat",
+        encounters = {
+            {
+                address = "encounter:1",
+                wheelOfferCount = 1,
+            },
+        },
+    })
+    lu.assertEquals(#snapshot.rows[2].encounterRewardLegs, 1)
 
     lu.assertEquals(snapshot.rows[3].routeOrdinal, 2)
     lu.assertEquals(snapshot.rows[3].roleKey, "Combat")
@@ -590,14 +601,8 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterInvalidatesDuplicat
     })
     local control = template.createRuntime(routeFields({
         {},
-        {
-            RoleKey = "Combat",
-            OptionKey = "O_Combat01",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "O_Combat02",
-        },
+        thessalyCombat("O_Combat01"),
+        thessalyCombat("O_Combat02"),
         {
             RoleKey = "Devotion",
             OptionKey = "O_Devotion01",

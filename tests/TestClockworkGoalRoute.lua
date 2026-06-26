@@ -40,15 +40,13 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalStorageMatchesTartaru
     lu.assertEquals(instance.routeSlots[14].roleKey, "Preboss")
     lu.assertNil(instance.routeSlots[14].roomKey)
     lu.assertEquals(instance.roleValues, {
-        "Vanilla",
         "Combat",
         "Story",
         "Fountain",
         "Miniboss",
     })
     lu.assertEquals(instance.roleLabels.Combat, "Combat")
-    lu.assertEquals(instance.optionValuesByRole.Combat[1], "")
-    lu.assertEquals(instance.optionValuesByRole.Combat[2], "I_Combat01")
+    lu.assertEquals(instance.optionValuesByRole.Combat[1], "I_Combat01")
     lu.assertEquals(instance.rolesByKey.Combat.reward.kind, "clockworkChoice")
     lu.assertNil(instance.rolesByKey.Combat.mapOptions[1].reward)
     lu.assertEquals(instance.optionValuesByRole.Story, { "I_Story01" })
@@ -93,7 +91,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalForcesFirstRouteRowFr
         "Combat",
     })
     lu.assertEquals(data.optionValuesForRow(instance, blankFirstStep, 2, "Story"), {})
-    lu.assertEquals(data.optionValuesForRow(instance, blankFirstStep, 2, "Combat")[2], "I_Combat01")
+    lu.assertEquals(data.optionValuesForRow(instance, blankFirstStep, 2, "Combat")[1], "I_Combat01")
     local rewardContext = data.rewardContext(instance, blankFirstStep, 2, instance.rolesByKey.Combat)
     lu.assertEquals(rewardContext.kind, "forcedReward")
     lu.assertEquals(rewardContext.rewardType, "ClockworkGoal")
@@ -377,7 +375,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
     lu.assertEquals(validation.code, "clockwork_goal_count")
 end
 
-function TestRunPlannerClockworkGoalRoute.testClockworkGoalLateVanillaRowIsValidButCanInvalidatePreboss()
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalActiveVanillaRowsAreInvalid()
     local catalog = loadCatalog()
     local data = loadClockworkGoalData()
     local instance = data.prepare({
@@ -401,12 +399,9 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalLateVanillaRowIsValid
         {},
     })
 
-    lu.assertTrue(data.validateRow(instance, rows, 12).valid)
-    lu.assertTrue(data.validateRow(instance, rows, 13).valid)
-
-    local validation = data.validateRow(instance, rows, 14)
+    local validation = data.validateRow(instance, rows, 12)
     lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "clockwork_goal_count")
+    lu.assertEquals(validation.code, "unknown_role")
 end
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalAllowsPostGoalExtensionBehindTwoExitRoom()

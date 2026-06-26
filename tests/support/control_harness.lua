@@ -218,6 +218,7 @@ local function loadFieldsCageDeps()
         availability = routeDeps.availability,
         valueStates = routeDeps.valueStates,
     })
+    deps.roomStructure = testImport("mods/controls/room_structure.lua")
     return deps
 end
 

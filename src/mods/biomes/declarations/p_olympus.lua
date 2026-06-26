@@ -60,12 +60,6 @@ return function(deps)
         },
         roles = {
             {
-                key = "Vanilla",
-                label = "Vanilla",
-                reward = rewards.none(),
-                biomeEncounterDepthCost = routeRules.encounterDepthCost(0, 1),
-            },
-            {
                 key = "Combat",
                 label = "Combat",
                 mapOptions = layout.combatRooms,

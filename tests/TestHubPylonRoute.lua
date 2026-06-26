@@ -62,13 +62,12 @@ function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
     lu.assertNil(instance.routeSlots[10].roomKey)
     lu.assertEquals(instance.routeSlots[10].roleKey, "Preboss")
     lu.assertEquals(instance.roleValues, {
-        "Vanilla",
         "Combat",
         "Story",
         "Miniboss",
     })
     lu.assertEquals(instance.optionValuesByRole.Story, { "N_Story01" })
-    lu.assertEquals(instance.optionValuesByRole.Combat[1], "")
+    lu.assertEquals(instance.optionValuesByRole.Combat[1], "N_Combat05")
     lu.assertEquals(instance.optionValuesByRole.Miniboss, {
         "N_MiniBoss01",
         "N_MiniBoss02",
@@ -190,10 +189,14 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
                 OptionKey = "N_Story01",
             },
             {
-                RoleKey = "Vanilla",
+                RoleKey = "Combat",
+                OptionKey = "N_Combat05",
+                Reward1Key = "MaxHealthDrop",
             },
             {
-                RoleKey = "Vanilla",
+                RoleKey = "Combat",
+                OptionKey = "N_Combat06",
+                Reward1Key = "WeaponUpgrade",
             },
             {},
         }, {

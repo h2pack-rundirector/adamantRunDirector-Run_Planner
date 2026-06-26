@@ -27,6 +27,33 @@ local function drawRoomsWithOptionChange(template, control, instance, nextOption
     template.views.rooms(draw, control, instance)
 end
 
+local function fOpeningRow()
+    return { OptionKey = "F_Opening01" }
+end
+
+local function fCombatRow(optionKey, rewardKey, siblingKey)
+    return {
+        RoleKey = "Combat",
+        OptionKey = optionKey,
+        Reward1Key = rewardKey,
+        SiblingStructureKey = siblingKey,
+    }
+end
+
+local function qCombatRow(optionKey)
+    return {
+        RoleKey = "Combat",
+        OptionKey = optionKey,
+    }
+end
+
+local function qMinibossRow(optionKey)
+    return {
+        RoleKey = "Miniboss",
+        OptionKey = optionKey,
+    }
+end
+
 function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
@@ -53,7 +80,6 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(instance.routeSlots[12].roleKey, "Preboss")
     lu.assertEquals(instance.routeSlots[12].roomHistoryCost, 1)
     lu.assertEquals(instance.roleValues, {
-        "Vanilla",
         "Combat",
         "Story",
         "Fountain",
@@ -63,7 +89,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(instance.optionValuesByRole.Story, { "F_Story01" })
     lu.assertEquals(instance.optionValuesByRole.Fountain, { "F_Reprieve01" })
     lu.assertEquals(instance.optionValuesByRole.Midshop, { "F_Shop01" })
-    lu.assertEquals(instance.optionValuesByRole.Combat[1], "")
+    lu.assertEquals(instance.optionValuesByRole.Combat[1], "F_Combat01")
 
     lu.assertEquals(#storage, 2)
     lu.assertEquals(storage[1].key, "Rooms")
@@ -112,14 +138,14 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingTopologyExportsSel
         biome = catalog.lookup.F,
     })
     local rows = fakeRows({
-        {},
-        {},
-        {},
-        {},
-        {},
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+        fCombatRow("F_Combat04", "Major"),
+        fCombatRow("F_Combat08", "Major"),
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat05",
+            OptionKey = "F_Combat06",
             SiblingStructureKey = "F_Story01",
             Reward1Key = "Major",
         },
@@ -145,14 +171,14 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingTopologyExportsSel
         biome = catalog.lookup.F,
     })
     local control = template.createRuntime(routeFields({
-        {},
-        {},
-        {},
-        {},
-        {},
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+        fCombatRow("F_Combat04", "Major"),
+        fCombatRow("F_Combat08", "Major"),
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat05",
+            OptionKey = "F_Combat06",
             SiblingStructureKey = "F_Story01",
             Reward1Key = "Major",
         },
@@ -163,7 +189,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingTopologyExportsSel
         kind = "fixedLinearSiblingChoice",
         selected = {
             structure = "Combat",
-            roomKey = "F_Combat05",
+            roomKey = "F_Combat06",
             rewardStore = "RunProgress",
             rewardClass = "Major",
             offerCount = 1,
@@ -184,6 +210,47 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingTopologyExportsSel
     })
 end
 
+function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyRejectsPreviouslyGeneratedSiblingRoom()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local template = loadFixedLinearTemplate()
+    local instance = data.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local rows = fakeRows({
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+        fCombatRow("F_Combat04", "Major"),
+        fCombatRow("F_Combat08", "Major"),
+        fCombatRow("F_Combat06", "Major", "F_Story01"),
+        fCombatRow("F_Combat07", "Major", "F_Story01"),
+    })
+
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 7).F_Story01, valueStates.HIDDEN)
+
+    instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(routeFields({
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+        fCombatRow("F_Combat04", "Major"),
+        fCombatRow("F_Combat08", "Major"),
+        fCombatRow("F_Combat06", "Major", "F_Story01"),
+        fCombatRow("F_Combat07", "Major", "F_Story01"),
+    }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 7)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fixed_sibling_room_generated")
+    lu.assertEquals(snapshot.rows[7].invalidCode, "fixed_sibling_room_generated")
+end
+
 function TestRunPlannerFixedLinearRoute.testOceanusThreeExitRoomsExportTwoSiblingDoors()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
@@ -194,24 +261,31 @@ function TestRunPlannerFixedLinearRoute.testOceanusThreeExitRoomsExportTwoSiblin
     })
     local rows = fakeRows({
         {},
-        {},
-        {},
+        { RoleKey = "Combat", OptionKey = "G_Combat01", Reward1Key = "Major" },
+        { RoleKey = "Combat", OptionKey = "G_Combat04", Reward1Key = "Major" },
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat02",
+            SiblingStructureKey = "CombatMajor",
+            Reward1Key = "Major",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat03",
             SiblingStructureKey = "G_Story01",
             SiblingStructure2Key = "G_Shop01",
             Reward1Key = "Major",
         },
     })
 
-    lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 4), 2)
-    lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 4, 1))
-    lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 4, 2))
-    lu.assertFalse(data.shouldDrawSiblingStructure(instance, rows, 4, 3))
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4, 1).G_Story01)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4, 2).G_Shop01)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 4, 2).G_Story01, valueStates.HIDDEN)
+    lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 4), 1)
+    lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 5), 2)
+    lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 5, 1))
+    lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 5, 2))
+    lu.assertFalse(data.shouldDrawSiblingStructure(instance, rows, 5, 3))
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5, 1).G_Story01)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5, 2).G_Shop01)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5, 2).G_Story01, valueStates.HIDDEN)
 
     local mismatchRows = fakeRows({
         {},
@@ -223,9 +297,15 @@ function TestRunPlannerFixedLinearRoute.testOceanusThreeExitRoomsExportTwoSiblin
             SiblingStructureKey = "CombatMajor",
             Reward1Key = "Major",
         },
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat03",
+            SiblingStructureKey = "CombatMajor",
+            Reward1Key = "Major",
+        },
     })
     lu.assertEquals(
-        data.siblingStructureValueStatesForRow(instance, mismatchRows, 4, 2).CombatMinor,
+        data.siblingStructureValueStatesForRow(instance, mismatchRows, 5, 2).CombatMinor,
         valueStates.INVALID
     )
 
@@ -235,11 +315,22 @@ function TestRunPlannerFixedLinearRoute.testOceanusThreeExitRoomsExportTwoSiblin
     })
     local control = template.createRuntime(routeFields({
         {},
-        {},
-        {},
+        { RoleKey = "Combat", OptionKey = "G_Combat01", Reward1Key = "Major" },
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat04",
+            SiblingStructureKey = "CombatMajor",
+            Reward1Key = "Major",
+        },
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat02",
+            SiblingStructureKey = "CombatMajor",
+            Reward1Key = "Major",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat03",
             SiblingStructureKey = "G_Story01",
             SiblingStructure2Key = "G_Shop01",
             Reward1Key = "Major",
@@ -247,7 +338,7 @@ function TestRunPlannerFixedLinearRoute.testOceanusThreeExitRoomsExportTwoSiblin
     }), instance)
     local snapshot = control:buildSnapshot()
 
-    lu.assertEquals(snapshot.rows[4].roomTopology.siblings, {
+    lu.assertEquals(snapshot.rows[5].roomTopology.siblings, {
         {
             structure = "Story",
             roomKey = "G_Story01",
@@ -270,11 +361,22 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyInvalidatesMissin
     })
     local control = template.createRuntime(routeFields({
         {},
-        {},
-        {},
+        { RoleKey = "Combat", OptionKey = "G_Combat01", Reward1Key = "Major" },
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat04",
+            SiblingStructureKey = "CombatMajor",
+            Reward1Key = "Major",
+        },
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat02",
+            SiblingStructureKey = "CombatMajor",
+            Reward1Key = "Major",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat03",
             SiblingStructureKey = "CombatMajor",
             Reward1Key = "Major",
         },
@@ -282,9 +384,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyInvalidatesMissin
     local snapshot = control:buildSnapshot()
 
     lu.assertFalse(snapshot.valid)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 4)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
     lu.assertEquals(snapshot.invalidRows[1].code, "fixed_sibling_structure_required")
-    lu.assertEquals(snapshot.rows[4].invalidCode, "fixed_sibling_structure_required")
+    lu.assertEquals(snapshot.rows[5].invalidCode, "fixed_sibling_structure_required")
 
     instance = template.prepare({
         name = "RouteG",
@@ -292,11 +394,22 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyInvalidatesMissin
     })
     control = template.createRuntime(routeFields({
         {},
-        {},
-        {},
+        { RoleKey = "Combat", OptionKey = "G_Combat01", Reward1Key = "Major" },
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat04",
+            SiblingStructureKey = "CombatMajor",
+            Reward1Key = "Major",
+        },
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat02",
+            SiblingStructureKey = "CombatMajor",
+            Reward1Key = "Major",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat03",
             SiblingStructureKey = "CombatMajor",
             SiblingStructure2Key = "CombatMinor",
             Reward1Key = "Major",
@@ -305,9 +418,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyInvalidatesMissin
     snapshot = control:buildSnapshot()
 
     lu.assertFalse(snapshot.valid)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 4)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
     lu.assertEquals(snapshot.invalidRows[1].code, "fixed_sibling_reward_store_mismatch")
-    lu.assertEquals(snapshot.rows[4].invalidCode, "fixed_sibling_reward_store_mismatch")
+    lu.assertEquals(snapshot.rows[5].invalidCode, "fixed_sibling_reward_store_mismatch")
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoorPressure()
@@ -318,11 +431,11 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
         biome = catalog.lookup.F,
     })
     local control = template.createRuntime(routeFields({
-        {},
-        {},
-        {},
-        {},
-        {},
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+        fCombatRow("F_Combat09", "Major"),
+        fCombatRow("F_Combat04", "Major"),
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat06",
@@ -355,14 +468,15 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
         biome = catalog.lookup.F,
     })
     control = template.createRuntime(routeFields({
-        {},
-        {},
-        {},
-        {},
-        {},
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+        fCombatRow("F_Combat09", "Major"),
+        fCombatRow("F_Combat04", "Major"),
         {
             RoleKey = "Miniboss",
             OptionKey = "F_MiniBoss01",
+            SiblingStructureKey = "F_Shop01",
             Reward1Key = "Boon",
             Reward2Key = "ZeusUpgrade",
         },
@@ -377,6 +491,59 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
             OptionKey = "F_Combat13",
             Reward1Key = "Major",
             SiblingStructureKey = "CombatMajor",
+        },
+    }), instance)
+    attachSingleBiomeRouteContext(control, "Underworld", "F")
+    snapshot = control:buildSnapshot()
+
+    lu.assertTrue(snapshot.valid)
+
+    instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    control = template.createRuntime(routeFields({
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+        fCombatRow("F_Combat09", "Major"),
+        fCombatRow("F_Combat04", "Major"),
+        fCombatRow("F_Combat06", "Major", "F_Shop01"),
+        fCombatRow("F_Combat07", "Major", "CombatMajor"),
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "F_MiniBoss01",
+            SiblingStructureKey = "CombatMajor",
+            Reward1Key = "Boon",
+            Reward2Key = "ZeusUpgrade",
+        },
+    }), instance)
+    attachSingleBiomeRouteContext(control, "Underworld", "F")
+    snapshot = control:buildSnapshot()
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 8)
+    lu.assertEquals(snapshot.invalidRows[1].code, "fixed_forced_topology_group_unresolved")
+    lu.assertEquals(snapshot.rows[8].invalidCode, "fixed_forced_topology_group_unresolved")
+
+    instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    control = template.createRuntime(routeFields({
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+        fCombatRow("F_Combat09", "Major"),
+        fCombatRow("F_Combat04", "Major"),
+        fCombatRow("F_Combat06", "Major", "F_Shop01"),
+        fCombatRow("F_Combat07", "Major", "CombatMajor"),
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "F_MiniBoss01",
+            SiblingStructureKey = "F_MiniBoss02",
+            Reward1Key = "Boon",
+            Reward2Key = "ZeusUpgrade",
         },
     }), instance)
     attachSingleBiomeRouteContext(control, "Underworld", "F")
@@ -474,12 +641,12 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearQShopSharedOfferGroupInva
     })
     local control = template.createRuntime(routeFields({
         {},
-        {},
-        {},
-        {},
-        {},
-        {},
-        {},
+        qCombatRow("Q_Combat10"),
+        qCombatRow("Q_Combat03"),
+        qMinibossRow("Q_MiniBoss02"),
+        qCombatRow("Q_Combat01"),
+        qCombatRow("Q_Combat12"),
+        qMinibossRow("Q_MiniBoss03"),
         {
             Reward1Key = "RandomLoot",
             Reward2Key = "RandomLoot",
@@ -506,7 +673,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearCombatRoomsCannotRepeatIn
         biome = catalog.lookup.F,
     })
     local rowData = {
-        {},
+        fOpeningRow(),
         { RoleKey = "Combat", OptionKey = "F_Combat06" },
         { RoleKey = "Combat", OptionKey = "F_Combat06" },
     }
@@ -558,7 +725,6 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearOpeningRowUsesFixedRoomCh
 
     data.fillOptionValues(instance, rows, 1, "Opening", values)
     lu.assertEquals(values, {
-        "",
         "F_Opening01",
         "F_Opening02",
         "F_Opening03",
@@ -653,7 +819,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeBuildsValidatedSna
     local control = template.createRuntime(routeFields({
             {},
             {
-                RoleKey = "Vanilla",
+                RoleKey = "Combat",
+                OptionKey = "Q_Combat10",
             },
             {
                 RoleKey = "Combat",
@@ -689,7 +856,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeBuildsValidatedSna
     lu.assertEquals(snapshot.rows[1].rewardExitCount, 2)
     lu.assertTrue(snapshot.rows[1].valid)
     lu.assertEquals(snapshot.rows[2].routeOrdinal, 1)
-    lu.assertEquals(snapshot.rows[2].roleKey, "Vanilla")
+    lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
     lu.assertTrue(snapshot.rows[2].valid)
     lu.assertEquals(snapshot.rows[3].routeOrdinal, 2)
     lu.assertEquals(snapshot.rows[3].roleKey, "Combat")
@@ -742,12 +909,12 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeSnapshotsPrebossRo
     })
     local control = template.createRuntime(routeFields({
             {},
-            { RoleKey = "" },
-            { RoleKey = "" },
-            { RoleKey = "Miniboss", OptionKey = "Q_MiniBoss02" },
-            { RoleKey = "" },
-            { RoleKey = "" },
-            { RoleKey = "Miniboss", OptionKey = "Q_MiniBoss03" },
+            qCombatRow("Q_Combat10"),
+            qCombatRow("Q_Combat03"),
+            qMinibossRow("Q_MiniBoss02"),
+            qCombatRow("Q_Combat01"),
+            qCombatRow("Q_Combat12"),
+            qMinibossRow("Q_MiniBoss03"),
             { RoleKey = "" },
         }), instance)
     local snapshot = control:buildSnapshot()
@@ -775,24 +942,15 @@ function TestRunPlannerFixedLinearRoute.testSingleRoomRolesDefaultToConcreteOpti
         biome = catalog.lookup.F,
     })
     local control = template.createRuntime(routeFields({
-            {
-                RoleKey = "Vanilla",
-            },
-            {
-                RoleKey = "Vanilla",
-            },
-            {
-                RoleKey = "Vanilla",
-            },
-            {
-                RoleKey = "Vanilla",
-            },
-            {
-                RoleKey = "Vanilla",
-            },
+            fOpeningRow(),
+            fCombatRow("F_Combat02", "Major"),
+            fCombatRow("F_Combat03", "Major"),
+            fCombatRow("F_Combat04", "Major"),
+            fCombatRow("F_Combat08", "Major"),
             {
                 RoleKey = "Story",
                 OptionKey = "",
+                SiblingStructureKey = "CombatMajor",
             },
         }), instance)
     local row = control:rowSnapshot(6)
@@ -813,7 +971,6 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesRolesByRouteRo
     local values = {}
 
     data.fillRoleValues(instance, rows, 2, values)
-    lu.assertTrue(hasValue(values, "Vanilla"))
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Story"))
     lu.assertTrue(hasValue(values, "Fountain"))
@@ -856,7 +1013,6 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesOptionsByRoute
     local values = {}
 
     data.fillOptionValues(instance, rows, 2, "Combat", values)
-    lu.assertTrue(hasValue(values, ""))
     lu.assertTrue(hasValue(values, "F_Combat01"))
     lu.assertTrue(hasValue(values, "F_Combat05"))
     lu.assertEquals(data.optionValueStatesForRow(instance, rows, 2, "Combat").F_Combat05, valueStates.INVALID)
@@ -1004,20 +1160,17 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesExactDepthRole
     local values = {}
 
     data.fillRoleValues(instance, rows, 2, values)
-    lu.assertTrue(hasValue(values, "Vanilla"))
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
     lu.assertEquals(data.roleValueStatesForRow(instance, rows, 2).Miniboss, valueStates.HIDDEN)
 
     data.fillRoleValues(instance, rows, 4, values)
-    lu.assertTrue(hasValue(values, "Vanilla"))
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
     lu.assertEquals(data.roleValueStatesForRow(instance, rows, 4).Combat, valueStates.HIDDEN)
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 4).Miniboss)
 
     data.fillRoleValues(instance, rows, 7, values)
-    lu.assertTrue(hasValue(values, "Vanilla"))
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
     lu.assertEquals(data.roleValueStatesForRow(instance, rows, 7).Combat, valueStates.HIDDEN)
@@ -1069,13 +1222,15 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesExactDe
     })
     local control = template.createRuntime(routeFields({
             {
-                RoleKey = "",
+                RoleKey = "Intro",
             },
             {
-                RoleKey = "Vanilla",
+                RoleKey = "Combat",
+                OptionKey = "Q_Combat10",
             },
             {
-                RoleKey = "Vanilla",
+                RoleKey = "Combat",
+                OptionKey = "Q_Combat03",
             },
             {
                 RoleKey = "Combat",
@@ -1278,21 +1433,14 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearAmbiguousEncounterDepthBl
         biome = catalog.lookup.F,
     })
     local rows = fakeRows({
-        {
-            RoleKey = "",
-        },
-        {
-            RoleKey = "Vanilla",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat05",
-        },
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat05", "Major"),
     })
 
     local context = data.rowContext(instance, rows, 3)
-    lu.assertNil(context.biomeEncounterDepth)
-    lu.assertEquals(context.biomeEncounterDepthMin, 2)
+    lu.assertEquals(context.biomeEncounterDepth, 3)
+    lu.assertEquals(context.biomeEncounterDepthMin, 3)
     lu.assertEquals(context.biomeEncounterDepthMax, 3)
     lu.assertFalse(data.isOptionAvailable(instance, rows, 3, "Combat", "F_Combat05"))
 
@@ -1355,21 +1503,11 @@ function TestRunPlannerFixedLinearRoute.testMinibossRequiresConcreteOption()
         biome = catalog.lookup.F,
     })
     local rows = fakeRows({
-        {
-            RoleKey = "",
-        },
-        {
-            RoleKey = "Vanilla",
-        },
-        {
-            RoleKey = "Vanilla",
-        },
-        {
-            RoleKey = "Vanilla",
-        },
-        {
-            RoleKey = "Vanilla",
-        },
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+        fCombatRow("F_Combat04", "Major"),
+        fCombatRow("F_Combat08", "Major"),
         {
             RoleKey = "Miniboss",
         },
@@ -1393,16 +1531,19 @@ function TestRunPlannerFixedLinearRoute.testConcreteMinibossOptionUsesLeafDepthC
     })
     local rows = fakeRows({
         {
-            RoleKey = "",
+            OptionKey = "P_Intro",
         },
         {
-            RoleKey = "Vanilla",
+            RoleKey = "Combat",
+            OptionKey = "P_Combat05",
         },
         {
-            RoleKey = "Vanilla",
+            RoleKey = "Combat",
+            OptionKey = "P_Combat06",
         },
         {
-            RoleKey = "Vanilla",
+            RoleKey = "Combat",
+            OptionKey = "P_Combat11",
         },
         {
             RoleKey = "Miniboss",
@@ -1528,7 +1669,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesPreviou
         biome = catalog.lookup.F,
     })
 	    local control = template.createRuntime(routeFields({
-	            { RoleKey = "" },
+	            fOpeningRow(),
 	            { RoleKey = "Combat", OptionKey = "F_Combat02" },
 	            { RoleKey = "Combat", OptionKey = "F_Combat03" },
 	            {
@@ -1560,21 +1701,22 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesOutOfRa
         biome = catalog.lookup.F,
     })
 	    local control = template.createRuntime(routeFields({
-	            {
-	                RoleKey = "",
-	            },
+	            fOpeningRow(),
 	            {
 	                RoleKey = "Story",
 	                OptionKey = "F_Story01",
             },
             {
-                RoleKey = "Vanilla",
+                RoleKey = "Combat",
+                OptionKey = "F_Combat02",
             },
             {
-                RoleKey = "Vanilla",
+                RoleKey = "Combat",
+                OptionKey = "F_Combat03",
             },
             {
-                RoleKey = "Vanilla",
+                RoleKey = "Combat",
+                OptionKey = "F_Combat04",
             },
             {
                 RoleKey = "Story",

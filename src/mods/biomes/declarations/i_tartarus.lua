@@ -2,7 +2,6 @@ return function(deps)
     local layout = import("mods/biomes/declarations/i_tartarus_layout.lua")(deps)
     local parser = deps.parser
     local rewards = deps.rewards
-    local routeRules = deps.routeRules
     local clockworkGoalReward = "ClockworkGoal"
 
     return {
@@ -61,12 +60,6 @@ return function(deps)
             },
         },
         roles = {
-            {
-                key = "Vanilla",
-                label = "Vanilla",
-                reward = rewards.none(),
-                biomeEncounterDepthCost = routeRules.encounterDepthCost(0, 1),
-            },
             {
                 key = "Combat",
                 label = "Combat",

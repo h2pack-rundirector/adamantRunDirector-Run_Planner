@@ -7,7 +7,7 @@ return function(deps)
 
     return {
         siblingStructureWindow = {
-            biomeDepthCache = { min = 2, max = 4 },
+            biomeDepthCache = { min = 1, max = 4 },
         },
         rules = {
             {

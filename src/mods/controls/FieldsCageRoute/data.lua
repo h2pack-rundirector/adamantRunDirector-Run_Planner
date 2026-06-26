@@ -4,6 +4,7 @@ local readCache = deps.readCache
 local timeline = deps.timeline
 local rowEngine = deps.rowEngine
 local roomTopology = deps.roomTopology
+local roomStructure = deps.roomStructure
 
 local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
@@ -346,17 +347,46 @@ local function siblingCandidateRoomKey(instance, rows, rowIndex)
     return roomTopology.roomKey(sibling)
 end
 
+local function structuralCountForRow(instance, rows, rowIndex, field)
+    local slot = slotForRow(instance, rowIndex)
+    local roleKey, role = data.resolveRole(instance, rows, rowIndex)
+    local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
+    if field == "exitCount" then
+        return math.floor(tonumber(roomStructure.exitCount(slot, role, option)) or 0)
+    end
+    if field == "rewardExitCount" then
+        return math.floor(tonumber(roomStructure.rewardExitCount(slot, role, option)) or 0)
+    end
+    return 0
+end
+
+local function hasSelectableSiblingStructure(roleKey)
+    return roleKey == "Combat" or roleKey == "Miniboss" or roleKey == "Bridge"
+end
+
 local function siblingPolicyContext(instance, rows, rowIndex)
+    local roleKey = data.resolveRole(instance, rows, rowIndex)
     return {
         rowIndex = rowIndex,
         routeRowCount = instance.routeRowCount,
+        isFixedIdentityRow = data.isFixedIdentityRow(instance, rowIndex),
+        hasSelectableSiblingStructure = hasSelectableSiblingStructure(roleKey),
         rowContext = data.rowContext(instance, rows, rowIndex),
         selectedRoomKey = rowRoomKey(instance, rows, rowIndex),
+        structuralCountAt = function(index, field)
+            return structuralCountForRow(instance, rows, index, field)
+        end,
         roomKeyAt = function(index)
             return rowRoomKey(instance, rows, index)
         end,
+        siblingAt = function()
+            return data.resolveSiblingStructure(instance, rows, rowIndex)
+        end,
         siblingRoomKeyAt = function(index)
             return siblingCandidateRoomKey(instance, rows, index)
+        end,
+        siblingCountAt = function(index)
+            return data.activeSiblingStructureCount(instance, rows, index)
         end,
         extraRuleStatus = function(sibling)
             return topologyRulesStatus(instance, rows, rowIndex, sibling)
@@ -548,16 +578,26 @@ function data.siblingStructureStatus(instance, rows, rowIndex)
     if policy == nil then
         return validStatus()
     end
-    return roomTopology.siblingWindowStatus(policy, data.rowContext(instance, rows, rowIndex))
+    local cache = activeReadCache(instance)
+    if cache == nil then
+        return roomTopology.siblingWindowStatus(policy, data.rowContext(instance, rows, rowIndex))
+    end
+
+    cache.siblingStructureStatus = cache.siblingStructureStatus or {}
+    local record = rowRecord(cache.siblingStructureStatus, rowIndex)
+    if record.pass ~= cache.pass then
+        record.pass = cache.pass
+        record.status = roomTopology.siblingWindowStatus(policy, data.rowContext(instance, rows, rowIndex))
+    end
+    return record.status
 end
 
 function data.shouldDrawSiblingStructure(instance, rows, rowIndex)
-    local status = data.siblingStructureStatus(instance, rows, rowIndex)
-    if not status.valid then
-        return false
-    end
-    local roleKey = data.resolveRole(instance, rows, rowIndex)
-    return roleKey == "Combat" or roleKey == "Miniboss" or roleKey == "Bridge"
+    return roomTopology.shouldDrawActiveSibling(
+        data.activeSiblingStructureCount(instance, rows, rowIndex),
+        data.siblingStructureStatus(instance, rows, rowIndex),
+        1
+    )
 end
 
 function data.resolveSiblingStructure(instance, rows, rowIndex)
@@ -577,10 +617,6 @@ local function siblingAvailabilityStatus(instance, rows, rowIndex, sibling)
         siblingPolicyContext(instance, rows, rowIndex),
         sibling
     )
-end
-
-local function isSiblingTopologyStatus(instance, status)
-    return roomTopology.isSiblingTopologyStatus(instance.siblingStructurePolicy, status)
 end
 
 local function fillSiblingStructureValueStates(instance, rows, rowIndex, states)
@@ -613,22 +649,7 @@ function data.validateRoomTopology(instance, rows, rowIndex)
         return nil
     end
 
-    local structureStatus = data.siblingStructureStatus(instance, rows, rowIndex)
-    if not structureStatus.valid then
-        return nil
-    end
-
-    if roleKey == "Vanilla" then
-        local forcedStatus = roomTopology.forcedGroupsStatus(
-            instance.siblingStructurePolicy,
-            siblingPolicyContext(instance, rows, rowIndex)
-        )
-        if not forcedStatus.valid then
-            return forcedStatus
-        end
-        return nil
-    end
-    if roleKey ~= "Combat" and roleKey ~= "Miniboss" and roleKey ~= "Bridge" then
+    if not hasSelectableSiblingStructure(roleKey) then
         return nil
     end
 
@@ -637,26 +658,30 @@ function data.validateRoomTopology(instance, rows, rowIndex)
         return invalidStatus("fields_cage_count_required", "Fields topology needs picked cage reward count")
     end
 
-    local siblingKey, sibling = data.resolveSiblingStructure(instance, rows, rowIndex)
-    if sibling == nil or siblingKey == "" then
-        return invalidStatus("fields_sibling_structure_required", "Fields topology needs sibling door structure")
-    end
-    local siblingStatus = siblingAvailabilityStatus(instance, rows, rowIndex, sibling)
-    if not siblingStatus.valid then
-        if isSiblingTopologyStatus(instance, siblingStatus) then
-            return siblingStatus
-        end
-        return invalidStatus(
-            "fields_sibling_structure_unavailable",
-            "Sibling " .. tostring(sibling.label or siblingKey) .. " is not valid at this pick"
-        )
+    local siblingInvalid = roomTopology.validateSiblingStructures(
+        instance.siblingStructurePolicy,
+        siblingPolicyContext(instance, rows, rowIndex),
+        {
+            requiredCode = "fields_sibling_structure_required",
+            requiredMessage = "Fields topology needs sibling door structure",
+            unavailableCode = "fields_sibling_structure_unavailable",
+            unavailableMessage = function(sibling, siblingKey)
+                return "Sibling " .. tostring(sibling.label or siblingKey) .. " is not valid at this pick"
+            end,
+        }
+    )
+    if siblingInvalid ~= nil then
+        return siblingInvalid
     end
     return nil
 end
 
 function data.roomTopology(instance, rows, rowIndex)
     local roleKey = data.resolveRole(instance, rows, rowIndex)
-    if roleKey == "Vanilla" or data.isFixedIdentityRow(instance, rowIndex) then
+    if data.isFixedIdentityRow(instance, rowIndex) then
+        return nil
+    end
+    if data.activeSiblingStructureCount(instance, rows, rowIndex) < 1 then
         return nil
     end
     if not data.siblingStructureStatus(instance, rows, rowIndex).valid then
@@ -680,6 +705,27 @@ function data.roomTopology(instance, rows, rowIndex)
         selected = selected,
         sibling = siblingTopology,
     }
+end
+
+function data.activeSiblingStructureCount(instance, rows, rowIndex)
+    local cache = activeReadCache(instance)
+    if cache == nil then
+        return roomTopology.activeSiblingCount(
+            instance.siblingStructurePolicy,
+            siblingPolicyContext(instance, rows, rowIndex)
+        )
+    end
+
+    cache.activeSiblingStructureCounts = cache.activeSiblingStructureCounts or {}
+    local record = rowRecord(cache.activeSiblingStructureCounts, rowIndex)
+    if record.pass ~= cache.pass then
+        record.pass = cache.pass
+        record.value = roomTopology.activeSiblingCount(
+            instance.siblingStructurePolicy,
+            siblingPolicyContext(instance, rows, rowIndex)
+        )
+    end
+    return record.value
 end
 
 function data.maxCageRewardCount(instance)

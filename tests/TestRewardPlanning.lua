@@ -419,9 +419,7 @@ function TestRunPlannerRewardPlanning.testRouteContextDevotionRewardUsesPriorUnd
         biome = catalog.lookup.F,
     })
     local fControl = fixedTemplate.createRuntime(routeFields({
-        {
-            RoleKey = "",
-        },
+        { OptionKey = "F_Opening01" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat02",
@@ -451,6 +449,7 @@ function TestRunPlannerRewardPlanning.testRouteContextDevotionRewardUsesPriorUnd
         {
             RoleKey = "Miniboss",
             OptionKey = "F_MiniBoss01",
+            SiblingStructureKey = "F_Shop01",
             Reward1Key = "Boon",
             Reward2Key = "HeraUpgrade",
         },
@@ -464,7 +463,7 @@ function TestRunPlannerRewardPlanning.testRouteContextDevotionRewardUsesPriorUnd
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat05",
-            SiblingStructureKey = "F_Shop01",
+            SiblingStructureKey = "CombatMajor",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -519,7 +518,7 @@ function TestRunPlannerRewardPlanning.testRouteContextScopesPriorGodLootByRoute(
         biome = catalog.lookup.F,
     })
     local fControl = fixedTemplate.createRuntime(routeFields({
-        {},
+        { OptionKey = "F_Opening01" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat02",
@@ -549,6 +548,7 @@ function TestRunPlannerRewardPlanning.testRouteContextScopesPriorGodLootByRoute(
         {
             RoleKey = "Miniboss",
             OptionKey = "F_MiniBoss01",
+            SiblingStructureKey = "F_Shop01",
             Reward1Key = "Boon",
             Reward2Key = "HeraUpgrade",
         },
@@ -562,7 +562,7 @@ function TestRunPlannerRewardPlanning.testRouteContextScopesPriorGodLootByRoute(
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat05",
-            SiblingStructureKey = "F_Shop01",
+            SiblingStructureKey = "CombatMajor",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -2287,9 +2287,7 @@ function TestRunPlannerRewardPlanning.testFixedLinearRuntimeInvalidatesDevotionR
         biome = catalog.lookup.F,
     })
 	    local control = template.createRuntime(routeFields({
-	            {
-	                RoleKey = "",
-	            },
+		            { OptionKey = "F_Opening01" },
 	            {
 	                RoleKey = "Combat",
 	                OptionKey = "F_Combat02",
@@ -2351,9 +2349,7 @@ function TestRunPlannerRewardPlanning.testRouteOverviewInvalidatesDuplicateTrial
         biome = catalog.lookup.F,
     })
     local control = template.createRuntime(routeFields({
-        {
-            RoleKey = "",
-        },
+        { OptionKey = "F_Opening01" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat02",

@@ -11,6 +11,7 @@ local availabilityStatus = availability.status
 local roomTopology = {}
 
 local EMPTY_VALUES = {}
+local MAX_NORMAL_SIBLING_COUNT = 2
 
 local function clearMap(map)
     for key in pairs(map) do
@@ -91,6 +92,48 @@ function roomTopology.siblingWindowStatus(policy, rowContext)
     return availabilityStatus({
         availability = policy.availability,
     }, rowContext)
+end
+
+function roomTopology.generationSourceRowIndex(rowIndex)
+    local sourceIndex = math.floor(tonumber(rowIndex) or 0) - 1
+    if sourceIndex < 1 then
+        return nil
+    end
+    return sourceIndex
+end
+
+function roomTopology.generatedStructuralCount(ctx, field)
+    local sourceIndex = roomTopology.generationSourceRowIndex(ctx.rowIndex)
+    if sourceIndex == nil or ctx.structuralCountAt == nil then
+        return 0
+    end
+    return math.floor(tonumber(ctx.structuralCountAt(sourceIndex, field)) or 0)
+end
+
+function roomTopology.siblingCountForExitCount(exitCount)
+    local count = math.max(math.floor(tonumber(exitCount) or 0) - 1, 0)
+    if count > MAX_NORMAL_SIBLING_COUNT then
+        return MAX_NORMAL_SIBLING_COUNT
+    end
+    return count
+end
+
+function roomTopology.activeSiblingCount(policy, ctx)
+    if policy == nil or ctx.isFixedIdentityRow then
+        return 0
+    end
+    if not ctx.hasSelectableSiblingStructure then
+        return 0
+    end
+
+    return roomTopology.siblingCountForExitCount(roomTopology.generatedStructuralCount(ctx, "exitCount"))
+end
+
+function roomTopology.shouldDrawActiveSibling(activeSiblingCount, windowStatus, siblingIndex)
+    if (activeSiblingCount or 0) < (siblingIndex or 1) then
+        return false
+    end
+    return windowStatus ~= nil and windowStatus.valid == true
 end
 
 local function candidateInGroup(group, roomKey)
@@ -175,8 +218,8 @@ local function generatedExitCountForGroup(ctx, group)
     if group.generatedExitCount ~= nil then
         return group.generatedExitCount
     end
-    if ctx.generatedExitCountAt ~= nil then
-        return math.floor(tonumber(ctx.generatedExitCountAt(ctx.rowIndex, group)) or 0)
+    if group.generatedExitCountField ~= nil and ctx.structuralCountAt ~= nil then
+        return roomTopology.generatedStructuralCount(ctx, group.generatedExitCountField)
     end
     return 0
 end
@@ -249,6 +292,20 @@ local function siblingRoomAlreadySelected(ctx, roomKey)
     return false
 end
 
+local function siblingRoomGeneratedBeforeRow(ctx, roomKey)
+    if roomKey == nil or ctx.siblingRoomKeyAt == nil then
+        return false
+    end
+    for priorIndex = 1, ctx.rowIndex - 1 do
+        for siblingIndex = 1, siblingCountAt(ctx, priorIndex) do
+            if ctx.siblingRoomKeyAt(priorIndex, siblingIndex) == roomKey then
+                return true
+            end
+        end
+    end
+    return false
+end
+
 function roomTopology.siblingCandidateStatus(policy, ctx, candidate)
     if candidate == nil or candidate.key == nil or candidate.key == "" then
         return validStatus()
@@ -266,6 +323,9 @@ function roomTopology.siblingCandidateStatus(policy, ctx, candidate)
     if siblingRoomAlreadySelected(ctx, roomKey) then
         return invalidStatus(statusCode(policy, "sibling_same_sibling_room"), "Sibling cannot duplicate another sibling")
     end
+    if siblingRoomGeneratedBeforeRow(ctx, roomKey) then
+        return invalidStatus(statusCode(policy, "sibling_room_generated"), "Sibling room was already generated")
+    end
     if pickedCandidateClosesGroup(policy, ctx, roomKey) then
         return invalidStatus(
             statusCode(policy, "sibling_miniboss_after_selected"),
@@ -276,12 +336,50 @@ function roomTopology.siblingCandidateStatus(policy, ctx, candidate)
         return invalidStatus(statusCode(policy, "sibling_room_planned"), "Sibling room is already planned on this route")
     end
     if ctx.extraRuleStatus ~= nil then
-        status = ctx.extraRuleStatus(candidate)
+        status = ctx.extraRuleStatus(candidate, ctx.candidateSiblingIndex)
         if not status.valid then
             return status
         end
     end
     return roomTopology.forcedGroupsStatus(policy, ctx, candidate)
+end
+
+local function siblingUnavailableMessage(opts, sibling, siblingKey)
+    local message = opts.unavailableMessage
+    if type(message) == "function" then
+        return message(sibling, siblingKey)
+    end
+    return message or ("Sibling " .. tostring(sibling and sibling.label or siblingKey) .. " is not valid")
+end
+
+function roomTopology.validateSiblingStructures(policy, ctx, opts)
+    opts = opts or {}
+    if roomTopology.siblingWindowStatus(policy, ctx.rowContext).valid ~= true then
+        return nil
+    end
+
+    local count = roomTopology.activeSiblingCount(policy, ctx)
+    for siblingIndex = 1, count do
+        local siblingKey, sibling = ctx.siblingAt(siblingIndex)
+        if sibling == nil or siblingKey == "" then
+            return invalidStatus(opts.requiredCode, opts.requiredMessage)
+        end
+
+        local previousSiblingIndex = ctx.candidateSiblingIndex
+        ctx.candidateSiblingIndex = siblingIndex
+        local siblingStatus = roomTopology.siblingCandidateStatus(policy, ctx, sibling)
+        ctx.candidateSiblingIndex = previousSiblingIndex
+        if not siblingStatus.valid then
+            if roomTopology.isSiblingTopologyStatus(policy, siblingStatus) then
+                return siblingStatus
+            end
+            return invalidStatus(
+                opts.unavailableCode,
+                siblingUnavailableMessage(opts, sibling, siblingKey)
+            )
+        end
+    end
+    return nil
 end
 
 function roomTopology.isSiblingTopologyStatus(policy, status)
@@ -299,6 +397,7 @@ function roomTopology.valueStateForSiblingStatus(policy, status)
         or status.code == statusCode(policy, "sibling_room_planned")
         or status.code == statusCode(policy, "sibling_miniboss_after_selected")
         or status.code == statusCode(policy, "sibling_same_sibling_room")
+        or status.code == statusCode(policy, "sibling_room_generated")
     then
         return valueStates.HIDDEN
     end

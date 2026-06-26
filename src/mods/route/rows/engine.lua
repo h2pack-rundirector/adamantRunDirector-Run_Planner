@@ -59,7 +59,7 @@ local function defaultReadRoleKey(_instance, rows, rowIndex, slot)
 
     local roleKey = rows and rows:read(rowIndex, "RoleKey") or nil
     if roleKey == nil or roleKey == "" then
-        return VANILLA_ROLE_KEY
+        return ""
     end
     return roleKey
 end
@@ -117,10 +117,10 @@ function rowEngine.create(adapter)
     local slotForRow = adapter.slotForRow or defaultSlotForRow
     local isFixedIdentitySlot = adapter.isFixedIdentitySlot or defaultIsFixedIdentitySlot
 
-    local function roleForRow(instance, rowIndex, roleKey)
+    local function roleForRow(instance, rows, rowIndex, roleKey)
         local slot = slotForRow(instance, rowIndex)
         if adapter.roleForRow ~= nil then
-            return adapter.roleForRow(instance, rowIndex, roleKey, slot, defaultRoleForRow)
+            return adapter.roleForRow(instance, rowIndex, roleKey, slot, defaultRoleForRow, rows)
         end
         return defaultRoleForRow(instance, rowIndex, roleKey, slot)
     end
@@ -171,7 +171,7 @@ function rowEngine.create(adapter)
             return nil
         end
         local previousRoleKey = data.resolveRole(instance, rows, rowIndex - 1)
-        if previousRoleKey == VANILLA_ROLE_KEY then
+        if previousRoleKey == nil or previousRoleKey == "" or previousRoleKey == VANILLA_ROLE_KEY then
             return nil
         end
         local _, previousOption = data.resolveOption(instance, rows, rowIndex - 1, previousRoleKey)
@@ -359,7 +359,7 @@ function rowEngine.create(adapter)
         target = target or {}
         timeline.nextBiomeRowCounters(instance, previous, target)
         local roleKey = readRoleKey(instance, rows, rowIndex)
-        local role = roleForRow(instance, rowIndex, roleKey)
+        local role = roleForRow(instance, rows, rowIndex, roleKey)
         local optionKey, option = selectedOptionForCost(role, rows, rowIndex)
         local biomeEncounterDepthCostMin, biomeEncounterDepthCostMax = effectiveBiomeEncounterDepthCostBounds(
             instance,
@@ -540,7 +540,7 @@ function rowEngine.create(adapter)
     end
 
     function data.optionLabelsForRow(instance, rowIndex, roleKey)
-        return optionLabelsForRole(instance, roleForRow(instance, rowIndex, roleKey))
+        return optionLabelsForRole(instance, roleForRow(instance, nil, rowIndex, roleKey))
     end
 
     local function isOptionAvailableUncached(instance, rows, rowIndex, roleKey, optionKey)
@@ -551,7 +551,7 @@ function rowEngine.create(adapter)
             return false
         end
 
-        local role = roleForRow(instance, rowIndex, roleKey)
+        local role = roleForRow(instance, rows, rowIndex, roleKey)
         if role == nil then
             return false
         end
@@ -648,7 +648,7 @@ function rowEngine.create(adapter)
 
     local function resolveRoleUncached(instance, rows, rowIndex)
         local roleKey = readRoleKey(instance, rows, rowIndex)
-        return roleKey, roleForRow(instance, rowIndex, roleKey)
+        return roleKey, roleForRow(instance, rows, rowIndex, roleKey)
     end
 
     function data.resolveRole(instance, rows, rowIndex)
@@ -677,7 +677,7 @@ function rowEngine.create(adapter)
             return "", nil
         end
 
-        local role = roleForRow(instance, rowIndex, roleKey)
+        local role = roleForRow(instance, rows, rowIndex, roleKey)
         if role == nil then
             return readOptionKey(rows, rowIndex) or "", nil
         end
@@ -691,7 +691,7 @@ function rowEngine.create(adapter)
         if optionKey ~= "" then
             return optionKey, role.optionsByKey and role.optionsByKey[optionKey] or nil
         end
-        if role.requiresConcreteOption then
+        if role.requiresConcreteOption or #options > 1 then
             return "", nil
         end
 
@@ -741,6 +741,9 @@ function rowEngine.create(adapter)
     local function validateBaseRowUncached(instance, rows, rowIndex)
         local slot = slotForRow(instance, rowIndex)
         local roleKey, role = data.resolveRole(instance, rows, rowIndex)
+        if roleKey == nil or roleKey == "" then
+            return invalidStatus("role_required", "Choose a room type")
+        end
         if role == nil then
             return invalidStatus("unknown_role", "Unknown route role: " .. tostring(roleKey))
         end
@@ -779,7 +782,7 @@ function rowEngine.create(adapter)
         if optionKey ~= "" and option == nil then
             return invalidStatus("unknown_option", "Unknown route option: " .. tostring(optionKey))
         end
-        if optionKey == "" and role.requiresConcreteOption then
+        if optionKey == "" and (role.requiresConcreteOption or #options > 1) then
             return invalidStatus("option_required", "Choose a " .. tostring(role.label or roleKey))
         end
         if resolvedOptionKey == "" and shouldOfferAutoOption(role, options) then
@@ -907,7 +910,7 @@ function rowEngine.create(adapter)
             return values
         end
 
-        local role = roleForRow(instance, rowIndex, roleKey)
+        local role = roleForRow(instance, rows, rowIndex, roleKey)
         if role == nil then
             return values
         end
@@ -1019,7 +1022,7 @@ function rowEngine.create(adapter)
             return valueStates.HIDDEN
         end
 
-        local role = roleForRow(instance, rowIndex, roleKey)
+        local role = roleForRow(instance, rows, rowIndex, roleKey)
         if role == nil then
             return valueStates.INVALID
         end

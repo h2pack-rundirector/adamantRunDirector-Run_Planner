@@ -92,13 +92,7 @@ layout.combatEncounterPolicy = {
     countControl = {
         key = "CombatCount",
         label = "Combat Count",
-        default = "Vanilla",
         options = {
-            {
-                key = "Vanilla",
-                label = "Vanilla",
-                biomeEncounterDepthCost = { min = 1, max = 2 },
-            },
             {
                 key = "TwoCombats",
                 label = "2 Combats",

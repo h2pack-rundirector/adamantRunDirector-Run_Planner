@@ -30,6 +30,11 @@ local fixedRoomField = common.fixedRoomField
 local data
 local routeTerminatedBeforeRow
 
+local INACTIVE_ROLE = {
+    key = VANILLA_ROLE_KEY,
+    label = "Inactive",
+}
+
 local function slotForRow(instance, rowIndex)
     return instance.routeSlots[math.floor(tonumber(rowIndex) or 0)]
 end
@@ -130,6 +135,7 @@ local function buildRouteSlots(instance)
 end
 
 local function addFixedRoleLabels(instance)
+    instance.roleLabels[VANILLA_ROLE_KEY] = INACTIVE_ROLE.label
     for _, slot in ipairs(instance.routeSlots or {}) do
         if slot.roleKey ~= nil then
             instance.roleLabels[slot.roleKey] = slot.label or slot.roleKey
@@ -328,7 +334,7 @@ local function rawOptionForRole(role, rows, rowIndex)
     end
 
     local options = optionListForRole(role)
-    if #options == 0 or role.requiresConcreteOption then
+    if #options == 0 or role.requiresConcreteOption or #options > 1 then
         return "", nil
     end
     if shouldOfferAutoOption(role, options) then
@@ -595,7 +601,7 @@ local adapter = {
         return defaultReadRoleKey(instance, rows, rowIndex, slot)
     end,
 
-    roleForRow = function(instance, rowIndex, roleKey, slot, defaultRoleForRow)
+    roleForRow = function(instance, rowIndex, roleKey, slot, defaultRoleForRow, rows)
         if isFixedSlot(slot) then
             if roleKey == nil or roleKey == "" or roleKey == slot.roleKey then
                 return slot.role
@@ -608,6 +614,9 @@ local adapter = {
                 return instance.rolesByKey[forcedRoleKey]
             end
             return nil
+        end
+        if routeTerminatedBeforeRow(instance, rows, rowIndex, slot) and roleKey == VANILLA_ROLE_KEY then
+            return INACTIVE_ROLE
         end
         return defaultRoleForRow(instance, rowIndex, roleKey, slot)
     end,

@@ -207,6 +207,10 @@ The generated forced count should include both:
 For F/G/P this means force pressure belongs to the room planner and sibling
 topology together, not sibling topology alone.
 
+Sibling controls live on the picked row, because they describe the doors
+generated beside that picked room. The generated-door capacity for that row
+comes from the previous room's `exitCount`.
+
 H currently holds because the force deadline lines up with the biome ending, but
 that is an accident of topology. The generic model should not depend on that.
 
@@ -219,5 +223,6 @@ that is an accident of topology. The generic model should not depend on that.
 - Keep `DebugOnly` variants out of normal route modeling unless we explicitly
   decide to surface debug rooms.
 - Teach forced-group validation to consume generated reward-door capacity and
-  primary-row plus sibling topology together.
+  primary-row plus sibling topology together. Done for fixed-linear F/G/P.
 - Apply the model to F/G/P sibling topology after the metadata split is in place.
+  Done.

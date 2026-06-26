@@ -51,16 +51,7 @@ function common.optionListForRole(role)
 end
 
 function common.shouldOfferAutoOption(role, options)
-    if #options == 0 then
-        return false
-    end
-    if role.requiresConcreteOption then
-        return false
-    end
-    if #options == 1 and role.roomOptions ~= nil then
-        return false
-    end
-    return true
+    return role ~= nil and role.allowAutoOption == true and #options > 0
 end
 
 function common.buildOptionChoices(role)
