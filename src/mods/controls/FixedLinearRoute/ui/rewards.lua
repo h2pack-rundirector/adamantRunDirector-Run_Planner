@@ -8,9 +8,9 @@ local rewardRatio = deps.rewardRatio
 
 local rewards = {}
 
-local REWARD_COLUMN_X = 130
-local SIBLING_REWARD_LABEL_COLUMN_X = 130
-local SIBLING_REWARD_CONTROL_COLUMN_X = 290
+local DOOR_LABEL_COLUMN_X = 80
+local DOOR_CONTROL_COLUMN_X = 190
+local PICKED_DOOR_LABEL = "Picked Door"
 local SIBLING_REWARD_OPTS = {
     label = "",
     controlWidth = 110,
@@ -67,6 +67,13 @@ end
 local function drawRewardRowHeader(imgui, control, rowIndex, slot)
     imgui.AlignTextToFramePadding()
     imgui.Text(rewardRowLabel(control, rowIndex, slot))
+end
+
+local function drawDoorLabel(imgui, label)
+    imgui.SameLine()
+    imgui.SetCursorPosX(DOOR_LABEL_COLUMN_X)
+    imgui.AlignTextToFramePadding()
+    imgui.Text(label)
 end
 
 local function drawRewardSurface(draw, control, surface, fields, opts)
@@ -136,9 +143,9 @@ end
 
 local function siblingRewardLabel(instance, activeCount, siblingIndex)
     if (activeCount or 0) > 1 then
-        return "Other Door " .. tostring(siblingIndex) .. " Reward"
+        return "Other Door " .. tostring(siblingIndex)
     end
-    return "Other Door Reward"
+    return "Other Door"
 end
 
 local function drawSiblingRewardClassDropdown(draw, control, instance, rowIndex, siblingIndex, activeCount)
@@ -146,11 +153,11 @@ local function drawSiblingRewardClassDropdown(draw, control, instance, rowIndex,
         return false
     end
 
-    draw.imgui.SetCursorPosX(SIBLING_REWARD_LABEL_COLUMN_X)
+    draw.imgui.SetCursorPosX(DOOR_LABEL_COLUMN_X)
     draw.imgui.AlignTextToFramePadding()
     draw.imgui.Text(siblingRewardLabel(instance, activeCount, siblingIndex))
     draw.imgui.SameLine()
-    draw.imgui.SetCursorPosX(SIBLING_REWARD_CONTROL_COLUMN_X)
+    draw.imgui.SetCursorPosX(DOOR_CONTROL_COLUMN_X)
     return draw.widgets.dropdown(
         control:rewardField(rowIndex, data.siblingRewardClassAlias(instance, siblingIndex)),
         decoratedSiblingRewardClassOpts(control, instance, rowIndex, siblingIndex)
@@ -182,8 +189,9 @@ local function drawRewardRow(draw, control, instance, rowIndex)
         and rewardSystem ~= nil
         and rewardSystem.hasDisplay(surface)
     then
+        drawDoorLabel(imgui, PICKED_DOOR_LABEL)
         imgui.SameLine()
-        imgui.SetCursorPosX(REWARD_COLUMN_X)
+        imgui.SetCursorPosX(DOOR_CONTROL_COLUMN_X)
         drawRewardSurface(draw, control, surface, rewardFields(control, rowIndex), rewardDrawOpts(control))
     end
     if drawSiblingRewardClassDropdowns(draw, control, instance, rowIndex) then

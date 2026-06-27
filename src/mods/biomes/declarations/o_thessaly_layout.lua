@@ -118,14 +118,14 @@ layout.combatEncounterPolicy = {
         },
         {
             key = "Encounter1",
-            label = "First Encounter",
+            label = "1st Encounter",
             reward = rewards.majorMinor(),
             hasReward = true,
             required = true,
         },
         {
             key = "Encounter2",
-            label = "Second Encounter",
+            label = "2nd Encounter",
             reward = rewards.majorMinor(),
             hasReward = true,
             required = false,

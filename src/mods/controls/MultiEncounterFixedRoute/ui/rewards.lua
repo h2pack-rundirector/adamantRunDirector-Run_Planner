@@ -10,9 +10,21 @@ local rewards = {}
 
 local REWARD_COLUMN_X = 130
 local ENCOUNTER_REWARD_COLUMN_X = 260
+local WHEEL_OFFER_OPTS = {
+    label = "",
+    controlWidth = 110,
+}
 local REWARD_DRAW_OPTS = {
     hideGenericRewardLabel = true,
 }
+
+local function copyBaseOpts(base)
+    local copy = {}
+    for key, value in pairs(base or {}) do
+        copy[key] = value
+    end
+    return copy
+end
 
 local function rewardDrawOpts(control)
     if control.rewardDrawOpts ~= nil then
@@ -41,6 +53,42 @@ local function rewardFields(control, rowIndex)
         control._rewardFieldsByRow[rowIndex] = fields
     end
     return fields
+end
+
+local function wheelOfferOptsByRole(control)
+    control._rewardWheelOfferOptsByRole = control._rewardWheelOfferOptsByRole or {}
+    return control._rewardWheelOfferOptsByRole
+end
+
+local function wheelOfferOpts(control, instance, roleKey)
+    local optsByRole = wheelOfferOptsByRole(control)
+    local opts = optsByRole[roleKey]
+    if opts == nil then
+        opts = copyBaseOpts(WHEEL_OFFER_OPTS)
+        opts.values = data.wheelOfferValues(instance, roleKey)
+        opts.displayValues = data.wheelOfferLabels(instance, roleKey)
+        optsByRole[roleKey] = opts
+    end
+    return opts
+end
+
+local function wheelOfferValueStates(control, rowIndex, legIndex, alias, opts)
+    return control:rewardValueStates(
+        rowIndex,
+        "encounter:" .. tostring(legIndex),
+        alias,
+        opts
+    )
+end
+
+local function decoratedWheelOfferOpts(control, instance, rowIndex, roleKey, legIndex)
+    local opts = wheelOfferOpts(control, instance, roleKey)
+    local alias = data.wheelOfferAlias(instance, legIndex)
+    return decorations.decorateDropdown(
+        opts,
+        opts,
+        wheelOfferValueStates(control, rowIndex, legIndex, alias, opts)
+    )
 end
 
 local function encounterRewardFields(control, encounterRewardRowIndex, rowIndex, legIndex)
@@ -80,6 +128,23 @@ local function drawRewardRowHeader(imgui, control, rowIndex, slot)
     imgui.Text(rewardRowLabel(control, rowIndex, slot))
 end
 
+local function drawWheelOfferDropdown(draw, control, instance, rowIndex, roleKey, legIndex, encounterRewardRowIndex)
+    local opts = decoratedWheelOfferOpts(control, instance, rowIndex, roleKey, legIndex)
+    if opts.values[1] == nil then
+        return false
+    end
+
+    local imgui = draw.imgui
+    imgui.SameLine()
+    imgui.AlignTextToFramePadding()
+    imgui.Text(" || ")
+    imgui.SameLine()
+    return draw.widgets.dropdown(
+        control:encounterRewardField(encounterRewardRowIndex, data.wheelOfferAlias(instance, legIndex)),
+        opts
+    )
+end
+
 local function drawRewardSurface(draw, control, surface, fields, opts)
     if rewardSystem.draw(draw, surface, fields, opts) and (opts == nil or opts.onControlChanged == nil) then
         control:invalidateReadPass()
@@ -88,6 +153,7 @@ end
 
 local function drawEncounterRewardRows(draw, control, instance, rowIndex)
     local imgui = draw.imgui
+    local roleKey = data.resolveRole(instance, control:routeRows(), rowIndex)
     for legIndex = 1, data.encounterRewardLegCountForRow(instance, control:routeRows(), rowIndex) do
         local leg = data.encounterRewardLegForRow(instance, control:routeRows(), rowIndex, legIndex)
         local encounterRewardRowIndex = data.encounterRewardRowIndex(instance, rowIndex, legIndex)
@@ -114,6 +180,9 @@ local function drawEncounterRewardRows(draw, control, instance, rowIndex)
                 encounterRewardFields(control, encounterRewardRowIndex, rowIndex, legIndex),
                 rewardDrawOpts(control)
             )
+            if drawWheelOfferDropdown(draw, control, instance, rowIndex, roleKey, legIndex, encounterRewardRowIndex) then
+                control:invalidateReadPass()
+            end
         end
     end
 end

@@ -33,8 +33,10 @@ row.roomTopology = {
 ```
 
 Reward items can be checked against that generated context later, but the biome
-declaration should keep topology as topology: exits, cage counts, wheel offer
-count, forced structure, and so on.
+declaration should keep structural topology as topology: exits, cage counts,
+forced structure, and so on. Reward-generation topology, such as Thessaly wheel
+offer count, can be configured next to the reward leaf when it has no room
+routing effect, then projected onto the row snapshot for bag simulation.
 
 The row is the structural spine. Rewards are leaf metadata on that row, not the
 place where route topology should live.
@@ -348,9 +350,10 @@ Meaning:
 - `1`: only the selected wheel reward was generated.
 - `2`: selected reward plus one unpicked sibling reward were generated.
 
-This belongs on the O row topology for each active encounter reward leg. It
-should not be inferred from generic room exits, and it should not be stored as
-topology owned by the reward leaf.
+The resolved value belongs on the O row topology for each active encounter
+reward leg. It should not be inferred from generic room exits. The UI/storage
+owner is the encounter reward line, because wheel count affects reward bag
+simulation and has no impact on room routing.
 
 Normalized shape:
 
@@ -375,9 +378,9 @@ context interprets `wheelOfferCount = 2` as selected offer plus one unknown
 sibling offer from the same ship wheel batch.
 
 The 2-vs-3 combat-leg choice remains room structure. The 1-vs-2 wheel-offer
-choice is also row topology: it describes how many reward choices vanilla
-generated for that active ship encounter. Reward bag simulation consumes it
-later, but the value is configured and validated with room structure.
+choice is reward-generation topology: it describes how many reward choices
+vanilla generated for that active ship encounter. Reward bag simulation consumes
+it later, and the value is configured and validated with the encounter reward.
 
 ## Deferred Structural Detour: Chaos Gates
 

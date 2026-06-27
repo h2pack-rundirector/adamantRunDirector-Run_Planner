@@ -6,6 +6,10 @@ local topologyBranches = {}
 local EMPTY_LIST = {}
 local MAJOR_MINOR_BRANCH = "majorMinor"
 
+local function encounterLabel(encounter, index)
+    return encounter and encounter.label or "Combat " .. tostring(index) .. " Reward"
+end
+
 local function branchValue(node)
     local value = node and node.rewardClass or nil
     if value == "Major" or value == "Minor" then
@@ -152,10 +156,37 @@ local function mismatchedBranch(row, nodes)
     return nil, nil
 end
 
+local function missingShipWheelChoice(row, topology)
+    if topology == nil or topology.kind ~= "shipCombat" then
+        return nil, nil
+    end
+
+    for index, encounter in ipairs(topology.encounters or EMPTY_LIST) do
+        if encounter.wheelOfferCount == nil then
+            return {
+                row = row,
+                rewardType = "WheelOfferCount",
+                address = encounter.address,
+                addressLabel = encounterLabel(encounter, index),
+                valueTargets = EMPTY_LIST,
+            }, {
+                code = "ship_wheel_offer_count_required",
+                message = "Thessaly combat reward needs wheel choice count",
+            }
+        end
+    end
+    return nil, nil
+end
+
 function topologyBranches.invalidForRow(row, scratch)
     local topology = row and row.roomTopology or nil
     if topology == nil then
         return nil, nil
+    end
+
+    local wheelEvent, wheelInvalid = missingShipWheelChoice(row, topology)
+    if wheelInvalid ~= nil then
+        return wheelEvent, wheelInvalid
     end
 
     scratch = scratch or {}

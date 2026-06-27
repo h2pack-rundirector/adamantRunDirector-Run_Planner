@@ -11,9 +11,6 @@ local ui = {}
 local function resetRoomDetails(fields, instance, rowIndex)
     fields.Rooms:reset(rowIndex, "OptionKey")
     fields.Rooms:reset(rowIndex, "VariantKey")
-    for legIndex = 1, data.maxEncounterRewardLegCount(instance) do
-        fields.Rooms:reset(rowIndex, data.wheelOfferAlias(instance, legIndex))
-    end
 end
 
 local function resetRewardDetails(fields, rowIndex)
@@ -25,6 +22,7 @@ local function resetEncounterRewardDetails(fields, instance, rowIndex)
         local encounterRewardRowIndex = data.encounterRewardRowIndex(instance, rowIndex, legIndex)
         if encounterRewardRowIndex ~= nil then
             rewardSystem.resetRows(fields.EncounterRewards, encounterRewardRowIndex)
+            fields.EncounterRewards:reset(encounterRewardRowIndex, data.wheelOfferAlias(instance, legIndex))
         end
     end
 end

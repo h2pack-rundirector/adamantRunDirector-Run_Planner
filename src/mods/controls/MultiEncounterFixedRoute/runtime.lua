@@ -12,13 +12,20 @@ local invalidLocations = deps.invalidLocations
 local runtime = {}
 local EMPTY_LIST = {}
 
-local function createRouteRows(fields)
+local function createRouteRows(fields, instance)
     return {
         read = function(_, rowIndex, alias)
             if rewardSystem.isAlias(alias) then
                 return fields.Rewards:read(rowIndex, alias)
             end
             return fields.Rooms:read(rowIndex, alias)
+        end,
+        readEncounterReward = function(_, rowIndex, legIndex, alias)
+            local encounterRewardRowIndex = data.encounterRewardRowIndex(instance, rowIndex, legIndex)
+            if encounterRewardRowIndex == nil then
+                return nil
+            end
+            return fields.EncounterRewards:read(encounterRewardRowIndex, alias)
         end,
     }
 end
@@ -40,6 +47,22 @@ end
 local function routeRewardValidation(instance, rowIndex)
     if instance.routeContext ~= nil and instance.routeContext.rewardRowValidation ~= nil then
         return instance.routeContext:rewardRowValidation(instance.routeKey, instance.biomeKey, rowIndex)
+    end
+    return nil
+end
+
+local function routeRewardValueStates(instance, rowIndex, rewardAddress, controlAlias, surfaceControl, sourceContext)
+    if instance.routeContext ~= nil and instance.routeContext.rewardValueStates ~= nil then
+        return instance.routeContext:rewardValueStates(
+            instance.routeKey,
+            instance.biomeKey,
+            rowIndex,
+            rewardAddress,
+            controlAlias,
+            surfaceControl,
+            nil,
+            sourceContext
+        )
     end
     return nil
 end
@@ -162,7 +185,7 @@ end
 
 function runtime.create(fields, instance)
     prewarmRewardSurfaces(instance)
-    local routeRows = createRouteRows(fields)
+    local routeRows = createRouteRows(fields, instance)
 
     local control = {}
 
@@ -233,6 +256,10 @@ function runtime.create(fields, instance)
             return nil
         end
         return rewardSurface(role, self:option(rowIndex))
+    end
+
+    function control:rewardValueStates(rowIndex, rewardAddress, controlAlias, surfaceControl, sourceContext)
+        return routeRewardValueStates(instance, rowIndex, rewardAddress, controlAlias, surfaceControl, sourceContext)
     end
 
     function control:rewardRatioSummary()

@@ -495,7 +495,13 @@ function data.resolveWheelOffer(instance, rows, rowIndex, roleKey, legIndex)
         return "", nil
     end
 
-    local key = rows and rows:read(rowIndex, data.wheelOfferAlias(instance, legIndex)) or ""
+    local alias = data.wheelOfferAlias(instance, legIndex)
+    local key
+    if rows ~= nil and rows.readEncounterReward ~= nil then
+        key = rows:readEncounterReward(rowIndex, legIndex, alias)
+    else
+        key = rows and rows:read(rowIndex, alias) or ""
+    end
     key = key or ""
     return key, control.optionsByKey[key]
 end
@@ -515,12 +521,6 @@ function data.validateRoomTopology(instance, rows, rowIndex)
         return nil
     end
 
-    for legIndex = 1, data.encounterRewardLegCountForRow(instance, rows, rowIndex) do
-        local wheelKey, wheel = data.resolveWheelOffer(instance, rows, rowIndex, roleKey, legIndex)
-        if wheel == nil or wheelKey == "" then
-            return invalidStatus("ship_wheel_offer_count_required", "Thessaly topology needs wheel choice count")
-        end
-    end
     return nil
 end
 
@@ -533,12 +533,9 @@ function data.roomTopology(instance, rows, rowIndex)
     local encounters = {}
     for legIndex = 1, data.encounterRewardLegCountForRow(instance, rows, rowIndex) do
         local _, wheel = data.resolveWheelOffer(instance, rows, rowIndex, roleKey, legIndex)
-        if wheel == nil or wheel.wheelOfferCount == nil then
-            return nil
-        end
         encounters[#encounters + 1] = {
             address = "encounter:" .. tostring(legIndex),
-            wheelOfferCount = wheel.wheelOfferCount,
+            wheelOfferCount = wheel and wheel.wheelOfferCount or nil,
         }
     end
 
@@ -560,9 +557,9 @@ function data.biomeEncounterDepthCostForVariant(instance, rows, rowIndex, roleKe
 end
 
 function data.storage(instance)
-    local roomRows = data.buildRoomRows()
+    local encounterRewardRows = data.buildRewardRows()
     for legIndex = 1, data.maxEncounterRewardLegCount(instance) do
-        roomRows[#roomRows + 1] = {
+        encounterRewardRows[#encounterRewardRows + 1] = {
             key = data.wheelOfferAlias(instance, legIndex),
             type = "string",
             default = "",
@@ -576,7 +573,7 @@ function data.storage(instance)
             minRows = instance.routeRowCount,
             defaultRows = instance.routeRowCount,
             maxRows = instance.routeRowCount,
-            row = roomRows,
+            row = data.buildRoomRows(),
         },
         {
             key = "Rewards",
@@ -592,7 +589,7 @@ function data.storage(instance)
             minRows = instance.encounterRewardRowCount,
             defaultRows = instance.encounterRewardRowCount,
             maxRows = instance.encounterRewardRowCount,
-            row = data.buildRewardRows(),
+            row = encounterRewardRows,
         },
     }
 end
