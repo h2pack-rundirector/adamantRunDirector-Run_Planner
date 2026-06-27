@@ -70,7 +70,7 @@ return function(deps)
     local options = {
         {
             key = "",
-            label = "Select Sibling",
+            label = "Select Door",
         },
         rewardSibling("CombatMajor", "Combat Major", "RunProgress", "Major"),
         rewardSibling("CombatMinor", "Combat Minor", "MetaProgress", "Minor"),
@@ -114,7 +114,7 @@ return function(deps)
         siblingStructureControl = {
             key = "SiblingStructure",
             alias = "SiblingStructureKey",
-            label = "Sibling Door",
+            label = "Other Door",
             options = options,
         },
     }

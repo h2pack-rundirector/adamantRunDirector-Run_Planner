@@ -183,23 +183,30 @@ local function drawRouteRowSeparator(imgui)
     imgui.Spacing()
 end
 
+local function isRoomTabRow(control, rowIndex)
+    local slot = control:slot(rowIndex)
+    return slot ~= nil and slot.kind ~= "preboss"
+end
+
 function rooms.draw(draw, control, instance)
     local rowCount = control:rowCount()
     local drewRow = false
     local allRowsInactive, inactiveBoundary = decorations.routeInactiveBoundary(instance)
     control:beginReadPass()
     for rowIndex = 1, rowCount do
-        if drewRow then
-            drawRouteRowSeparator(draw.imgui)
-        end
-        local inactive = decorations.pushInactive(
-            draw.imgui,
-            decorations.routeRowInactive(allRowsInactive, inactiveBoundary, control:slot(rowIndex), "rooms")
-        )
-        drawRoomRow(draw, control, instance, rowIndex)
+        if isRoomTabRow(control, rowIndex) then
+            if drewRow then
+                drawRouteRowSeparator(draw.imgui)
+            end
+            local inactive = decorations.pushInactive(
+                draw.imgui,
+                decorations.routeRowInactive(allRowsInactive, inactiveBoundary, control:slot(rowIndex), "rooms")
+            )
+            drawRoomRow(draw, control, instance, rowIndex)
             decorations.popInactive(draw.imgui, inactive)
             drewRow = true
         end
+    end
     control:endReadPass()
 end
 

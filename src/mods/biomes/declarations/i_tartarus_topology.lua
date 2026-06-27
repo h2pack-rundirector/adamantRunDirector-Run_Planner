@@ -38,7 +38,7 @@ return function(deps)
     local options = {
         {
             key = "",
-            label = "Select Sibling",
+            label = "Select Door",
         },
         {
             key = "CombatGoal",
@@ -117,7 +117,7 @@ return function(deps)
         siblingStructureControl = {
             key = "SiblingStructure",
             alias = "SiblingStructureKey",
-            label = "Sibling Door",
+            label = "Other Door",
             options = options,
         },
     }

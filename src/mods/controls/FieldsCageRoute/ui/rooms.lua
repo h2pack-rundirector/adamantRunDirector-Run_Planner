@@ -21,12 +21,14 @@ local CAGE_COUNT_OPTS = {
 }
 local SIBLING_STRUCTURE_OPTS = {
     label = "",
-    controlWidth = 130,
+    controlWidth = 170,
 }
-local ROLE_COLUMN_X = 80
-local OPTION_COLUMN_X = 230
-local CAGE_COUNT_COLUMN_X = 430
-local SIBLING_STRUCTURE_COLUMN_X = 560
+local FIXED_OPTION_COLUMN_X = 80
+local DOOR_LABEL_COLUMN_X = 80
+local DOOR_CONTROL_COLUMN_X = 190
+local OPTION_COLUMN_X = 340
+local CAGE_COUNT_COLUMN_X = 540
+local PICKED_DOOR_LABEL = "Picked Door"
 
 local function copyBaseOpts(base)
     local copy = {}
@@ -113,13 +115,6 @@ local function siblingStructureOpts(control, instance, rowIndex)
     )
 end
 
-local function siblingStructureColumnX(roleKey)
-    if roleKey == "Combat" then
-        return SIBLING_STRUCTURE_COLUMN_X
-    end
-    return CAGE_COUNT_COLUMN_X
-end
-
 local function optionLabelAddsInformation(role, option)
     if role == nil or option == nil then
         return false
@@ -181,7 +176,11 @@ local function drawCageCountDropdown(draw, control, instance, rowIndex, roleKey)
     )
 end
 
-local function drawSiblingStructureDropdown(draw, control, instance, rowIndex, roleKey)
+local function siblingStructureLabel(instance)
+    return instance.siblingStructurePolicy and instance.siblingStructurePolicy.label or "Other Door"
+end
+
+local function drawSiblingStructureDropdown(draw, control, instance, rowIndex)
     if not data.shouldDrawSiblingStructure(instance, control:routeRows(), rowIndex) then
         return false
     end
@@ -191,14 +190,24 @@ local function drawSiblingStructureDropdown(draw, control, instance, rowIndex, r
         return false
     end
 
+    draw.imgui.SetCursorPosX(DOOR_LABEL_COLUMN_X)
+    draw.imgui.AlignTextToFramePadding()
+    draw.imgui.Text(siblingStructureLabel(instance))
     draw.imgui.SameLine()
-    draw.imgui.SetCursorPosX(siblingStructureColumnX(roleKey))
+    draw.imgui.SetCursorPosX(DOOR_CONTROL_COLUMN_X)
     return draw.widgets.dropdown(control:roomField(rowIndex, data.siblingStructureAlias(instance)), opts)
 end
 
 local function drawRouteRowHeader(imgui, slot)
     imgui.AlignTextToFramePadding()
     imgui.Text(slot.label)
+end
+
+local function drawDoorLabel(imgui, label)
+    imgui.SameLine()
+    imgui.SetCursorPosX(DOOR_LABEL_COLUMN_X)
+    imgui.AlignTextToFramePadding()
+    imgui.Text(label)
 end
 
 local function drawRoomRow(draw, control, instance, rowIndex)
@@ -212,15 +221,23 @@ local function drawRoomRow(draw, control, instance, rowIndex)
 
     drawRouteRowHeader(imgui, slot)
     if data.isFixedIdentityRow(instance, rowIndex) then
-        local changed, previousOptionKey = drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey, ROLE_COLUMN_X)
+        local changed, previousOptionKey = drawOptionDropdown(
+            draw,
+            control,
+            instance,
+            rowIndex,
+            currentRoleKey,
+            FIXED_OPTION_COLUMN_X
+        )
         if changed then
             control:invalidateReadPass()
             control:onRoomOptionChanged(rowIndex, previousOptionKey)
         end
     else
         local roleField = control:roomField(rowIndex, "RoleKey")
+        drawDoorLabel(imgui, PICKED_DOOR_LABEL)
         imgui.SameLine()
-        imgui.SetCursorPosX(ROLE_COLUMN_X)
+        imgui.SetCursorPosX(DOOR_CONTROL_COLUMN_X)
         if draw.widgets.dropdown(roleField, getRoleOpts(control, instance, rowIndex)) then
             resetRowDetails(control:fields(), instance, rowIndex)
             control:invalidateReadPass()
@@ -234,7 +251,7 @@ local function drawRoomRow(draw, control, instance, rowIndex)
         if drawCageCountDropdown(draw, control, instance, rowIndex, currentRoleKey) then
             control:invalidateReadPass()
         end
-        if drawSiblingStructureDropdown(draw, control, instance, rowIndex, currentRoleKey) then
+        if drawSiblingStructureDropdown(draw, control, instance, rowIndex) then
             control:invalidateReadPass()
         end
     end
@@ -246,23 +263,30 @@ local function drawRouteRowSeparator(imgui)
     imgui.Spacing()
 end
 
+local function isRoomTabRow(control, rowIndex)
+    local slot = control:slot(rowIndex)
+    return slot ~= nil and slot.kind ~= "preboss"
+end
+
 function rooms.draw(draw, control, instance)
     local rowCount = control:rowCount()
     local drewRow = false
     local allRowsInactive, inactiveBoundary = decorations.routeInactiveBoundary(instance)
     control:beginReadPass()
     for rowIndex = 1, rowCount do
-        if drewRow then
-            drawRouteRowSeparator(draw.imgui)
-        end
-        local inactive = decorations.pushInactive(
-            draw.imgui,
-            decorations.routeRowInactive(allRowsInactive, inactiveBoundary, control:slot(rowIndex), "rooms")
-        )
-        drawRoomRow(draw, control, instance, rowIndex)
+        if isRoomTabRow(control, rowIndex) then
+            if drewRow then
+                drawRouteRowSeparator(draw.imgui)
+            end
+            local inactive = decorations.pushInactive(
+                draw.imgui,
+                decorations.routeRowInactive(allRowsInactive, inactiveBoundary, control:slot(rowIndex), "rooms")
+            )
+            drawRoomRow(draw, control, instance, rowIndex)
             decorations.popInactive(draw.imgui, inactive)
             drewRow = true
         end
+    end
     control:endReadPass()
 end
 

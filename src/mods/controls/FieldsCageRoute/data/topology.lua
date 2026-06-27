@@ -102,6 +102,34 @@ function topology.create(data)
         return count
     end
 
+    local function isFirstFieldsPick(instance, rows, rowIndex)
+        local context = data.rowContext(instance, rows, rowIndex)
+        return context ~= nil and context.biomeDepthCache == 1
+    end
+
+    local function implicitFirstPickSiblingStructure(instance, rows, rowIndex)
+        local roleKey = data.resolveRole(instance, rows, rowIndex)
+        if roleKey ~= "Combat" or not isFirstFieldsPick(instance, rows, rowIndex) then
+            return nil
+        end
+
+        local selectedCount = selectedCombatCageRewardCount(instance, rows, rowIndex)
+        if selectedCount == nil then
+            return nil
+        end
+        return {
+            key = "CombatCage" .. tostring(selectedCount),
+            structure = "CombatCage" .. tostring(selectedCount),
+            rewardStore = "RunProgress",
+            offerCount = selectedCount,
+        }
+    end
+
+    local function hasImplicitFirstPickSiblingStructure(instance, rows, rowIndex)
+        return data.resolveRole(instance, rows, rowIndex) == "Combat"
+            and isFirstFieldsPick(instance, rows, rowIndex)
+    end
+
     local function matchingCombatCageRewardCountStatus(instance, rows, rowIndex, sibling)
         if not isCombatCageStructure(sibling and sibling.structure) then
             return validStatus()
@@ -163,10 +191,17 @@ function topology.create(data)
     end
 
     function api.shouldDrawSiblingStructure(instance, rows, rowIndex)
+        if hasImplicitFirstPickSiblingStructure(instance, rows, rowIndex) then
+            return false
+        end
         return shared.shouldDrawSiblingStructure(instance, rows, rowIndex, 1)
     end
 
     function api.resolveSiblingStructure(instance, rows, rowIndex)
+        local implicit = implicitFirstPickSiblingStructure(instance, rows, rowIndex)
+        if implicit ~= nil then
+            return implicit.key, implicit
+        end
         return shared.resolveSiblingStructure(instance, rows, rowIndex)
     end
 
@@ -187,6 +222,9 @@ function topology.create(data)
         local _, cageCount = data.resolveCageCount(instance, rows, rowIndex, roleKey)
         if roleKey == "Combat" and (cageCount == nil or (cageCount.cageRewardCount or 0) <= 0) then
             return invalidStatus("fields_cage_count_required", "Fields topology needs picked cage reward count")
+        end
+        if hasImplicitFirstPickSiblingStructure(instance, rows, rowIndex) then
+            return nil
         end
 
         return shared.validateSiblingStructures(instance, rows, rowIndex, {

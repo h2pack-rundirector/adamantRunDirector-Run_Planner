@@ -106,6 +106,9 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureRendersInRo
     fields.Rooms:get(2, "RoleKey"):write("Combat")
     fields.Rooms:get(2, "OptionKey"):write("H_Combat04")
     fields.Rooms:get(2, "VariantKey"):write("TwoRewards")
+    fields.Rooms:get(3, "RoleKey"):write("Combat")
+    fields.Rooms:get(3, "OptionKey"):write("H_Combat04")
+    fields.Rooms:get(3, "VariantKey"):write("TwoRewards")
     local control = template.createUi(fields, instance)
     local draw = noOpDraw()
     local roomSiblingDropdownCount = 0
@@ -131,7 +134,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureRendersInRo
     lu.assertEquals(rewardSiblingDropdownCount, 0)
 end
 
-function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureStartsAtFirstPick()
+function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureIsImplicitAtFirstPick()
     local catalog = loadCatalog()
     local template = loadFieldsCageTemplate()
     local instance = template.prepare({
@@ -154,7 +157,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureStartsAtFir
     end
     template.views.rooms(draw, control, instance)
 
-    lu.assertEquals(siblingDropdownCount, 1)
+    lu.assertEquals(siblingDropdownCount, 0)
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingCountUsesPhysicalExits()
@@ -190,7 +193,14 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeResolvesOnlyConcrete
     })
     local control = template.createRuntime(routeFields({
             {},
-            hCombatTwoRewardRow("H_Combat13"),
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat13",
+                VariantKey = "TwoRewards",
+                Reward1Key = "Boon",
+                Reward1LootKey = "HestiaUpgrade",
+                Reward2Key = "MaxHealthDrop",
+            },
             {
                 RoleKey = "Combat",
                 OptionKey = "H_Combat09",
