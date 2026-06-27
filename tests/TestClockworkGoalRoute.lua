@@ -958,6 +958,22 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalAllowsPostGoalExtensi
     lu.assertEquals(snapshot.clockwork.storyCount, 1)
     lu.assertEquals(snapshot.rows[9].roleKey, "RewardCombat")
     lu.assertTrue(snapshot.rows[9].valid)
+    lu.assertEquals(snapshot.rows[9].roomTopology, {
+        kind = "clockworkSiblingChoice",
+        selected = {
+            structure = "RewardCombat",
+            roomKey = "I_Combat13",
+            rewardStore = "TartarusRewards",
+            ineligibleRewardTypes = { "Boon" },
+            offerCount = 1,
+            rewardAddresses = { "row" },
+        },
+        sibling = {
+            structure = "Preboss",
+            isPreboss = true,
+            offerCount = 0,
+        },
+    })
     lu.assertEquals(snapshot.rows[10].roleKey, "Vanilla")
     lu.assertTrue(snapshot.rows[14].valid)
 end

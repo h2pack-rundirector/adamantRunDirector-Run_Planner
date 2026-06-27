@@ -68,8 +68,11 @@ return function(deps)
     end
 
     return {
-        siblingStructureWindow = {
-            biomeDepthCache = { min = 2, max = 7 },
+        topologyWindow = {
+            biomeDepthCache = { min = 1, max = 8 },
+        },
+        siblingControlWindow = {
+            biomeDepthCache = { min = 3, max = 7 },
         },
         forcedGroups = {
             {

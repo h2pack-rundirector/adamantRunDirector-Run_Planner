@@ -204,6 +204,10 @@ function topology.create(data)
         return shared.siblingStructureStatus(instance, rows, rowIndex)
     end
 
+    function api.siblingTopologyStatus(instance, rows, rowIndex)
+        return shared.siblingTopologyStatus(instance, rows, rowIndex)
+    end
+
     function api.activeSiblingStructureCount(instance, rows, rowIndex)
         return shared.activeSiblingStructureCount(instance, rows, rowIndex)
     end
@@ -258,7 +262,7 @@ function topology.create(data)
     function api.roomTopology(instance, rows, rowIndex)
         if instance.siblingStructurePolicy == nil
             or data.isFixedIdentityRow(instance, rowIndex)
-            or not data.siblingStructureStatus(instance, rows, rowIndex).valid
+            or not data.siblingTopologyStatus(instance, rows, rowIndex).valid
         then
             return nil
         end

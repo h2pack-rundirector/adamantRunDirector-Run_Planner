@@ -177,6 +177,25 @@ function adapter.create(data, opts)
         }
     end
 
+    function api.siblingTopologyStatus(instance, rows, rowIndex)
+        local policy = instance.siblingStructurePolicy
+        if policy == nil then
+            return validStatus()
+        end
+        local cache = activeReadCache(instance)
+        if cache == nil then
+            return roomTopology.siblingTopologyStatus(policy, data.rowContext(instance, rows, rowIndex))
+        end
+
+        cache.siblingTopologyStatus = cache.siblingTopologyStatus or {}
+        local record = rowRecord(cache.siblingTopologyStatus, rowIndex)
+        if record.pass ~= cache.pass then
+            record.pass = cache.pass
+            record.status = roomTopology.siblingTopologyStatus(policy, data.rowContext(instance, rows, rowIndex))
+        end
+        return record.status
+    end
+
     function api.siblingStructureStatus(instance, rows, rowIndex)
         local policy = instance.siblingStructurePolicy
         if policy == nil then
@@ -184,14 +203,14 @@ function adapter.create(data, opts)
         end
         local cache = activeReadCache(instance)
         if cache == nil then
-            return roomTopology.siblingWindowStatus(policy, data.rowContext(instance, rows, rowIndex))
+            return roomTopology.siblingControlStatus(policy, data.rowContext(instance, rows, rowIndex))
         end
 
         cache.siblingStructureStatus = cache.siblingStructureStatus or {}
         local record = rowRecord(cache.siblingStructureStatus, rowIndex)
         if record.pass ~= cache.pass then
             record.pass = cache.pass
-            record.status = roomTopology.siblingWindowStatus(policy, data.rowContext(instance, rows, rowIndex))
+            record.status = roomTopology.siblingControlStatus(policy, data.rowContext(instance, rows, rowIndex))
         end
         return record.status
     end

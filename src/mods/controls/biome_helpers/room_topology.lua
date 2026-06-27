@@ -77,7 +77,10 @@ function roomTopology.prepareSiblingPolicy(topology, opts)
         key = control.key,
         label = control.label or control.key,
         alias = control.alias or "SiblingStructureKey",
-        availability = topology.siblingStructureWindow,
+        topologyAvailability = topology.topologyWindow or topology.siblingStructureWindow,
+        controlAvailability = topology.siblingControlWindow
+            or topology.siblingStructureWindow
+            or topology.topologyWindow,
         rules = topology.rules or EMPTY_VALUES,
         forcedGroups = prepareForcedGroups(topology.forcedGroups),
         values = {},
@@ -110,13 +113,21 @@ function roomTopology.prepareSiblingPolicy(topology, opts)
     return policy
 end
 
-function roomTopology.siblingWindowStatus(policy, rowContext)
+local function windowStatus(policy, rowContext, availabilityField)
     if policy == nil then
         return validStatus()
     end
     return availabilityStatus({
-        availability = policy.availability,
+        availability = policy[availabilityField],
     }, rowContext)
+end
+
+function roomTopology.siblingTopologyStatus(policy, rowContext)
+    return windowStatus(policy, rowContext, "topologyAvailability")
+end
+
+function roomTopology.siblingControlStatus(policy, rowContext)
+    return windowStatus(policy, rowContext, "controlAvailability")
 end
 
 function roomTopology.generationSourceRowIndex(rowIndex)
@@ -154,11 +165,11 @@ function roomTopology.activeSiblingCount(policy, ctx)
     return roomTopology.siblingCountForExitCount(roomTopology.generatedStructuralCount(ctx, "exitCount"))
 end
 
-function roomTopology.shouldDrawActiveSibling(activeSiblingCount, windowStatus, siblingIndex)
+function roomTopology.shouldDrawActiveSibling(activeSiblingCount, status, siblingIndex)
     if (activeSiblingCount or 0) < (siblingIndex or 1) then
         return false
     end
-    return windowStatus ~= nil and windowStatus.valid == true
+    return status ~= nil and status.valid == true
 end
 
 local function candidateInGroup(group, roomKey)
@@ -540,7 +551,7 @@ end
 
 function roomTopology.validateSiblingStructures(policy, ctx, opts)
     opts = opts or {}
-    if roomTopology.siblingWindowStatus(policy, ctx.rowContext).valid ~= true then
+    if roomTopology.siblingControlStatus(policy, ctx.rowContext).valid ~= true then
         return nil
     end
 
@@ -595,7 +606,7 @@ function roomTopology.fillSiblingValueStates(policy, ctx, states)
     if policy == nil then
         return states
     end
-    if not roomTopology.siblingWindowStatus(policy, ctx.rowContext).valid then
+    if not roomTopology.siblingControlStatus(policy, ctx.rowContext).valid then
         return states
     end
     for _, key in ipairs(policy.values or EMPTY_VALUES) do

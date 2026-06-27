@@ -102,6 +102,9 @@ end
 
 local function siblingRewardStoreForChoice(data, instance, rows, rowIndex, siblingIndex, option)
     if data.siblingNeedsRewardClass(option) then
+        if not data.siblingStructureStatus(instance, rows, rowIndex).valid then
+            return rewardStoreForMajorMinorChoice(rows, rowIndex)
+        end
         local rewardClass = data.resolveSiblingRewardClass(instance, rows, rowIndex, siblingIndex)
         return rewardStoreForRewardClass(rewardClass)
     end
@@ -120,17 +123,19 @@ local function siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex,
         return nil
     end
     local rewardStore, rewardClass = siblingRewardStoreForChoice(data, instance, rows, rowIndex, siblingIndex, option)
+    local hasVisibleRewardBranch = option.rewardBranch ~= nil
+        and data.siblingStructureStatus(instance, rows, rowIndex).valid == true
     return {
         structure = option.structure,
         roomKey = roomTopology.roomKey(option),
         rewardStore = rewardStore,
         rewardClass = rewardClass,
-        rewardBranch = option.rewardBranch,
-        rewardBranchAddress = option.rewardBranch ~= nil and data.siblingRewardClassAddress(instance, siblingIndex) or nil,
-        rewardBranchControlAlias = option.rewardBranch ~= nil
+        rewardBranch = hasVisibleRewardBranch and option.rewardBranch or nil,
+        rewardBranchAddress = hasVisibleRewardBranch and data.siblingRewardClassAddress(instance, siblingIndex) or nil,
+        rewardBranchControlAlias = hasVisibleRewardBranch
             and data.siblingRewardClassAlias(instance, siblingIndex)
             or nil,
-        rewardBranchLabel = option.rewardBranch ~= nil
+        rewardBranchLabel = hasVisibleRewardBranch
             and siblingRewardBranchLabel(activeSiblingCount, siblingIndex)
             or nil,
         eligibleRewardTypes = option.eligibleRewardTypes,
@@ -150,6 +155,22 @@ function topology.create(data)
             return hasSelectableSiblingStructure(roleKey, option)
         end,
     })
+
+    local function implicitSiblingStructure(instance, rows, rowIndex)
+        if data.siblingTopologyStatus(instance, rows, rowIndex).valid ~= true
+            or data.siblingStructureStatus(instance, rows, rowIndex).valid == true
+        then
+            return nil
+        end
+
+        local roleKey = data.resolveRole(instance, rows, rowIndex)
+        if roleKey ~= "Combat" then
+            return nil
+        end
+
+        local policy = instance.siblingStructurePolicy
+        return policy and policy.optionsByKey and policy.optionsByKey.Combat or nil
+    end
 
     local function siblingTopologies(instance, rows, rowIndex)
         local siblings = {}
@@ -235,6 +256,10 @@ function topology.create(data)
         return shared.siblingStructureStatus(instance, rows, rowIndex)
     end
 
+    function api.siblingTopologyStatus(instance, rows, rowIndex)
+        return shared.siblingTopologyStatus(instance, rows, rowIndex)
+    end
+
     function api.activeSiblingStructureCount(instance, rows, rowIndex)
         return shared.activeSiblingStructureCount(instance, rows, rowIndex)
     end
@@ -244,6 +269,10 @@ function topology.create(data)
     end
 
     function api.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
+        local implicit = implicitSiblingStructure(instance, rows, rowIndex)
+        if implicit ~= nil then
+            return implicit.key, implicit
+        end
         return shared.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
     end
 
@@ -288,7 +317,7 @@ function topology.create(data)
 
         if instance.siblingStructurePolicy == nil
             or data.isFixedIdentityRow(instance, rowIndex)
-            or not data.siblingStructureStatus(instance, rows, rowIndex).valid
+            or not data.siblingTopologyStatus(instance, rows, rowIndex).valid
         then
             return nil
         end

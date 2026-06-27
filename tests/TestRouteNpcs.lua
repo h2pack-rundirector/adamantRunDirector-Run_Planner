@@ -564,12 +564,20 @@ function TestRunPlannerRouteNpcs.testRouteContextFiltersOlympusNpcsByRoomTag()
     })
     local pControl = template.createRuntime(routeFields({
         {},
-        { RoleKey = "Combat", OptionKey = "P_Combat02" },
-        { RoleKey = "Combat", OptionKey = "P_Combat04", SiblingStructureKey = "Combat" },
+        { RoleKey = "Combat", OptionKey = "P_Combat02", Reward1Key = "Major", Reward2Key = "MaxHealthDrop" },
+        {
+            RoleKey = "Combat",
+            OptionKey = "P_Combat04",
+            SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
         {
             RoleKey = "Combat",
             OptionKey = "P_Combat07",
             SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -577,6 +585,7 @@ function TestRunPlannerRouteNpcs.testRouteContextFiltersOlympusNpcsByRoomTag()
             RoleKey = "Combat",
             OptionKey = "P_Combat17",
             SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },

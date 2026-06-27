@@ -396,7 +396,8 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
         "mods/biomes/declarations/p_olympus_topology.lua"
     )
 
-    lu.assertEquals(erebus.siblingStructureWindow, { biomeDepthCache = { min = 4, max = 8 } })
+    lu.assertEquals(erebus.topologyWindow, { biomeDepthCache = { min = 1, max = 10 } })
+    lu.assertEquals(erebus.siblingControlWindow, { biomeDepthCache = { min = 4, max = 8 } })
     assertFixedLinearSiblingOptions(erebus, {
         keys = {
             "",
@@ -426,7 +427,8 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
     lu.assertEquals(erebus.forcedGroups[2].forceAtBiomeDepthMax, 6)
     lu.assertTrue(erebus.forcedGroups[2].pickedCandidateBeforeDeadlineClosesGroup)
 
-    lu.assertEquals(oceanus.siblingStructureWindow, { biomeDepthCache = { min = 3, max = 7 } })
+    lu.assertEquals(oceanus.topologyWindow, { biomeDepthCache = { min = 1, max = 7 } })
+    lu.assertEquals(oceanus.siblingControlWindow, { biomeDepthCache = { min = 3, max = 7 } })
     assertFixedLinearSiblingOptions(oceanus, {
         keys = {
             "",
@@ -450,7 +452,8 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
     lu.assertEquals(oceanus.forcedGroups[2].generatedCapacityKind, "sourceExitCount")
     lu.assertEquals(oceanus.forcedGroups[2].forceAtBiomeDepthMax, 7)
 
-    lu.assertEquals(olympus.siblingStructureWindow, { biomeDepthCache = { min = 2, max = 7 } })
+    lu.assertEquals(olympus.topologyWindow, { biomeDepthCache = { min = 1, max = 8 } })
+    lu.assertEquals(olympus.siblingControlWindow, { biomeDepthCache = { min = 3, max = 7 } })
     assertFixedLinearSiblingOptions(olympus, {
         keys = {
             "",
@@ -1065,6 +1068,8 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
             key = "clockworkProgressionDoor",
         },
     })
+    lu.assertEquals(tartarus.roomTopology.topologyWindow, { biomeDepthCache = { min = 1, max = 12 } })
+    lu.assertEquals(tartarus.roomTopology.siblingControlWindow, { biomeDepthCache = { min = 2, max = 12 } })
     lu.assertEquals(optionByKey(tartarus.roomTopology.siblingStructureControl.options, "Preboss"), {
         key = "Preboss",
         label = "Preboss",

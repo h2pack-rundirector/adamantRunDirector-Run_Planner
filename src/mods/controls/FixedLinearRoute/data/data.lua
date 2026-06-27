@@ -151,6 +151,10 @@ function data.siblingStructureStatus(instance, rows, rowIndex)
     return topology.siblingStructureStatus(instance, rows, rowIndex)
 end
 
+function data.siblingTopologyStatus(instance, rows, rowIndex)
+    return topology.siblingTopologyStatus(instance, rows, rowIndex)
+end
+
 function data.activeSiblingStructureCount(instance, rows, rowIndex)
     return topology.activeSiblingStructureCount(instance, rows, rowIndex)
 end

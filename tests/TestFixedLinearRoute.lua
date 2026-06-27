@@ -219,6 +219,55 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingRewardBranchPlumbi
     })
 end
 
+function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyExportsImplicitCombatSiblingOutsideControlWindow()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local rows = fakeRows({
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+    })
+
+    lu.assertTrue(data.siblingTopologyStatus(instance, rows, 3).valid)
+    lu.assertFalse(data.siblingStructureStatus(instance, rows, 3).valid)
+    lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 3), 1)
+    lu.assertFalse(data.shouldDrawSiblingStructure(instance, rows, 3, 1))
+    lu.assertFalse(data.shouldDrawSiblingRewardClass(instance, rows, 3, 1))
+    lu.assertEquals(data.roomTopology(instance, rows, 3), {
+        kind = "fixedLinearSiblingChoice",
+        selected = {
+            structure = "Combat",
+            roomKey = "F_Combat03",
+            rewardStore = "RunProgress",
+            rewardClass = "Major",
+            rewardBranch = "majorMinor",
+            rewardBranchAddress = "row",
+            rewardBranchControlAlias = "Reward1Key",
+            rewardBranchLabel = "Rewards",
+            offerCount = 1,
+            rewardAddresses = { "row" },
+        },
+        sibling = {
+            structure = "Combat",
+            rewardStore = "RunProgress",
+            rewardClass = "Major",
+            offerCount = 1,
+        },
+        siblings = {
+            {
+                structure = "Combat",
+                rewardStore = "RunProgress",
+                rewardClass = "Major",
+                offerCount = 1,
+            },
+        },
+    })
+end
+
 function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingTopologyExportsSelectedAndSiblingDoors()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
