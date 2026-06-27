@@ -1,5 +1,8 @@
 return function(deps)
     local layout = import("mods/biomes/declarations/q_summit_layout.lua")
+    local topology = import("mods/biomes/declarations/q_summit_topology.lua")({
+        layout = layout,
+    })
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules
@@ -9,6 +12,7 @@ return function(deps)
         label = "Summit",
         region = "Surface",
         adapter = "scriptedFixedLinear",
+        roomTopology = topology,
         timeline = parser.standardTimeline("Q", {
             postBossFeatures = { surfaceShop = true },
         }),

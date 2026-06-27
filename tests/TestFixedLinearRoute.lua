@@ -812,6 +812,77 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearQShopSharedOfferGroupInva
     lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_shop_group_option")
 end
 
+function TestRunPlannerFixedLinearRoute.testSummitMinibossesExportDeterministicTopology()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteQ",
+        biome = catalog.lookup.Q,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        qCombatRow("Q_Combat10"),
+        qCombatRow("Q_Combat03"),
+        qMinibossRow("Q_MiniBoss02"),
+        qCombatRow("Q_Combat01"),
+        qCombatRow("Q_Combat12"),
+        qMinibossRow("Q_MiniBoss04"),
+        {},
+    }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertTrue(snapshot.valid)
+    lu.assertNil(snapshot.rows[2].roomTopology)
+    lu.assertEquals(snapshot.rows[4].roomTopology, {
+        kind = "fixedLinearSiblingChoice",
+        selected = {
+            structure = "Miniboss",
+            roomKey = "Q_MiniBoss02",
+            rewardStore = "TyphonBossRewards",
+            offerCount = 1,
+            rewardAddresses = { "row" },
+        },
+        sibling = {
+            structure = "Miniboss",
+            roomKey = "Q_MiniBoss05",
+            rewardStore = "TyphonBossRewards",
+            offerCount = 1,
+        },
+        siblings = {
+            {
+                structure = "Miniboss",
+                roomKey = "Q_MiniBoss05",
+                rewardStore = "TyphonBossRewards",
+                offerCount = 1,
+            },
+        },
+    })
+    lu.assertEquals(snapshot.rows[7].roomTopology, {
+        kind = "fixedLinearSiblingChoice",
+        selected = {
+            structure = "Miniboss",
+            roomKey = "Q_MiniBoss04",
+            rewardStore = "TyphonBossRewards",
+            offerCount = 1,
+            rewardAddresses = { "row" },
+        },
+        sibling = {
+            structure = "Miniboss",
+            roomKey = "Q_MiniBoss03",
+            rewardStore = "TyphonBossRewards",
+            offerCount = 1,
+        },
+        siblings = {
+            {
+                structure = "Miniboss",
+                roomKey = "Q_MiniBoss03",
+                rewardStore = "TyphonBossRewards",
+                offerCount = 1,
+            },
+        },
+    })
+end
+
 function TestRunPlannerFixedLinearRoute.testFixedLinearCombatRoomsCannotRepeatInOneBiome()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()

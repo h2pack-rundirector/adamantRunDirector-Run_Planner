@@ -191,6 +191,21 @@ vanilla owns the concrete `_PreBoss` room. F/G/H/P preboss markers expose both:
 Those are not ordinary next-door exits. They should stay modeled as explicit
 preboss reward nodes with their own timing/choice semantics.
 
+### Q
+
+Summit is fixed enough that it does not need user-facing sibling topology
+controls. The route structure is:
+
+```text
+Intro -> Combat -> Combat -> Miniboss pair
+      -> Combat -> Combat -> Miniboss pair -> Preboss
+```
+
+The two miniboss checkpoints are still generated choices. The planner exports
+them as deterministic row topology on the selected miniboss row so future bag
+simulation can see both the selected `TyphonBossRewards` door and the unpicked
+`TyphonBossRewards` sibling door.
+
 ### I
 
 Tartarus has a clockwork progression axis. A two-exit room can offer one

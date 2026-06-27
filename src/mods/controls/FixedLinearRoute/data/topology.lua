@@ -68,6 +68,30 @@ local function selectedRoomTopologyForRow(data, instance, rows, rowIndex)
     return selectedRoomTopology(roleKey, option, rows, rowIndex)
 end
 
+local function deterministicTopologyNode(node, selected)
+    if node == nil then
+        return nil
+    end
+
+    local snapshot = {
+        structure = node.structure,
+        roomKey = node.roomKey,
+        rewardStore = node.rewardStore,
+        rewardClass = node.rewardClass,
+        rewardBranch = node.rewardBranch,
+        rewardBranchAddress = node.rewardBranchAddress,
+        rewardBranchControlAlias = node.rewardBranchControlAlias,
+        rewardBranchLabel = node.rewardBranchLabel,
+        eligibleRewardTypes = node.eligibleRewardTypes,
+        ineligibleRewardTypes = node.ineligibleRewardTypes,
+        offerCount = node.offerCount,
+    }
+    if selected then
+        snapshot.rewardAddresses = node.rewardAddresses or { "row" }
+    end
+    return snapshot
+end
+
 local function hasSelectableSiblingStructure(roleKey, option)
     return roleKey == "Combat"
         or roleKey == "Fountain"
@@ -148,6 +172,39 @@ function topology.create(data)
         return siblings
     end
 
+    local function deterministicRoomTopology(instance, rows, rowIndex)
+        local byRoomKey = instance.biome.roomTopology and instance.biome.roomTopology.deterministicPairsByRoomKey
+        if byRoomKey == nil then
+            return nil
+        end
+
+        local roleKey = data.resolveRole(instance, rows, rowIndex)
+        local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
+        local roomKey = option and option.key or nil
+        local pair = roomKey and byRoomKey[roomKey] or nil
+        if pair == nil then
+            return nil
+        end
+
+        local selected = deterministicTopologyNode(pair.nodesByRoomKey and pair.nodesByRoomKey[roomKey], true)
+        local siblings = {}
+        for _, node in ipairs(pair.nodes or {}) do
+            if node.roomKey ~= roomKey then
+                siblings[#siblings + 1] = deterministicTopologyNode(node)
+            end
+        end
+        if selected == nil or siblings[1] == nil then
+            return nil
+        end
+
+        return {
+            kind = "fixedLinearSiblingChoice",
+            selected = selected,
+            sibling = siblings[1],
+            siblings = siblings,
+        }
+    end
+
     local api = {}
 
     function api.prepareSiblingStructurePolicy(instance)
@@ -224,6 +281,11 @@ function topology.create(data)
     end
 
     function api.roomTopology(instance, rows, rowIndex)
+        local deterministic = deterministicRoomTopology(instance, rows, rowIndex)
+        if deterministic ~= nil then
+            return deterministic
+        end
+
         if instance.siblingStructurePolicy == nil
             or data.isFixedIdentityRow(instance, rowIndex)
             or not data.siblingStructureStatus(instance, rows, rowIndex).valid
