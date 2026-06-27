@@ -116,8 +116,8 @@ Current policy:
   to Fields Pick 1 from the intro room as well as fixed-linear rows,
 - topology may be exported without drawing a sibling control when the structure
   is deterministic or safely implicit,
-- `Auto` / `Vanilla` should not be accepted for topology fields that determine
-  generated offers,
+- unresolved or inactive sentinel values should not be accepted for topology
+  fields that determine generated offers,
 - invalid messages should point at the unresolved topology, for example
   "Fields topology needs sibling door structure for Row 3."
 

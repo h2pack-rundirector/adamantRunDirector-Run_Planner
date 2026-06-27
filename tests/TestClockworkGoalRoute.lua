@@ -863,7 +863,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
     lu.assertEquals(validation.code, "clockwork_goal_count")
 end
 
-function TestRunPlannerClockworkGoalRoute.testClockworkGoalActiveVanillaRowsAreInvalid()
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalActiveInactiveRowsAreInvalid()
     local catalog = loadCatalog()
     local data = loadClockworkGoalData()
     local instance = data.prepare({
@@ -876,14 +876,14 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalActiveVanillaRowsAreI
         { RouteKindKey = "Goal", OptionKey = "I_Combat03" },
         { RouteKindKey = "Goal", OptionKey = "I_Combat04" },
         { RouteKindKey = "Goal", OptionKey = "I_Combat09" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
-        { RoleKey = "Vanilla" },
+        { RoleKey = "Inactive" },
+        { RoleKey = "Inactive" },
+        { RoleKey = "Inactive" },
+        { RoleKey = "Inactive" },
+        { RoleKey = "Inactive" },
+        { RoleKey = "Inactive" },
+        { RoleKey = "Inactive" },
+        { RoleKey = "Inactive" },
         {},
     })
 
@@ -935,8 +935,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalAllowsPostGoalExtensi
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 9).RewardCombat)
     lu.assertTrue(hasValue(postGoalRoles, "Story"))
 
-    lu.assertEquals(data.readRoleKey(instance, rows, 10), "Vanilla")
-    lu.assertEquals(data.roleValuesForRow(instance, rows, 10), { "Vanilla" })
+    lu.assertEquals(data.readRoleKey(instance, rows, 10), "Inactive")
+    lu.assertEquals(data.roleValuesForRow(instance, rows, 10), { "Inactive" })
     lu.assertTrue(data.validateRow(instance, rows, 10).valid)
     lu.assertTrue(data.isInactiveRouteRow(instance, rows, 10))
     lu.assertFalse(data.isInactiveRouteRow(instance, rows, 14))
@@ -974,7 +974,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalAllowsPostGoalExtensi
             offerCount = 0,
         },
     })
-    lu.assertEquals(snapshot.rows[10].roleKey, "Vanilla")
+    lu.assertEquals(snapshot.rows[10].roleKey, "Inactive")
     lu.assertTrue(snapshot.rows[14].valid)
 end
 
@@ -996,8 +996,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTerminatesAfterOneExi
         {},
     })
 
-    lu.assertEquals(data.readRoleKey(instance, rows, 7), "Vanilla")
-    lu.assertEquals(data.roleValuesForRow(instance, rows, 7), { "Vanilla" })
+    lu.assertEquals(data.readRoleKey(instance, rows, 7), "Inactive")
+    lu.assertEquals(data.roleValuesForRow(instance, rows, 7), { "Inactive" })
     lu.assertTrue(data.validateRow(instance, rows, 7).valid)
     lu.assertTrue(data.isInactiveRouteRow(instance, rows, 7))
     lu.assertEquals(data.countGoals(instance, rows), 5)

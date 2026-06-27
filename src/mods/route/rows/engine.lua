@@ -16,7 +16,6 @@ local shallowCopyList = common.shallowCopyList
 local optionListForRole = common.optionListForRole
 local clearList = common.clearList
 local buildLookup = common.buildLookup
-local shouldOfferAutoOption = common.shouldOfferAutoOption
 local buildRoleChoices = common.buildRoleChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
@@ -210,7 +209,7 @@ function rowEngine.create(adapter)
         end
 
         local options = optionListForRole(role)
-        if #options == 1 and not shouldOfferAutoOption(role, options) then
+        if #options == 1 then
             local option = options[1]
             return option.key or "", option
         end
@@ -473,19 +472,6 @@ function rowEngine.create(adapter)
         return countPriorOptionSelections(instance, role, rows, rowIndex, option.key) < maxSelections
     end
 
-    local function hasAvailableConcreteOption(instance, role, rows, rowIndex, rowContext)
-        for _, option in ipairs(optionListForRole(role)) do
-            if isAvailable(option, rowContext)
-                and nextRoomTagsFailureCode(instance, rows, rowIndex, option) == nil
-                and isOptionWithinSelectionCap(instance, role, option, rows, rowIndex)
-                and isOptionAllowed(instance, rows, rowIndex, role.key, option.key, role, option)
-            then
-                return true
-            end
-        end
-        return false
-    end
-
     local function findFirstAvailableOption(instance, rows, rowIndex, role)
         local values = role.optionValues or instance.optionValuesByRole[role.key] or {}
         for _, optionKey in ipairs(values) do
@@ -552,8 +538,7 @@ function rowEngine.create(adapter)
         end
 
         if optionKey == "" then
-            return shouldOfferAutoOption(role, optionListForRole(role))
-                and hasAvailableConcreteOption(instance, role, rows, rowIndex, data.rowContext(instance, rows, rowIndex))
+            return false
         end
 
         local option = role.optionsByKey and role.optionsByKey[optionKey] or nil
@@ -690,10 +675,6 @@ function rowEngine.create(adapter)
             return "", nil
         end
 
-        if shouldOfferAutoOption(role, options) then
-            return "", nil
-        end
-
         local normalizedKey, option = findFirstAvailableOption(instance, rows, rowIndex, role)
         return normalizedKey or "", option
     end
@@ -779,12 +760,6 @@ function rowEngine.create(adapter)
         end
         if optionKey == "" and (role.requiresConcreteOption or #options > 1) then
             return invalidStatus("option_required", "Choose a " .. tostring(role.label or roleKey))
-        end
-        if resolvedOptionKey == "" and shouldOfferAutoOption(role, options) then
-            if data.isOptionAvailable(instance, rows, rowIndex, roleKey, "") then
-                return validStatus()
-            end
-            return invalidStatus("option_unavailable", tostring(role.label or roleKey) .. " has no valid option here")
         end
         if resolvedOptionKey ~= "" then
             local status = availabilityStatus(option, data.rowContext(instance, rows, rowIndex))
@@ -1023,26 +998,7 @@ function rowEngine.create(adapter)
         end
 
         if optionKey == "" then
-            if not shouldOfferAutoOption(role, optionListForRole(role)) then
-                return valueStates.HIDDEN
-            end
-
-            local state = valueStates.NORMAL
-            local hasConcreteOption = false
-            for _, option in ipairs(optionListForRole(role)) do
-                if option.key ~= nil and option.key ~= "" then
-                    hasConcreteOption = true
-                    local optionState = optionValueStateUncached(instance, rows, rowIndex, roleKey, option.key)
-                    if optionState == valueStates.NORMAL then
-                        return valueStates.NORMAL
-                    end
-                    state = valueStates.merge(state, optionState)
-                end
-            end
-            if hasConcreteOption then
-                return state
-            end
-            return valueStates.INVALID
+            return valueStates.HIDDEN
         end
 
         local option = role.optionsByKey and role.optionsByKey[optionKey] or nil

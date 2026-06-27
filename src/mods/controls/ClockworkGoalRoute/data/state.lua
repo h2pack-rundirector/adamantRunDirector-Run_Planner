@@ -2,7 +2,7 @@ local deps = ...
 local common = deps.common
 local slots = deps.slots
 
-local VANILLA_ROLE_KEY = common.VANILLA_ROLE_KEY
+local INACTIVE_ROLE_KEY = "Inactive"
 local GOAL_COUNTER_KEY = "clockworkGoal"
 local NON_GOAL_COUNTER_KEY = "clockworkNonGoalReward"
 local STORY_COUNTER_KEY = "clockworkStory"
@@ -13,12 +13,12 @@ local NON_GOAL_KIND = "NonGoal"
 local GOAL_COMBAT_ROLE_KEY = "GoalCombat"
 
 local optionListForRole = common.optionListForRole
-local shouldOfferAutoOption = common.shouldOfferAutoOption
 local invalidStatus = common.invalidStatus
 
 local state = {
+    INACTIVE_ROLE_KEY = INACTIVE_ROLE_KEY,
     inactiveRole = {
-        key = VANILLA_ROLE_KEY,
+        key = INACTIVE_ROLE_KEY,
         label = "Inactive",
     },
 }
@@ -31,7 +31,8 @@ function state.forcedRouteRoleKey(instance, slot)
 end
 
 function state.addFixedRoleLabels(instance)
-    instance.roleLabels[VANILLA_ROLE_KEY] = state.inactiveRole.label
+    instance.rolesByKey[INACTIVE_ROLE_KEY] = state.inactiveRole
+    instance.roleLabels[INACTIVE_ROLE_KEY] = state.inactiveRole.label
     for _, slot in ipairs(instance.routeSlots or {}) do
         if slot.roleKey ~= nil then
             instance.roleLabels[slot.roleKey] = slot.label or slot.roleKey
@@ -142,7 +143,7 @@ local function rawRoleKey(instance, rows, rowIndex, slot)
         end
         return ""
     end
-    return VANILLA_ROLE_KEY
+    return INACTIVE_ROLE_KEY
 end
 
 local function rawRoleForKey(instance, _rowIndex, roleKey, slot)
@@ -174,9 +175,6 @@ local function rawOptionForRole(role, rows, rowIndex)
 
     local options = optionListForRole(role)
     if #options == 0 or role.requiresConcreteOption or #options > 1 then
-        return "", nil
-    end
-    if shouldOfferAutoOption(role, options) then
         return "", nil
     end
 
@@ -254,7 +252,7 @@ local function buildClockworkState(instance, rows, cache)
         if slots.isRouteSlot(slot) then
             rowState.inactive = goalCount >= goalLimit and not previousSupportsExtensionChoice
             if rowState.inactive then
-                rowState.roleKey = VANILLA_ROLE_KEY
+                rowState.roleKey = INACTIVE_ROLE_KEY
                 rowState.optionKey = ""
                 previousSupportsExtensionChoice = false
             else
@@ -278,7 +276,7 @@ local function buildClockworkState(instance, rows, cache)
                     slot
                 ) or previousSupportsExtensionChoice
                 local canSpendBranch = canSpendBranchingRoomAt(nonGoalCount, instance, option)
-                local supportsNextExtensionChoice = roleKey ~= VANILLA_ROLE_KEY
+                local supportsNextExtensionChoice = roleKey ~= INACTIVE_ROLE_KEY
                     and role ~= nil
                     and withinGoalLimit
                     and withinNonGoalLimit
@@ -347,7 +345,7 @@ function state.priorGoalCount(instance, rows, rowIndex)
 end
 
 local function roleIsAllowedByCounters(instance, rows, rowIndex, roleKey, role)
-    if roleKey == VANILLA_ROLE_KEY then
+    if roleKey == INACTIVE_ROLE_KEY then
         return true
     end
     local slot = slots.slotForRow(instance, rowIndex)

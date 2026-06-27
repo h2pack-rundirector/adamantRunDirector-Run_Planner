@@ -29,8 +29,8 @@ own any coordinate translation. Encounter-depth context is computed from prior
 row costs; the current row's cost is exported for snapshots but does not make
 that row eligible for its own encounter-depth gates.
 
-Encounter depth is intentionally unknown after an unresolved row such as
-Vanilla/Auto or a mixed-cost role without a concrete option. Options with
+Encounter depth is intentionally unknown after an unresolved active row such as
+a mixed-cost role without a concrete option. Options with
 `availability.biomeEncounterDepth` fail closed while encounter depth is unknown;
 the user must make prior rows concrete enough for the planner to prove the
 counter.
@@ -323,13 +323,13 @@ fixes the plan.
 
 The first supported route requirement is `previousRoomExitCount`. It only
 passes when the previous planned row is valid and resolves to a concrete room
-option with enough exits. `Vanilla` and unresolved `Auto` rows do not satisfy
-the requirement because the planner cannot prove the previous room shape.
+option with enough exits. Unresolved rows do not satisfy the requirement because
+the planner cannot prove the previous room shape.
 
 Biome Q also uses forced-depth role gates for miniboss depths. At depths 3 and
 6, vanilla can have broadly eligible combat rooms, but forced miniboss rooms win
-the room selection pass. The planner keeps `Vanilla` available as an opt-out,
-but explicit planned roles at those depths must be `Miniboss`.
+the room selection pass. Explicit planned roles at those depths must be
+`Miniboss`.
 
 Reward declarations use vanilla reward contexts, plus narrow planner adapters
 for vanilla mechanisms that need player-facing language:
@@ -676,10 +676,11 @@ The main declaration file is the source of truth for route and role semantics:
   branch shape.
 - `biomeEncounterDepthCost`: known encounter-depth cost on fixed slots,
   concrete room options, or roles whose every selectable option shares the same
-  cost. Vanilla/Auto rows do not declare a cost; they make later encounter-depth
+  cost. Unresolved rows do not declare a cost; they make later encounter-depth
   availability unknown until the user selects concrete prior rows.
 - `requiresConcreteOption`: option-bearing roles such as Miniboss can disable
-  Auto and require a concrete vanilla room selection. Miniboss costs live on the
+  implicit single-option resolution and require a concrete room selection.
+  Miniboss costs live on the
   leaf options because later availability can depend on the selected variant.
 - `slotLayout.fixedBeforeHub` and `slotLayout.fixedAfterHub`: hub-adapter
   fixed rooms that do not use normal depth coordinates.

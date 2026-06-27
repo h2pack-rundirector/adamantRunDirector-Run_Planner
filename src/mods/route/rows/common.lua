@@ -50,18 +50,10 @@ function common.optionListForRole(role)
     return role.roomOptions or role.mapOptions or {}
 end
 
-function common.shouldOfferAutoOption(role, options)
-    return role ~= nil and role.allowAutoOption == true and #options > 0
-end
-
 function common.buildOptionChoices(role)
     local optionValues = {}
     local optionLabels = {}
     local options = common.optionListForRole(role)
-    if common.shouldOfferAutoOption(role, options) then
-        optionValues[#optionValues + 1] = ""
-        optionLabels[""] = "Auto"
-    end
     for _, option in ipairs(options) do
         common.addChoice(optionValues, optionLabels, option.key, option.label)
     end
@@ -82,10 +74,6 @@ function common.buildRoleChoices(instance)
         local optionValues = {}
         local optionLabels = {}
         local options = common.optionListForRole(role)
-        if common.shouldOfferAutoOption(role, options) then
-            optionValues[#optionValues + 1] = ""
-            optionLabels[""] = "Auto"
-        end
         for _, option in ipairs(options) do
             common.addChoice(optionValues, optionLabels, option.key, option.label)
         end

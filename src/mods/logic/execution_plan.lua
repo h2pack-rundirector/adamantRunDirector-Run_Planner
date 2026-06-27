@@ -6,6 +6,7 @@ local executionPlan = {}
 
 local EMPTY_LIST = {}
 local VANILLA_ROLE_KEY = "Vanilla"
+local INACTIVE_ROLE_KEY = "Inactive"
 
 local function copyList(source)
     local copy = {}
@@ -81,6 +82,7 @@ local function hasConfiguredPlanRow(row)
         or row.roleKey == nil
         or row.roleKey == ""
         or row.roleKey == VANILLA_ROLE_KEY
+        or row.roleKey == INACTIVE_ROLE_KEY
     then
         return false
     end
