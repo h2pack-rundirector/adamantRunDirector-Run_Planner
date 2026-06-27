@@ -47,18 +47,17 @@ local function surfaceFor(self, context)
     end
     local builder = builders[context.kind]
     if builder ~= nil then
-        return builder.create(self.definitions, context)
+        return builder.create(self.rewardDomain, context)
     end
     return noSurface(context)
 end
 
-function surfaces.create(definitions)
-    local source = definitions or {}
+function surfaces.create(rewardDomain)
+    local source = rewardDomain or {}
     local instance = {
-        definitions = {
+        rewardDomain = {
             godLoot = common.copyList(source.godLoot),
             primitives = source.primitives or {},
-            rewardSets = source.rewardSets or {},
             rewardStores = source.rewardStores or {},
             shopOptionSets = source.shopOptionSets or {},
             shops = source.shops or {},
@@ -77,7 +76,7 @@ function surfaces.create(definitions)
     end
 
     function instance.godLootOptions()
-        return common.copyList(instance.definitions.godLoot)
+        return common.copyList(instance.rewardDomain.godLoot)
     end
 
     return instance

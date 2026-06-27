@@ -15,7 +15,7 @@ local function validator()
     return dofile("src/mods/biomes/live_validator.lua")
 end
 
-local function rewardDefinitions()
+local function rewardDomain()
     return {
         rewardStores = {
             RunProgress = {},
@@ -142,7 +142,7 @@ end
 function TestRunPlannerLiveGameValidator.testLiveValidatorAcceptsMatchingGameTables()
     local issues = validator().validate(tinyCatalog(), {
         game = liveGame(),
-        rewardDefinitions = rewardDefinitions(),
+        rewardDomain = rewardDomain(),
         featureDefinitions = featureDefinitions(),
     })
 
@@ -158,7 +158,7 @@ function TestRunPlannerLiveGameValidator.testLiveValidatorReportsGameDataDrift()
 
     local codes = issueCodes(validator().validate(tinyCatalog(), {
         game = game,
-        rewardDefinitions = rewardDefinitions(),
+        rewardDomain = rewardDomain(),
         featureDefinitions = featureDefinitions(),
     }))
 
@@ -170,8 +170,8 @@ end
 
 function TestRunPlannerLiveGameValidator.testLogicAttachRunsLiveValidatorOnlyInDebugMode()
     local calls = 0
-    local passedRewardDefinitions
-    local definitions = rewardDefinitions()
+    local passedRewardDomain
+    local domain = rewardDomain()
     local activationCallback
     local logic = assert(loadfile("src/mods/logic.lua"))({
         catalog = {},
@@ -200,11 +200,11 @@ function TestRunPlannerLiveGameValidator.testLogicAttachRunsLiveValidatorOnlyInD
         liveGameValidator = {
             run = function(_, opts)
                 calls = calls + 1
-                passedRewardDefinitions = opts.rewardDefinitions
+                passedRewardDomain = opts.rewardDomain
             end,
         },
         rewards = {
-            definitions = definitions,
+            rewardDomain = domain,
         },
     })
     logic.attach({
@@ -238,5 +238,5 @@ function TestRunPlannerLiveGameValidator.testLogicAttachRunsLiveValidatorOnlyInD
         },
     })
     lu.assertEquals(calls, 1)
-    lu.assertIs(passedRewardDefinitions, definitions)
+    lu.assertIs(passedRewardDomain, domain)
 end

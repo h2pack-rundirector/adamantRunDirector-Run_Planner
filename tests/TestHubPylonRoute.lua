@@ -98,6 +98,23 @@ function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
         Disabled = "Disabled",
         Enabled = "Enabled",
     })
+    lu.assertEquals(instance.sideRoomEncounterClassLabels, {
+        Easy = "Easy",
+        Empty = "Empty",
+        Hard = "Hard",
+    })
+    lu.assertEquals(routeData.sideRoomEncounterClassValues(
+        instance,
+        instance.biome.hub.combatRoomsByKey.N_Combat12.sideDoors[1]
+    ), { "Hard" })
+    lu.assertEquals(routeData.sideRoomEncounterClassValues(
+        instance,
+        instance.biome.hub.combatRoomsByKey.N_Combat05.sideDoors[1]
+    ), { "Easy", "Empty" })
+    lu.assertEquals(routeData.sideRoomEncounterClassValues(
+        instance,
+        instance.biome.hub.combatRoomsByKey.N_Combat12.sideDoors[3]
+    ), { "Easy", "Hard" })
 
     lu.assertEquals(instance.sideRoomRowCount, 18)
 
@@ -120,6 +137,8 @@ function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
     lu.assertEquals(storage[3].maxRows, 18)
     lu.assertEquals(storage[3].row[1].key, "ModeKey")
     lu.assertEquals(storage[3].row[1].default, "")
+    lu.assertEquals(storage[3].row[2].key, "EncounterClassKey")
+    lu.assertEquals(storage[3].row[2].default, "")
     lu.assertEquals(storage[4].key, "SideRewards")
     lu.assertEquals(storage[4].minRows, 18)
     lu.assertEquals(storage[4].row[1].key, "Reward1Key")
@@ -247,7 +266,10 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
             roomKey = "N_Combat12",
             hubDoorId = 561389,
             rewardStore = "HubRewards",
-            ineligibleRewardSet = "HubCombatRoomEasyBans",
+            ineligibleRewardTypes = {
+                "WeaponUpgrade",
+                "HermesUpgrade",
+            },
             offerCount = 1,
             rewardAddresses = { "row" },
         },
@@ -271,6 +293,8 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
     lu.assertEquals(snapshot.rows[4].sideRooms[1].modeKey, "Enabled")
     lu.assertEquals(snapshot.rows[4].sideRooms[1].storedModeKey, "Enabled")
     lu.assertTrue(snapshot.rows[4].sideRooms[1].enabled)
+    lu.assertEquals(snapshot.rows[4].sideRooms[1].encounterClassKey, "Hard")
+    lu.assertEquals(snapshot.rows[4].sideRooms[1].storedEncounterClassKey, "")
     lu.assertEquals(snapshot.rows[4].sideRooms[1].rewardStore, "SubRoomRewardsHard")
     lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 1).rewardKind, "roomStore")
     lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 1).rewardPicks[1], {
@@ -284,6 +308,8 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
     lu.assertEquals(snapshot.rows[4].sideRooms[2].modeKey, "Disabled")
     lu.assertEquals(snapshot.rows[4].sideRooms[2].storedModeKey, "Disabled")
     lu.assertFalse(snapshot.rows[4].sideRooms[2].enabled)
+    lu.assertNil(snapshot.rows[4].sideRooms[2].encounterClassKey)
+    lu.assertEquals(snapshot.rows[4].sideRooms[2].storedEncounterClassKey, "")
     lu.assertEquals(snapshot.rows[4].sideRooms[2].rewardStore, "SubRoomRewardsHard")
     lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 2).rewardKind, "none")
     lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 2).rewardPicks, {})
@@ -291,6 +317,8 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
     lu.assertEquals(snapshot.rows[4].sideRooms[3].modeKey, "Vanilla")
     lu.assertEquals(snapshot.rows[4].sideRooms[3].storedModeKey, "")
     lu.assertFalse(snapshot.rows[4].sideRooms[3].enabled)
+    lu.assertNil(snapshot.rows[4].sideRooms[3].encounterClassKey)
+    lu.assertEquals(snapshot.rows[4].sideRooms[3].storedEncounterClassKey, "")
     lu.assertEquals(snapshot.rows[4].sideRooms[3].rewardStore, "SubRoomRewards")
     lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 3).rewardPicks, {})
 

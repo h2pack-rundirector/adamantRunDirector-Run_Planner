@@ -5,7 +5,9 @@ can offer. They should not encode route-history legality such as whether
 `TalentDrop` is currently legal. That second layer belongs in route reward
 validation/runtime resolution.
 
-This audit compares `src/mods/rewards/declarations/definitions.lua` against vanilla data in:
+This audit compares `src/mods/rewards/declarations/primitives.lua`,
+`src/mods/rewards/declarations/bags.lua`, and
+`src/mods/rewards/declarations/shops.lua` against vanilla data in:
 
 - `Scripts/LootData.lua`
 - `Scripts/RewardData.lua`
@@ -68,8 +70,8 @@ be handled by route reward validation, not by removing it from the bundle.
 
 ### `OpeningRunProgress`
 
-Vanilla source: F/N opening and pre-hub rooms use `RunProgress` with
-`RewardSets.OpeningRoomBans`.
+Vanilla source: F/N opening and pre-hub rooms use `RunProgress` with explicit
+room-level ineligible rewards.
 
 Structural bans:
 
@@ -179,8 +181,8 @@ The vanilla Devotion entry in this store is commented out, so it is not modeled.
 
 ### `EasyHubRewards`
 
-Vanilla source: N combat rooms with `RewardSets.HubCombatRoomEasyBans` applied
-to `HubRewards`.
+Vanilla source: N easy combat rooms use `HubRewards` with explicit room-level
+ineligible rewards.
 
 Structural bans remove:
 

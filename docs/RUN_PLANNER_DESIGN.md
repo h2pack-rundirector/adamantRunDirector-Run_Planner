@@ -48,7 +48,7 @@ counter.
   entries unless the normal run route uses that room as an actual reward surface.
 - `F` is special: its opening room is routeable depth `0` because vanilla
   explicitly sets `BiomeDepthCache = 0` for the starter room. Normal runs use
-  `RunProgress` with `OpeningRoomBans` there. F route rows use a
+  `RunProgress` with explicit opening-room reward bans there. F route rows use a
   `selectionBiomeDepthOffset` of `-1` so `BiomeDepthCache` availability checks
   model the room the player is standing in while the next room is selected.
 - Normal planned route depths are the depths between the locked entry/opening
@@ -554,8 +554,8 @@ shopProfile = "..." }`. Runtime/shop UI should render option controls from the
 reward surface registry instead of hard-coding a single boon field.
 
 Biome files should not duplicate shop internals. They only select the shop
-surface that applies to a route depth. Store-specific shape belongs inside
-`mods/rewards/declarations/definitions.lua`:
+surface that applies to a route depth. Store-specific shop shape belongs inside
+`mods/rewards/declarations/shops.lua`:
 
 - `key`: stable route/storage identity, matching the source group/offer shape
   such as `Group4Offer1`.

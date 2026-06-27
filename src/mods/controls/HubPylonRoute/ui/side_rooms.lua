@@ -13,8 +13,13 @@ local SIDE_MODE_OPTS = {
     label = "",
     controlWidth = 110,
 }
+local SIDE_ENCOUNTER_OPTS = {
+    label = "",
+    controlWidth = 95,
+}
 local SIDE_MODE_COLUMN_X = 130
-local SIDE_REWARD_COLUMN_X = 260
+local SIDE_ENCOUNTER_COLUMN_X = 255
+local SIDE_REWARD_COLUMN_X = 370
 local REWARD_DRAW_OPTS = {
     hideGenericRewardLabel = true,
 }
@@ -47,6 +52,18 @@ local function getSideModeOpts(control, instance)
         control._sideModeOpts.displayValues = data.sideRoomModeLabels(instance)
     end
     return control._sideModeOpts
+end
+
+local function getSideEncounterOpts(control, instance, sideDoor)
+    control._sideEncounterOptsByRoomKey = control._sideEncounterOptsByRoomKey or {}
+    local opts = control._sideEncounterOptsByRoomKey[sideDoor.roomKey]
+    if opts == nil then
+        opts = copyBaseOpts(SIDE_ENCOUNTER_OPTS)
+        opts.values = data.sideRoomEncounterClassValues(instance, sideDoor)
+        opts.displayValues = data.sideRoomEncounterClassLabels(instance)
+        control._sideEncounterOptsByRoomKey[sideDoor.roomKey] = opts
+    end
+    return opts
 end
 
 local function sideRewardFields(control, sideRowIndex, rowIndex, sideIndex)
@@ -95,6 +112,38 @@ local function drawSideRoomMode(draw, control, instance, rowIndex, sideIndex)
     return sideRowIndex, sideDoor
 end
 
+local function drawFixedSideRoomEncounterClass(draw, instance, sideDoor)
+    local values = data.sideRoomEncounterClassValues(instance, sideDoor)
+    local encounterClassKey = values[1]
+    if encounterClassKey == nil then
+        return
+    end
+    draw.imgui.SameLine()
+    draw.imgui.SetCursorPosX(SIDE_ENCOUNTER_COLUMN_X)
+    draw.imgui.AlignTextToFramePadding()
+    draw.imgui.Text(tostring(data.sideRoomEncounterClassLabels(instance)[encounterClassKey] or encounterClassKey))
+end
+
+local function drawSideRoomEncounterClass(draw, control, instance, sideRowIndex, sideDoor)
+    local values = data.sideRoomEncounterClassValues(instance, sideDoor)
+    if values[1] == nil then
+        return
+    end
+    if values[2] == nil then
+        drawFixedSideRoomEncounterClass(draw, instance, sideDoor)
+        return
+    end
+
+    draw.imgui.SameLine()
+    draw.imgui.SetCursorPosX(SIDE_ENCOUNTER_COLUMN_X)
+    if draw.widgets.dropdown(
+        control:sideRoomField(sideRowIndex, data.sideRoomEncounterClassAlias()),
+        getSideEncounterOpts(control, instance, sideDoor)
+    ) then
+        control:invalidateReadPass()
+    end
+end
+
 local function drawSideRoomRow(draw, control, instance, rowIndex)
     for sideIndex = 1, data.sideDoorCountForRow(instance, control:routeRows(), rowIndex) do
         if sideIndex > 1 then
@@ -103,10 +152,10 @@ local function drawSideRoomRow(draw, control, instance, rowIndex)
         local sideRowIndex, sideDoor = drawSideRoomMode(draw, control, instance, rowIndex, sideIndex)
         local mode = sideRowIndex and control:fields().SideRooms:read(sideRowIndex, data.sideRoomModeAlias()) or ""
         local surface = sideDoor ~= nil and rewardSystem and rewardSystem.surfaceFor(sideDoor.reward) or nil
-        if mode == data.sideRoomEnabledMode()
-            and rewardSystem ~= nil
-            and rewardSystem.hasDisplay(surface)
-        then
+        if mode == data.sideRoomEnabledMode() then
+            drawSideRoomEncounterClass(draw, control, instance, sideRowIndex, sideDoor)
+        end
+        if mode == data.sideRoomEnabledMode() and rewardSystem ~= nil and rewardSystem.hasDisplay(surface) then
             draw.imgui.SameLine()
             draw.imgui.SetCursorPosX(SIDE_REWARD_COLUMN_X)
             drawRewardSurface(

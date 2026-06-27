@@ -1,9 +1,14 @@
 local assembly = {}
 
-local function createDefinitions(godData)
-    return import("mods/rewards/declarations/definitions.lua")({
-        godData = godData,
-    })
+local function createRewardDomain(godData, primitives, bagDefinitions, shopDefinitions)
+    return {
+        primitives = primitives,
+        godLoot = godData.godLootNames(),
+        rewardBags = bagDefinitions.rewardBags,
+        rewardStores = bagDefinitions.rewardStores,
+        shopOptionSets = shopDefinitions.shopOptionSets,
+        shops = shopDefinitions.shops,
+    }
 end
 
 local function createConditions(godData)
@@ -23,7 +28,10 @@ function assembly.create(opts)
     opts = opts or {}
 
     local constraints = opts.constraints or import("mods/rewards/declarations/constraints.lua")
-    local definitions = opts.definitions or createDefinitions(opts.godData)
+    local primitives = opts.primitives or import("mods/rewards/declarations/primitives.lua")
+    local bagDefinitions = opts.bagDefinitions or import("mods/rewards/declarations/bags.lua")
+    local shopDefinitions = opts.shopDefinitions or import("mods/rewards/declarations/shops.lua")
+    local rewardDomain = opts.rewardDomain or createRewardDomain(opts.godData, primitives, bagDefinitions, shopDefinitions)
     local conditions = opts.conditions
     if conditions == nil and opts.godData ~= nil then
         conditions = createConditions(opts.godData)
@@ -37,7 +45,7 @@ function assembly.create(opts)
     return {
         catalogSurfaces = catalogSurfaces,
         conditions = conditions,
-        definitions = definitions,
+        rewardDomain = rewardDomain,
     }
 end
 

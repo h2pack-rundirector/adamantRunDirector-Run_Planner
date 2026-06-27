@@ -33,19 +33,19 @@ local function resolveRewardConstraints(context, sourceIndexBySlotKey)
     return constraints
 end
 
-function shopSurface.create(definitions, context)
-    local shop = definitions.shops[context.shopProfile] or {}
+function shopSurface.create(rewardDomain, context)
+    local shop = rewardDomain.shops[context.shopProfile] or {}
     local controls = {}
-    local godValues, godLabels = common.godSourceOptions(definitions)
+    local godValues, godLabels = common.godSourceOptions(rewardDomain)
     local sourceIndexBySlotKey = {}
 
     for index, slot in ipairs(shop.slots or {}) do
         local rewardAlias = storage.rewardAlias(index)
         local lootAlias = storage.lootAlias(index)
         sourceIndexBySlotKey[slot.key] = index
-        local options = slot.options or common.optionsFor(definitions, slot.optionSet)
+        local options = slot.options or common.optionsFor(rewardDomain, slot.optionSet)
         local values, labels = common.uniqueNames(options, nil, nil, function(name)
-            return common.rewardOptionLabel(definitions, name)
+            return common.rewardOptionLabel(rewardDomain, name)
         end)
         controls[#controls + 1] = common.dropdown(
             rewardAlias,

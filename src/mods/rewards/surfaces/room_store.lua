@@ -5,16 +5,16 @@ local storage = common.storage
 
 local roomStore = {}
 
-function roomStore.create(definitions, context)
+function roomStore.create(rewardDomain, context)
     local rewardStore = context.rewardStore or "RunProgress"
-    local rewardTypes = common.optionsFor(definitions, rewardStore)
-    local eligible = common.rewardTypeLookup(definitions, context.eligibleRewardTypes, context.eligibleRewardSet)
-    local ineligible = common.rewardTypeLookup(definitions, context.ineligibleRewardTypes, context.ineligibleRewardSet)
+    local rewardTypes = common.optionsFor(rewardDomain, rewardStore)
+    local eligible = common.rewardTypeLookup(context.eligibleRewardTypes)
+    local ineligible = common.rewardTypeLookup(context.ineligibleRewardTypes)
 
     if common.isOnlyEligible(context.eligibleRewardTypes, "Boon")
         and (ineligible == nil or not ineligible.Boon)
     then
-        local values, labels = common.godSourceOptions(definitions)
+        local values, labels = common.godSourceOptions(rewardDomain)
         return {
             kind = "boonSource",
             context = context,
@@ -29,9 +29,9 @@ function roomStore.create(definitions, context)
     end
 
     local rewardValues, rewardLabels = common.uniqueNames(rewardTypes, eligible, ineligible, function(name)
-        return common.rewardOptionLabel(definitions, name)
+        return common.rewardOptionLabel(rewardDomain, name)
     end)
-    local godValues, godLabels = common.godSourceOptions(definitions)
+    local godValues, godLabels = common.godSourceOptions(rewardDomain)
     return {
         kind = "roomStore",
         context = context,

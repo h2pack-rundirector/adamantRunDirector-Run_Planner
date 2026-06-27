@@ -1,0 +1,186 @@
+-- Note: I've left out all requiremennts that only matter in Fresh File for better readability
+-- Note 2: I've re-ordered most of the lists so that all of them are written consistently. If you check the code, it'll look a bit different
+
+
+-- The "General" Reward Bag, when someone is talking about the reward bag, they probably mean this one
+-- Used for Major Finds in Erebus, Oceanus, Fields, the first 2 rooms of Ephyra, Ephyra midboss, Thessaly, and Olympus
+RunProgress =
+{
+Centaur Heart
+Centaur Heart -- picked up at least one boon from a core god
+Soul Tonic
+Soul Tonic -- picked up at least one boon from a core god
+Gold
+Gold -- picked up at least one boon from a core god
+Pom of Power -- at least one pommable boon
+Pom of Power -- at least one pommable boon, picked up at least one boon from a core god
+Daedalus Hammer -- no hammers picked up yet, no hammer on sale (if the door is the exit of a shop)
+Daedalus Hammer -- exactly one hammer picked up so far, cleared at least 2 biomes, no hammer on sale (if the door is the exit of a shop)
+Hermes Boon -- no Hermes boons picked up yet this biome, at most one Hermes boon picked up this run, no Hermes on sale (if the door is the exit of a shop)
+Family Dispute -- completed at least 7 encounters, completed at least 2 encounters in the current biome, picked up boons from at least two different core gods, at least 15 rooms since last taking a trial, room has at least 2 exits
+Selene Hex --  no Hex picked up yet, no Selene on sale (if the door is the exit of a shop), no pending Selene delivery from a hermes shrine
+Path Of Stars -- has a Hex, Hex is not fully upgraded, cleared at least one biome, not picked up a (normal) Path of Stars in the current biome, no Path of Stars on sale (if the door is the exit of a shop)
+Boon
+Boon
+Boon
+Boon
+},
+
+
+-- Used for Minor Find rooms in Erebus, Oceanus, Thessaly, and Olympus
+-- Note: I've removed some entries from this bag that are only relevant in fresh file for brevity.
+-- In FF the double ash/bones are replacced by single (until you collect a total oof 100 ash or 500 bones)
+MetaProgress =
+{
+Nectar
+Ashes -- first biome
+Ashes -- first biome
+Double Ashes -- second+ biome
+Double Ashes -- second+ biome
+Bones -- first biome
+Bones -- first biome
+Bones -- first biome
+Bones -- first biome
+Double Bones -- second+ biome
+Double Bones -- second+ biome
+Double Bones -- second+ biome
+Double Bones -- second+ biome
+},
+
+
+-- Used for minor rewards in Fields
+-- Note: while non-combat nemesis events in Fields spawn in the minor-reward-spots, they have nothing to do with this bag
+FieldsOptionalRewards =
+{
+Mini (5) Centaur Heart
+Mini (5) Centaur Heart
+Mini (5) Centaur Heart
+Mini (5) Soul Tonic
+Mini (5) Soul Tonic
+Mini (5) Soul Tonic
+Mini (20) Gold
+Mini (20) Gold
+Mini (20) Gold
+Mini (1) Path Of Stars -- has a Hex, Hex is not fully upgraded
+Mini (1) Path Of Stars -- has a Hex, Hex is not fully upgraded
+Sandwich (40% heal)
+20 Armor
+Nectar
+Ashes
+Bones
+Bones
+Bones
+Bones
+},
+
+
+-- Used for non-express-route doors in Tartarus
+TartarusRewards =
+{
+Triple Gold
+Triple Pom of Power -- at least one pommable boon
+Daedalus Hammer -- no hammers picked up yet
+Daedalus Hammer -- exactly one hammer picked up so far
+Family Dispute -- completed at least 7 encounters, completed at least 2 encounters in the current biome, picked up boons from at least two different core gods, at least 15 rooms since last taking a trial, room has at least 2 exits
+Big (5) Path Of Stars -- has a Hex, Hex is not fully upgraded
+Boon
+Boon
+Boon
+},
+
+
+-- Used for the doors in the Ephyra Hub Room, except the midboss (which uses RunProgress)
+HubRewards =
+{
+Double Centaur Heart
+Double Soul Tonic
+Daedalus Hammer -- no hammers picked up yet
+Hermes Boon -- no Hermes boons picked up yet this biome, at most one Hermes boon picked up this run
+Selene Hex --  no Hex picked up yet, no pending Selene delivery from a hermes shrine
+Boon
+Boon
+Boon
+Boon
+Boon
+},
+
+
+-- Used for the 10 Ephyra subroom layouts that pick between "easy"/"hard" encounters and the 1 subroom layout that picks between no/"easy" encounters
+-- note that "no encounter" doesn't count as either easy or hard, so a "no encounter" room gets this whole list
+SubRoomRewards =
+{
+-- these rewards require that the encounter is not a "hard" subroom encounter
+Mini (5) Centaur Heart
+Mini-Empty (5 max health only) Centaur Heart
+Mini (5) Soul Tonic
+Mini (20) Gold
+Air Element
+Earth Element
+Fire Element
+Water Element
+Nectar
+Ashes
+Ashes
+Bones
+Bones
+},
+
+
+-- these rewards require that the encounter is not an "easy" subroom encounter
+Centaur Heart
+Centaur Heart
+Soul Tonic
+Soul Tonic
+Gold
+Gold
+Pom of Power -- at least one pommable boon
+Pom of Power -- at least one pommable boon
+Mini (1) Path Of Stars -- has a Hex, Hex is not fully upgraded
+Mini (1) Path Of Stars -- has a Hex, Hex is not fully upgraded
+},
+
+
+-- Used for the 4 Ephyra subroom layouts with only "hard" encounters
+-- idk why this bag exists. These 4 layouts could just use SubRoomRewards for basically the same results
+SubRoomRewardsHard =
+{
+Centaur Heart
+Centaur Heart
+Soul Tonic
+Soul Tonic
+Gold
+Gold
+Pom of Power -- at least one pommable boon
+Pom of Power -- at least one pommable boon
+},
+
+
+-- Used for miniboss doors in Summit
+TyphonBossRewards =
+{
+Triple Pom of Power -- at least one pommable boon
+Daedalus Hammer -- no hammers picked up yet
+Daedalus Hammer -- exactly one hammer picked up so far
+Big (5) Path Of Stars -- has a Hex, Hex is not fully upgraded
+Boon
+Boon
+},
+
+
+-- unused
+MinorRunProgress =
+{
+Mini (5) Centaur Heart
+Mini (5) Centaur Heart
+Mini (5) Centaur Heart
+Mini-Empty (5 max health only) Centaur Heart
+Mini-Empty (5 max health only) Centaur Heart
+Mini (5) Soul Tonic
+Mini (5) Soul Tonic
+Mini (5) Soul Tonic
+Pom Slice -- at least one pommable boon
+Mini (1) Path Of Stars -- has a Hex, Hex is not fully upgraded
+Mini (1) Path Of Stars -- has a Hex, Hex is not fully upgraded
+Alll Elements
+20 Armor
+},

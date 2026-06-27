@@ -32,12 +32,8 @@ function common.lookupList(values)
     return lookup
 end
 
-function common.rewardTypeLookup(definitions, values, rewardSetName)
+function common.rewardTypeLookup(values)
     local lookup = common.lookupList(values)
-    for _, value in ipairs(rewardSetName ~= nil and definitions.rewardSets[rewardSetName] or {}) do
-        lookup = lookup or {}
-        lookup[value] = true
-    end
     return lookup
 end
 
@@ -56,12 +52,12 @@ function common.addOption(values, labels, key, label)
     labels[key] = label or key
 end
 
-function common.displayLabel(definitions, key)
+function common.displayLabel(rewardDomain, key)
     if key == nil or key == "" then
         return "Vanilla"
     end
 
-    local primitive = definitions.primitives and definitions.primitives[key]
+    local primitive = rewardDomain.primitives and rewardDomain.primitives[key]
     if primitive ~= nil and primitive.label ~= nil then
         return primitive.label
     end
@@ -74,9 +70,9 @@ function common.displayLabel(definitions, key)
     return label
 end
 
-function common.optionSource(definitions, optionSetName)
+function common.optionSource(rewardDomain, optionSetName)
     for _, sourceKey in ipairs(OPTION_SOURCE_KEYS) do
-        local optionSet = definitions[sourceKey][optionSetName]
+        local optionSet = rewardDomain[sourceKey][optionSetName]
         if optionSet ~= nil then
             return optionSet
         end
@@ -84,16 +80,16 @@ function common.optionSource(definitions, optionSetName)
     return nil
 end
 
-function common.optionsFor(definitions, optionSetName)
-    local optionSet = common.optionSource(definitions, optionSetName)
+function common.optionsFor(rewardDomain, optionSetName)
+    local optionSet = common.optionSource(rewardDomain, optionSetName)
     if optionSet ~= nil then
         return optionSet.options or {}
     end
     return {}
 end
 
-function common.optionsLabel(definitions, optionSetName, fallback)
-    local optionSet = common.optionSource(definitions, optionSetName)
+function common.optionsLabel(rewardDomain, optionSetName, fallback)
+    local optionSet = common.optionSource(rewardDomain, optionSetName)
     if optionSet ~= nil and optionSet.label ~= nil then
         return optionSet.label
     end
@@ -122,16 +118,16 @@ function common.uniqueNames(items, eligible, ineligible, labelFor)
     return values, labels
 end
 
-function common.rewardOptionLabel(definitions, name)
-    return common.displayLabel(definitions, name)
+function common.rewardOptionLabel(rewardDomain, name)
+    return common.displayLabel(rewardDomain, name)
 end
 
-function common.godSourceOptions(definitions)
+function common.godSourceOptions(rewardDomain)
     local values = {}
     local labels = {}
     common.addOption(values, labels, common.VANILLA_VALUE, "Vanilla")
-    for _, lootName in ipairs(definitions.godLoot or {}) do
-        common.addOption(values, labels, lootName, common.rewardOptionLabel(definitions, lootName))
+    for _, lootName in ipairs(rewardDomain.godLoot or {}) do
+        common.addOption(values, labels, lootName, common.rewardOptionLabel(rewardDomain, lootName))
     end
     return values, labels
 end

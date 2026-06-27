@@ -78,8 +78,6 @@ local function pylonRoomTopology(instance, slot, row)
             rewardStore = context and context.rewardStore or nil,
             eligibleRewardTypes = context and context.eligibleRewardTypes or nil,
             ineligibleRewardTypes = context and context.ineligibleRewardTypes or nil,
-            eligibleRewardSet = context and context.eligibleRewardSet or nil,
-            ineligibleRewardSet = context and context.ineligibleRewardSet or nil,
             offerCount = offerCount,
             rewardAddresses = offerCount > 0 and { "row" } or nil,
         },
@@ -176,6 +174,14 @@ local function sideRoomMode(sideRows, sideRowIndex)
     return mode, mode
 end
 
+local function sideRoomEncounterClass(instance, sideRows, sideRowIndex, sideDoor, enabled)
+    local storedKey, resolvedKey = data.resolveSideRoomEncounterClass(instance, sideRows, sideRowIndex, sideDoor)
+    if not enabled then
+        return storedKey, nil
+    end
+    return storedKey, resolvedKey
+end
+
 local function sideRewardPicks(surface, sideRewardRows, sideRowIndex)
     local picks = rewardSystem and rewardSystem.snapshot(surface, sideRewardFields(sideRewardRows, sideRowIndex)) or {}
     for _, pick in ipairs(picks) do
@@ -184,9 +190,11 @@ local function sideRewardPicks(surface, sideRewardRows, sideRowIndex)
     return picks
 end
 
-local function sideRoomSnapshot(fields, sideRowIndex, sideIndex, sideDoor, rewardsConfigured)
+local function sideRoomSnapshot(instance, fields, sideRowIndex, sideIndex, sideDoor, rewardsConfigured)
     local storedMode, mode = sideRoomMode(fields.SideRooms, sideRowIndex)
     local enabled = storedMode == data.sideRoomEnabledMode()
+    local storedEncounterClassKey, encounterClassKey =
+        sideRoomEncounterClass(instance, fields.SideRooms, sideRowIndex, sideDoor, enabled)
     local surface = rewardsConfigured and enabled and rewardSurfaceForContext(sideDoor.reward) or nil
     return {
         sideIndex = sideIndex,
@@ -195,6 +203,8 @@ local function sideRoomSnapshot(fields, sideRowIndex, sideIndex, sideDoor, rewar
         modeKey = mode,
         storedModeKey = storedMode,
         enabled = enabled,
+        encounterClassKey = encounterClassKey,
+        storedEncounterClassKey = storedEncounterClassKey,
         features = sideDoor.features,
         rewardStore = sideDoor.reward and sideDoor.reward.rewardStore or nil,
         rewards = rewardsConfigured and readSideRewards(fields.SideRewards, sideRowIndex) or EMPTY_LIST,
@@ -228,7 +238,8 @@ local function sideRoomSnapshots(instance, fields, routeRows, rowIndex, rewardsC
         local sideDoor = data.sideDoorForRow(instance, routeRows, rowIndex, sideIndex)
         local sideRowIndex = data.sideRoomRowIndex(instance, rowIndex, sideIndex)
         if sideDoor ~= nil and sideRowIndex ~= nil then
-            sideRooms[#sideRooms + 1] = sideRoomSnapshot(fields, sideRowIndex, sideIndex, sideDoor, rewardsConfigured)
+            sideRooms[#sideRooms + 1] =
+                sideRoomSnapshot(instance, fields, sideRowIndex, sideIndex, sideDoor, rewardsConfigured)
         end
     end
     return sideRooms

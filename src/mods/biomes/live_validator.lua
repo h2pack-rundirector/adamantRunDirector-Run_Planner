@@ -154,14 +154,14 @@ local function validateRoomRefs(issues, game, catalog)
     end
 end
 
-local function validateRewardStores(issues, game, rewardDefinitions)
+local function validateRewardStores(issues, game, rewardDomain)
     local rewardStoreData = liveTable(game, "RewardStoreData")
     if rewardStoreData == nil then
         addIssue(issues, "missing_live_table", "RewardStoreData", "Live RewardStoreData table is missing")
         return
     end
 
-    for storeKey in pairs(rewardDefinitions.rewardStores or {}) do
+    for storeKey in pairs(rewardDomain.rewardStores or {}) do
         if rewardStoreData[storeKey] == nil then
             addIssue(
                 issues,
@@ -173,14 +173,14 @@ local function validateRewardStores(issues, game, rewardDefinitions)
     end
 end
 
-local function validateShops(issues, game, rewardDefinitions)
+local function validateShops(issues, game, rewardDomain)
     local storeData = liveTable(game, "StoreData")
     if storeData == nil then
         addIssue(issues, "missing_live_table", "StoreData", "Live StoreData table is missing")
         return
     end
 
-    for shopKey in pairs(rewardDefinitions.shops or {}) do
+    for shopKey in pairs(rewardDomain.shops or {}) do
         if storeData[shopKey] == nil then
             addIssue(
                 issues,
@@ -226,13 +226,13 @@ end
 function liveValidator.validate(catalog, opts)
     opts = opts or {}
     local game = opts.game or _G
-    local rewardDefinitions = opts.rewardDefinitions
+    local rewardDomain = opts.rewardDomain
     local featureDefinitions = opts.featureDefinitions or catalog.features
     local issues = {}
 
     validateRoomRefs(issues, game, catalog)
-    validateRewardStores(issues, game, rewardDefinitions)
-    validateShops(issues, game, rewardDefinitions)
+    validateRewardStores(issues, game, rewardDomain)
+    validateShops(issues, game, rewardDomain)
     validateFeatureRequirementFields(issues, game, featureDefinitions)
 
     return issues

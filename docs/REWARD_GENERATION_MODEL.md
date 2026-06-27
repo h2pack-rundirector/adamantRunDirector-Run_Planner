@@ -143,6 +143,23 @@ through layered availability:
 Bag availability is a filter/check on reward leaves. Bag mutation comes from
 row topology plus selected reward leaves.
 
+## Reward Bag Declarations
+
+`definitions.rewardBags` is the counted store model. It contains duplicate
+reward entries, matching the vanilla idea that a store can have several copies
+of the same reward primitive.
+
+`definitions.rewardStores` remains the UI/declaration domain model. It is
+derived from the first occurrence of each reward type in the corresponding bag,
+so dropdowns continue to see one `Boon` option while bag simulation can still
+see four `Boon` entries.
+
+Filtered draws must keep the original store name. For example, a miniboss uses
+`RunProgress` with `eligibleRewardTypes = { "Boon" }`; it is not a separate
+`RunProgressBoonOnly` store. If the current `RunProgress` bag has no eligible
+`Boon` entry, vanilla appends another full `RunProgress` bag and then draws from
+the filtered eligible entries.
+
 ## Vanilla Reward Store Facts
 
 `ChooseRoomReward(...)` chooses from `run.RewardStores[rewardStoreName]`.

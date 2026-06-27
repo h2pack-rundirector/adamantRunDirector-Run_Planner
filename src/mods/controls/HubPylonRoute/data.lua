@@ -6,6 +6,8 @@ local rowEngine = deps.rowEngine
 local VANILLA_SIDE_ROOM_MODE = ""
 local ENABLED_SIDE_ROOM_MODE = "Enabled"
 local DISABLED_SIDE_ROOM_MODE = "Disabled"
+local SIDE_ROOM_ENCOUNTER_CLASS_ALIAS = "EncounterClassKey"
+local EMPTY_LIST = {}
 
 local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
@@ -143,6 +145,21 @@ local function addSideRoomModeChoices(instance)
     end
 end
 
+local function addSideRoomEncounterClassChoices(instance)
+    instance.sideRoomEncounterClassValuesByRoomKey = {}
+    instance.sideRoomEncounterClassLabels = {}
+    for _, room in ipairs(instance.biome and instance.biome.hub and instance.biome.hub.combatRooms or {}) do
+        for _, sideDoor in ipairs(room.sideDoors or EMPTY_LIST) do
+            local values = {}
+            for _, encounterClass in ipairs(sideDoor.encounterClasses or EMPTY_LIST) do
+                values[#values + 1] = encounterClass.key
+                instance.sideRoomEncounterClassLabels[encounterClass.key] = encounterClass.label or encounterClass.key
+            end
+            instance.sideRoomEncounterClassValuesByRoomKey[sideDoor.roomKey] = values
+        end
+    end
+end
+
 local function buildOptionEnrichmentColors(instance)
     instance.optionEnrichmentColorsByRole = {}
     for _, role in ipairs(instance.roles or {}) do
@@ -165,6 +182,12 @@ local function buildSideRoomRows()
             key = "ModeKey",
             type = "string",
             default = VANILLA_SIDE_ROOM_MODE,
+            maxLen = 16,
+        },
+        {
+            key = SIDE_ROOM_ENCOUNTER_CLASS_ALIAS,
+            type = "string",
+            default = "",
             maxLen = 16,
         },
     }
@@ -236,6 +259,7 @@ function data.prepare(instance)
 
     instance.maxSideDoorCount = maxSideDoorCount(instance)
     addSideRoomModeChoices(instance)
+    addSideRoomEncounterClassChoices(instance)
     buildRouteSlots(instance)
     timeline.applyRouteSlots(instance)
     prepareSideRoomRows(instance)
@@ -287,6 +311,10 @@ function data.sideRoomModeAlias()
     return "ModeKey"
 end
 
+function data.sideRoomEncounterClassAlias()
+    return SIDE_ROOM_ENCOUNTER_CLASS_ALIAS
+end
+
 function data.sideRoomRewardAlias(_, rewardAlias)
     return rewardAlias or ""
 end
@@ -301,6 +329,29 @@ end
 
 function data.sideRoomEnabledMode()
     return ENABLED_SIDE_ROOM_MODE
+end
+
+function data.sideRoomEncounterClassValues(instance, sideDoor)
+    if sideDoor == nil then
+        return EMPTY_LIST
+    end
+    return instance.sideRoomEncounterClassValuesByRoomKey[sideDoor.roomKey] or EMPTY_LIST
+end
+
+function data.sideRoomEncounterClassLabels(instance)
+    return instance.sideRoomEncounterClassLabels or {}
+end
+
+function data.defaultSideRoomEncounterClassKey(instance, sideDoor)
+    return data.sideRoomEncounterClassValues(instance, sideDoor)[1] or ""
+end
+
+function data.resolveSideRoomEncounterClass(instance, sideRows, sideRowIndex, sideDoor)
+    local storedKey = sideRows:read(sideRowIndex, SIDE_ROOM_ENCOUNTER_CLASS_ALIAS) or ""
+    if storedKey ~= "" then
+        return storedKey, storedKey
+    end
+    return storedKey, data.defaultSideRoomEncounterClassKey(instance, sideDoor)
 end
 
 function data.maxSideDoorCount(instance)

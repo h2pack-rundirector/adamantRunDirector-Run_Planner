@@ -16,19 +16,19 @@ local function loadCatalogFactory()
     return factory
 end
 
-local function loadDefinitions()
-    return importHarness.loadRewardDefinitions()
+local function loadRewardDomain()
+    return importHarness.loadRewardDomain()
 end
 
 local function loadCatalog()
     local factory = loadCatalogFactory()
-    local definitions = loadDefinitions()
-    return factory.create(definitions)
+    local rewardDomain = loadRewardDomain()
+    return factory.create(rewardDomain)
 end
 
-local function loadCatalogWith(definitions)
+local function loadCatalogWith(rewardDomain)
     local factory = loadCatalogFactory()
-    return factory.create(definitions)
+    return factory.create(rewardDomain)
 end
 
 local function loadValueStates()
@@ -67,6 +67,29 @@ end
 
 local function loadConditions()
     return importHarness.loadRewardConditions()
+end
+
+local function countBagEntries(bag, rewardType)
+    local count = 0
+    for _, item in ipairs(bag or {}) do
+        if item == rewardType or type(item) == "table" and item.rewardType == rewardType then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function declarationRewardType(item)
+    if type(item) == "table" then
+        return item.rewardType
+    end
+    return item
+end
+
+local function appendUnknownRewardReference(unknown, primitives, path, rewardType)
+    if rewardType ~= nil and primitives[rewardType] == nil then
+        unknown[#unknown + 1] = path .. ": " .. tostring(rewardType)
+    end
 end
 
 local function loadSemantics()
@@ -531,35 +554,104 @@ function TestRunPlannerRewards.testConditionsBlockRoomHammerAfterShopHammer()
     })
 end
 
-function TestRunPlannerRewards.testDefinitionsSeparateRewardStoresSetsAndShopOptionSets()
-    local definitions = loadDefinitions()
+function TestRunPlannerRewards.testRewardDomainSeparateRewardStoresSetsAndShopOptionSets()
+    local rewardDomain = loadRewardDomain()
 
-    lu.assertNotNil(definitions.rewardStores.RunProgress)
-    lu.assertNotNil(definitions.rewardStores.HubRewards)
-    lu.assertNotNil(definitions.rewardStores.SubRoomRewards)
-    lu.assertNotNil(definitions.rewardStores.TartarusRewards)
-    lu.assertNotNil(definitions.rewardStores.TyphonBossRewards)
+    lu.assertNotNil(rewardDomain.rewardBags.RunProgress)
+    lu.assertNotNil(rewardDomain.rewardBags.HubRewards)
+    lu.assertNotNil(rewardDomain.rewardBags.SubRoomRewards)
+    lu.assertEquals(rewardDomain.rewardBags.RunProgress.refill, "appendWhenNoEligibleEntry")
+    lu.assertEquals(countBagEntries(rewardDomain.rewardBags.RunProgress, "Boon"), 4)
+    lu.assertEquals(countBagEntries(rewardDomain.rewardBags.RunProgress, "WeaponUpgrade"), 2)
+    lu.assertEquals(countBagEntries(rewardDomain.rewardBags.HubRewards, "Boon"), 5)
+    lu.assertEquals(countBagEntries(rewardDomain.rewardBags.TartarusRewards, "Boon"), 3)
 
-    lu.assertNil(definitions.rewardStores.OpeningRunProgress)
-    lu.assertNil(definitions.rewardStores.EasyHubRewards)
-    lu.assertNil(definitions.rewardStoreViews)
+    lu.assertNotNil(rewardDomain.rewardStores.RunProgress)
+    lu.assertNotNil(rewardDomain.rewardStores.HubRewards)
+    lu.assertNotNil(rewardDomain.rewardStores.SubRoomRewards)
+    lu.assertNotNil(rewardDomain.rewardStores.TartarusRewards)
+    lu.assertNotNil(rewardDomain.rewardStores.TyphonBossRewards)
 
-    lu.assertNil(definitions.rewardStores.WorldShopBoon)
-    lu.assertNotNil(definitions.shopOptionSets.WorldShopBoon)
-    lu.assertNotNil(definitions.shopOptionSets.EndShopPrimaryPower)
-    lu.assertEquals(definitions.shops.WorldShop.slots[1].optionSet, "WorldShopBoon")
+    lu.assertNil(rewardDomain.rewardStores.OpeningRunProgress)
+    lu.assertNil(rewardDomain.rewardStores.EasyHubRewards)
+    lu.assertNil(rewardDomain.rewardStoreViews)
 
-    lu.assertEquals(definitions.rewardSets.OpeningRoomBans, {
-        "Devotion",
-        "RoomMoneyDrop",
-        "MaxHealthDrop",
-        "MaxManaDrop",
-    })
-    lu.assertEquals(definitions.rewardSets.HubCombatRoomEasyBans, {
-        "Devotion",
-        "WeaponUpgrade",
-        "HermesUpgrade",
-    })
+    lu.assertNil(rewardDomain.rewardStores.WorldShopBoon)
+    lu.assertNotNil(rewardDomain.shopOptionSets.WorldShopBoon)
+    lu.assertNotNil(rewardDomain.shopOptionSets.EndShopPrimaryPower)
+    lu.assertEquals(rewardDomain.shops.WorldShop.slots[1].optionSet, "WorldShopBoon")
+end
+
+function TestRunPlannerRewards.testRewardDeclarationReferencesResolveToPrimitives()
+    local rewardDomain = loadRewardDomain()
+    local primitives = rewardDomain.primitives
+    local unknown = {}
+
+    for bagKey, bag in pairs(rewardDomain.rewardBags or {}) do
+        for index, item in ipairs(bag) do
+            appendUnknownRewardReference(
+                unknown,
+                primitives,
+                "rewardBags." .. tostring(bagKey) .. "[" .. tostring(index) .. "]",
+                declarationRewardType(item)
+            )
+        end
+    end
+
+    for storeKey, store in pairs(rewardDomain.rewardStores or {}) do
+        for index, rewardType in ipairs(store.options or {}) do
+            appendUnknownRewardReference(
+                unknown,
+                primitives,
+                "rewardStores." .. tostring(storeKey) .. ".options[" .. tostring(index) .. "]",
+                rewardType
+            )
+        end
+    end
+
+    for optionSetKey, optionSet in pairs(rewardDomain.shopOptionSets or {}) do
+        for index, rewardType in ipairs(optionSet.options or {}) do
+            appendUnknownRewardReference(
+                unknown,
+                primitives,
+                "shopOptionSets." .. tostring(optionSetKey) .. ".options[" .. tostring(index) .. "]",
+                rewardType
+            )
+        end
+    end
+
+    for ruleIndex, rule in ipairs(loadConditions()) do
+        for index, rewardType in ipairs(rule.targets or {}) do
+            appendUnknownRewardReference(
+                unknown,
+                primitives,
+                "conditions[" .. tostring(ruleIndex) .. "].targets[" .. tostring(index) .. "]",
+                rewardType
+            )
+        end
+        for requirementIndex, requirement in ipairs(rule.requirements or {}) do
+            for index, rewardType in ipairs(requirement.rewards or {}) do
+                appendUnknownRewardReference(
+                    unknown,
+                    primitives,
+                    "conditions[" .. tostring(ruleIndex) .. "].requirements[" .. tostring(requirementIndex)
+                        .. "].rewards[" .. tostring(index) .. "]",
+                    rewardType
+                )
+            end
+            for index, rewardType in ipairs(requirement.countedLootNames or {}) do
+                appendUnknownRewardReference(
+                    unknown,
+                    primitives,
+                    "conditions[" .. tostring(ruleIndex) .. "].requirements[" .. tostring(requirementIndex)
+                        .. "].countedLootNames[" .. tostring(index) .. "]",
+                    rewardType
+                )
+            end
+        end
+    end
+
+    lu.assertEquals(unknown, {})
 end
 
 function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()
@@ -603,13 +695,18 @@ function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()
     lu.assertEquals(surface.controls[4].key, "lootBName")
 end
 
-function TestRunPlannerRewards.testCatalogAppliesNamedRewardSets()
+function TestRunPlannerRewards.testCatalogAppliesExplicitRewardFilters()
     local catalog = loadCatalog()
 
     local opening = catalog:surfaceFor({
         kind = "roomStore",
         rewardStore = "RunProgress",
-        ineligibleRewardSet = "OpeningRoomBans",
+        ineligibleRewardTypes = {
+            "Devotion",
+            "RoomMoneyDrop",
+            "MaxHealthDrop",
+            "MaxManaDrop",
+        },
     })
     lu.assertEquals(opening.controls[1].values, {
         "",
@@ -624,7 +721,11 @@ function TestRunPlannerRewards.testCatalogAppliesNamedRewardSets()
     local easyHub = catalog:surfaceFor({
         kind = "roomStore",
         rewardStore = "HubRewards",
-        ineligibleRewardSet = "HubCombatRoomEasyBans",
+        ineligibleRewardTypes = {
+            "Devotion",
+            "WeaponUpgrade",
+            "HermesUpgrade",
+        },
     })
     lu.assertEquals(easyHub.controls[1].values, {
         "",
@@ -1194,27 +1295,6 @@ function TestRunPlannerRewards.testCatalogComposesEligibleAndIneligibleRewardTyp
         "",
         "Boon",
         "HermesUpgrade",
-    })
-end
-
-function TestRunPlannerRewards.testCatalogComposesNamedAndExplicitRewardFilters()
-    local catalog = loadCatalog()
-    local surface = catalog:surfaceFor({
-        kind = "roomStore",
-        rewardStore = "RunProgress",
-        eligibleRewardSet = "OpeningRoomBans",
-        eligibleRewardTypes = { "Boon", "HermesUpgrade" },
-        ineligibleRewardTypes = { "RoomMoneyDrop" },
-    })
-
-    lu.assertEquals(surface.kind, "roomStore")
-    lu.assertEquals(surface.controls[1].values, {
-        "",
-        "Boon",
-        "HermesUpgrade",
-        "Devotion",
-        "MaxHealthDrop",
-        "MaxManaDrop",
     })
 end
 

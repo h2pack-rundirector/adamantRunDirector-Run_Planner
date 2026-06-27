@@ -9,6 +9,10 @@ local HARD_SUBROOMS = {
     N_Sub14 = true,
 }
 
+local LIGHT_SUBROOMS = {
+    N_Sub02 = true,
+}
+
 local SURFACE_SHOP_FEATURES = { surfaceShop = true }
 local CHAOS_FEATURES = { chaos = true }
 local SURFACE_SHOP_SUBROOMS = {
@@ -73,10 +77,29 @@ local function subroomRewardStore(roomKey)
     return "SubRoomRewards"
 end
 
+local function subroomEncounterClasses(roomKey)
+    if HARD_SUBROOMS[roomKey] then
+        return {
+            { key = "Hard", label = "Hard" },
+        }
+    end
+    if LIGHT_SUBROOMS[roomKey] then
+        return {
+            { key = "Easy", label = "Easy" },
+            { key = "Empty", label = "Empty" },
+        }
+    end
+    return {
+        { key = "Easy", label = "Easy" },
+        { key = "Hard", label = "Hard" },
+    }
+end
+
 local function sideDoor(doorId, roomKey)
     return {
         doorId = doorId,
         roomKey = roomKey,
+        encounterClasses = subroomEncounterClasses(roomKey),
         features = SURFACE_SHOP_SUBROOMS[roomKey] and SURFACE_SHOP_FEATURES or nil,
         reward = rewards.roomStore(subroomRewardStore(roomKey)),
     }
@@ -209,7 +232,12 @@ layout.combatRooms = {
     combatRoom("N_Combat17", 561424, {
         sideDoor(558352, "N_Sub11"),
     }, {
-        reward = rewards.roomStore("HubRewards", { ineligibleRewardSet = "HubCombatRoomEasyBans" }),
+        reward = rewards.roomStore("HubRewards", {
+            ineligibleRewardTypes = {
+                "WeaponUpgrade",
+                "HermesUpgrade",
+            },
+        }),
     }),
     combatRoom("N_Combat20", 561418, {
         sideDoor(659508, "N_Sub06"),
@@ -221,7 +249,12 @@ layout.combatRooms = {
         sideDoor(566544, "N_Sub10"),
         sideDoor(566545, "N_Sub07"),
     }, {
-        reward = rewards.roomStore("HubRewards", { ineligibleRewardSet = "HubCombatRoomEasyBans" }),
+        reward = rewards.roomStore("HubRewards", {
+            ineligibleRewardTypes = {
+                "WeaponUpgrade",
+                "HermesUpgrade",
+            },
+        }),
     }),
     combatRoom("N_Combat15", 560705, {
         sideDoor(657623, "N_Sub03"),

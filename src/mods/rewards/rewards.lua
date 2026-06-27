@@ -37,7 +37,7 @@ function rewardSystem.create(opts)
     local decorations = opts.decorations
     local parts = import("mods/rewards/assembly.lua").create(opts)
     local surfaceRegistry = import("mods/rewards/surfaces/registry.lua").create(
-        parts.definitions
+        parts.rewardDomain
     )
     local runtime = import("mods/rewards/runtime.lua", nil, {
         catalog = surfaceRegistry,
@@ -59,8 +59,8 @@ function rewardSystem.create(opts)
         rewardAlias = storage.rewardAlias,
 
         catalogSurfaces = parts.catalogSurfaces,
-        definitions = parts.definitions,
         legalityConditions = parts.conditions,
+        rewardDomain = parts.rewardDomain,
 
         draw = ui.draw,
         hasControls = runtime.hasControls,

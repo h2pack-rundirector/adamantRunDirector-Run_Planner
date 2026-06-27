@@ -19,7 +19,7 @@ local function registerLiveValidation(moduleRef)
         if debugModeEnabled(runtime) then
             liveGameValidator.run(catalog, {
                 host = host,
-                rewardDefinitions = rewards.definitions,
+                rewardDomain = rewards.rewardDomain,
             })
         end
     end)

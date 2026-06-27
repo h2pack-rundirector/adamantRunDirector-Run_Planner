@@ -5,9 +5,9 @@ local storage = common.storage
 
 local forcedReward = {}
 
-function forcedReward.create(definitions, context)
+function forcedReward.create(rewardDomain, context)
     if context.rewardType == "Devotion" then
-        local values, labels = common.godSourceOptions(definitions)
+        local values, labels = common.godSourceOptions(rewardDomain)
         return {
             kind = "devotionPair",
             context = context,
@@ -29,7 +29,7 @@ function forcedReward.create(definitions, context)
     end
 
     if context.rewardType == "Boon" then
-        local values, labels = common.godSourceOptions(definitions)
+        local values, labels = common.godSourceOptions(rewardDomain)
         return {
             kind = "boonSource",
             context = context,
@@ -47,7 +47,7 @@ function forcedReward.create(definitions, context)
         kind = "fixedReward",
         context = context,
         fixedRewardType = context.rewardType,
-        displayLabel = common.rewardOptionLabel(definitions, context.rewardType),
+        displayLabel = common.rewardOptionLabel(rewardDomain, context.rewardType),
         controls = {},
     }
 end

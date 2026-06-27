@@ -9,20 +9,20 @@ local storage = common.storage
 
 local fieldsCages = {}
 
-function fieldsCages.create(definitions, context)
+function fieldsCages.create(rewardDomain, context)
     local sourceCount = math.floor(tonumber(context.sourceCount) or 0)
     if sourceCount <= 1 then
-        return roomStore.create(definitions, context)
+        return roomStore.create(rewardDomain, context)
     end
 
     local rewardStore = context.rewardStore or "RunProgress"
-    local rewardTypes = common.optionsFor(definitions, rewardStore)
-    local eligible = common.rewardTypeLookup(definitions, context.eligibleRewardTypes, context.eligibleRewardSet)
-    local ineligible = common.rewardTypeLookup(definitions, context.ineligibleRewardTypes, context.ineligibleRewardSet)
+    local rewardTypes = common.optionsFor(rewardDomain, rewardStore)
+    local eligible = common.rewardTypeLookup(context.eligibleRewardTypes)
+    local ineligible = common.rewardTypeLookup(context.ineligibleRewardTypes)
     local rewardValues, rewardLabels = common.uniqueNames(rewardTypes, eligible, ineligible, function(name)
-        return common.rewardOptionLabel(definitions, name)
+        return common.rewardOptionLabel(rewardDomain, name)
     end)
-    local godValues, godLabels = common.godSourceOptions(definitions)
+    local godValues, godLabels = common.godSourceOptions(rewardDomain)
     local controls = {}
 
     for sourceIndex = 1, sourceCount do

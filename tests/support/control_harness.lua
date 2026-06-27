@@ -56,13 +56,13 @@ local function loadCatalog()
     return catalog, data
 end
 
-local loadedRewardDefinitions
+local loadedRewardDomain
 
-local function loadRewardDefinitions()
-    if loadedRewardDefinitions == nil then
-        loadedRewardDefinitions = importHarness.loadRewardDefinitions()
+local function loadRewardDomain()
+    if loadedRewardDomain == nil then
+        loadedRewardDomain = importHarness.loadRewardDomain()
     end
-    return loadedRewardDefinitions
+    return loadedRewardDomain
 end
 
 local loadedRewardConditions
@@ -78,7 +78,7 @@ local function loadRouteDeps()
     local route
     withTestImport(function()
         local rewards = testImport("mods/rewards/rewards.lua").create({
-            definitions = loadRewardDefinitions(),
+            rewardDomain = loadRewardDomain(),
         })
         local timeline = testImport("mods/route/timeline.lua")
         local rows = testImport("mods/route/rows.lua", nil, {

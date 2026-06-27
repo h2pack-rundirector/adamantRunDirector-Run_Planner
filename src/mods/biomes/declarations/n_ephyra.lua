@@ -36,7 +36,14 @@ return function(deps)
                     label = "Opening",
                     isBiomeEntry = true,
                     room = layout.openingRoom,
-                    reward = rewards.roomStore("RunProgress", { ineligibleRewardSet = "OpeningRoomBans" }),
+                    reward = rewards.roomStore("RunProgress", {
+                        ineligibleRewardTypes = {
+                            "Devotion",
+                            "RoomMoneyDrop",
+                            "MaxHealthDrop",
+                            "MaxManaDrop",
+                        },
+                    }),
                     biomeEncounterDepthCost = 1,
                     locked = true,
                 },
@@ -44,7 +51,14 @@ return function(deps)
                     key = "PreHub",
                     label = "Pre-Hub",
                     room = layout.preHubRoom,
-                    reward = rewards.roomStore("RunProgress", { ineligibleRewardSet = "OpeningRoomBans" }),
+                    reward = rewards.roomStore("RunProgress", {
+                        ineligibleRewardTypes = {
+                            "Devotion",
+                            "RoomMoneyDrop",
+                            "MaxHealthDrop",
+                            "MaxManaDrop",
+                        },
+                    }),
                     biomeEncounterDepthCost = 0,
                     locked = true,
                 },

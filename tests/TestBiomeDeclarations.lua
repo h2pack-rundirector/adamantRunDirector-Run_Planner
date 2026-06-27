@@ -48,9 +48,9 @@ local function hasValue(items, value)
     return false
 end
 
-local function validatorOptions(rewardDefinitions)
+local function validatorOptions(rewardDomain)
     return {
-        rewardDefinitions = rewardDefinitions,
+        rewardDomain = rewardDomain,
         featureDefinitions = dofile("src/mods/data/features.lua"),
     }
 end
@@ -59,14 +59,14 @@ function TestRunPlannerBiomeDeclarations.testCheckedInBiomeDeclarationsValidateS
     local data = dofile("src/mods/data.lua")
     local validator = dofile("src/mods/biomes/validator.lua")
     local catalogDeps = importHarness.loadCatalogDeps()
-    local rewardDefinitions = importHarness.loadRewardDefinitions(catalogDeps.godData)
+    local rewardDomain = importHarness.loadRewardDomain(catalogDeps.godData)
     local catalog = withTestImport(function()
         return data.loadBiomes(catalogDeps)
     end)
 
     local issues = {}
-    appendIssues(issues, validator.validateRewardDefinitions(rewardDefinitions))
-    appendIssues(issues, validator.validateCatalog(catalog, validatorOptions(rewardDefinitions)))
+    appendIssues(issues, validator.validateRewardDomain(rewardDomain))
+    appendIssues(issues, validator.validateCatalog(catalog, validatorOptions(rewardDomain)))
 
     assertNoIssues(issues)
 end
@@ -75,12 +75,12 @@ function TestRunPlannerBiomeDeclarations.testGodListDuplicatesStayInSync()
     local validator = dofile("src/mods/biomes/validator.lua")
     local godData = importHarness.loadGodData()
     local routeRules = importHarness.loadRouteRules(godData)
-    local rewardDefinitions = importHarness.loadRewardDefinitions(godData)
+    local rewardDomain = importHarness.loadRewardDomain(godData)
     local rewardConditions = importHarness.loadRewardConditions(godData)
 
     assertNoIssues(validator.validateGodLists(
         godData,
-        rewardDefinitions,
+        rewardDomain,
         routeRules,
         rewardConditions
     ))
@@ -122,7 +122,7 @@ end
 
 function TestRunPlannerBiomeDeclarations.testValidatorReportsMalformedStaticDeclarations()
     local validator = dofile("src/mods/biomes/validator.lua")
-    local rewardDefinitions = importHarness.loadRewardDefinitions()
+    local rewardDomain = importHarness.loadRewardDomain()
     local malformed = {
         key = "X",
         label = "Broken",
@@ -164,7 +164,7 @@ function TestRunPlannerBiomeDeclarations.testValidatorReportsMalformedStaticDecl
         },
     }
 
-    local codes = issueCodes(validator.validateBiome(malformed, validatorOptions(rewardDefinitions)))
+    local codes = issueCodes(validator.validateBiome(malformed, validatorOptions(rewardDomain)))
 
     lu.assertTrue(codes.unknown_role)
     lu.assertTrue(codes.unknown_reward_store)

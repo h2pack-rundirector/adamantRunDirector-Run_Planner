@@ -30,11 +30,11 @@ function importHarness.loadRouteRules(godData)
     end)
 end
 
-function importHarness.loadRewardDefinitions(godData)
+function importHarness.loadRewardDomain(godData)
     return importHarness.withTestImport(function()
-        return importHarness.testImport("mods/rewards/declarations/definitions.lua")({
+        return importHarness.testImport("mods/rewards/assembly.lua").create({
             godData = godData or importHarness.loadGodData(),
-        })
+        }).rewardDomain
     end)
 end
 

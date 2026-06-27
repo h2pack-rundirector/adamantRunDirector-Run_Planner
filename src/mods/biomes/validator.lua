@@ -46,39 +46,40 @@ local function validateUniqueKeys(issues, items, path, keyField)
     end
 end
 
-local function rewardStoreExists(rewardDefinitions, rewardStore)
+local function rewardStoreExists(rewardDomain, rewardStore)
     return rewardStore ~= nil
-        and rewardDefinitions.rewardStores ~= nil
-        and rewardDefinitions.rewardStores[rewardStore] ~= nil
+        and rewardDomain.rewardStores ~= nil
+        and rewardDomain.rewardStores[rewardStore] ~= nil
 end
 
-local function shopOptionSetExists(rewardDefinitions, optionSet)
+local function shopOptionSetExists(rewardDomain, optionSet)
     return optionSet ~= nil
-        and rewardDefinitions.shopOptionSets ~= nil
-        and rewardDefinitions.shopOptionSets[optionSet] ~= nil
+        and rewardDomain.shopOptionSets ~= nil
+        and rewardDomain.shopOptionSets[optionSet] ~= nil
 end
 
-local function shopProfileExists(rewardDefinitions, shopProfile)
+local function shopProfileExists(rewardDomain, shopProfile)
     return shopProfile ~= nil
-        and rewardDefinitions.shops ~= nil
-        and rewardDefinitions.shops[shopProfile] ~= nil
+        and rewardDomain.shops ~= nil
+        and rewardDomain.shops[shopProfile] ~= nil
 end
 
-local function rewardSetExists(rewardDefinitions, rewardSet)
-    return rewardSet ~= nil
-        and rewardDefinitions.rewardSets ~= nil
-        and rewardDefinitions.rewardSets[rewardSet] ~= nil
-end
-
-local function primitiveExists(rewardDefinitions, rewardType)
+local function primitiveExists(rewardDomain, rewardType)
     return rewardType ~= nil
-        and rewardDefinitions.primitives ~= nil
-        and rewardDefinitions.primitives[rewardType] ~= nil
+        and rewardDomain.primitives ~= nil
+        and rewardDomain.primitives[rewardType] ~= nil
 end
 
-local function validateRewardTypes(issues, rewardDefinitions, items, path)
+local function rewardTypeFromBagEntry(entry)
+    if type(entry) == "table" then
+        return entry.rewardType
+    end
+    return entry
+end
+
+local function validateRewardTypes(issues, rewardDomain, items, path)
     for index, rewardType in ipairs(items or {}) do
-        if not primitiveExists(rewardDefinitions, rewardType) then
+        if not primitiveExists(rewardDomain, rewardType) then
             addIssue(issues, "unknown_reward_type", childPath(path, index), "Unknown reward type: " .. tostring(rewardType))
         end
     end
@@ -91,29 +92,16 @@ local function prefixedKey(prefix, key)
     return prefix .. string.upper(string.sub(key, 1, 1)) .. string.sub(key, 2)
 end
 
-local function validateRewardFilters(issues, rewardDefinitions, context, path, prefix)
+local function validateRewardFilters(issues, rewardDomain, context, path, prefix)
     local prefixText = prefix or ""
     local typeKey = prefixedKey(prefixText, "eligibleRewardTypes")
     local ineligibleTypeKey = prefixedKey(prefixText, "ineligibleRewardTypes")
-    local setKey = prefixedKey(prefixText, "eligibleRewardSet")
-    local ineligibleSetKey = prefixedKey(prefixText, "ineligibleRewardSet")
 
-    validateRewardTypes(issues, rewardDefinitions, context[typeKey], childPath(path, typeKey))
-    validateRewardTypes(issues, rewardDefinitions, context[ineligibleTypeKey], childPath(path, ineligibleTypeKey))
-    if context[setKey] ~= nil and not rewardSetExists(rewardDefinitions, context[setKey]) then
-        addIssue(issues, "unknown_reward_set", childPath(path, setKey), "Unknown reward set: " .. tostring(context[setKey]))
-    end
-    if context[ineligibleSetKey] ~= nil and not rewardSetExists(rewardDefinitions, context[ineligibleSetKey]) then
-        addIssue(
-            issues,
-            "unknown_reward_set",
-            childPath(path, ineligibleSetKey),
-            "Unknown reward set: " .. tostring(context[ineligibleSetKey])
-        )
-    end
+    validateRewardTypes(issues, rewardDomain, context[typeKey], childPath(path, typeKey))
+    validateRewardTypes(issues, rewardDomain, context[ineligibleTypeKey], childPath(path, ineligibleTypeKey))
 end
 
-local function validateRewardContext(issues, rewardDefinitions, reward, path)
+local function validateRewardContext(issues, rewardDomain, reward, path)
     if reward == nil then
         return
     end
@@ -123,39 +111,39 @@ local function validateRewardContext(issues, rewardDefinitions, reward, path)
     end
 
     if reward.kind == "roomStore" then
-        if not rewardStoreExists(rewardDefinitions, reward.rewardStore) then
+        if not rewardStoreExists(rewardDomain, reward.rewardStore) then
             addIssue(issues, "unknown_reward_store", childPath(path, "rewardStore"), "Unknown reward store")
         end
-        validateRewardFilters(issues, rewardDefinitions, reward, path, "")
+        validateRewardFilters(issues, rewardDomain, reward, path, "")
     elseif reward.kind == "majorMinor" then
-        if not rewardStoreExists(rewardDefinitions, reward.majorRewardStore) then
+        if not rewardStoreExists(rewardDomain, reward.majorRewardStore) then
             addIssue(issues, "unknown_reward_store", childPath(path, "majorRewardStore"), "Unknown major reward store")
         end
-        if not rewardStoreExists(rewardDefinitions, reward.minorRewardStore) then
+        if not rewardStoreExists(rewardDomain, reward.minorRewardStore) then
             addIssue(issues, "unknown_reward_store", childPath(path, "minorRewardStore"), "Unknown minor reward store")
         end
-        validateRewardFilters(issues, rewardDefinitions, reward, path, "")
-        validateRewardFilters(issues, rewardDefinitions, reward, path, "major")
-        validateRewardFilters(issues, rewardDefinitions, reward, path, "minor")
+        validateRewardFilters(issues, rewardDomain, reward, path, "")
+        validateRewardFilters(issues, rewardDomain, reward, path, "major")
+        validateRewardFilters(issues, rewardDomain, reward, path, "minor")
     elseif reward.kind == "forcedReward" then
-        if not primitiveExists(rewardDefinitions, reward.rewardType) then
+        if not primitiveExists(rewardDomain, reward.rewardType) then
             addIssue(issues, "unknown_reward_type", childPath(path, "rewardType"), "Unknown reward type")
         end
-        if reward.rewardStore ~= nil and not rewardStoreExists(rewardDefinitions, reward.rewardStore) then
+        if reward.rewardStore ~= nil and not rewardStoreExists(rewardDomain, reward.rewardStore) then
             addIssue(issues, "unknown_reward_store", childPath(path, "rewardStore"), "Unknown reward store")
         end
     elseif reward.kind == "shop" then
-        if not shopProfileExists(rewardDefinitions, reward.shopProfile) then
+        if not shopProfileExists(rewardDomain, reward.shopProfile) then
             addIssue(issues, "unknown_shop_profile", childPath(path, "shopProfile"), "Unknown shop profile")
         end
     elseif reward.kind == "fieldsCages" then
-        if not rewardStoreExists(rewardDefinitions, reward.rewardStore) then
+        if not rewardStoreExists(rewardDomain, reward.rewardStore) then
             addIssue(issues, "unknown_reward_store", childPath(path, "rewardStore"), "Unknown reward store")
         end
-        validateRewardFilters(issues, rewardDefinitions, reward, path, "")
+        validateRewardFilters(issues, rewardDomain, reward, path, "")
     elseif reward.kind == "preboss" then
         for index, offer in ipairs(reward.offers or {}) do
-            validateRewardContext(issues, rewardDefinitions, offer, childPath(childPath(path, "offers"), index))
+            validateRewardContext(issues, rewardDomain, offer, childPath(childPath(path, "offers"), index))
         end
     end
 end
@@ -175,48 +163,48 @@ local function validateFeatures(issues, knownFeatureKeys, features, path)
     end
 end
 
-local function validateRoomOption(issues, rewardDefinitions, knownFeatureKeys, option, path)
+local function validateRoomOption(issues, rewardDomain, knownFeatureKeys, option, path)
     if type(option) ~= "table" then
         return
     end
     validateFeatures(issues, knownFeatureKeys, option.features, childPath(path, "features"))
     if option.reward ~= nil then
-        validateRewardContext(issues, rewardDefinitions, option.reward, childPath(path, "reward"))
+        validateRewardContext(issues, rewardDomain, option.reward, childPath(path, "reward"))
     end
 end
 
-local function validateRoomOptions(issues, rewardDefinitions, knownFeatureKeys, options, path)
+local function validateRoomOptions(issues, rewardDomain, knownFeatureKeys, options, path)
     validateUniqueKeys(issues, options, path, "key")
     for index, option in ipairs(options or {}) do
-        validateRoomOption(issues, rewardDefinitions, knownFeatureKeys, option, childPath(path, index))
+        validateRoomOption(issues, rewardDomain, knownFeatureKeys, option, childPath(path, index))
     end
 end
 
-local function validateRole(issues, rewardDefinitions, knownFeatureKeys, role, path)
+local function validateRole(issues, rewardDomain, knownFeatureKeys, role, path)
     if type(role) ~= "table" then
         return
     end
     validateFeatures(issues, knownFeatureKeys, role and role.features, childPath(path, "features"))
     if role and role.reward ~= nil then
-        validateRewardContext(issues, rewardDefinitions, role.reward, childPath(path, "reward"))
+        validateRewardContext(issues, rewardDomain, role.reward, childPath(path, "reward"))
     end
     validateRoomOptions(
         issues,
-        rewardDefinitions,
+        rewardDomain,
         knownFeatureKeys,
         role and role.roomOptions,
         childPath(path, "roomOptions")
     )
     validateRoomOptions(
         issues,
-        rewardDefinitions,
+        rewardDomain,
         knownFeatureKeys,
         role and role.mapOptions,
         childPath(path, "mapOptions")
     )
 end
 
-local function validateSlotEntry(issues, rewardDefinitions, knownFeatureKeys, rolesByKey, entry, path)
+local function validateSlotEntry(issues, rewardDomain, knownFeatureKeys, rolesByKey, entry, path)
     if type(entry) ~= "table" then
         return
     end
@@ -225,33 +213,33 @@ local function validateSlotEntry(issues, rewardDefinitions, knownFeatureKeys, ro
     end
     validateFeatures(issues, knownFeatureKeys, entry.features, childPath(path, "features"))
     if entry.reward ~= nil then
-        validateRewardContext(issues, rewardDefinitions, entry.reward, childPath(path, "reward"))
+        validateRewardContext(issues, rewardDomain, entry.reward, childPath(path, "reward"))
     end
     validateRoomOption(
         issues,
-        rewardDefinitions,
+        rewardDomain,
         knownFeatureKeys,
         entry.room,
         childPath(path, "room")
     )
     validateRoomOptions(
         issues,
-        rewardDefinitions,
+        rewardDomain,
         knownFeatureKeys,
         entry.roomOptions,
         childPath(path, "roomOptions")
     )
 end
 
-local function validateSlotList(issues, rewardDefinitions, knownFeatureKeys, rolesByKey, items, path)
+local function validateSlotList(issues, rewardDomain, knownFeatureKeys, rolesByKey, items, path)
     for index, entry in ipairs(items or {}) do
-        validateSlotEntry(issues, rewardDefinitions, knownFeatureKeys, rolesByKey, entry, childPath(path, index))
+        validateSlotEntry(issues, rewardDomain, knownFeatureKeys, rolesByKey, entry, childPath(path, index))
     end
 end
 
-local function validateSlotMap(issues, rewardDefinitions, knownFeatureKeys, rolesByKey, items, path)
+local function validateSlotMap(issues, rewardDomain, knownFeatureKeys, rolesByKey, items, path)
     for key, entry in pairs(items or {}) do
-        validateSlotEntry(issues, rewardDefinitions, knownFeatureKeys, rolesByKey, entry, childPath(path, key))
+        validateSlotEntry(issues, rewardDomain, knownFeatureKeys, rolesByKey, entry, childPath(path, key))
     end
 end
 
@@ -292,17 +280,34 @@ local function buildKnownFeatureKeys(featureDefinitions, biomes)
     return known
 end
 
-function validator.validateRewardDefinitions(rewardDefinitions)
+function validator.validateRewardDomain(rewardDomain)
     local issues = {}
-    local definitions = rewardDefinitions or {}
+    local domain = rewardDomain or {}
 
-    for storeKey, store in pairs(definitions.rewardStores or {}) do
-        validateRewardTypes(issues, definitions, store.options, "rewardStores." .. tostring(storeKey) .. ".options")
+    for bagKey, bag in pairs(domain.rewardBags or {}) do
+        if domain.rewardStores == nil or domain.rewardStores[bagKey] == nil then
+            addIssue(
+                issues,
+                "unknown_reward_store",
+                "rewardBags." .. tostring(bagKey),
+                "Reward bag has no matching reward store"
+            )
+        end
+        for index, item in ipairs(bag or {}) do
+            local path = "rewardBags." .. tostring(bagKey) .. ".entries[" .. tostring(index) .. "].rewardType"
+            local rewardType = rewardTypeFromBagEntry(item)
+            if not primitiveExists(domain, rewardType) then
+                addIssue(issues, "unknown_reward_type", path, "Unknown reward type: " .. tostring(rewardType))
+            end
+        end
     end
-    for optionSetKey, optionSet in pairs(definitions.shopOptionSets or {}) do
-        validateRewardTypes(issues, definitions, optionSet.options, "shopOptionSets." .. tostring(optionSetKey) .. ".options")
+    for storeKey, store in pairs(domain.rewardStores or {}) do
+        validateRewardTypes(issues, domain, store.options, "rewardStores." .. tostring(storeKey) .. ".options")
     end
-    for shopKey, shop in pairs(definitions.shops or {}) do
+    for optionSetKey, optionSet in pairs(domain.shopOptionSets or {}) do
+        validateRewardTypes(issues, domain, optionSet.options, "shopOptionSets." .. tostring(optionSetKey) .. ".options")
+    end
+    for shopKey, shop in pairs(domain.shops or {}) do
         local seenSlots = {}
         for index, slot in ipairs(shop.slots or {}) do
             local slotPath = "shops." .. tostring(shopKey) .. ".slots[" .. tostring(index) .. "]"
@@ -313,7 +318,7 @@ function validator.validateRewardDefinitions(rewardDefinitions)
             else
                 seenSlots[slot.key] = true
             end
-            if not shopOptionSetExists(definitions, slot.optionSet) then
+            if not shopOptionSetExists(domain, slot.optionSet) then
                 addIssue(issues, "unknown_shop_option_set", childPath(slotPath, "optionSet"), "Unknown shop option set")
             end
         end
@@ -325,7 +330,7 @@ end
 function validator.validateBiome(biome, opts)
     opts = opts or {}
     local issues = {}
-    local rewardDefinitions = opts.rewardDefinitions or {}
+    local rewardDomain = opts.rewardDomain or {}
     local knownFeatureKeys = opts.knownFeatureKeys or buildKnownFeatureKeys(opts.featureDefinitions, { biome })
     local path = "biomes." .. tostring(biome and biome.key or "?")
 
@@ -339,7 +344,7 @@ function validator.validateBiome(biome, opts)
     for index, role in ipairs(biome.roles or {}) do
         validateRole(
             issues,
-            rewardDefinitions,
+            rewardDomain,
             knownFeatureKeys,
             role,
             childPath(childPath(path, "roles"), index)
@@ -353,7 +358,7 @@ function validator.validateBiome(biome, opts)
     if layout.entry ~= nil then
         validateSlotEntry(
             issues,
-            rewardDefinitions,
+            rewardDomain,
             knownFeatureKeys,
             rolesByKey,
             layout.entry,
@@ -362,7 +367,7 @@ function validator.validateBiome(biome, opts)
     end
     validateSlotMap(
         issues,
-        rewardDefinitions,
+        rewardDomain,
         knownFeatureKeys,
         rolesByKey,
         layout.special,
@@ -370,7 +375,7 @@ function validator.validateBiome(biome, opts)
     )
     validateSlotList(
         issues,
-        rewardDefinitions,
+        rewardDomain,
         knownFeatureKeys,
         rolesByKey,
         layout.fixedBeforeRoute,
@@ -378,7 +383,7 @@ function validator.validateBiome(biome, opts)
     )
     validateSlotList(
         issues,
-        rewardDefinitions,
+        rewardDomain,
         knownFeatureKeys,
         rolesByKey,
         layout.fixedAfterRoute,
@@ -386,7 +391,7 @@ function validator.validateBiome(biome, opts)
     )
     validateSlotList(
         issues,
-        rewardDefinitions,
+        rewardDomain,
         knownFeatureKeys,
         rolesByKey,
         layout.fixedBeforeHub,
@@ -394,7 +399,7 @@ function validator.validateBiome(biome, opts)
     )
     validateSlotList(
         issues,
-        rewardDefinitions,
+        rewardDomain,
         knownFeatureKeys,
         rolesByKey,
         layout.fixedAfterHub,
@@ -402,7 +407,7 @@ function validator.validateBiome(biome, opts)
     )
     validateSlotList(
         issues,
-        rewardDefinitions,
+        rewardDomain,
         knownFeatureKeys,
         rolesByKey,
         layout.fixedAfterGoals,
@@ -428,7 +433,7 @@ function validator.validateCatalog(catalog, opts)
             seenBiomes[biome.key] = true
         end
         local biomeIssues = validator.validateBiome(biome, {
-            rewardDefinitions = opts.rewardDefinitions,
+            rewardDomain = opts.rewardDomain,
             knownFeatureKeys = knownFeatureKeys,
         })
         for _, issue in ipairs(biomeIssues) do
@@ -439,7 +444,7 @@ function validator.validateCatalog(catalog, opts)
     return issues
 end
 
-function validator.validateGodLists(godData, rewardDefinitions, routeRules, rewardConditions)
+function validator.validateGodLists(godData, rewardDomain, routeRules, rewardConditions)
     local issues = {}
 
     local function assertSameList(name, expected, actual)
@@ -457,7 +462,7 @@ function validator.validateGodLists(godData, rewardDefinitions, routeRules, rewa
     local godLootNames = godData.godLootNames()
     local devotionPrerequisiteLootNames = godData.devotionPrerequisiteLootNames()
 
-    assertSameList("definitions.godLoot", godLootNames, rewardDefinitions and rewardDefinitions.godLoot)
+    assertSameList("rewardDomain.godLoot", godLootNames, rewardDomain and rewardDomain.godLoot)
     assertSameList("routeRules.boonSourcePick", godLootNames, routeRules and routeRules.boonSourcePick().allowedLootNames)
     assertSameList("routeRules.devotionPick", godLootNames, routeRules and routeRules.devotionPick().allowedLootNames)
 

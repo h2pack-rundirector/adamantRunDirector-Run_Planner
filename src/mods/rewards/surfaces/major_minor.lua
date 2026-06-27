@@ -5,54 +5,46 @@ local storage = common.storage
 
 local majorMinor = {}
 
-function majorMinor.create(definitions, context)
+function majorMinor.create(rewardDomain, context)
     local majorRewardStore = context.majorRewardStore or "RunProgress"
     local minorRewardStore = context.minorRewardStore or "MetaProgress"
     local majorEligible = common.rewardTypeLookup(
-        definitions,
-        context.majorEligibleRewardTypes or context.eligibleRewardTypes,
-        context.majorEligibleRewardSet or context.eligibleRewardSet
+        context.majorEligibleRewardTypes or context.eligibleRewardTypes
     )
     local majorIneligible = common.rewardTypeLookup(
-        definitions,
-        context.majorIneligibleRewardTypes or context.ineligibleRewardTypes,
-        context.majorIneligibleRewardSet or context.ineligibleRewardSet
+        context.majorIneligibleRewardTypes or context.ineligibleRewardTypes
     )
     if context.allowDevotion ~= true then
         majorIneligible = majorIneligible or {}
         majorIneligible.Devotion = true
     end
     local minorEligible = common.rewardTypeLookup(
-        definitions,
-        context.minorEligibleRewardTypes,
-        context.minorEligibleRewardSet
+        context.minorEligibleRewardTypes
     )
     local minorIneligible = common.rewardTypeLookup(
-        definitions,
-        context.minorIneligibleRewardTypes,
-        context.minorIneligibleRewardSet
+        context.minorIneligibleRewardTypes
     )
     local majorValues, majorLabels = common.uniqueNames(
-        common.optionsFor(definitions, majorRewardStore),
+        common.optionsFor(rewardDomain, majorRewardStore),
         majorEligible,
         majorIneligible,
         function(name)
-            return common.rewardOptionLabel(definitions, name)
+            return common.rewardOptionLabel(rewardDomain, name)
         end
     )
     local minorValues, minorLabels = common.uniqueNames(
-        common.optionsFor(definitions, minorRewardStore),
+        common.optionsFor(rewardDomain, minorRewardStore),
         minorEligible,
         minorIneligible,
         function(name)
-            return common.rewardOptionLabel(definitions, name)
+            return common.rewardOptionLabel(rewardDomain, name)
         end
     )
-    local godValues, godLabels = common.godSourceOptions(definitions)
+    local godValues, godLabels = common.godSourceOptions(rewardDomain)
     local rewardClassValues = { common.MAJOR_VALUE, common.MINOR_VALUE }
     local rewardClassLabels = {
-        [common.MAJOR_VALUE] = common.optionsLabel(definitions, majorRewardStore, common.MAJOR_VALUE),
-        [common.MINOR_VALUE] = common.optionsLabel(definitions, minorRewardStore, common.MINOR_VALUE),
+        [common.MAJOR_VALUE] = common.optionsLabel(rewardDomain, majorRewardStore, common.MAJOR_VALUE),
+        [common.MINOR_VALUE] = common.optionsLabel(rewardDomain, minorRewardStore, common.MINOR_VALUE),
     }
 
     return {

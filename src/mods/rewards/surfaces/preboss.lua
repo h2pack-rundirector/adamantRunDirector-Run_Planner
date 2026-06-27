@@ -50,17 +50,17 @@ local function resolveRewardConstraints(shopOffer, sourceIndexBySlotKey)
     return constraints
 end
 
-local function appendShopControls(definitions, offer, controls, godValues, godLabels)
-    local shop = definitions.shops[offer.shopProfile] or {}
+local function appendShopControls(rewardDomain, offer, controls, godValues, godLabels)
+    local shop = rewardDomain.shops[offer.shopProfile] or {}
     local sourceIndexBySlotKey = {}
 
     for index, slot in ipairs(shop.slots or {}) do
         local rewardAlias = rewardAliasForOffer(offer, index)
         local lootAlias = lootAliasForOffer(offer, index)
         sourceIndexBySlotKey[slot.key] = index
-        local options = slot.options or common.optionsFor(definitions, slot.optionSet)
+        local options = slot.options or common.optionsFor(rewardDomain, slot.optionSet)
         local values, labels = common.uniqueNames(options, nil, nil, function(name)
-            return common.rewardOptionLabel(definitions, name)
+            return common.rewardOptionLabel(rewardDomain, name)
         end)
         controls[#controls + 1] = common.dropdown(
             rewardAlias,
@@ -106,14 +106,14 @@ local function appendShopControls(definitions, offer, controls, godValues, godLa
     return sourceIndexBySlotKey
 end
 
-local function appendPrebossRewardControls(definitions, offer, controls, godValues, godLabels)
+local function appendPrebossRewardControls(rewardDomain, offer, controls, godValues, godLabels)
     local rewardAlias = rewardAliasForOffer(offer, 1)
     local lootAlias = rewardAliasForOffer(offer, 2)
-    local rewardTypes = common.optionsFor(definitions, offer.rewardStore)
-    local eligible = common.rewardTypeLookup(definitions, offer.eligibleRewardTypes, offer.eligibleRewardSet)
-    local ineligible = common.rewardTypeLookup(definitions, offer.ineligibleRewardTypes, offer.ineligibleRewardSet)
+    local rewardTypes = common.optionsFor(rewardDomain, offer.rewardStore)
+    local eligible = common.rewardTypeLookup(offer.eligibleRewardTypes)
+    local ineligible = common.rewardTypeLookup(offer.ineligibleRewardTypes)
     local rewardValues, rewardLabels = common.uniqueNames(rewardTypes, eligible, ineligible, function(name)
-        return common.rewardOptionLabel(definitions, name)
+        return common.rewardOptionLabel(rewardDomain, name)
     end)
 
     controls[#controls + 1] = common.dropdown(
@@ -150,13 +150,13 @@ local function appendPrebossRewardControls(definitions, offer, controls, godValu
     )
 end
 
-function prebossSurface.create(definitions, context)
+function prebossSurface.create(rewardDomain, context)
     local controls = {}
-    local godValues, godLabels = common.godSourceOptions(definitions)
+    local godValues, godLabels = common.godSourceOptions(rewardDomain)
     local shopOffer = offerByKind(context, "shop")
     local rewardOffer = offerByKind(context, "roomStore")
-    local sourceIndexBySlotKey = appendShopControls(definitions, shopOffer, controls, godValues, godLabels)
-    appendPrebossRewardControls(definitions, rewardOffer, controls, godValues, godLabels)
+    local sourceIndexBySlotKey = appendShopControls(rewardDomain, shopOffer, controls, godValues, godLabels)
+    appendPrebossRewardControls(rewardDomain, rewardOffer, controls, godValues, godLabels)
 
     return {
         kind = "preboss",

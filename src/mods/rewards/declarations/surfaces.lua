@@ -49,24 +49,14 @@ end
 local function copyRewardFilters(context, opts, sourcePrefix, targetPrefix)
     local sourceEligibleTypes = prefixedKey(sourcePrefix, "eligibleRewardTypes")
     local sourceIneligibleTypes = prefixedKey(sourcePrefix, "ineligibleRewardTypes")
-    local sourceEligibleSet = prefixedKey(sourcePrefix, "eligibleRewardSet")
-    local sourceIneligibleSet = prefixedKey(sourcePrefix, "ineligibleRewardSet")
     local targetEligibleTypes = prefixedKey(targetPrefix, "eligibleRewardTypes")
     local targetIneligibleTypes = prefixedKey(targetPrefix, "ineligibleRewardTypes")
-    local targetEligibleSet = prefixedKey(targetPrefix, "eligibleRewardSet")
-    local targetIneligibleSet = prefixedKey(targetPrefix, "ineligibleRewardSet")
 
     if opts[sourceEligibleTypes] ~= nil then
         context[targetEligibleTypes] = copyList(opts[sourceEligibleTypes])
     end
     if opts[sourceIneligibleTypes] ~= nil then
         context[targetIneligibleTypes] = copyList(opts[sourceIneligibleTypes])
-    end
-    if opts[sourceEligibleSet] ~= nil then
-        context[targetEligibleSet] = opts[sourceEligibleSet]
-    end
-    if opts[sourceIneligibleSet] ~= nil then
-        context[targetIneligibleSet] = opts[sourceIneligibleSet]
     end
 end
 
