@@ -74,6 +74,9 @@ local function loadRewardLegality()
             semantics = semantics,
             invalidLocations = invalidLocations,
         }),
+        topologyBranches = testImport("mods/route/reward_planning/topology_branches.lua", nil, {
+            valueStates = testImport("mods/route/value_states.lua"),
+        }),
     })
 end
 

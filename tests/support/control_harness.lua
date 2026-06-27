@@ -161,6 +161,9 @@ local function loadRewardLegality()
             semantics = semantics,
             invalidLocations = invalidLocations,
         }),
+        topologyBranches = testImport("mods/route/reward_planning/topology_branches.lua", nil, {
+            valueStates = testImport("mods/route/value_states.lua"),
+        }),
     })
 end
 
@@ -587,6 +590,7 @@ local function routeRewardRow(rowIndex, rewardType, opts)
         locationLabel = opts.locationLabel,
         rewardConstraints = opts.rewardConstraints,
         rewardRowGroup = opts.rewardRowGroup,
+        roomTopology = opts.roomTopology,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
         biomeEncounterDepthCostMin = opts.biomeEncounterDepthCostMin or opts.biomeEncounterDepthCost or 1,
         biomeEncounterDepthCostMax = opts.biomeEncounterDepthCostMax or opts.biomeEncounterDepthCost or 1,

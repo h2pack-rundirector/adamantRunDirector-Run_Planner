@@ -212,6 +212,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingRewardBranchPlumbi
         rewardStore = "RunProgress",
         rewardClass = "Major",
         rewardBranch = "majorMinor",
+        rewardBranchAddress = "sibling:1",
+        rewardBranchControlAlias = "SiblingRewardClassKey",
+        rewardBranchLabel = "Other Door Reward",
         offerCount = 1,
     })
 end
@@ -277,6 +280,10 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingTopologyExportsSel
             roomKey = "F_Combat06",
             rewardStore = "RunProgress",
             rewardClass = "Major",
+            rewardBranch = "majorMinor",
+            rewardBranchAddress = "row",
+            rewardBranchControlAlias = "Reward1Key",
+            rewardBranchLabel = "Rewards",
             offerCount = 1,
             rewardAddresses = { "row" },
         },
@@ -517,6 +524,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyExportsMismatched
             rewardStore = "RunProgress",
             rewardClass = "Major",
             rewardBranch = "majorMinor",
+            rewardBranchAddress = "sibling:1",
+            rewardBranchControlAlias = "SiblingRewardClassKey",
+            rewardBranchLabel = "Other Door 1 Reward",
             offerCount = 1,
         },
         {
@@ -524,6 +534,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyExportsMismatched
             rewardStore = "MetaProgress",
             rewardClass = "Minor",
             rewardBranch = "majorMinor",
+            rewardBranchAddress = "sibling:2",
+            rewardBranchControlAlias = "Sibling2RewardClassKey",
+            rewardBranchLabel = "Other Door 2 Reward",
             offerCount = 1,
         },
     })
@@ -553,12 +566,14 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
             OptionKey = "F_Combat07",
             Reward1Key = "Major",
             SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
         },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat13",
             Reward1Key = "Major",
             SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
         },
     }), instance)
     attachSingleBiomeRouteContext(control, "Underworld", "F")
@@ -597,6 +612,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
             OptionKey = "F_Combat13",
             Reward1Key = "Major",
             SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
         },
     }), instance)
     attachSingleBiomeRouteContext(control, "Underworld", "F")
@@ -615,11 +631,18 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
         fCombatRow("F_Combat09", "Major"),
         fCombatRow("F_Combat04", "Major"),
         fCombatRow("F_Combat06", "Major", "F_Shop01"),
-        fCombatRow("F_Combat07", "Major", "Combat"),
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat07",
+            Reward1Key = "Major",
+            SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
+        },
         {
             RoleKey = "Miniboss",
             OptionKey = "F_MiniBoss01",
             SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
             Reward1Key = "Boon",
             Reward2Key = "ZeusUpgrade",
         },
@@ -643,7 +666,13 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
         fCombatRow("F_Combat09", "Major"),
         fCombatRow("F_Combat04", "Major"),
         fCombatRow("F_Combat06", "Major", "F_Shop01"),
-        fCombatRow("F_Combat07", "Major", "Combat"),
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat07",
+            Reward1Key = "Major",
+            SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
+        },
         {
             RoleKey = "Miniboss",
             OptionKey = "F_MiniBoss01",
@@ -1716,6 +1745,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeRoutesRewardValueS
     }), instance)
     local seen = {}
     control:setRouteContext({
+        blockingHorizon = function()
+            return nil
+        end,
         rewardValueStates = function(
             _,
             routeKey,
@@ -1765,6 +1797,93 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeRoutesRewardValueS
     lu.assertIs(seen.surfaceControl, surfaceControl)
     lu.assertIs(seen.rewardFields, rewardFields)
     lu.assertIs(seen.rewardContext, rewardContext)
+end
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingRewardDropdownUsesRouteValueStateContext()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    local function writeRow(rowIndex, room, reward)
+        for alias, value in pairs(room or {}) do
+            fields.Rooms:get(rowIndex, alias):write(value)
+        end
+        for alias, value in pairs(reward or {}) do
+            fields.Rewards:get(rowIndex, alias):write(value)
+        end
+    end
+    writeRow(1, fOpeningRow())
+    writeRow(2, { RoleKey = "Combat", OptionKey = "F_Combat02" }, { Reward1Key = "Major" })
+    writeRow(3, { RoleKey = "Combat", OptionKey = "F_Combat03" }, { Reward1Key = "Major" })
+    writeRow(4, { RoleKey = "Combat", OptionKey = "F_Combat04" }, { Reward1Key = "Major" })
+    writeRow(5, { RoleKey = "Combat", OptionKey = "F_Combat08" }, { Reward1Key = "Major" })
+    writeRow(
+        6,
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat06",
+            SiblingStructureKey = "Combat",
+        },
+        {
+            Reward1Key = "Major",
+        }
+    )
+    local control = template.createUi(fields, instance)
+    local siblingRewardField = fields.Rewards:get(6, "SiblingRewardClassKey")
+    local seen = {}
+    control:setRouteContext({
+        blockingHorizon = function()
+            return nil
+        end,
+        rewardValueStates = function(
+            _,
+            routeKey,
+            biomeKey,
+            rowIndex,
+            rewardAddress,
+            controlAlias,
+            surfaceControl,
+            _rewardFields,
+            rewardContext
+        )
+            if rewardAddress == "sibling:1" then
+                seen.routeKey = routeKey
+                seen.biomeKey = biomeKey
+                seen.rowIndex = rowIndex
+                seen.rewardAddress = rewardAddress
+                seen.controlAlias = controlAlias
+                seen.surfaceControl = surfaceControl
+                seen.rewardContext = rewardContext
+            end
+            return {
+                Minor = 2,
+            }
+        end,
+    }, "Underworld")
+    local draw = noOpDraw()
+    local sawSibling = false
+    draw.widgets.dropdown = function(field, opts)
+        if field == siblingRewardField then
+            sawSibling = true
+            lu.assertTrue(hasValue(opts.values or {}, "Minor"))
+            lu.assertEquals(opts.valueColors.Minor, { 1.0, 0.22, 0.16, 1.0 })
+        end
+        return false
+    end
+
+    template.views.rewards(draw, control, instance)
+
+    lu.assertTrue(sawSibling)
+    lu.assertEquals(seen.routeKey, "Underworld")
+    lu.assertEquals(seen.biomeKey, "F")
+    lu.assertEquals(seen.rowIndex, 6)
+    lu.assertEquals(seen.rewardAddress, "sibling:1")
+    lu.assertEquals(seen.controlAlias, "SiblingRewardClassKey")
+    lu.assertEquals(seen.surfaceControl.alias, "SiblingRewardClassKey")
+    lu.assertEquals(seen.rewardContext.address, "sibling:1")
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesPreviousRoomExitRequirement()

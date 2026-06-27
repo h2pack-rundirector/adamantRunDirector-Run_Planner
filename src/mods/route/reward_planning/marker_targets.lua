@@ -6,6 +6,9 @@ local invalidLocations = deps.invalidLocations
 local rewardMarkers = {}
 
 local function valueTargets(event)
+    if event.valueTargets ~= nil then
+        return event.valueTargets
+    end
     local targets = {}
     semantics.valueTargetsForEvent(event, targets)
     return targets

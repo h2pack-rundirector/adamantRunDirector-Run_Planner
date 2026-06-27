@@ -4,6 +4,7 @@ local rowRewardItems = deps.rewardItems
 local semantics = deps.semantics
 local rewardContext = deps.context
 local markers = deps.markers
+local topologyBranches = deps.topologyBranches
 
 local rewardLegality = {}
 local EMPTY_LIST = {}
@@ -58,6 +59,7 @@ local function newResult()
         invalidRows = {},
         byBiomeRow = {},
         decisionsByBiomeRowAddress = {},
+        topologyByBiomeRow = {},
         valueStatesByBiomeRow = {},
     }
 end
@@ -89,6 +91,26 @@ local function decisionsForRow(result, biomeKey, rowIndex)
         byBiome[rowIndex] = byRow
     end
     return byRow
+end
+
+local function topologiesForBiome(result, biomeKey)
+    local byBiome = result.topologyByBiomeRow[biomeKey]
+    if byBiome == nil then
+        byBiome = {}
+        result.topologyByBiomeRow[biomeKey] = byBiome
+    end
+    return byBiome
+end
+
+local function topologyForRow(result, biomeKey, rowIndex)
+    local byBiome = result.topologyByBiomeRow[biomeKey]
+    return byBiome and byBiome[rowIndex] or nil
+end
+
+local function recordRowTopology(result, ctx, row)
+    if row ~= nil and row.roomTopology ~= nil then
+        topologiesForBiome(result, ctx.biomeKey)[row.rowIndex] = row.roomTopology
+    end
 end
 
 local function decisionForItem(result, rewardCtx, ctx, row, item)
@@ -735,6 +757,7 @@ local function ensureLegalityScratch(scratch)
     scratch.choiceGroups = scratch.choiceGroups or {}
     scratch.choiceGroupSeenCounts = scratch.choiceGroupSeenCounts or {}
     scratch.choiceGroupSeenOccurrences = scratch.choiceGroupSeenOccurrences or {}
+    scratch.topologyBranches = scratch.topologyBranches or {}
     return scratch
 end
 
@@ -748,6 +771,16 @@ end
 
 function rewardLegality.candidateInvalid(rewardCtx, ctx, event)
     return eventInvalid(rewardCtx, ctx, event)
+end
+
+function rewardLegality.valueStatesForControl(result, biomeKey, rowIndex, rewardAddress, controlAlias, control, states)
+    return topologyBranches.valueStatesForControl(
+        topologyForRow(result, biomeKey, rowIndex),
+        rewardAddress,
+        controlAlias,
+        control,
+        states
+    )
 end
 
 function rewardLegality.prepareRow(context, result, rewardCtx, _ctx, row, scratch)
@@ -775,6 +808,12 @@ function rewardLegality.evaluateRow(context, result, rewardCtx, ctx, row, scratc
     local promotePendingAfterRow = rewardContext.hasPendingEntries(rewardCtx)
 
     scratch = ensureLegalityScratch(scratch)
+    recordRowTopology(result, ctx, row)
+    local topologyEvent, topologyInvalid = topologyBranches.invalidForRow(row, scratch.topologyBranches)
+    if topologyInvalid ~= nil then
+        return addInvalid(context, result, scratch.seenInvalids, ctx, topologyEvent, topologyInvalid)
+    end
+
     local batches = scratch.batches or {}
     local events = scratch.events or {}
     local rewardItemScratch = scratch.rewardItems or {}

@@ -28,6 +28,7 @@ local function newRewardLegalityResult()
         invalidRows = {},
         byBiomeRow = {},
         decisionsByBiomeRowAddress = {},
+        topologyByBiomeRow = {},
         valueStatesByBiomeRow = {},
     }
 end
@@ -300,6 +301,17 @@ function rewards.create(opts)
 
         local decision = decisionForAddress(result, biomeKey, rowIndex, rewardAddress)
         local states = buildCandidateValueStates(rewardLegalityEngine, decision, rewardAddress, control)
+        if rewardLegalityEngine.valueStatesForControl ~= nil then
+            states = rewardLegalityEngine.valueStatesForControl(
+                result,
+                biomeKey,
+                rowIndex,
+                rewardAddress,
+                controlAlias,
+                control,
+                states
+            )
+        end
         states = applyInvalidMarkerStates(result, biomeKey, rowIndex, rewardAddress, controlAlias, states)
         storeControlValueStates(result, biomeKey, rowIndex, rewardAddress, controlAlias, states)
         return states

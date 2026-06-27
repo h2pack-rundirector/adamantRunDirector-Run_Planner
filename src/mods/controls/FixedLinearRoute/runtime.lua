@@ -44,6 +44,22 @@ local function routeRewardValidation(instance, rowIndex)
     return nil
 end
 
+local function routeRewardValueStates(instance, rowIndex, rewardAddress, controlAlias, surfaceControl, sourceContext)
+    if instance.routeContext ~= nil and instance.routeContext.rewardValueStates ~= nil then
+        return instance.routeContext:rewardValueStates(
+            instance.routeKey,
+            instance.biomeKey,
+            rowIndex,
+            rewardAddress,
+            controlAlias,
+            surfaceControl,
+            nil,
+            sourceContext
+        )
+    end
+    return nil
+end
+
 local function prewarmRewardSurface(role, option)
     rewardSurface(role, option)
 end
@@ -153,6 +169,10 @@ function runtime.create(fields, instance)
 
     function control:rewardSurface(rowIndex)
         return rewardSurface(self:role(rowIndex), self:option(rowIndex))
+    end
+
+    function control:rewardValueStates(rowIndex, rewardAddress, controlAlias, surfaceControl, sourceContext)
+        return routeRewardValueStates(instance, rowIndex, rewardAddress, controlAlias, surfaceControl, sourceContext)
     end
 
     function control:rewardRatioSummary()

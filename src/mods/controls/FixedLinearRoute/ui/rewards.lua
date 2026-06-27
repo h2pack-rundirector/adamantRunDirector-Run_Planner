@@ -87,6 +87,53 @@ local function siblingRewardClassOpts(control, instance, siblingIndex)
     return opts
 end
 
+local function siblingRewardClassControl(control, instance, siblingIndex)
+    control._siblingRewardClassControlsByIndex = control._siblingRewardClassControlsByIndex or {}
+    local surfaceControl = control._siblingRewardClassControlsByIndex[siblingIndex]
+    if surfaceControl == nil then
+        surfaceControl = {
+            alias = data.siblingRewardClassAlias(instance, siblingIndex),
+            rewardAddress = data.siblingRewardClassAddress(instance, siblingIndex),
+            values = data.siblingRewardClassValues(instance),
+        }
+        control._siblingRewardClassControlsByIndex[siblingIndex] = surfaceControl
+    end
+    return surfaceControl
+end
+
+local function siblingRewardContext(control, rowIndex, surfaceControl)
+    control._siblingRewardContextsByRow = control._siblingRewardContextsByRow or {}
+    local contextsByAddress = control._siblingRewardContextsByRow[rowIndex]
+    if contextsByAddress == nil then
+        contextsByAddress = {}
+        control._siblingRewardContextsByRow[rowIndex] = contextsByAddress
+    end
+
+    local context = contextsByAddress[surfaceControl.rewardAddress]
+    if context == nil then
+        context = {
+            rowIndex = rowIndex,
+            address = surfaceControl.rewardAddress,
+        }
+        contextsByAddress[surfaceControl.rewardAddress] = context
+    end
+    return context
+end
+
+local function decoratedSiblingRewardClassOpts(control, instance, rowIndex, siblingIndex)
+    local opts = siblingRewardClassOpts(control, instance, siblingIndex)
+    local surfaceControl = siblingRewardClassControl(control, instance, siblingIndex)
+    local rewardContext = siblingRewardContext(control, rowIndex, surfaceControl)
+    local states = control:rewardValueStates(
+        rowIndex,
+        surfaceControl.rewardAddress,
+        surfaceControl.alias,
+        surfaceControl,
+        rewardContext
+    )
+    return decorations.decorateDropdown(opts, opts, states)
+end
+
 local function siblingRewardLabel(instance, activeCount, siblingIndex)
     if (activeCount or 0) > 1 then
         return "Other Door " .. tostring(siblingIndex) .. " Reward"
@@ -106,7 +153,7 @@ local function drawSiblingRewardClassDropdown(draw, control, instance, rowIndex,
     draw.imgui.SetCursorPosX(SIBLING_REWARD_CONTROL_COLUMN_X)
     return draw.widgets.dropdown(
         control:rewardField(rowIndex, data.siblingRewardClassAlias(instance, siblingIndex)),
-        siblingRewardClassOpts(control, instance, siblingIndex)
+        decoratedSiblingRewardClassOpts(control, instance, rowIndex, siblingIndex)
     )
 end
 

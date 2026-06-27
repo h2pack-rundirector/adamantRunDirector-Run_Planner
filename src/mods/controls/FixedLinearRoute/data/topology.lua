@@ -27,6 +27,10 @@ local function selectedRoomTopology(roleKey, option, rows, rowIndex)
             roomKey = option and option.key or nil,
             rewardStore = rewardStore,
             rewardClass = rewardClass,
+            rewardBranch = "majorMinor",
+            rewardBranchAddress = "row",
+            rewardBranchControlAlias = "Reward1Key",
+            rewardBranchLabel = "Rewards",
             offerCount = 1,
             rewardAddresses = { "row" },
         }
@@ -80,7 +84,14 @@ local function siblingRewardStoreForChoice(data, instance, rows, rowIndex, sibli
     return option and option.rewardStore or nil, option and option.rewardClass or nil
 end
 
-local function siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex, option)
+local function siblingRewardBranchLabel(activeSiblingCount, siblingIndex)
+    if (activeSiblingCount or 0) > 1 then
+        return "Other Door " .. tostring(siblingIndex) .. " Reward"
+    end
+    return "Other Door Reward"
+end
+
+local function siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex, activeSiblingCount, option)
     if option == nil or option.key == nil or option.key == "" then
         return nil
     end
@@ -91,6 +102,13 @@ local function siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex,
         rewardStore = rewardStore,
         rewardClass = rewardClass,
         rewardBranch = option.rewardBranch,
+        rewardBranchAddress = option.rewardBranch ~= nil and data.siblingRewardClassAddress(instance, siblingIndex) or nil,
+        rewardBranchControlAlias = option.rewardBranch ~= nil
+            and data.siblingRewardClassAlias(instance, siblingIndex)
+            or nil,
+        rewardBranchLabel = option.rewardBranch ~= nil
+            and siblingRewardBranchLabel(activeSiblingCount, siblingIndex)
+            or nil,
         eligibleRewardTypes = option.eligibleRewardTypes,
         offerCount = option.offerCount,
     }
@@ -118,7 +136,7 @@ function topology.create(data)
                 return nil
             end
 
-            local siblingTopology = siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex, sibling)
+            local siblingTopology = siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex, count, sibling)
             if siblingTopology == nil then
                 return nil
             end

@@ -183,6 +183,11 @@ function data.siblingRewardClassAlias(_, siblingIndex)
     return "Sibling" .. tostring(siblingIndex) .. "RewardClassKey"
 end
 
+function data.siblingRewardClassAddress(_, siblingIndex)
+    siblingIndex = math.floor(tonumber(siblingIndex) or 1)
+    return "sibling:" .. tostring(siblingIndex)
+end
+
 function data.siblingRewardClassValues()
     return REWARD_CLASS_VALUES
 end

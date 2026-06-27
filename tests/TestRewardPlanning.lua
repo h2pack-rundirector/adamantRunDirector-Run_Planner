@@ -457,6 +457,7 @@ function TestRunPlannerRewardPlanning.testRouteContextDevotionRewardUsesPriorUnd
             RoleKey = "Combat",
             OptionKey = "F_Combat07",
             SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -464,6 +465,7 @@ function TestRunPlannerRewardPlanning.testRouteContextDevotionRewardUsesPriorUnd
             RoleKey = "Combat",
             OptionKey = "F_Combat05",
             SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -557,6 +559,7 @@ function TestRunPlannerRewardPlanning.testRouteContextScopesPriorGodLootByRoute(
             RoleKey = "Combat",
             OptionKey = "F_Combat07",
             SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -564,6 +567,7 @@ function TestRunPlannerRewardPlanning.testRouteContextScopesPriorGodLootByRoute(
             RoleKey = "Combat",
             OptionKey = "F_Combat05",
             SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -805,6 +809,138 @@ function TestRunPlannerRewardPlanning.testRouteContextMarksRelatedMultiSourceRew
     lu.assertEquals(secondStates.MaxHealthDrop, valueStates.INVALID)
     lu.assertNil(firstStates.MaxManaDrop)
     lu.assertNil(secondStates.MaxManaDrop)
+end
+
+function TestRunPlannerRewardPlanning.testTopologyRewardBranchesRequireSiblingBranch()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "MaxHealthDrop", {
+                roomTopology = {
+                    kind = "fixedLinearSiblingChoice",
+                    selected = {
+                        structure = "Combat",
+                        rewardBranch = "majorMinor",
+                        rewardClass = "Major",
+                        rewardBranchAddress = "row",
+                        rewardBranchControlAlias = "Reward1Key",
+                    },
+                    siblings = {
+                        {
+                            structure = "Combat",
+                            rewardBranch = "majorMinor",
+                            rewardBranchAddress = "sibling:1",
+                            rewardBranchControlAlias = "SiblingRewardClassKey",
+                            rewardBranchLabel = "Other Door Reward",
+                        },
+                    },
+                },
+            }),
+        }),
+    }, {
+        biomes = {
+            F = { label = "Erebus" },
+        },
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].rowIndex, 1)
+    lu.assertEquals(overview.invalidRows[1].address, "sibling:1")
+    lu.assertEquals(overview.invalidRows[1].locationLabel, "Erebus Depth 1 Other Door Reward")
+    lu.assertEquals(overview.invalidRows[1].code, "major_minor_sibling_branch_required")
+    lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 1).code, "major_minor_sibling_branch_required")
+
+    local branchControl = rewardCandidateControl("rewardType", {
+        "Major",
+        "Minor",
+    }, "SiblingRewardClassKey")
+    local siblingStates = routeContext:rewardValueStates(
+        "Underworld",
+        "F",
+        1,
+        "sibling:1",
+        "SiblingRewardClassKey",
+        branchControl
+    )
+    lu.assertNil(siblingStates.Major)
+    lu.assertEquals(siblingStates.Minor, valueStates.INVALID)
+end
+
+function TestRunPlannerRewardPlanning.testTopologyRewardBranchesRejectMajorMinorMix()
+    local branchControl = rewardCandidateControl("rewardType", {
+        "Major",
+        "Minor",
+    }, "SiblingRewardClassKey")
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "MaxHealthDrop", {
+                roomTopology = {
+                    kind = "fixedLinearSiblingChoice",
+                    selected = {
+                        structure = "Combat",
+                        rewardBranch = "majorMinor",
+                        rewardClass = "Major",
+                        rewardBranchAddress = "row",
+                        rewardBranchControlAlias = "Reward1Key",
+                        rewardBranchLabel = "Rewards",
+                    },
+                    siblings = {
+                        {
+                            structure = "Combat",
+                            rewardBranch = "majorMinor",
+                            rewardClass = "Minor",
+                            rewardBranchAddress = "sibling:1",
+                            rewardBranchControlAlias = "SiblingRewardClassKey",
+                            rewardBranchLabel = "Other Door Reward",
+                        },
+                    },
+                },
+            }),
+        }),
+    }, {
+        biomes = {
+            F = { label = "Erebus" },
+        },
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 2)
+    lu.assertEquals(overview.invalidRows[1].markerKind, "primary")
+    lu.assertEquals(overview.invalidRows[1].address, "sibling:1")
+    lu.assertEquals(overview.invalidRows[1].code, "major_minor_branch_mismatch")
+    lu.assertEquals(overview.invalidRows[2].markerKind, "related")
+    lu.assertEquals(overview.invalidRows[2].address, "row")
+
+    local pickedControl = rewardCandidateControl("rewardType", {
+        "Major",
+        "Minor",
+    }, "Reward1Key")
+    local pickedStates = routeContext:rewardValueStates("Underworld", "F", 1, "row", "Reward1Key", pickedControl)
+    local siblingStates = routeContext:rewardValueStates(
+        "Underworld",
+        "F",
+        1,
+        "sibling:1",
+        "SiblingRewardClassKey",
+        branchControl
+    )
+
+    lu.assertEquals(pickedStates.Major, valueStates.INVALID)
+    lu.assertEquals(siblingStates.Minor, valueStates.INVALID)
+    lu.assertNil(pickedStates.Minor)
+    lu.assertNil(siblingStates.Major)
 end
 
 function TestRunPlannerRewardPlanning.testRouteContextAllowsCandidatesAfterRequiredPriorReward()
@@ -2313,6 +2449,7 @@ function TestRunPlannerRewardPlanning.testFixedLinearRuntimeInvalidatesDevotionR
                 RoleKey = "Combat",
                 OptionKey = "F_Combat05",
                 SiblingStructureKey = "Combat",
+                SiblingRewardClassKey = "Major",
                 Reward1Key = "Major",
                 Reward2Key = "Devotion",
                 Reward5Key = "ZeusUpgrade",
@@ -2372,6 +2509,7 @@ function TestRunPlannerRewardPlanning.testRouteOverviewInvalidatesDuplicateTrial
             RoleKey = "Combat",
             OptionKey = "F_Combat05",
             SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
             Reward1Key = "Major",
             Reward2Key = "Devotion",
             Reward5Key = "ZeusUpgrade",

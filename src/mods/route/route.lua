@@ -15,6 +15,9 @@ local function createRewardPlanning(invalidLocations, routeMarkers, legalityCond
         invalidLocations = invalidLocations,
         context = import("mods/route/reward_planning/context.lua"),
         markers = rewardMarkers,
+        topologyBranches = import("mods/route/reward_planning/topology_branches.lua", nil, {
+            valueStates = import("mods/route/value_states.lua"),
+        }),
     })
 
     return {
