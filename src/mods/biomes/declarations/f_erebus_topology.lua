@@ -1,14 +1,13 @@
 return function(deps)
     local layout = deps.layout
 
-    local function rewardSibling(key, label, rewardStore, rewardClass)
+    local function rewardSibling(key, label)
         return {
             key = key,
             label = label,
             structure = "Combat",
             roleKey = "Combat",
-            rewardStore = rewardStore,
-            rewardClass = rewardClass,
+            rewardBranch = "majorMinor",
             offerCount = 1,
         }
     end
@@ -25,36 +24,10 @@ return function(deps)
             force = room.force,
             rewardStore = opts.rewardStore,
             rewardClass = opts.rewardClass,
+            rewardBranch = opts.rewardBranch,
             eligibleRewardTypes = opts.eligibleRewardTypes,
             offerCount = opts.offerCount or 0,
         }
-    end
-
-    local function majorMinorRoomSiblings(room, structure, roleKey)
-        return {
-            roomSibling(room, structure, {
-                key = room.key .. "_Major",
-                label = room.label .. " Major",
-                roleKey = roleKey,
-                rewardStore = "RunProgress",
-                rewardClass = "Major",
-                offerCount = 1,
-            }),
-            roomSibling(room, structure, {
-                key = room.key .. "_Minor",
-                label = room.label .. " Minor",
-                roleKey = roleKey,
-                rewardStore = "MetaProgress",
-                rewardClass = "Minor",
-                offerCount = 1,
-            }),
-        }
-    end
-
-    local function append(target, values)
-        for _, value in ipairs(values) do
-            target[#target + 1] = value
-        end
     end
 
     local function roomKeys(rooms)
@@ -70,16 +43,19 @@ return function(deps)
             key = "",
             label = "Select Door",
         },
-        rewardSibling("CombatMajor", "Combat Major", "RunProgress", "Major"),
-        rewardSibling("CombatMinor", "Combat Minor", "MetaProgress", "Minor"),
+        rewardSibling("Combat", "Combat"),
         roomSibling(layout.storyRooms[1], "Story", {
             roleKey = "Story",
         }),
         roomSibling(layout.shopRooms[1], "Midshop", {
             roleKey = "Midshop",
         }),
+        roomSibling(layout.fountainRooms[1], "Fountain", {
+            roleKey = "Fountain",
+            rewardBranch = "majorMinor",
+            offerCount = 1,
+        }),
     }
-    append(options, majorMinorRoomSiblings(layout.fountainRooms[1], "Fountain", "Fountain"))
     for _, miniboss in ipairs(layout.minibossRooms) do
         options[#options + 1] = roomSibling(miniboss, "Miniboss", {
             roleKey = "Miniboss",
@@ -92,12 +68,6 @@ return function(deps)
     return {
         siblingStructureWindow = {
             biomeDepthCache = { min = 4, max = 8 },
-        },
-        rules = {
-            {
-                key = "matchingSiblingRewardStore",
-                onlyWhenBothHaveRewardStore = true,
-            },
         },
         forcedGroups = {
             {

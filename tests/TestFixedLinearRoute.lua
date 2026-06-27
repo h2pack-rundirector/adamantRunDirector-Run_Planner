@@ -111,6 +111,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(storage[2].row[6].key, "Reward6Key")
     lu.assertEquals(storage[2].row[7].key, "Reward1LootKey")
     lu.assertEquals(storage[2].row[12].key, "Reward6LootKey")
+    lu.assertEquals(storage[2].row[13].key, "SiblingRewardClassKey")
 
     instance = template.prepare({
         name = "RouteG",
@@ -119,6 +120,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     storage = template.storage(instance)
     lu.assertEquals(storage[1].row[4].key, "SiblingStructureKey")
     lu.assertEquals(storage[1].row[5].key, "SiblingStructure2Key")
+    lu.assertEquals(storage[2].row[13].key, "SiblingRewardClassKey")
+    lu.assertEquals(storage[2].row[14].key, "Sibling2RewardClassKey")
 
     instance = template.prepare({
         name = "RouteQ",
@@ -127,6 +130,90 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     storage = template.storage(instance)
     lu.assertEquals(#storage[1].row, 3)
     lu.assertEquals(storage[1].row[3].key, "VariantKey")
+    lu.assertEquals(#storage[2].row, 12)
+end
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingRewardBranchPlumbingFollowsTopologyBranch()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local template = loadFixedLinearTemplate()
+    local instance = data.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local rows = fakeRows({
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+        fCombatRow("F_Combat04", "Major"),
+        fCombatRow("F_Combat08", "Major"),
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat06",
+            SiblingStructureKey = "Combat",
+            Reward1Key = "Major",
+        },
+    })
+
+    lu.assertTrue(data.shouldDrawSiblingRewardClass(instance, rows, 6, 1))
+    lu.assertEquals(data.siblingRewardClassValues(instance), { "Major", "Minor" })
+    lu.assertEquals(data.siblingRewardClassLabels(instance), {
+        Major = "Major",
+        Minor = "Minor",
+    })
+    lu.assertEquals(data.siblingRewardClassAlias(instance, 1), "SiblingRewardClassKey")
+    lu.assertEquals(data.siblingRewardClassAlias(instance, 2), "Sibling2RewardClassKey")
+
+    instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(5, "RoleKey"):write("Combat")
+    fields.Rooms:get(5, "OptionKey"):write("F_Combat08")
+    fields.Rooms:get(6, "RoleKey"):write("Combat")
+    fields.Rooms:get(6, "OptionKey"):write("F_Combat06")
+    fields.Rooms:get(6, "SiblingStructureKey"):write("Combat")
+    local siblingRewardField = fields.Rewards:get(6, "SiblingRewardClassKey")
+    local control = template.createUi(fields, instance)
+    local draw = noOpDraw()
+
+    draw.widgets.dropdown = function(field, opts)
+        if field == siblingRewardField then
+            lu.assertTrue(hasValue(opts.values or {}, "Major"))
+            lu.assertTrue(hasValue(opts.values or {}, "Minor"))
+            field:write("Major")
+            return true
+        end
+        return false
+    end
+    template.views.rewards(draw, control, instance)
+
+    lu.assertEquals(fields.Rewards:read(6, "SiblingRewardClassKey"), "Major")
+
+    control = template.createRuntime(routeFields({
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+        fCombatRow("F_Combat04", "Major"),
+        fCombatRow("F_Combat08", "Major"),
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat06",
+            SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
+            Reward1Key = "Major",
+        },
+    }), instance)
+    local snapshot = control:buildSnapshot()
+
+    lu.assertEquals(snapshot.rows[6].roomTopology.sibling, {
+        structure = "Combat",
+        rewardStore = "RunProgress",
+        rewardClass = "Major",
+        rewardBranch = "majorMinor",
+        offerCount = 1,
+    })
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingTopologyExportsSelectedAndSiblingDoors()
@@ -154,12 +241,10 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingTopologyExportsSel
     lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 6))
     lu.assertEquals(data.siblingStructureValues(instance), {
         "",
-        "CombatMajor",
-        "CombatMinor",
+        "Combat",
         "F_Story01",
         "F_Shop01",
-        "F_Reprieve01_Major",
-        "F_Reprieve01_Minor",
+        "F_Reprieve01",
         "F_MiniBoss01",
         "F_MiniBoss02",
         "F_MiniBoss03",
@@ -266,7 +351,7 @@ function TestRunPlannerFixedLinearRoute.testOceanusThreeExitRoomsExportTwoSiblin
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat02",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Major",
         },
         {
@@ -294,20 +379,20 @@ function TestRunPlannerFixedLinearRoute.testOceanusThreeExitRoomsExportTwoSiblin
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat02",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
             Reward1Key = "Major",
         },
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat03",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
+            Sibling2RewardClassKey = "Minor",
             Reward1Key = "Major",
         },
     })
-    lu.assertEquals(
-        data.siblingStructureValueStatesForRow(instance, mismatchRows, 5, 2).CombatMinor,
-        valueStates.INVALID
-    )
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, mismatchRows, 5, 2).Combat)
 
     instance = template.prepare({
         name = "RouteG",
@@ -319,13 +404,13 @@ function TestRunPlannerFixedLinearRoute.testOceanusThreeExitRoomsExportTwoSiblin
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat04",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Major",
         },
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat02",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Major",
         },
         {
@@ -352,7 +437,7 @@ function TestRunPlannerFixedLinearRoute.testOceanusThreeExitRoomsExportTwoSiblin
     })
 end
 
-function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyInvalidatesMissingAndMismatchedSiblings()
+function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyInvalidatesMissingSiblingStructure()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
     local instance = template.prepare({
@@ -365,19 +450,19 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyInvalidatesMissin
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat04",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Major",
         },
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat02",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Major",
         },
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat03",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Major",
         },
     }), instance)
@@ -387,40 +472,61 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyInvalidatesMissin
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
     lu.assertEquals(snapshot.invalidRows[1].code, "fixed_sibling_structure_required")
     lu.assertEquals(snapshot.rows[5].invalidCode, "fixed_sibling_structure_required")
+end
 
-    instance = template.prepare({
+function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyExportsMismatchedSiblingRewardBranches()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
         name = "RouteG",
         biome = catalog.lookup.G,
     })
-    control = template.createRuntime(routeFields({
+    local control = template.createRuntime(routeFields({
         {},
         { RoleKey = "Combat", OptionKey = "G_Combat01", Reward1Key = "Major" },
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat04",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
             Reward1Key = "Major",
         },
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat02",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
             Reward1Key = "Major",
         },
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat03",
-            SiblingStructureKey = "CombatMajor",
-            SiblingStructure2Key = "CombatMinor",
+            SiblingStructureKey = "Combat",
+            SiblingStructure2Key = "Combat",
+            SiblingRewardClassKey = "Major",
+            Sibling2RewardClassKey = "Minor",
             Reward1Key = "Major",
         },
     }), instance)
-    snapshot = control:buildSnapshot()
+    local snapshot = control:buildSnapshot()
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
-    lu.assertEquals(snapshot.invalidRows[1].code, "fixed_sibling_reward_store_mismatch")
-    lu.assertEquals(snapshot.rows[5].invalidCode, "fixed_sibling_reward_store_mismatch")
+    lu.assertTrue(snapshot.valid)
+    lu.assertEquals(snapshot.rows[5].roomTopology.siblings, {
+        {
+            structure = "Combat",
+            rewardStore = "RunProgress",
+            rewardClass = "Major",
+            rewardBranch = "majorMinor",
+            offerCount = 1,
+        },
+        {
+            structure = "Combat",
+            rewardStore = "MetaProgress",
+            rewardClass = "Minor",
+            rewardBranch = "majorMinor",
+            offerCount = 1,
+        },
+    })
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoorPressure()
@@ -446,13 +552,13 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
             RoleKey = "Combat",
             OptionKey = "F_Combat07",
             Reward1Key = "Major",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
         },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat13",
             Reward1Key = "Major",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
         },
     }), instance)
     attachSingleBiomeRouteContext(control, "Underworld", "F")
@@ -490,7 +596,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
             RoleKey = "Combat",
             OptionKey = "F_Combat13",
             Reward1Key = "Major",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
         },
     }), instance)
     attachSingleBiomeRouteContext(control, "Underworld", "F")
@@ -509,11 +615,11 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
         fCombatRow("F_Combat09", "Major"),
         fCombatRow("F_Combat04", "Major"),
         fCombatRow("F_Combat06", "Major", "F_Shop01"),
-        fCombatRow("F_Combat07", "Major", "CombatMajor"),
+        fCombatRow("F_Combat07", "Major", "Combat"),
         {
             RoleKey = "Miniboss",
             OptionKey = "F_MiniBoss01",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Boon",
             Reward2Key = "ZeusUpgrade",
         },
@@ -537,7 +643,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
         fCombatRow("F_Combat09", "Major"),
         fCombatRow("F_Combat04", "Major"),
         fCombatRow("F_Combat06", "Major", "F_Shop01"),
-        fCombatRow("F_Combat07", "Major", "CombatMajor"),
+        fCombatRow("F_Combat07", "Major", "Combat"),
         {
             RoleKey = "Miniboss",
             OptionKey = "F_MiniBoss01",
@@ -950,7 +1056,7 @@ function TestRunPlannerFixedLinearRoute.testSingleRoomRolesDefaultToConcreteOpti
             {
                 RoleKey = "Story",
                 OptionKey = "",
-                SiblingStructureKey = "CombatMajor",
+                SiblingStructureKey = "Combat",
             },
         }), instance)
     local row = control:rowSnapshot(6)
@@ -1721,7 +1827,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesOutOfRa
             {
                 RoleKey = "Story",
                 OptionKey = "F_Story01",
-                SiblingStructureKey = "CombatMajor",
+                SiblingStructureKey = "Combat",
             },
             {
                 RoleKey = "Story",

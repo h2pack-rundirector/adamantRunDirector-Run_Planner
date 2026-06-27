@@ -11,7 +11,11 @@ function storage.lootAlias(index)
 end
 
 function storage.isAlias(alias)
-    return type(alias) == "string" and string.match(alias, "^Reward%d+.*Key$") ~= nil
+    return type(alias) == "string"
+        and (
+            string.match(alias, "^Reward%d+.*Key$") ~= nil
+            or string.match(alias, "^Sibling%d*RewardClassKey$") ~= nil
+        )
 end
 
 function storage.buildRows()

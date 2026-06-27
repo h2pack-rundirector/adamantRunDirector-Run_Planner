@@ -92,10 +92,6 @@ return function(deps)
             {
                 key = "clockworkProgressionDoor",
             },
-            {
-                key = "matchingSiblingRewardStore",
-                onlyWhenBothHaveRewardStore = true,
-            },
         },
         forcedGroups = {
             {

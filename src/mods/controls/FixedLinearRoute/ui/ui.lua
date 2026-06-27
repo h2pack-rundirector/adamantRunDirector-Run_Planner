@@ -22,9 +22,22 @@ local function resetRewardDetails(fields, rowIndex)
     rewardSystem.resetRows(fields.Rewards, rowIndex)
 end
 
+local function resetSiblingRewardDetails(fields, instance, rowIndex)
+    if instance.siblingStructurePolicy ~= nil then
+        for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
+            fields.Rewards:reset(rowIndex, data.siblingRewardClassAlias(instance, siblingIndex))
+        end
+    end
+end
+
+local function resetAllRewardDetails(fields, instance, rowIndex)
+    resetRewardDetails(fields, rowIndex)
+    resetSiblingRewardDetails(fields, instance, rowIndex)
+end
+
 local function resetRowDetails(fields, instance, rowIndex)
     resetRoomDetails(fields, instance, rowIndex)
-    resetRewardDetails(fields, rowIndex)
+    resetAllRewardDetails(fields, instance, rowIndex)
 end
 
 local rooms = import("mods/controls/FixedLinearRoute/ui/rooms.lua", nil, {
@@ -33,6 +46,7 @@ local rooms = import("mods/controls/FixedLinearRoute/ui/rooms.lua", nil, {
     decorations = deps.decorations,
 })
 local rewards = import("mods/controls/FixedLinearRoute/ui/rewards.lua", nil, {
+    data = data,
     rewards = deps.rewards,
     rewardRatio = deps.rewardRatio,
     decorations = deps.decorations,
@@ -45,6 +59,9 @@ local planner = import("mods/controls/FixedLinearRoute/ui/planner.lua", nil, {
 
 function ui.create(fields, instance)
     local control = runtime.create(fields, instance)
+    local function resetCurrentRewardDetails(currentFields, rowIndex)
+        resetAllRewardDetails(currentFields, instance, rowIndex)
+    end
 
     function control:fields()
         return fields
@@ -59,7 +76,7 @@ function ui.create(fields, instance)
     end
 
     function control:onRoomOptionChanged(rowIndex, previousOptionKey)
-        optionChanges.resetRewardsIfContextChanged(self, resetRewardDetails, rowIndex, previousOptionKey)
+        optionChanges.resetRewardsIfContextChanged(self, resetCurrentRewardDetails, rowIndex, previousOptionKey)
     end
 
     function control:resetRow(rowIndex)

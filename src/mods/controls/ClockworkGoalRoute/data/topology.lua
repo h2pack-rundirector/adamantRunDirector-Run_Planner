@@ -81,20 +81,13 @@ local function siblingRoomTopology(option)
     return {
         structure = option.structure,
         roomKey = roomTopology.roomKey(option),
-            rewardStore = option.rewardStore,
-            isClockworkGoal = option.isClockworkGoal,
-            isPreboss = option.isPreboss,
-            eligibleRewardTypes = option.eligibleRewardTypes,
-            ineligibleRewardTypes = option.ineligibleRewardTypes,
-            offerCount = option.offerCount,
-        }
-    end
-
-local function selectedRewardStoreForRow(data, instance, rows, rowIndex)
-    local roleKey = data.resolveRole(instance, rows, rowIndex)
-    local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
-    local selected = selectedRoomTopology(data, instance, rows, rowIndex, roleKey, option)
-    return selected and selected.rewardStore or nil
+        rewardStore = option.rewardStore,
+        isClockworkGoal = option.isClockworkGoal,
+        isPreboss = option.isPreboss,
+        eligibleRewardTypes = option.eligibleRewardTypes,
+        ineligibleRewardTypes = option.ineligibleRewardTypes,
+        offerCount = option.offerCount,
+    }
 end
 
 local function isGoalDoor(topologyNode)
@@ -120,22 +113,6 @@ function topology.create(data)
             return topologyRulesStatus(instance, rows, rowIndex, siblingIndex, sibling)
         end,
     })
-
-    local function matchingSiblingRewardStoreStatus(instance, rows, rowIndex, sibling)
-        local candidateStore = sibling and sibling.rewardStore or nil
-        if candidateStore == nil then
-            return validStatus()
-        end
-
-        local selectedStore = selectedRewardStoreForRow(data, instance, rows, rowIndex)
-        if selectedStore ~= nil and selectedStore ~= candidateStore then
-            return invalidStatus(
-                "clockwork_sibling_reward_store_mismatch",
-                "Sibling reward store must match selected reward store"
-            )
-        end
-        return validStatus()
-    end
 
     local function progressionDoorStatus(instance, rows, rowIndex, sibling)
         local selected = selectedRoomTopologyForRow(data, instance, rows, rowIndex)
@@ -182,9 +159,6 @@ function topology.create(data)
     local function topologyRuleStatus(instance, rows, rowIndex, sibling, rule)
         if rule.key == "clockworkProgressionDoor" then
             return progressionDoorStatus(instance, rows, rowIndex, sibling)
-        end
-        if rule.key == "matchingSiblingRewardStore" then
-            return matchingSiblingRewardStoreStatus(instance, rows, rowIndex, sibling)
         end
         return validStatus()
     end

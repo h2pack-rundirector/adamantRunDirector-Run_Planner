@@ -370,19 +370,14 @@ end
 local function assertFixedLinearSiblingOptions(topology, expected)
     lu.assertEquals(topology.siblingStructureControl.key, "SiblingStructure")
     lu.assertEquals(topology.siblingStructureControl.alias, "SiblingStructureKey")
-    lu.assertEquals(topology.rules, {
-        {
-            key = "matchingSiblingRewardStore",
-            onlyWhenBothHaveRewardStore = true,
-        },
-    })
+    lu.assertNil(topology.rules)
     lu.assertEquals(optionKeys(topology.siblingStructureControl.options), expected.keys)
-    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, "CombatMajor").rewardStore, "RunProgress")
-    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, "CombatMinor").rewardStore, "MetaProgress")
+    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, "Combat").structure, "Combat")
+    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, "Combat").rewardBranch, "majorMinor")
     lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.storyKey).structure, "Story")
     lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.shopKey).structure, "Midshop")
-    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.fountainMajorKey).rewardClass, "Major")
-    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.fountainMinorKey).rewardClass, "Minor")
+    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.fountainKey).structure, "Fountain")
+    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.fountainKey).rewardBranch, "majorMinor")
     lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.minibossKeys[1]).structure, "Miniboss")
     lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.minibossKeys[1]).rewardStore, "RunProgress")
 end
@@ -405,20 +400,17 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
     assertFixedLinearSiblingOptions(erebus, {
         keys = {
             "",
-            "CombatMajor",
-            "CombatMinor",
+            "Combat",
             "F_Story01",
             "F_Shop01",
-            "F_Reprieve01_Major",
-            "F_Reprieve01_Minor",
+            "F_Reprieve01",
             "F_MiniBoss01",
             "F_MiniBoss02",
             "F_MiniBoss03",
         },
         storyKey = "F_Story01",
         shopKey = "F_Shop01",
-        fountainMajorKey = "F_Reprieve01_Major",
-        fountainMinorKey = "F_Reprieve01_Minor",
+        fountainKey = "F_Reprieve01",
         minibossKeys = { "F_MiniBoss01", "F_MiniBoss02", "F_MiniBoss03" },
     })
     lu.assertEquals(erebus.forcedGroups[1].key, "F_Shop")
@@ -438,20 +430,17 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
     assertFixedLinearSiblingOptions(oceanus, {
         keys = {
             "",
-            "CombatMajor",
-            "CombatMinor",
+            "Combat",
             "G_Story01",
             "G_Shop01",
-            "G_Reprieve01_Major",
-            "G_Reprieve01_Minor",
+            "G_Reprieve01",
             "G_MiniBoss01",
             "G_MiniBoss02",
             "G_MiniBoss03",
         },
         storyKey = "G_Story01",
         shopKey = "G_Shop01",
-        fountainMajorKey = "G_Reprieve01_Major",
-        fountainMinorKey = "G_Reprieve01_Minor",
+        fountainKey = "G_Reprieve01",
         minibossKeys = { "G_MiniBoss01", "G_MiniBoss02", "G_MiniBoss03" },
     })
     lu.assertEquals(oceanus.forcedGroups[1].key, "G_Shop")
@@ -465,19 +454,16 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
     assertFixedLinearSiblingOptions(olympus, {
         keys = {
             "",
-            "CombatMajor",
-            "CombatMinor",
+            "Combat",
             "P_Story01",
             "P_Shop01",
-            "P_Reprieve01_Major",
-            "P_Reprieve01_Minor",
+            "P_Reprieve01",
             "P_MiniBoss01",
             "P_MiniBoss02",
         },
         storyKey = "P_Story01",
         shopKey = "P_Shop01",
-        fountainMajorKey = "P_Reprieve01_Major",
-        fountainMinorKey = "P_Reprieve01_Minor",
+        fountainKey = "P_Reprieve01",
         minibossKeys = { "P_MiniBoss01", "P_MiniBoss02" },
     })
     lu.assertEquals(olympus.forcedGroups[1].key, "P_Minibosses")
@@ -1073,7 +1059,11 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
             maxCreationsThisRun = 6,
         },
     })
-    lu.assertEquals(tartarus.roomTopology.rules[1].key, "clockworkProgressionDoor")
+    lu.assertEquals(tartarus.roomTopology.rules, {
+        {
+            key = "clockworkProgressionDoor",
+        },
+    })
     lu.assertEquals(optionByKey(tartarus.roomTopology.siblingStructureControl.options, "Preboss"), {
         key = "Preboss",
         label = "Preboss",

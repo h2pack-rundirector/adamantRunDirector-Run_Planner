@@ -1,6 +1,7 @@
 -- luacheck: no unused args
 
 local deps = ...
+local data = deps.data
 local rewardSystem = deps.rewards
 local decorations = deps.decorations
 local rewardRatio = deps.rewardRatio
@@ -8,9 +9,23 @@ local rewardRatio = deps.rewardRatio
 local rewards = {}
 
 local REWARD_COLUMN_X = 130
+local SIBLING_REWARD_LABEL_COLUMN_X = 130
+local SIBLING_REWARD_CONTROL_COLUMN_X = 290
+local SIBLING_REWARD_OPTS = {
+    label = "",
+    controlWidth = 110,
+}
 local REWARD_DRAW_OPTS = {
     hideGenericRewardLabel = true,
 }
+
+local function copyBaseOpts(base)
+    local copy = {}
+    for key, value in pairs(base or {}) do
+        copy[key] = value
+    end
+    return copy
+end
 
 local function rewardDrawOpts(control)
     if control.rewardDrawOpts ~= nil then
@@ -60,7 +75,53 @@ local function drawRewardSurface(draw, control, surface, fields, opts)
     end
 end
 
-local function drawRewardRow(draw, control, rowIndex)
+local function siblingRewardClassOpts(control, instance, siblingIndex)
+    control._siblingRewardClassOptsByIndex = control._siblingRewardClassOptsByIndex or {}
+    local opts = control._siblingRewardClassOptsByIndex[siblingIndex]
+    if opts == nil then
+        opts = copyBaseOpts(SIBLING_REWARD_OPTS)
+        opts.values = data.siblingRewardClassValues(instance)
+        opts.displayValues = data.siblingRewardClassLabels(instance)
+        control._siblingRewardClassOptsByIndex[siblingIndex] = opts
+    end
+    return opts
+end
+
+local function siblingRewardLabel(instance, activeCount, siblingIndex)
+    if (activeCount or 0) > 1 then
+        return "Other Door " .. tostring(siblingIndex) .. " Reward"
+    end
+    return "Other Door Reward"
+end
+
+local function drawSiblingRewardClassDropdown(draw, control, instance, rowIndex, siblingIndex, activeCount)
+    if not data.shouldDrawSiblingRewardClass(instance, control:routeRows(), rowIndex, siblingIndex) then
+        return false
+    end
+
+    draw.imgui.SetCursorPosX(SIBLING_REWARD_LABEL_COLUMN_X)
+    draw.imgui.AlignTextToFramePadding()
+    draw.imgui.Text(siblingRewardLabel(instance, activeCount, siblingIndex))
+    draw.imgui.SameLine()
+    draw.imgui.SetCursorPosX(SIBLING_REWARD_CONTROL_COLUMN_X)
+    return draw.widgets.dropdown(
+        control:rewardField(rowIndex, data.siblingRewardClassAlias(instance, siblingIndex)),
+        siblingRewardClassOpts(control, instance, siblingIndex)
+    )
+end
+
+local function drawSiblingRewardClassDropdowns(draw, control, instance, rowIndex)
+    local changed = false
+    local activeCount = data.activeSiblingStructureCount(instance, control:routeRows(), rowIndex)
+    for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
+        if drawSiblingRewardClassDropdown(draw, control, instance, rowIndex, siblingIndex, activeCount) then
+            changed = true
+        end
+    end
+    return changed
+end
+
+local function drawRewardRow(draw, control, instance, rowIndex)
     local slot = control:slot(rowIndex)
     if slot == nil then
         return
@@ -77,6 +138,9 @@ local function drawRewardRow(draw, control, rowIndex)
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)
         drawRewardSurface(draw, control, surface, rewardFields(control, rowIndex), rewardDrawOpts(control))
+    end
+    if drawSiblingRewardClassDropdowns(draw, control, instance, rowIndex) then
+        control:invalidateReadPass()
     end
 end
 
@@ -100,7 +164,7 @@ function rewards.draw(draw, control, instance)
             draw.imgui,
             decorations.routeRowInactive(allRowsInactive, inactiveBoundary, control:slot(rowIndex), "rewards")
         )
-        drawRewardRow(draw, control, rowIndex)
+        drawRewardRow(draw, control, instance, rowIndex)
         decorations.popInactive(draw.imgui, inactive)
         drewRow = true
     end

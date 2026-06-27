@@ -456,14 +456,14 @@ function TestRunPlannerRewardPlanning.testRouteContextDevotionRewardUsesPriorUnd
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat07",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat05",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -556,14 +556,14 @@ function TestRunPlannerRewardPlanning.testRouteContextScopesPriorGodLootByRoute(
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat07",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat05",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -2312,7 +2312,7 @@ function TestRunPlannerRewardPlanning.testFixedLinearRuntimeInvalidatesDevotionR
             {
                 RoleKey = "Combat",
                 OptionKey = "F_Combat05",
-                SiblingStructureKey = "CombatMajor",
+                SiblingStructureKey = "Combat",
                 Reward1Key = "Major",
                 Reward2Key = "Devotion",
                 Reward5Key = "ZeusUpgrade",
@@ -2371,7 +2371,7 @@ function TestRunPlannerRewardPlanning.testRouteOverviewInvalidatesDuplicateTrial
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat05",
-            SiblingStructureKey = "CombatMajor",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Major",
             Reward2Key = "Devotion",
             Reward5Key = "ZeusUpgrade",

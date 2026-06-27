@@ -16,6 +16,11 @@ local validStatus = common.validStatus
 
 local data
 local topology
+local REWARD_CLASS_VALUES = { "Major", "Minor" }
+local REWARD_CLASS_LABELS = {
+    Major = "Major",
+    Minor = "Minor",
+}
 
 local adapter = {
     slotForRow = slots.slotForRow,
@@ -89,6 +94,7 @@ end
 
 function data.storage(instance)
     local roomRows = data.buildRoomRows()
+    local rewardRows = data.buildRewardRows()
     if instance.siblingStructurePolicy ~= nil then
         for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
             roomRows[#roomRows + 1] = {
@@ -96,6 +102,12 @@ function data.storage(instance)
                 type = "string",
                 default = "",
                 maxLen = 32,
+            }
+            rewardRows[#rewardRows + 1] = {
+                key = data.siblingRewardClassAlias(instance, siblingIndex),
+                type = "string",
+                default = "",
+                maxLen = 16,
             }
         end
     end
@@ -114,7 +126,7 @@ function data.storage(instance)
             minRows = instance.routeRowCount,
             defaultRows = instance.routeRowCount,
             maxRows = instance.routeRowCount,
-            row = data.buildRewardRows(),
+            row = rewardRows,
         },
     }
 end
@@ -161,6 +173,53 @@ end
 
 function data.roomTopology(instance, rows, rowIndex)
     return topology.roomTopology(instance, rows, rowIndex)
+end
+
+function data.siblingRewardClassAlias(_, siblingIndex)
+    siblingIndex = math.floor(tonumber(siblingIndex) or 1)
+    if siblingIndex <= 1 then
+        return "SiblingRewardClassKey"
+    end
+    return "Sibling" .. tostring(siblingIndex) .. "RewardClassKey"
+end
+
+function data.siblingRewardClassValues()
+    return REWARD_CLASS_VALUES
+end
+
+function data.siblingRewardClassLabels()
+    return REWARD_CLASS_LABELS
+end
+
+function data.siblingNeedsRewardClass(sibling)
+    return sibling ~= nil
+        and (
+            sibling.rewardBranch == "majorMinor"
+            or sibling.requiresRewardClass == true
+        )
+end
+
+function data.shouldDrawSiblingRewardClass(instance, rows, rowIndex, siblingIndex)
+    if data.activeSiblingStructureCount(instance, rows, rowIndex) < (siblingIndex or 1) then
+        return false
+    end
+    if not data.siblingStructureStatus(instance, rows, rowIndex).valid then
+        return false
+    end
+
+    local _, sibling = data.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
+    return data.siblingNeedsRewardClass(sibling)
+end
+
+function data.resolveSiblingRewardClass(instance, rows, rowIndex, siblingIndex)
+    local key = rows and rows:read(rowIndex, data.siblingRewardClassAlias(instance, siblingIndex)) or ""
+    key = key or ""
+    if key == "Major" then
+        return key, "RunProgress"
+    elseif key == "Minor" then
+        return key, "MetaProgress"
+    end
+    return key, nil
 end
 
 return data
