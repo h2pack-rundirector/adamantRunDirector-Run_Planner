@@ -679,7 +679,7 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
 
     lu.assertEquals(biomes.lookup.F.slotLayout.special[11].biomeEncounterDepthCost, 0)
 
-    local thessalyPolicy = biomes.lookup.O.combatEncounterPolicy.countControl.options
+    local thessalyPolicy = biomes.lookup.O.roomTopology.combatEncounterPolicy.countControl.options
     lu.assertEquals(thessalyPolicy[1].biomeEncounterDepthCost, 1)
     lu.assertEquals(thessalyPolicy[2].biomeEncounterDepthCost, 2)
 end
@@ -708,14 +708,15 @@ function TestRunPlannerData.testBiomeDefinitionsResolveRouteEncounterDepthCosts(
             end
         end
 
-        local countOptions = biome.combatEncounterPolicy
-            and biome.combatEncounterPolicy.countControl
-            and biome.combatEncounterPolicy.countControl.options
+        local countOptions = biome.roomTopology
+            and biome.roomTopology.combatEncounterPolicy
+            and biome.roomTopology.combatEncounterPolicy.countControl
+            and biome.roomTopology.combatEncounterPolicy.countControl.options
             or nil
         for _, option in ipairs(countOptions or {}) do
             assertEncounterDepthCost(
                 option.biomeEncounterDepthCost,
-                biome.key .. ".combatEncounterPolicy." .. tostring(option.key)
+                biome.key .. ".roomTopology.combatEncounterPolicy." .. tostring(option.key)
             )
         end
     end
@@ -1156,7 +1157,6 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].room.exitCount, 1)
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].room.rewardExitCount, 0)
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].room.key, "N_Hub")
-    lu.assertEquals(ephyra.hub.generatedRewardExitCount, 10)
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].reward, noneReward())
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].roomHistoryCost, 0)
     lu.assertEquals(ephyra.slotLayout.fixedAfterHub[1].kind, "preboss")
@@ -1164,8 +1164,6 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     lu.assertEquals(ephyra.slotLayout.fixedAfterHub[1].reward, shopReward("WorldShop"))
 
     lu.assertEquals(ephyra.hub.roomKey, "N_Hub")
-    lu.assertEquals(ephyra.hub.requiredPylons, 6)
-    lu.assertEquals(ephyra.hub.availableDoorCount, { min = 9, max = 10 })
     lu.assertEquals(ephyra.hub.sideRoomAvailability.default, "")
     lu.assertEquals(ephyra.hub.sideRoomAvailability.modes, {
         { key = "", label = "Vanilla" },
@@ -1173,7 +1171,26 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
         { key = "Enabled", label = "Enabled" },
     })
     lu.assertEquals(#ephyra.hub.combatRooms, 23)
-    lu.assertEquals(#ephyra.hub.hubDoorRooms, 26)
+
+    lu.assertEquals(ephyra.roomTopology.kind, "hubDoorBatch")
+    lu.assertEquals(ephyra.roomTopology.hub.roomKey, "N_Hub")
+    lu.assertEquals(ephyra.roomTopology.hub.generatedDoorCount, 10)
+    lu.assertEquals(ephyra.roomTopology.hub.generatedRewardExitCount, 10)
+    lu.assertEquals(ephyra.roomTopology.hub.selectedDoorCount, 6)
+    lu.assertEquals(ephyra.roomTopology.hub.availableDoorCount, { min = 9, max = 10 })
+    lu.assertEquals(ephyra.roomTopology.hub.effectTiming, "afterGroup")
+    lu.assertEquals(#ephyra.roomTopology.hub.doorRooms, 26)
+    lu.assertEquals(ephyra.roomTopology.hub.rewardRowGroup, {
+        key = "N_HubPylons",
+        effectTiming = "afterGroup",
+        constraints = {
+            uniqueRewardTypes = {
+                allow = {
+                    Boon = true,
+                },
+            },
+        },
+    })
 
     local combat12 = ephyra.hub.combatRoomsByKey.N_Combat12
     lu.assertEquals(combat12.hubDoorId, 561389)
@@ -1202,8 +1219,8 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     lu.assertEquals(ephyra.hub.subroomRewardStores.N_Sub14, "SubRoomRewardsHard")
     lu.assertEquals(ephyra.hub.subroomRewardStores.N_Sub15, "SubRoomRewards")
 
-    lu.assertEquals(ephyra.hub.minibossAvailability.mode, "oneOf")
-    lu.assertEquals(ephyra.hub.minibossAvailability.rooms, { "N_MiniBoss01", "N_MiniBoss02" })
+    lu.assertEquals(ephyra.roomTopology.hub.minibossAvailability.mode, "oneOf")
+    lu.assertEquals(ephyra.roomTopology.hub.minibossAvailability.rooms, { "N_MiniBoss01", "N_MiniBoss02" })
     lu.assertEquals(ephyra.hub.sideRoomAvailability.identity, "parentCombatRoomAndDoorId")
     lu.assertEquals(ephyra.hub.sideRoomAvailability.default, "")
 end
@@ -1263,13 +1280,14 @@ function TestRunPlannerData.testThessalyCombatPolicyModelsShipEncounters()
     local thessaly = biomes.lookup.O
     local combat = thessaly.rolesByKey.Combat.mapOptions[1]
     local fountain = thessaly.rolesByKey.Fountain.roomOptions[1]
-    local policy = biomes.lookup.O.combatEncounterPolicy
+    local policy = thessaly.roomTopology.combatEncounterPolicy
 
     lu.assertEquals(combat.exitCount, 1)
     lu.assertEquals(combat.rewardExitCount, 0)
     lu.assertEquals(fountain.exitCount, 1)
     lu.assertEquals(fountain.rewardExitCount, 0)
 
+    lu.assertEquals(thessaly.roomTopology.kind, "shipCombat")
     lu.assertEquals(policy.key, "O_CombatData")
     lu.assertNil(policy.countControl.default)
     lu.assertEquals(policy.countControl.options[1].key, "TwoCombats")

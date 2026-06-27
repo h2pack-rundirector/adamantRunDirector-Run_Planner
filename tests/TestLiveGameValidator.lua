@@ -68,13 +68,17 @@ local function tinyCatalog()
                 },
                 hub = {
                     roomKey = "X_Hub",
-                    hubDoorRooms = {
-                        {
-                            roomKey = "X_DoorRoom",
-                        },
-                    },
                     combatRooms = {
                         { key = "X_Combat01" },
+                    },
+                },
+                roomTopology = {
+                    hub = {
+                        doorRooms = {
+                            {
+                                roomKey = "X_DoorRoom",
+                            },
+                        },
                     },
                 },
                 fields = {

@@ -73,7 +73,7 @@ function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
         "N_MiniBoss02",
     })
     lu.assertEquals(instance.maxSideDoorCount, 3)
-    lu.assertEquals(instance.biome.hub.rewardRowGroup, {
+    lu.assertEquals(instance.biome.roomTopology.hub.rewardRowGroup, {
         key = "N_HubPylons",
         effectTiming = "afterGroup",
         constraints = {
@@ -240,6 +240,28 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
     lu.assertEquals(snapshot.rows[4].hubDoorId, 561389)
     lu.assertEquals(#snapshot.rows[4].sideDoors, 3)
     lu.assertEquals(#snapshot.rows[4].sideRooms, 3)
+    lu.assertEquals(snapshot.rows[4].roomTopology, {
+        kind = "hubDoorBatchPick",
+        selected = {
+            structure = "Combat",
+            roomKey = "N_Combat12",
+            hubDoorId = 561389,
+            rewardStore = "HubRewards",
+            ineligibleRewardSet = "HubCombatRoomEasyBans",
+            offerCount = 1,
+            rewardAddresses = { "row" },
+        },
+        hub = {
+            roomKey = "N_Hub",
+            availableDoorCount = { min = 9, max = 10 },
+            generatedDoorCount = 10,
+            generatedRewardExitCount = 10,
+            selectedDoorCount = 6,
+            effectTiming = "afterGroup",
+            rewardRowGroup = instance.biome.roomTopology.hub.rewardRowGroup,
+        },
+        sideRooms = snapshot.rows[4].sideRooms,
+    })
     lu.assertTrue(snapshot.rows[4].valid)
     lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardKind, "roomStore")
     lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardPicks[1].value, "Boon")

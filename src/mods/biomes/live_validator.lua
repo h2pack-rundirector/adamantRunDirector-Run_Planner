@@ -88,7 +88,6 @@ local function collectHubRefs(refs, hub, path)
     collectRoomOptions(refs, hub.combatRooms, childPath(path, "combatRooms"))
     collectRoomOptions(refs, hub.minibossRooms, childPath(path, "minibossRooms"))
     collectRoomOptions(refs, hub.storyRooms, childPath(path, "storyRooms"))
-    collectSlotList(refs, hub.hubDoorRooms, childPath(path, "hubDoorRooms"))
 end
 
 local function collectFieldsRefs(refs, fields, path)
@@ -97,6 +96,17 @@ local function collectFieldsRefs(refs, fields, path)
     end
     collectRoomOptions(refs, fields.combatRooms, childPath(path, "combatRooms"))
     collectRoomOptions(refs, fields.minibossRooms, childPath(path, "minibossRooms"))
+end
+
+local function collectRoomTopologyRefs(refs, topology, path)
+    if type(topology) ~= "table" then
+        return
+    end
+
+    local hub = topology.hub
+    if type(hub) == "table" then
+        collectSlotList(refs, hub.doorRooms, childPath(childPath(path, "hub"), "doorRooms"))
+    end
 end
 
 local function collectTimelineRefs(refs, timeline, path)
@@ -125,6 +135,7 @@ local function collectBiomeRoomRefs(catalog)
         collectTimelineRefs(refs, biome.timeline, childPath(biomePath, "timeline"))
         collectHubRefs(refs, biome.hub, childPath(biomePath, "hub"))
         collectFieldsRefs(refs, biome.fields, childPath(biomePath, "fields"))
+        collectRoomTopologyRefs(refs, biome.roomTopology, childPath(biomePath, "roomTopology"))
     end
     return refs
 end

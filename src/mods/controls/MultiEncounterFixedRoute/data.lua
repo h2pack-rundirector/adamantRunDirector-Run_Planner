@@ -211,7 +211,7 @@ end
 local function prepareEncounterPolicies(instance)
     instance.encounterPoliciesByKey = {}
 
-    local policy = prepareEncounterPolicy(instance.biome.combatEncounterPolicy)
+    local policy = prepareEncounterPolicy(instance.biome.roomTopology.combatEncounterPolicy)
     if policy ~= nil then
         instance.encounterPoliciesByKey[policy.key] = policy
         instance.primaryEncounterPolicy = policy

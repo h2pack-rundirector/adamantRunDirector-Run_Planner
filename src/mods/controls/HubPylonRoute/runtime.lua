@@ -52,6 +52,50 @@ local function rewardSurface(role, option)
     return rewardSystem.surfaceFor(rewardContext(role, option))
 end
 
+local function hubTopology(instance)
+    return instance.biome.roomTopology.hub
+end
+
+local function hubRewardRowGroup(instance)
+    local topology = hubTopology(instance)
+    return topology and topology.rewardRowGroup or nil
+end
+
+local function pylonRoomTopology(instance, slot, row)
+    if slot == nil or slot.kind ~= "biomeRow" then
+        return nil
+    end
+
+    local topology = hubTopology(instance)
+    local context = rewardContext(row.role, row.option)
+    local offerCount = context ~= nil and 1 or 0
+    return {
+        kind = "hubDoorBatchPick",
+        selected = {
+            structure = row.roleKey,
+            roomKey = row.roomKey,
+            hubDoorId = row.hubDoorId,
+            rewardStore = context and context.rewardStore or nil,
+            eligibleRewardTypes = context and context.eligibleRewardTypes or nil,
+            ineligibleRewardTypes = context and context.ineligibleRewardTypes or nil,
+            eligibleRewardSet = context and context.eligibleRewardSet or nil,
+            ineligibleRewardSet = context and context.ineligibleRewardSet or nil,
+            offerCount = offerCount,
+            rewardAddresses = offerCount > 0 and { "row" } or nil,
+        },
+        hub = {
+            roomKey = topology.roomKey,
+            availableDoorCount = topology.availableDoorCount,
+            generatedDoorCount = topology.generatedDoorCount,
+            generatedRewardExitCount = topology.generatedRewardExitCount,
+            selectedDoorCount = topology.selectedDoorCount,
+            effectTiming = topology.effectTiming,
+            rewardRowGroup = topology.rewardRowGroup,
+        },
+        sideRooms = row.sideRooms,
+    }
+end
+
 local function routeRewardValidation(instance, rowIndex)
     if instance.routeContext ~= nil and instance.routeContext.rewardRowValidation ~= nil then
         return instance.routeContext:rewardRowValidation(instance.routeKey, instance.biomeKey, rowIndex)
@@ -346,11 +390,7 @@ function runtime.create(fields, instance)
             hubDoorId = option and option.hubDoorId or slot.hubDoorId,
             sideDoors = option and option.sideDoors or slot.sideDoors,
             sideRooms = sideRoomSnapshots(instance, fields, routeRows, rowIndex, rewardsConfigured),
-            rewardRowGroup = slot.kind == "biomeRow"
-                and instance.biome
-                and instance.biome.hub
-                and instance.biome.hub.rewardRowGroup
-                or nil,
+            rewardRowGroup = slot.kind == "biomeRow" and hubRewardRowGroup(instance) or nil,
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,
@@ -364,6 +404,7 @@ function runtime.create(fields, instance)
                 and rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex))
                 or EMPTY_LIST,
         }
+        row.roomTopology = pylonRoomTopology(instance, slot, row)
         return rewardItems.attach(row)
     end
 

@@ -1,5 +1,6 @@
 return function(deps)
-    local layout = import("mods/biomes/declarations/o_thessaly_layout.lua")(deps)
+    local layout = import("mods/biomes/declarations/o_thessaly_layout.lua")()
+    local topology = import("mods/biomes/declarations/o_thessaly_topology.lua")(deps)
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules
@@ -9,6 +10,7 @@ return function(deps)
         label = "Thessaly",
         region = "Surface",
         adapter = "multiEncounterFixed",
+        roomTopology = topology,
         rewardRatio = {
             targetMetaProgress = 0.30,
         },
@@ -56,7 +58,6 @@ return function(deps)
                 },
             },
         },
-        combatEncounterPolicy = layout.combatEncounterPolicy,
         roles = {
             {
                 key = "Combat",

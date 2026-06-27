@@ -1,6 +1,10 @@
 return function(deps)
     local layout = import("mods/biomes/declarations/n_ephyra_layout.lua")(deps)
     local rewardLayout = import("mods/biomes/declarations/n_ephyra_rewards.lua")(deps)
+    local topology = import("mods/biomes/declarations/n_ephyra_topology.lua")({
+        layout = layout,
+        rewardLayout = rewardLayout,
+    })
     local parser = deps.parser
     local rewards = deps.rewards
     local routeRules = deps.routeRules
@@ -10,6 +14,7 @@ return function(deps)
         label = "Ephyra",
         region = "Surface",
         adapter = "hubPylon",
+        roomTopology = topology,
         timeline = parser.standardTimeline("N", {
             postBossFeatures = { surfaceShop = true },
         }),
@@ -68,9 +73,6 @@ return function(deps)
             pylonRoomHistoryCost = 2,
             doorSelectionFunction = "ChooseAvailableN_HubDoors",
             doorTypes = { "EphyraExitDoor" },
-            availableDoorCount = { min = 9, max = 10 },
-            generatedRewardExitCount = 10,
-            requiredPylons = 6,
             pylonObjective = "SoulPylon",
             combatRooms = layout.combatRooms,
             combatRoomsByKey = layout.combatRoomsByKey,
@@ -78,13 +80,7 @@ return function(deps)
             minibossRoomsByKey = layout.minibossRoomsByKey,
             storyRooms = layout.storyRooms,
             storyRoomsByKey = layout.storyRoomsByKey,
-            hubDoorRooms = layout.hubDoorRooms,
             subroomRewardStores = layout.subroomRewardStores,
-            rewardRowGroup = rewardLayout.hubPylons,
-            minibossAvailability = {
-                mode = "oneOf",
-                rooms = { "N_MiniBoss01", "N_MiniBoss02" },
-            },
             sideRoomAvailability = {
                 identity = "parentCombatRoomAndDoorId",
                 vanillaPolicy = {
