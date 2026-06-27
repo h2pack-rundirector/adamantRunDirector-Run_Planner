@@ -232,14 +232,10 @@ local function isVariantAvailableAtContext(variant, context)
     if variant.availableAtBiomeEncounterDepth == nil then
         return true
     end
-    if context == nil or context.biomeEncounterDepthMin == nil or context.biomeEncounterDepthMax == nil then
+    if context == nil or context.biomeEncounterDepth == nil then
         return false
     end
-    return availability.boundsInRange(
-        context.biomeEncounterDepthMin,
-        context.biomeEncounterDepthMax,
-        variant.availableAtBiomeEncounterDepth
-    )
+    return availability.isInRange(context.biomeEncounterDepth, variant.availableAtBiomeEncounterDepth)
 end
 
 local function prepareVariantChoiceCache(instance)

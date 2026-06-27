@@ -76,8 +76,6 @@ local function prebossRewardRow(rowIndex, rewards)
         rewards = rewards,
         rewardPicks = {},
         biomeEncounterDepthCost = 0,
-        biomeEncounterDepthCostMin = 0,
-        biomeEncounterDepthCostMax = 0,
     }
 end
 

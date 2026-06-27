@@ -5,20 +5,8 @@ local withTestImport = importHarness.withTestImport
 local function normalizeRewardRows(rows)
     local rewardItems = testImport("mods/route/reward_planning/items.lua")
     for _, row in ipairs(rows or {}) do
-        if row.biomeEncounterDepthCost == nil
-            and row.biomeEncounterDepthCostMin == nil
-            and row.biomeEncounterDepthCostMax == nil
-        then
+        if row.biomeEncounterDepthCost == nil then
             row.biomeEncounterDepthCost = 1
-        end
-        if row.biomeEncounterDepthCostMin == nil or row.biomeEncounterDepthCostMax == nil then
-            if type(row.biomeEncounterDepthCost) == "table" then
-                row.biomeEncounterDepthCostMin = row.biomeEncounterDepthCost.min
-                row.biomeEncounterDepthCostMax = row.biomeEncounterDepthCost.max
-            else
-                row.biomeEncounterDepthCostMin = row.biomeEncounterDepthCost
-                row.biomeEncounterDepthCostMax = row.biomeEncounterDepthCost
-            end
         end
         rewardItems.attach(row)
     end

@@ -239,8 +239,7 @@ local function minRoomHistorySpacingInvalid(requirement, rewardCtx, ctx, event)
 end
 
 local function minRunEncounterDepthInvalid(requirement, ctx)
-    local runEncounterDepthMin = ctx.runEncounterDepthMin or ctx.runEncounterDepth
-    if runEncounterDepthMin == nil or runEncounterDepthMin < requirement.min then
+    if ctx.runEncounterDepth == nil or ctx.runEncounterDepth < requirement.min then
         return requirement
     end
     return nil

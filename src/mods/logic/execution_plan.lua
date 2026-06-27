@@ -114,11 +114,7 @@ local function compactSideRoom(entry)
         biomeDepthCache = entry.biomeDepthCache,
         biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepth = entry.biomeEncounterDepth,
-        biomeEncounterDepthMin = entry.biomeEncounterDepthMin,
-        biomeEncounterDepthMax = entry.biomeEncounterDepthMax,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
-        biomeEncounterDepthCostMin = entry.biomeEncounterDepthCostMin,
-        biomeEncounterDepthCostMax = entry.biomeEncounterDepthCostMax,
         legIndex = entry.legIndex,
         cageIndex = entry.cageIndex,
         sideIndex = entry.sideIndex,
@@ -146,16 +142,10 @@ local function compactRoomRow(row)
         roomHistoryOrdinal = row.roomHistoryOrdinal,
         runDepthCache = row.runDepthCache,
         runEncounterDepth = row.runEncounterDepth,
-        runEncounterDepthMin = row.runEncounterDepthMin,
-        runEncounterDepthMax = row.runEncounterDepthMax,
         biomeDepthCache = row.biomeDepthCache,
         biomeDepthCacheCost = row.biomeDepthCacheCost,
         biomeEncounterDepth = row.biomeEncounterDepth,
-        biomeEncounterDepthMin = row.biomeEncounterDepthMin,
-        biomeEncounterDepthMax = row.biomeEncounterDepthMax,
         biomeEncounterDepthCost = row.biomeEncounterDepthCost,
-        biomeEncounterDepthCostMin = row.biomeEncounterDepthCostMin,
-        biomeEncounterDepthCostMax = row.biomeEncounterDepthCostMax,
         slotKind = row.slotKind,
         isBiomeEntry = row.isBiomeEntry == true,
         roomKey = row.roomKey,
@@ -220,8 +210,6 @@ local function annotateRouteCounters(snapshot)
                 row.roomHistoryOrdinal = context.roomHistoryOrdinal
                 row.runDepthCache = context.runDepthCache
                 row.runEncounterDepth = context.runEncounterDepth
-                row.runEncounterDepthMin = context.runEncounterDepthMin
-                row.runEncounterDepthMax = context.runEncounterDepthMax
             end
         end,
     })

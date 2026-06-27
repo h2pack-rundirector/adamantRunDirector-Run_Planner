@@ -154,7 +154,7 @@ local function variantMatchesRow(context, npc, biomeEntry, variant, row)
         and roleMatches(context, npc, row)
         and targetKindMatches(npc, biomeEntry, variant, row)
         and common.valueInRange(variant.biomeDepthCache, row.biomeDepthCache)
-        and common.boundsInRange(variant.biomeEncounterDepth, row.biomeEncounterDepthMin, row.biomeEncounterDepthMax)
+        and common.valueInRange(variant.biomeEncounterDepth, row.biomeEncounterDepth)
         and rowMatchesRequiredTag(row, biomeEntry.requiredRoomTag or variant.requiredRoomTag)
 end
 

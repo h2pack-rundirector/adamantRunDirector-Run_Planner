@@ -82,12 +82,8 @@ local function counterSummary(currentRun, row)
         .. " simRoomHistoryOrdinal=" .. fieldValue(row and row.roomHistoryOrdinal)
         .. " simRunDepthCache=" .. fieldValue(row and row.runDepthCache)
         .. " simRunEncounterDepth=" .. fieldValue(row and row.runEncounterDepth)
-        .. " simRunEncounterDepthMin=" .. fieldValue(row and row.runEncounterDepthMin)
-        .. " simRunEncounterDepthMax=" .. fieldValue(row and row.runEncounterDepthMax)
         .. " simBiomeDepthCache=" .. fieldValue(row and row.biomeDepthCache)
         .. " simBiomeEncounterDepth=" .. fieldValue(row and row.biomeEncounterDepth)
-        .. " simBiomeEncounterDepthMin=" .. fieldValue(row and row.biomeEncounterDepthMin)
-        .. " simBiomeEncounterDepthMax=" .. fieldValue(row and row.biomeEncounterDepthMax)
 end
 
 local function eligibleStoreRewardsSummary(currentRun, room, rewardStoreName, previouslyChosenRewards, args)

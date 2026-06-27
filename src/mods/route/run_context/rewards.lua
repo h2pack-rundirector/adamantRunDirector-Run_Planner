@@ -57,12 +57,8 @@ local function rewardRowContext(rowContext, routeControlName)
         roomHistoryOrdinal = rowContext.roomHistoryOrdinal,
         runDepthCache = rowContext.runDepthCache,
         runEncounterDepth = rowContext.runEncounterDepth,
-        runEncounterDepthMin = rowContext.runEncounterDepthMin,
-        runEncounterDepthMax = rowContext.runEncounterDepthMax,
         biomeDepthCache = rowContext.biomeDepthCache,
         biomeEncounterDepth = rowContext.biomeEncounterDepth,
-        biomeEncounterDepthMin = rowContext.biomeEncounterDepthMin,
-        biomeEncounterDepthMax = rowContext.biomeEncounterDepthMax,
         roomTopology = rowContext.row and rowContext.row.roomTopology or nil,
     }
 end
