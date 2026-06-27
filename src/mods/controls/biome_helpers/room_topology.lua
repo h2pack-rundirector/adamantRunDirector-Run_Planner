@@ -57,6 +57,15 @@ local function prepareForcedGroups(groups)
     return preparedGroups
 end
 
+local function candidateInPreparedGroups(groups, roomKey)
+    for _, group in ipairs(groups or EMPTY_VALUES) do
+        if roomKey ~= nil and group.candidatesByKey ~= nil and group.candidatesByKey[roomKey] == true then
+            return true
+        end
+    end
+    return false
+end
+
 function roomTopology.prepareSiblingPolicy(topology, opts)
     local control = topology and topology.siblingStructureControl or nil
     if control == nil then
@@ -74,6 +83,8 @@ function roomTopology.prepareSiblingPolicy(topology, opts)
         values = {},
         labels = {},
         optionsByKey = {},
+        optionsByRoomKey = {},
+        ungroupedForceCandidates = {},
     }
 
     for _, option in ipairs(control.options or EMPTY_VALUES) do
@@ -81,6 +92,20 @@ function roomTopology.prepareSiblingPolicy(topology, opts)
         policy.values[#policy.values + 1] = key
         policy.labels[key] = option.label or key
         policy.optionsByKey[key] = option
+        local roomKey = roomTopology.roomKey(option)
+        if roomKey ~= nil then
+            policy.optionsByRoomKey[roomKey] = option
+        end
+    end
+    for _, key in ipairs(policy.values) do
+        local option = policy.optionsByKey[key]
+        local roomKey = roomTopology.roomKey(option)
+        if roomKey ~= nil
+            and option.force ~= nil
+            and not candidateInPreparedGroups(policy.forcedGroups, roomKey)
+        then
+            policy.ungroupedForceCandidates[#policy.ungroupedForceCandidates + 1] = roomKey
+        end
     end
     return policy
 end
@@ -191,13 +216,25 @@ local function generatedSiblingCandidateAt(ctx, index, candidate, candidateOverr
     return false
 end
 
-local function generatedCandidateThroughRow(ctx, candidate, candidateOverride)
-    for currentRowIndex = 1, ctx.rowIndex do
-        if ctx.roomKeyAt(currentRowIndex) == candidate then
+local function generatedCandidateAtRow(ctx, index, candidate, candidateOverride)
+    if ctx.roomKeyAt(index) == candidate then
+        return true
+    end
+    return generatedSiblingCandidateAt(ctx, index, candidate, candidateOverride)
+end
+
+local function generatedCandidateBeforeRow(ctx, candidate)
+    for currentRowIndex = 1, ctx.rowIndex - 1 do
+        if generatedCandidateAtRow(ctx, currentRowIndex, candidate) then
             return true
         end
+    end
+    return false
+end
 
-        if generatedSiblingCandidateAt(ctx, currentRowIndex, candidate, candidateOverride) then
+local function generatedCandidateThroughRow(ctx, candidate, candidateOverride)
+    for currentRowIndex = 1, ctx.rowIndex do
+        if generatedCandidateAtRow(ctx, currentRowIndex, candidate, candidateOverride) then
             return true
         end
     end
@@ -237,6 +274,144 @@ local function requiredGeneratedCountForGroup(ctx, group)
     return math.min(#(group.candidates or EMPTY_VALUES), generatedCapacityForGroup(ctx, group))
 end
 
+local function forcedCandidateOption(policy, candidate)
+    return policy and (
+        policy.optionsByKey[candidate]
+        or policy.optionsByRoomKey[candidate]
+    ) or nil
+end
+
+local function forceRangeWindowActive(force, rowContext)
+    local range = force and force.biomeDepthCache or nil
+    local depth = rowContext and rowContext.biomeDepthCache or nil
+    if range == nil or depth == nil then
+        return false
+    end
+
+    if range.exact ~= nil then
+        return depth == range.exact
+    end
+    if range.min ~= nil and depth < range.min then
+        return false
+    end
+    return range.min ~= nil or range.max ~= nil
+end
+
+local function forceRangeDeadlineActive(force, rowContext)
+    local range = force and force.biomeDepthCache or nil
+    local depth = rowContext and rowContext.biomeDepthCache or nil
+    if range == nil or depth == nil then
+        return false
+    end
+
+    if range.exact ~= nil then
+        return depth == range.exact
+    end
+    if range.min ~= nil and depth < range.min then
+        return false
+    end
+    return range.max ~= nil and depth >= range.max
+end
+
+local function forceCandidateClosedByPickedGroup(policy, ctx, candidate)
+    for _, group in ipairs(policy and policy.forcedGroups or EMPTY_VALUES) do
+        if group.pickedCandidateBeforeDeadlineClosesGroup
+            and candidateInGroup(group, candidate)
+            and pickedCandidateBeforeRow(ctx, group)
+        then
+            return true
+        end
+    end
+    return false
+end
+
+local function forceCandidateAvailable(policy, ctx, candidate)
+    if generatedCandidateBeforeRow(ctx, candidate) then
+        return nil
+    end
+    if forceCandidateClosedByPickedGroup(policy, ctx, candidate) then
+        return nil
+    end
+
+    local option = forcedCandidateOption(policy, candidate)
+    if not availabilityStatus(option, ctx.rowContext).valid then
+        return nil
+    end
+    return option
+end
+
+local function forceWindowCandidateActive(policy, ctx, candidate)
+    local option = forceCandidateAvailable(policy, ctx, candidate)
+    return option ~= nil and forceRangeWindowActive(option.force, ctx.rowContext)
+end
+
+local function forceDeadlineCandidateActive(policy, ctx, candidate)
+    local option = forceCandidateAvailable(policy, ctx, candidate)
+    return option ~= nil and forceRangeDeadlineActive(option.force, ctx.rowContext)
+end
+
+local function forceCandidateKeys(policy)
+    local index = 0
+    return function()
+        while true do
+            index = index + 1
+            local key = policy and policy.values and policy.values[index] or nil
+            if key == nil then
+                return nil
+            end
+
+            local candidate = roomTopology.roomKey(policy.optionsByKey[key])
+            if candidate ~= nil then
+                return candidate
+            end
+        end
+    end
+end
+
+local function generatedForceWindowCandidateCount(policy, ctx, candidateOverride)
+    local count = 0
+    for candidate in forceCandidateKeys(policy) do
+        if forceWindowCandidateActive(policy, ctx, candidate)
+            and generatedCandidateAtRow(ctx, ctx.rowIndex, candidate, candidateOverride)
+        then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function hardForcePressureStatus(policy, ctx, candidateOverride)
+    if policy == nil or #(policy.ungroupedForceCandidates or EMPTY_VALUES) <= 0 then
+        return validStatus()
+    end
+
+    local capacity = roomTopology.generatedStructuralCount(ctx, "exitCount")
+    if capacity <= 0 then
+        return validStatus()
+    end
+
+    local hasMissingHardForce = false
+    for _, candidate in ipairs(policy.ungroupedForceCandidates) do
+        if forceDeadlineCandidateActive(policy, ctx, candidate)
+            and not generatedCandidateAtRow(ctx, ctx.rowIndex, candidate, candidateOverride)
+        then
+            hasMissingHardForce = true
+            break
+        end
+    end
+    if not hasMissingHardForce then
+        return validStatus()
+    end
+
+    if generatedForceWindowCandidateCount(policy, ctx, candidateOverride) >= capacity then
+        return validStatus()
+    end
+    return invalidStatus(
+        statusCode(policy, "forced_topology_pressure_unresolved"),
+        "Hard-forced topology needs generated force-window doors"
+    )
+end
+
 local function forcedGroupStatus(policy, ctx, group, candidateOverride)
     local deadline = group.forceAtBiomeDepthMax
     if deadline == nil then
@@ -262,6 +437,11 @@ local function forcedGroupStatus(policy, ctx, group, candidateOverride)
 end
 
 function roomTopology.forcedGroupsStatus(policy, ctx, candidateOverride)
+    local hardForceStatus = hardForcePressureStatus(policy, ctx, candidateOverride)
+    if not hardForceStatus.valid then
+        return hardForceStatus
+    end
+
     for _, group in ipairs(policy and policy.forcedGroups or EMPTY_VALUES) do
         local status = forcedGroupStatus(policy, ctx, group, candidateOverride)
         if not status.valid then

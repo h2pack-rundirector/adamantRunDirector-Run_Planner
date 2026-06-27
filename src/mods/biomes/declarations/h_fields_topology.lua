@@ -75,6 +75,7 @@ return function(deps)
                     structure = "Bridge",
                     roomKey = bridge.key,
                     availability = bridge.availability,
+                    force = bridge.force,
                     offerCount = 0,
                 },
             },

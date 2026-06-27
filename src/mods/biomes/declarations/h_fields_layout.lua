@@ -49,6 +49,9 @@ local earlyCombatAvailability = {
 local bridgeAvailability = {
     biomeDepthCache = { exact = 3 },
 }
+local bridgeForce = {
+    biomeDepthCache = { exact = 3 },
+}
 local minibossAvailability = {
     biomeDepthCache = { min = 2 },
 }
@@ -68,6 +71,7 @@ layout.introRoom = option("H_Intro", "Intro", {
 layout.bridgeRoom = option("H_Bridge01", "Echo", {
     exitCount = 2,
     availability = bridgeAvailability,
+    force = bridgeForce,
     maxCreationsThisRun = 1,
     maxAppearancesThisBiome = 1,
 })

@@ -304,6 +304,14 @@ therefore invalid unless the other miniboss was generated earlier as sibling
 topology. A picked miniboss before the deadline closes the group because vanilla
 then makes the other miniboss variant ineligible.
 
+Echo bridge has a narrower force-pressure rule. `H_Bridge01` is `AlwaysForce`
+only while the route has exactly two prior H combat/miniboss rooms, so it is a
+hard-force candidate only at biome depth 3. A hard-force candidate can be missed
+only if every generated door at that point is occupied by force-window
+candidates. Therefore Echo + ordinary combat is valid, two miniboss doors can
+make Echo miss its window, but miniboss + ordinary combat is invalid because the
+ordinary combat consumed a door while Echo was still hard-force active.
+
 Normalized row topology should live on the row context, not on the reward
 leaves:
 

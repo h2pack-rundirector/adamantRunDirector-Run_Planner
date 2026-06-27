@@ -1015,6 +1015,7 @@ function TestRunPlannerData.testBiomeOptionsDeclareAvailabilityMetadata()
     lu.assertEquals(fields.Miniboss.roomOptions[1].force.biomeDepthCache, { min = 2, max = 4 })
     lu.assertEquals(fields.Miniboss.routeRules, oneShotRouteRules())
     lu.assertEquals(fields.Bridge.roomOptions[1].availability.biomeDepthCache, { exact = 3 })
+    lu.assertEquals(fields.Bridge.roomOptions[1].force.biomeDepthCache, { exact = 3 })
 
     local thessaly = biomes.lookup.O.rolesByKey
     lu.assertEquals(thessaly.Combat.mapOptions[13].availability.biomeDepthCache, { min = 6 })
@@ -1221,6 +1222,7 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
 
     lu.assertEquals(fields.rolesByKey.Bridge.roomOptions[1].key, "H_Bridge01")
     lu.assertEquals(fields.rolesByKey.Bridge.roomOptions[1].availability.biomeDepthCache, { exact = 3 })
+    lu.assertEquals(fields.rolesByKey.Bridge.roomOptions[1].force.biomeDepthCache, { exact = 3 })
 
     local cagePolicy = fields.fields.cageRewardPolicy
     lu.assertEquals(cagePolicy.rewardStore, "RunProgress")
