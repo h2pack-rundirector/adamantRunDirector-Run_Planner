@@ -15,6 +15,7 @@ local routeUiFields = h.routeUiFields
 local noOpDraw = h.noOpDraw
 local buildThessalyRuntime = h.buildThessalyRuntime
 local attachSingleBiomeRouteContext = h.attachSingleBiomeRouteContext
+local valueStates = h.testImport("mods/route/value_states.lua")
 
 -- luacheck: globals TestRunPlannerMultiEncounterRoute
 TestRunPlannerMultiEncounterRoute = {}
@@ -342,13 +343,31 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRequiresWheelOfferC
             VariantKey = "TwoCombats",
         },
     }), instance)
-    attachSingleBiomeRouteContext(control, "Surface", "O")
+    local routeContext = attachSingleBiomeRouteContext(control, "Surface", "O")
     local snapshot = control:buildSnapshot()
+    local overview = routeContext:overview("Surface")
+    local wheelStates = routeContext:rewardValueStates("Surface", "O", 2, "encounter:1", "WheelOffer1Key", {
+        values = {
+            "",
+            "OneChoice",
+            "TwoChoices",
+        },
+    })
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
     lu.assertEquals(snapshot.invalidRows[1].code, "ship_wheel_offer_count_required")
+    lu.assertEquals(overview.invalidRows[1].controlTargets, {
+        {
+            address = "encounter:1",
+            controlAlias = "WheelOffer1Key",
+            mode = "selected",
+        },
+    })
+    lu.assertEquals(wheelStates[""], valueStates.INVALID)
+    lu.assertNil(wheelStates.OneChoice)
+    lu.assertNil(wheelStates.TwoChoices)
     lu.assertEquals(snapshot.rows[2].invalidCode, "ship_wheel_offer_count_required")
     lu.assertEquals(snapshot.rows[2].roomTopology.kind, "shipCombat")
     lu.assertNil(snapshot.rows[2].roomTopology.encounters[1].wheelOfferCount)
@@ -394,10 +413,12 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRoomTopologySurvive
         encounters = {
             {
                 address = "encounter:1",
+                wheelOfferControlAlias = "WheelOffer1Key",
                 wheelOfferCount = 1,
             },
             {
                 address = "encounter:2",
+                wheelOfferControlAlias = "WheelOffer2Key",
                 wheelOfferCount = 2,
             },
         },
@@ -523,6 +544,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
         encounters = {
             {
                 address = "encounter:1",
+                wheelOfferControlAlias = "WheelOffer1Key",
                 wheelOfferCount = 1,
             },
         },
@@ -542,6 +564,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
         encounters = {
             {
                 address = "encounter:1",
+                wheelOfferControlAlias = "WheelOffer1Key",
                 wheelOfferCount = 2,
             },
         },
@@ -568,10 +591,12 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
         encounters = {
             {
                 address = "encounter:1",
+                wheelOfferControlAlias = "WheelOffer1Key",
                 wheelOfferCount = 1,
             },
             {
                 address = "encounter:2",
+                wheelOfferControlAlias = "WheelOffer2Key",
                 wheelOfferCount = 2,
             },
         },
@@ -607,6 +632,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
         encounters = {
             {
                 address = "encounter:1",
+                wheelOfferControlAlias = "WheelOffer1Key",
                 wheelOfferCount = 1,
             },
         },

@@ -10,6 +10,19 @@ local function encounterLabel(encounter, index)
     return encounter and encounter.label or "Combat " .. tostring(index) .. " Reward"
 end
 
+local function encounterControlTargets(encounter)
+    if encounter == nil or encounter.wheelOfferControlAlias == nil then
+        return EMPTY_LIST
+    end
+    return {
+        {
+            address = encounter.address,
+            controlAlias = encounter.wheelOfferControlAlias,
+            mode = "selected",
+        },
+    }
+end
+
 local function branchValue(node)
     local value = node and node.rewardClass or nil
     if value == "Major" or value == "Minor" then
@@ -168,6 +181,7 @@ local function missingShipWheelChoice(row, topology)
                 rewardType = "WheelOfferCount",
                 address = encounter.address,
                 addressLabel = encounterLabel(encounter, index),
+                controlTargets = encounterControlTargets(encounter),
                 valueTargets = EMPTY_LIST,
             }, {
                 code = "ship_wheel_offer_count_required",

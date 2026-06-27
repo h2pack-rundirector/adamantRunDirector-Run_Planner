@@ -535,6 +535,7 @@ function data.roomTopology(instance, rows, rowIndex)
         local _, wheel = data.resolveWheelOffer(instance, rows, rowIndex, roleKey, legIndex)
         encounters[#encounters + 1] = {
             address = "encounter:" .. tostring(legIndex),
+            wheelOfferControlAlias = data.wheelOfferAlias(instance, legIndex),
             wheelOfferCount = wheel and wheel.wheelOfferCount or nil,
         }
     end

@@ -122,17 +122,35 @@ local function setInvalidState(states, value)
     return states
 end
 
+local function markerTargetMatches(target, rewardAddress, controlAlias)
+    return target.address == rewardAddress and target.controlAlias == controlAlias
+end
+
+local function controlTargetValue(target)
+    if target.value ~= nil then
+        return target.value
+    elseif target.mode == "selected" then
+        return ""
+    end
+    return nil
+end
+
 local function applyInvalidMarkerStates(result, biomeKey, rowIndex, rewardAddress, controlAlias, states)
     rewardAddress = rewardAddress or "row"
     for _, invalid in ipairs(result.invalidRows or EMPTY_LIST) do
         if invalid.biomeKey == biomeKey and invalid.rowIndex == rowIndex then
             for _, target in ipairs(invalid.valueTargets or EMPTY_LIST) do
-                if target.address == rewardAddress
-                    and target.controlAlias == controlAlias
+                if markerTargetMatches(target, rewardAddress, controlAlias)
                     and target.value ~= nil
                     and target.value ~= ""
                 then
                     states = setInvalidState(states, target.value)
+                end
+            end
+            for _, target in ipairs(invalid.controlTargets or EMPTY_LIST) do
+                local value = controlTargetValue(target)
+                if markerTargetMatches(target, rewardAddress, controlAlias) and value ~= nil then
+                    states = setInvalidState(states, value)
                 end
             end
         end

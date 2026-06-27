@@ -19,6 +19,7 @@ local function fields(event)
         address = event.address,
         rewardType = event.rewardType,
         sourceIndex = event.sourceIndex,
+        controlTargets = event.controlTargets,
         valueTargets = valueTargets(event),
     }
 end
