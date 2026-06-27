@@ -451,7 +451,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyInvalidatesMissin
         name = "RouteG",
         biome = catalog.lookup.G,
     })
-    local control = template.createRuntime(routeFields({
+    local rows = {
         {},
         { RoleKey = "Combat", OptionKey = "G_Combat01", Reward1Key = "Major" },
         {
@@ -472,13 +472,26 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyInvalidatesMissin
             SiblingStructureKey = "Combat",
             Reward1Key = "Major",
         },
-    }), instance)
+    }
+    local control = template.createRuntime(routeFields(rows), instance)
     local snapshot = control:buildSnapshot()
+    local data = loadFixedLinearData()
+    local routeRows = fakeRows(rows)
 
     lu.assertFalse(snapshot.valid)
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
     lu.assertEquals(snapshot.invalidRows[1].code, "fixed_sibling_structure_required")
+    lu.assertEquals(snapshot.invalidRows[1].tabKey, "rooms")
+    lu.assertEquals(snapshot.invalidRows[1].controlTargets, {
+        {
+            tabKey = "rooms",
+            controlAlias = "SiblingStructure2Key",
+            state = valueStates.INVALID,
+            mode = "selected",
+        },
+    })
     lu.assertEquals(snapshot.rows[5].invalidCode, "fixed_sibling_structure_required")
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, routeRows, 5, 2)[""], valueStates.INVALID)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyExportsMismatchedSiblingRewardBranches()

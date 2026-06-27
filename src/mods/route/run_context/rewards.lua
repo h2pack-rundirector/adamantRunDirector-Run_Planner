@@ -116,9 +116,9 @@ local function decisionForAddress(result, biomeKey, rowIndex, rewardAddress)
     return byRow and byRow[rewardAddress or "row"] or nil
 end
 
-local function setInvalidState(states, value)
+local function setControlState(states, value, state)
     states = states or {}
-    routeValueStates.set(states, value, INVALID_VALUE_STATE)
+    routeValueStates.set(states, value, state or INVALID_VALUE_STATE)
     return states
 end
 
@@ -144,13 +144,13 @@ local function applyInvalidMarkerStates(result, biomeKey, rowIndex, rewardAddres
                     and target.value ~= nil
                     and target.value ~= ""
                 then
-                    states = setInvalidState(states, target.value)
+                    states = setControlState(states, target.value, target.state)
                 end
             end
             for _, target in ipairs(invalid.controlTargets or EMPTY_LIST) do
                 local value = controlTargetValue(target)
                 if markerTargetMatches(target, rewardAddress, controlAlias) and value ~= nil then
-                    states = setInvalidState(states, value)
+                    states = setControlState(states, value, target.state)
                 end
             end
         end
@@ -175,7 +175,7 @@ local function buildCandidateValueStates(rewardLegalityEngine, decision, rewardA
         if event ~= nil
             and rewardLegalityEngine.candidateInvalid(rewardCtx, decision.ctx, event) ~= nil
         then
-            states = setInvalidState(states, value)
+            states = setControlState(states, value, INVALID_VALUE_STATE)
         end
     end
     return states

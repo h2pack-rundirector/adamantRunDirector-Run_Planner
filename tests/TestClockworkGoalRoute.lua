@@ -458,7 +458,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTopologyRequiresSibli
         name = "RouteI",
         biome = catalog.lookup.I,
     })
-    local control = template.createRuntime(routeFields({
+    local rows = {
         {},
         { RouteKindKey = "Goal", OptionKey = "I_Combat01" },
         {
@@ -466,12 +466,25 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTopologyRequiresSibli
             OptionKey = "I_Combat03",
             Reward1Key = "MaxHealthDrop",
         },
-    }), instance)
+    }
+    local control = template.createRuntime(routeFields(rows), instance)
     local snapshot = control:buildSnapshot()
+    local data = loadClockworkGoalData()
+    local routeRows = fakeRows(rows)
 
     lu.assertFalse(snapshot.valid)
     lu.assertFalse(snapshot.rows[3].valid)
+    lu.assertEquals(snapshot.invalidRows[1].tabKey, "rooms")
+    lu.assertEquals(snapshot.invalidRows[1].controlTargets, {
+        {
+            tabKey = "rooms",
+            controlAlias = "SiblingStructureKey",
+            state = valueStates.INVALID,
+            mode = "selected",
+        },
+    })
     lu.assertEquals(snapshot.rows[3].invalidCode, "clockwork_sibling_structure_required")
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, routeRows, 3)[""], valueStates.INVALID)
 end
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalForcesFirstRouteRowFromDeclaration()

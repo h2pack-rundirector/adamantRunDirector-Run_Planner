@@ -854,6 +854,16 @@ function TestRunPlannerRewardPlanning.testTopologyRewardBranchesRequireSiblingBr
     lu.assertEquals(overview.invalidRows[1].address, "sibling:1")
     lu.assertEquals(overview.invalidRows[1].locationLabel, "Erebus Depth 1 Other Door Reward")
     lu.assertEquals(overview.invalidRows[1].code, "major_minor_sibling_branch_required")
+    lu.assertEquals(overview.invalidRows[1].tabKey, "rewards")
+    lu.assertEquals(overview.invalidRows[1].controlTargets, {
+        {
+            tabKey = "rewards",
+            address = "sibling:1",
+            controlAlias = "SiblingRewardClassKey",
+            state = valueStates.INVALID,
+            mode = "selected",
+        },
+    })
     lu.assertEquals(routeContext:rewardRowValidation("Underworld", "F", 1).code, "major_minor_sibling_branch_required")
 
     local branchControl = rewardCandidateControl("rewardType", {
@@ -868,6 +878,7 @@ function TestRunPlannerRewardPlanning.testTopologyRewardBranchesRequireSiblingBr
         "SiblingRewardClassKey",
         branchControl
     )
+    lu.assertEquals(siblingStates[""], valueStates.INVALID)
     lu.assertNil(siblingStates.Major)
     lu.assertEquals(siblingStates.Minor, valueStates.INVALID)
 end

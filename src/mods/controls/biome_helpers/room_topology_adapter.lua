@@ -3,10 +3,12 @@ local common = deps.common
 local readCache = deps.readCache
 local roomTopology = deps.roomTopology
 local roomStructure = deps.roomStructure
+local valueStates = deps.valueStates
 
 local adapter = {}
 
 local validStatus = common.validStatus
+local INVALID_STATE = valueStates and valueStates.INVALID or 2
 local activeReadCache = readCache.active
 local rowRecord = readCache.rowRecord
 local nestedRecord = readCache.nestedRecord
@@ -93,6 +95,17 @@ function adapter.create(data, opts)
             return indexedSiblingStructureAlias(baseAlias, siblingIndex)
         end
         return baseAlias
+    end
+
+    function api.siblingStructureControlTargets(instance, siblingIndex)
+        return {
+            {
+                tabKey = "rooms",
+                controlAlias = api.siblingStructureAlias(instance, siblingIndex),
+                state = INVALID_STATE,
+                mode = "selected",
+            },
+        }
     end
 
     function api.siblingStructureLabels(instance)
@@ -250,11 +263,16 @@ function adapter.create(data, opts)
     end
 
     function api.validateSiblingStructures(instance, rows, rowIndex, validateOpts)
-        return roomTopology.validateSiblingStructures(
+        local invalid, siblingIndex = roomTopology.validateSiblingStructures(
             instance.siblingStructurePolicy,
             api.siblingPolicyContext(instance, rows, rowIndex),
             validateOpts
         )
+        if invalid ~= nil and invalid.controlTargets == nil then
+            invalid.tabKey = "rooms"
+            invalid.controlTargets = api.siblingStructureControlTargets(instance, siblingIndex)
+        end
+        return invalid
     end
 
     return api

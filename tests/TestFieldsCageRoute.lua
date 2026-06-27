@@ -560,7 +560,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRequiresSiblingStructureFor
         name = "RouteH",
         biome = catalog.lookup.H,
     })
-    local control = template.createRuntime(routeFields({
+    local rows = {
             {},
             hCombatTwoRewardRow("H_Combat13"),
             {
@@ -568,14 +568,27 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRequiresSiblingStructureFor
                 OptionKey = "H_Combat05",
                 VariantKey = "TwoRewards",
             },
-        }), instance)
+        }
+    local control = template.createRuntime(routeFields(rows), instance)
     local snapshot = control:buildSnapshot()
+    local data = loadFieldsCageData()
+    local routeRows = fakeRows(rows)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 3)
     lu.assertEquals(snapshot.invalidRows[1].code, "fields_sibling_structure_required")
+    lu.assertEquals(snapshot.invalidRows[1].tabKey, "rooms")
+    lu.assertEquals(snapshot.invalidRows[1].controlTargets, {
+        {
+            tabKey = "rooms",
+            controlAlias = "SiblingStructureKey",
+            state = valueStates.INVALID,
+            mode = "selected",
+        },
+    })
     lu.assertEquals(snapshot.rows[3].invalidCode, "fields_sibling_structure_required")
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, routeRows, 3)[""], valueStates.INVALID)
     lu.assertNil(snapshot.rows[3].roomTopology)
 end
 

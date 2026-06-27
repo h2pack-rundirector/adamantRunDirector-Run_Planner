@@ -18,5 +18,6 @@ return {
         readCache = route.readCache,
         roomStructure = roomStructure,
         roomTopology = roomTopology,
+        valueStates = route.valueStates,
     }),
 }

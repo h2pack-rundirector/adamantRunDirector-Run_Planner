@@ -16,6 +16,7 @@ end
 
 local function fields(event)
     return {
+        tabKey = event.tabKey,
         address = event.address,
         rewardType = event.rewardType,
         sourceIndex = event.sourceIndex,

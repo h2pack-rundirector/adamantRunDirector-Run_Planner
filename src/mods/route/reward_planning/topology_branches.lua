@@ -16,8 +16,10 @@ local function encounterControlTargets(encounter)
     end
     return {
         {
+            tabKey = "rewards",
             address = encounter.address,
             controlAlias = encounter.wheelOfferControlAlias,
+            state = valueStates.INVALID,
             mode = "selected",
         },
     }
@@ -43,11 +45,27 @@ local function branchLabel(node)
     return node and node.rewardBranchLabel or nil
 end
 
+local function branchControlTargets(node)
+    if branchControlAlias(node) == nil then
+        return EMPTY_LIST
+    end
+    return {
+        {
+            tabKey = "rewards",
+            address = branchAddress(node),
+            controlAlias = branchControlAlias(node),
+            state = valueStates.INVALID,
+            mode = "selected",
+        },
+    }
+end
+
 local function branchEvent(row, node, value)
     local targetValue = value or branchValue(node)
     local valueTargets = {}
     if targetValue ~= nil then
         valueTargets[#valueTargets + 1] = {
+            tabKey = "rewards",
             address = branchAddress(node),
             controlAlias = branchControlAlias(node),
             value = targetValue,
@@ -56,9 +74,11 @@ local function branchEvent(row, node, value)
 
     return {
         row = row,
+        tabKey = "rewards",
         rewardType = targetValue or "MajorMinorBranch",
         address = branchAddress(node),
         addressLabel = branchLabel(node),
+        controlTargets = targetValue == nil and branchControlTargets(node) or nil,
         valueTargets = valueTargets,
     }
 end
@@ -178,6 +198,7 @@ local function missingShipWheelChoice(row, topology)
         if encounter.wheelOfferCount == nil then
             return {
                 row = row,
+                tabKey = "rewards",
                 rewardType = "WheelOfferCount",
                 address = encounter.address,
                 addressLabel = encounterLabel(encounter, index),

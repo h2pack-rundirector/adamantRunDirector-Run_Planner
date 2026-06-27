@@ -368,7 +368,7 @@ function roomTopology.validateSiblingStructures(policy, ctx, opts)
     for siblingIndex = 1, count do
         local siblingKey, sibling = ctx.siblingAt(siblingIndex)
         if sibling == nil or siblingKey == "" then
-            return invalidStatus(opts.requiredCode, opts.requiredMessage)
+            return invalidStatus(opts.requiredCode, opts.requiredMessage), siblingIndex
         end
 
         local previousSiblingIndex = ctx.candidateSiblingIndex
@@ -377,12 +377,12 @@ function roomTopology.validateSiblingStructures(policy, ctx, opts)
         ctx.candidateSiblingIndex = previousSiblingIndex
         if not siblingStatus.valid then
             if roomTopology.isSiblingTopologyStatus(policy, siblingStatus) then
-                return siblingStatus
+                return siblingStatus, siblingIndex
             end
             return invalidStatus(
                 opts.unavailableCode,
                 siblingUnavailableMessage(opts, sibling, siblingKey)
-            )
+            ), siblingIndex
         end
     end
     return nil
@@ -424,6 +424,12 @@ function roomTopology.fillSiblingValueStates(policy, ctx, states)
             policy,
             roomTopology.siblingCandidateStatus(policy, ctx, candidate)
         ))
+    end
+    if roomTopology.activeSiblingCount(policy, ctx) >= (ctx.candidateSiblingIndex or 1) then
+        local siblingKey = ctx.siblingAt(ctx.candidateSiblingIndex or 1)
+        if siblingKey == nil or siblingKey == "" then
+            valueStates.set(states, "", valueStates.INVALID)
+        end
     end
     return states
 end

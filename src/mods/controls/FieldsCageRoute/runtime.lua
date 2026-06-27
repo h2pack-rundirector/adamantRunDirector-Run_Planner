@@ -253,6 +253,9 @@ function runtime.create(fields, instance)
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,
+            invalidTabKey = validation.tabKey,
+            invalidControlTargets = validation.controlTargets,
+            invalidValueTargets = validation.valueTargets,
             variantKey = cageCountKey,
             cagePolicyKey = role and role.cageRewardPolicy or nil,
             cageRewardCountKey = cageCountKey,
@@ -291,6 +294,9 @@ function runtime.create(fields, instance)
                     locationLabel = invalidLocations.biomeRow(instance, row),
                     code = row.invalidCode,
                     message = row.invalidReason,
+                    tabKey = row.invalidTabKey,
+                    controlTargets = row.invalidControlTargets,
+                    valueTargets = row.invalidValueTargets,
                 })
             end
         end

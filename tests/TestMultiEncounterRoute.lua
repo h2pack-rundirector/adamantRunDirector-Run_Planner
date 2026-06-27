@@ -358,10 +358,13 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRequiresWheelOfferC
     lu.assertTrue(snapshot.disabled)
     lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
     lu.assertEquals(snapshot.invalidRows[1].code, "ship_wheel_offer_count_required")
+    lu.assertEquals(overview.invalidRows[1].tabKey, "rewards")
     lu.assertEquals(overview.invalidRows[1].controlTargets, {
         {
+            tabKey = "rewards",
             address = "encounter:1",
             controlAlias = "WheelOffer1Key",
+            state = valueStates.INVALID,
             mode = "selected",
         },
     })

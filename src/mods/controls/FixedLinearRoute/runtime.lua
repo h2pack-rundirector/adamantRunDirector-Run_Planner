@@ -267,6 +267,9 @@ function runtime.create(fields, instance)
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,
+            invalidTabKey = validation.tabKey,
+            invalidControlTargets = validation.controlTargets,
+            invalidValueTargets = validation.valueTargets,
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
             rewards = rewardsConfigured and rewardSystem.readRewards(fields.Rewards, rowIndex) or EMPTY_LIST,
             rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
@@ -298,6 +301,9 @@ function runtime.create(fields, instance)
                     locationLabel = invalidLocations.biomeRow(instance, row),
                     code = row.invalidCode,
                     message = row.invalidReason,
+                    tabKey = row.invalidTabKey,
+                    controlTargets = row.invalidControlTargets,
+                    valueTargets = row.invalidValueTargets,
                 }
             end
         end

@@ -30,6 +30,9 @@ function position.tabOrder(tabKey)
 end
 
 function position.tabKeyForInvalid(invalid)
+    if invalid ~= nil and invalid.tabKey ~= nil then
+        return invalid.tabKey
+    end
     if isSideInvalid(invalid) then
         return "sideRooms"
     end
