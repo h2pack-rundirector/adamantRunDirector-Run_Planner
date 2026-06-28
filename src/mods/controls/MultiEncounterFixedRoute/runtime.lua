@@ -103,13 +103,19 @@ local function selectedRoomKey(slot, option)
 end
 
 local function encounterRewardPicks(surface, encounterRewardRows, encounterRewardRowIndex)
-    local picks = rewardSystem
-        and rewardSystem.snapshot(surface, rewardSystem.fields(encounterRewardRows, encounterRewardRowIndex))
-        or {}
+    local picks = {}
+    local selectionRequirements = {}
+    if rewardSystem ~= nil then
+        picks, selectionRequirements =
+            rewardSystem.snapshot(surface, rewardSystem.fields(encounterRewardRows, encounterRewardRowIndex))
+    end
     for _, pick in ipairs(picks) do
         pick.storageAlias = pick.alias
     end
-    return picks
+    for _, requirement in ipairs(selectionRequirements) do
+        requirement.storageAlias = requirement.controlAlias
+    end
+    return picks, selectionRequirements
 end
 
 local function encounterRewardLegSnapshot(fields, instance, rowIndex, legIndex, leg, rewardsConfigured)
@@ -121,6 +127,12 @@ local function encounterRewardLegSnapshot(fields, instance, rowIndex, legIndex, 
     if encounterRewardRowIndex == nil then
         return nil
     end
+    local rewardPicks = EMPTY_LIST
+    local selectionRequirements = EMPTY_LIST
+    if rewardsConfigured then
+        rewardPicks, selectionRequirements =
+            encounterRewardPicks(surface, fields.EncounterRewards, encounterRewardRowIndex)
+    end
     return {
         legIndex = legIndex,
         key = leg.key,
@@ -130,9 +142,8 @@ local function encounterRewardLegSnapshot(fields, instance, rowIndex, legIndex, 
         rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.EncounterRewards, encounterRewardRowIndex)
             or EMPTY_LIST,
         rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
-        rewardPicks = rewardsConfigured
-            and encounterRewardPicks(surface, fields.EncounterRewards, encounterRewardRowIndex)
-            or EMPTY_LIST,
+        rewardPicks = rewardPicks,
+        selectionRequirements = selectionRequirements,
     }
 end
 
@@ -327,6 +338,12 @@ function runtime.create(fields, instance)
         local encounterRewardLegs = encounterRewardLegSnapshots(fields, instance, routeRows, rowIndex, rewardsConfigured)
         local surface = rewardsConfigured and role ~= nil and role.encounterPolicy == nil and rewardSurface(role, option) or nil
         local context = data.rowContext(instance, routeRows, rowIndex)
+        local rewardPicks = EMPTY_LIST
+        local selectionRequirements = EMPTY_LIST
+        if rewardsConfigured and rewardSystem ~= nil then
+            rewardPicks, selectionRequirements =
+                rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex))
+        end
         local row = {
             rowIndex = rowIndex,
             routeOrdinal = slot.routeOrdinal,
@@ -363,10 +380,8 @@ function runtime.create(fields, instance)
             rewardOffers = surface and surface.offers or nil,
             rewardConstraints = surface and surface.rewardConstraints or nil,
             roomTopology = data.roomTopology(instance, routeRows, rowIndex),
-            rewardPicks = rewardsConfigured
-                and rewardSystem
-                and rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex))
-                or EMPTY_LIST,
+            rewardPicks = rewardPicks,
+            selectionRequirements = selectionRequirements,
         }
         return rewardItems.attach(row)
     end

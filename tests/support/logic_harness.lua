@@ -51,6 +51,10 @@ end
 local function loadRewardLegality()
     local semantics = testImport("mods/route/reward_planning/semantics.lua")
     local invalidLocations = testImport("mods/route/invalid_locations.lua")
+    local valueStates = testImport("mods/route/value_states.lua")
+    local controlRequirements = testImport("mods/route/control_requirements.lua", nil, {
+        valueStates = valueStates,
+    })
     return testImport("mods/route/reward_planning/legality.lua", nil, {
         conditions = loadRewardConditions(),
         rewardItems = testImport("mods/route/reward_planning/items.lua"),
@@ -63,8 +67,10 @@ local function loadRewardLegality()
             invalidLocations = invalidLocations,
         }),
         topologyBranches = testImport("mods/route/reward_planning/topology_branches.lua", nil, {
-            valueStates = testImport("mods/route/value_states.lua"),
+            valueStates = valueStates,
+            controlRequirements = controlRequirements,
         }),
+        controlRequirements = controlRequirements,
     })
 end
 

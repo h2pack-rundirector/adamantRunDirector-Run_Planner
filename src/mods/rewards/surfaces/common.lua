@@ -3,7 +3,6 @@ local storage = import("mods/rewards/storage.lua")
 local common = {}
 
 common.storage = storage
-common.VANILLA_VALUE = ""
 common.MAJOR_VALUE = "Major"
 common.MINOR_VALUE = "Minor"
 
@@ -54,7 +53,7 @@ end
 
 function common.displayLabel(rewardDomain, key)
     if key == nil or key == "" then
-        return "Vanilla"
+        return "Unresolved"
     end
 
     local primitive = rewardDomain.primitives and rewardDomain.primitives[key]
@@ -104,7 +103,6 @@ function common.uniqueNames(items, eligible, ineligible, labelFor)
         return common.displayLabel({ primitives = {} }, name)
     end
 
-    common.addOption(values, labels, common.VANILLA_VALUE, "Vanilla")
     for _, name in ipairs(items or {}) do
         if name ~= nil
             and seen[name] == nil
@@ -125,7 +123,6 @@ end
 function common.godSourceOptions(rewardDomain)
     local values = {}
     local labels = {}
-    common.addOption(values, labels, common.VANILLA_VALUE, "Vanilla")
     for _, lootName in ipairs(rewardDomain.godLoot or {}) do
         common.addOption(values, labels, lootName, common.rewardOptionLabel(rewardDomain, lootName))
     end

@@ -417,7 +417,7 @@ function TestRunPlannerRewardPlanning.testRouteContextDevotionRewardUsesPriorUnd
         biome = catalog.lookup.F,
     })
     local fControl = fixedTemplate.createRuntime(routeFields({
-        { OptionKey = "F_Opening01" },
+        { OptionKey = "F_Opening01", Reward1Key = "SpellDrop" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat02",
@@ -519,7 +519,7 @@ function TestRunPlannerRewardPlanning.testRouteContextScopesPriorGodLootByRoute(
         biome = catalog.lookup.F,
     })
     local fControl = fixedTemplate.createRuntime(routeFields({
-        { OptionKey = "F_Opening01" },
+        { OptionKey = "F_Opening01", Reward1Key = "SpellDrop" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat02",
@@ -720,6 +720,61 @@ function TestRunPlannerRewardPlanning.testRouteContextMarksInvalidRewardCandidat
     lu.assertEquals(states.TalentDrop, valueStates.INVALID)
     lu.assertNil(states.SpellDrop)
     lu.assertIs(states, routeContext:rewardValueStates("Underworld", "F", 1, "row", "Reward1Key", control))
+end
+
+function TestRunPlannerRewardPlanning.testRouteContextMarksRequiredVisibleRewardControls()
+    local control = rewardCandidateControl("boonSource", {
+        "ZeusUpgrade",
+        "HeraUpgrade",
+    }, "Reward2Key")
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "Boon", {
+                rewards = { "Boon" },
+                rewardPicks = {
+                    { key = "rewardType", kind = "rewardType", alias = "Reward1Key", value = "Boon" },
+                },
+                selectionRequirements = {
+                    {
+                        tabKey = "rewards",
+                        key = "boonSource",
+                        kind = "boonSource",
+                        controlAlias = "Reward2Key",
+                        label = "God",
+                    },
+                },
+            }),
+        }),
+    }, {
+        biomes = {
+            F = { label = "Erebus" },
+        },
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertEquals(#overview.invalidRows, 1)
+    lu.assertEquals(overview.invalidRows[1].locationLabel, "Erebus Depth 1 Rewards")
+    lu.assertEquals(overview.invalidRows[1].code, "selection_required")
+    lu.assertEquals(overview.invalidRows[1].message, "God needs a concrete selection")
+    lu.assertEquals(overview.invalidRows[1].controlTargets, {
+        {
+            tabKey = "rewards",
+            address = "row",
+            controlAlias = "Reward2Key",
+            state = valueStates.INVALID,
+            mode = "selected",
+        },
+    })
+
+    local states = routeContext:rewardValueStates("Underworld", "F", 1, "row", "Reward2Key", control)
+    lu.assertEquals(states[""], valueStates.INVALID)
+    lu.assertNil(states.ZeusUpgrade)
 end
 
 function TestRunPlannerRewardPlanning.testRouteContextMarksRelatedRewardParticipantValue()
@@ -2434,7 +2489,7 @@ function TestRunPlannerRewardPlanning.testFixedLinearRuntimeInvalidatesDevotionR
         biome = catalog.lookup.F,
     })
 	    local control = template.createRuntime(routeFields({
-		            { OptionKey = "F_Opening01" },
+            { OptionKey = "F_Opening01", Reward1Key = "SpellDrop" },
 	            {
 	                RoleKey = "Combat",
 	                OptionKey = "F_Combat02",
@@ -2445,14 +2500,20 @@ function TestRunPlannerRewardPlanning.testFixedLinearRuntimeInvalidatesDevotionR
             {
                 RoleKey = "Combat",
                 OptionKey = "F_Combat03",
+                Reward1Key = "Major",
+                Reward2Key = "MaxHealthDrop",
             },
             {
                 RoleKey = "Combat",
                 OptionKey = "F_Combat04",
+                Reward1Key = "Major",
+                Reward2Key = "MaxHealthDrop",
             },
             {
                 RoleKey = "Combat",
                 OptionKey = "F_Combat04",
+                Reward1Key = "Major",
+                Reward2Key = "MaxHealthDrop",
             },
             {
                 RoleKey = "Combat",
@@ -2497,22 +2558,30 @@ function TestRunPlannerRewardPlanning.testRouteOverviewInvalidatesDuplicateTrial
         biome = catalog.lookup.F,
     })
     local control = template.createRuntime(routeFields({
-        { OptionKey = "F_Opening01" },
+        { OptionKey = "F_Opening01", Reward1Key = "SpellDrop" },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat02",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
         },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat03",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
         },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat06",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
         },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat04",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
         },
         {
             RoleKey = "Combat",

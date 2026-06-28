@@ -42,11 +42,15 @@ local function thessalyEncounterRewardRows(rows)
             if row.WheelOffer1Key ~= nil then
                 encounterRows[offset + 1] = {
                     WheelOffer1Key = row.WheelOffer1Key,
+                    Reward1Key = "Major",
+                    Reward2Key = "MaxHealthDrop",
                 }
             end
             if row.WheelOffer2Key ~= nil then
                 encounterRows[offset + 2] = {
                     WheelOffer2Key = row.WheelOffer2Key,
+                    Reward1Key = "Major",
+                    Reward2Key = "MaxHealthDrop",
                 }
             end
         end

@@ -150,14 +150,37 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesBiomeRoomSelectionAndP
     })
     control:setRouteContext(routeContext, "Surface")
 
-    lu.assertEquals(control:biomeOptions(1).values, { "", "P" })
-    lu.assertEquals(control:biomeOptions(1).displayValues[""], "Vanilla")
+    lu.assertEquals(control:biomeOptions(1).values, { "P" })
+    lu.assertNil(control:biomeOptions(1).displayValues[""])
     lu.assertEquals(control:biomeOptions(1).displayValues.P, "Olympus")
+
+    local requiredBiome = control:rowValidation(1)
+    lu.assertEquals(requiredBiome.code, "selection_required")
+    lu.assertEquals(requiredBiome.controlTargets, {
+        {
+            tabKey = "features",
+            controlAlias = "BiomeKey",
+            state = 2,
+            mode = "selected",
+        },
+    })
+    lu.assertEquals(control:valueStates(1, "BiomeKey")[""], 2)
 
     control:writeBiome(1, "P")
     lu.assertEquals(fields.Targets:read(1, "BiomeKey"), "P")
     lu.assertEquals(control:roomOptions(1).values, { "", "6", "7" })
     lu.assertEquals(control:roomOptions(1).displayValues["6"], "Depth 5 - C01")
+    local requiredRoom = control:rowValidation(1)
+    lu.assertEquals(requiredRoom.code, "selection_required")
+    lu.assertEquals(requiredRoom.controlTargets, {
+        {
+            tabKey = "features",
+            controlAlias = "RowIndex",
+            state = 2,
+            mode = "selected",
+        },
+    })
+    lu.assertEquals(control:valueStates(1, "RowIndex")[""], 2)
 
     control:writeRoom(1, "6")
     lu.assertEquals(fields.Targets:read(1, "RowIndex"), "6")
@@ -174,7 +197,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesBiomeRoomSelectionAndP
     lu.assertEquals(fields.Targets:read(1, "BiomeKey"), nil)
     lu.assertEquals(fields.Targets:read(1, "RowIndex"), nil)
     lu.assertEquals(fields.Targets:read(1, "TargetKey"), nil)
-    lu.assertTrue(control:rowValidation(1).valid)
+    lu.assertEquals(control:rowValidation(1).code, "selection_required")
 end
 
 function TestRunPlannerRouteFeatures.testRouteContextDisablesFeatureTargetsWhenFeaturesAreNotConfigured()

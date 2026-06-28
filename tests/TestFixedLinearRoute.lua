@@ -28,16 +28,25 @@ local function drawRoomsWithOptionChange(template, control, instance, nextOption
 end
 
 local function fOpeningRow()
-    return { OptionKey = "F_Opening01" }
+    return {
+        OptionKey = "F_Opening01",
+        Reward1Key = "SpellDrop",
+    }
 end
 
 local function fCombatRow(optionKey, rewardKey, siblingKey)
-    return {
+    local row = {
         RoleKey = "Combat",
         OptionKey = optionKey,
         Reward1Key = rewardKey,
         SiblingStructureKey = siblingKey,
     }
+    if rewardKey == "Major" then
+        row.Reward2Key = "MaxHealthDrop"
+    elseif rewardKey == "Minor" then
+        row.Reward4Key = "GiftDrop"
+    end
+    return row
 end
 
 local function qCombatRow(optionKey)
@@ -51,6 +60,8 @@ local function qMinibossRow(optionKey)
     return {
         RoleKey = "Miniboss",
         OptionKey = optionKey,
+        Reward1Key = "Boon",
+        Reward2Key = "ZeusUpgrade",
     }
 end
 
@@ -621,12 +632,14 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
             RoleKey = "Combat",
             OptionKey = "F_Combat06",
             Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
             SiblingStructureKey = "F_Shop01",
         },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat07",
             Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
             SiblingStructureKey = "Combat",
             SiblingRewardClassKey = "Major",
         },
@@ -634,6 +647,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
             RoleKey = "Combat",
             OptionKey = "F_Combat13",
             Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
             SiblingStructureKey = "Combat",
             SiblingRewardClassKey = "Major",
         },
@@ -667,12 +681,14 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
             RoleKey = "Combat",
             OptionKey = "F_Combat07",
             Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
             SiblingStructureKey = "F_Shop01",
         },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat13",
             Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
             SiblingStructureKey = "Combat",
             SiblingRewardClassKey = "Major",
         },
@@ -697,6 +713,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
             RoleKey = "Combat",
             OptionKey = "F_Combat07",
             Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
             SiblingStructureKey = "Combat",
             SiblingRewardClassKey = "Major",
         },
@@ -732,6 +749,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
             RoleKey = "Combat",
             OptionKey = "F_Combat07",
             Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
             SiblingStructureKey = "Combat",
             SiblingRewardClassKey = "Major",
         },
@@ -846,7 +864,13 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearQShopSharedOfferGroupInva
         qMinibossRow("Q_MiniBoss03"),
         {
             Reward1Key = "RandomLoot",
+            Reward1LootKey = "ZeusUpgrade",
             Reward2Key = "RandomLoot",
+            Reward2LootKey = "HeraUpgrade",
+            Reward3Key = "HealBigDrop",
+            Reward4Key = "ArmorBigBoost",
+            Reward5Key = "MaxHealthDropBig",
+            Reward6Key = "WeaponPointsRareDrop",
         },
     }), instance)
     attachSingleBiomeRouteContext(control, "Surface", "Q")
@@ -942,8 +966,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearCombatRoomsCannotRepeatIn
     })
     local rowData = {
         fOpeningRow(),
-        { RoleKey = "Combat", OptionKey = "F_Combat06" },
-        { RoleKey = "Combat", OptionKey = "F_Combat06" },
+        { RoleKey = "Combat", OptionKey = "F_Combat06", Reward1Key = "Major", Reward2Key = "MaxHealthDrop" },
+        { RoleKey = "Combat", OptionKey = "F_Combat06", Reward1Key = "Major", Reward2Key = "MaxHealthDrop" },
     }
     local rows = fakeRows(rowData)
 
@@ -1774,6 +1798,14 @@ function TestRunPlannerFixedLinearRoute.testMinibossRequiresConcreteOption()
     local validation = data.validateRow(instance, rows, 6)
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "option_required")
+    lu.assertEquals(validation.controlTargets, {
+        {
+            tabKey = "rooms",
+            controlAlias = "OptionKey",
+            state = valueStates.INVALID,
+            mode = "selected",
+        },
+    })
 end
 
 function TestRunPlannerFixedLinearRoute.testConcreteMinibossOptionUsesLeafDepthCost()

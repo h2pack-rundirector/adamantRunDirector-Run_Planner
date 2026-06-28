@@ -7,6 +7,7 @@ local biomeRules = deps.biomeRules
 local valueStates = deps.valueStates
 local timeline = deps.timeline
 local rewards = deps.rewards
+local controlRequirements = deps.controlRequirements
 
 local rowEngine = {}
 
@@ -759,7 +760,13 @@ function rowEngine.create(adapter)
             return invalidStatus("unknown_option", "Unknown route option: " .. tostring(optionKey))
         end
         if optionKey == "" and (role.requiresConcreteOption or #options > 1) then
-            return invalidStatus("option_required", "Choose a " .. tostring(role.label or roleKey))
+            return controlRequirements.invalid({
+                code = "option_required",
+                message = "Choose a " .. tostring(role.label or roleKey),
+                tabKey = "rooms",
+                controlAlias = "OptionKey",
+                label = tostring(role.label or roleKey),
+            })
         end
         if resolvedOptionKey ~= "" then
             local status = availabilityStatus(option, data.rowContext(instance, rows, rowIndex))

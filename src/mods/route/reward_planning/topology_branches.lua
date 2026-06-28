@@ -1,5 +1,6 @@
 local deps = ... or {}
 local valueStates = deps.valueStates
+local controlRequirements = deps.controlRequirements
 
 local topologyBranches = {}
 
@@ -14,15 +15,12 @@ local function encounterControlTargets(encounter)
     if encounter == nil or encounter.wheelOfferControlAlias == nil then
         return EMPTY_LIST
     end
-    return {
-        {
-            tabKey = "rewards",
-            address = encounter.address,
-            controlAlias = encounter.wheelOfferControlAlias,
-            state = valueStates.INVALID,
-            mode = "selected",
-        },
-    }
+    return controlRequirements.selectedTargets({
+        tabKey = "rewards",
+        address = encounter.address,
+        controlAlias = encounter.wheelOfferControlAlias,
+        state = valueStates.INVALID,
+    })
 end
 
 local function branchValue(node)
@@ -49,15 +47,12 @@ local function branchControlTargets(node)
     if branchControlAlias(node) == nil then
         return EMPTY_LIST
     end
-    return {
-        {
-            tabKey = "rewards",
-            address = branchAddress(node),
-            controlAlias = branchControlAlias(node),
-            state = valueStates.INVALID,
-            mode = "selected",
-        },
-    }
+    return controlRequirements.selectedTargets({
+        tabKey = "rewards",
+        address = branchAddress(node),
+        controlAlias = branchControlAlias(node),
+        state = valueStates.INVALID,
+    })
 end
 
 local function branchEvent(row, node, value)

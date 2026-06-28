@@ -185,8 +185,8 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
         biome = catalog.lookup.N,
     })
     local control = template.createRuntime(routeFields({
-            {},
-            {},
+            { Reward1Key = "SpellDrop" },
+            { Reward1Key = "WeaponUpgrade" },
             {},
             {
                 RoleKey = "Combat",
@@ -356,8 +356,8 @@ function TestRunPlannerHubPylonRoute.testHubPylonSideRoomProbabilitySummary()
         biome = catalog.lookup.N,
     })
     local control = template.createRuntime(routeFields({
-            {},
-            {},
+            { Reward1Key = "SpellDrop" },
+            { Reward1Key = "WeaponUpgrade" },
             {},
             {
                 RoleKey = "Combat",
@@ -394,8 +394,8 @@ function TestRunPlannerHubPylonRoute.testHubPylonPolicyAllowsDuplicateBoonSource
         biome = catalog.lookup.N,
     })
     local control = template.createRuntime(routeFields({
-            {},
-            {},
+            { Reward1Key = "SpellDrop" },
+            { Reward1Key = "WeaponUpgrade" },
             {},
             {
                 RoleKey = "Combat",
@@ -497,8 +497,8 @@ function TestRunPlannerHubPylonRoute.testHubPylonRewardRowGroupRejectsDuplicateN
         biome = catalog.lookup.N,
     })
     local rowData = {
-        {},
-        {},
+        { Reward1Key = "SpellDrop" },
+        { Reward1Key = "WeaponUpgrade" },
         {},
         {
             RoleKey = "Combat",

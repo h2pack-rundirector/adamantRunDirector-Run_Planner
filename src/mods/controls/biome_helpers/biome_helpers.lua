@@ -19,5 +19,6 @@ return {
         roomStructure = roomStructure,
         roomTopology = roomTopology,
         valueStates = route.valueStates,
+        controlRequirements = route.controlRequirements,
     }),
 }

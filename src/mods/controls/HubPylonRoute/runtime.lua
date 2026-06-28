@@ -183,11 +183,18 @@ local function sideRoomEncounterClass(instance, sideRows, sideRowIndex, sideDoor
 end
 
 local function sideRewardPicks(surface, sideRewardRows, sideRowIndex)
-    local picks = rewardSystem and rewardSystem.snapshot(surface, sideRewardFields(sideRewardRows, sideRowIndex)) or {}
+    local picks = {}
+    local selectionRequirements = {}
+    if rewardSystem ~= nil then
+        picks, selectionRequirements = rewardSystem.snapshot(surface, sideRewardFields(sideRewardRows, sideRowIndex))
+    end
     for _, pick in ipairs(picks) do
         pick.storageAlias = pick.alias
     end
-    return picks
+    for _, requirement in ipairs(selectionRequirements) do
+        requirement.storageAlias = requirement.controlAlias
+    end
+    return picks, selectionRequirements
 end
 
 local function sideRoomSnapshot(instance, fields, sideRowIndex, sideIndex, sideDoor, rewardsConfigured)
@@ -196,6 +203,11 @@ local function sideRoomSnapshot(instance, fields, sideRowIndex, sideIndex, sideD
     local storedEncounterClassKey, encounterClassKey =
         sideRoomEncounterClass(instance, fields.SideRooms, sideRowIndex, sideDoor, enabled)
     local surface = rewardsConfigured and enabled and rewardSurfaceForContext(sideDoor.reward) or nil
+    local rewardPicks = EMPTY_LIST
+    local selectionRequirements = EMPTY_LIST
+    if rewardsConfigured and enabled then
+        rewardPicks, selectionRequirements = sideRewardPicks(surface, fields.SideRewards, sideRowIndex)
+    end
     return {
         sideIndex = sideIndex,
         doorId = sideDoor.doorId,
@@ -210,8 +222,8 @@ local function sideRoomSnapshot(instance, fields, sideRowIndex, sideIndex, sideD
         rewards = rewardsConfigured and readSideRewards(fields.SideRewards, sideRowIndex) or EMPTY_LIST,
         rewardLoot = rewardsConfigured and readSideRewardLoot(fields.SideRewards, sideRowIndex) or EMPTY_LIST,
         rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
-        rewardPicks = rewardsConfigured and enabled and sideRewardPicks(surface, fields.SideRewards, sideRowIndex)
-            or EMPTY_LIST,
+        rewardPicks = rewardPicks,
+        selectionRequirements = selectionRequirements,
     }
 end
 
@@ -374,6 +386,12 @@ function runtime.create(fields, instance)
         local rewardsConfigured = self:rewardsConfigured()
         local surface = rewardsConfigured and rewardSurface(role, option) or nil
         local context = data.rowContext(instance, routeRows, rowIndex)
+        local rewardPicks = EMPTY_LIST
+        local selectionRequirements = EMPTY_LIST
+        if rewardsConfigured and rewardSystem ~= nil then
+            rewardPicks, selectionRequirements =
+                rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex))
+        end
         local row = {
             rowIndex = rowIndex,
             routeOrdinal = slot.routeOrdinal,
@@ -406,10 +424,8 @@ function runtime.create(fields, instance)
             rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
             rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
             rewardConstraints = surface and surface.rewardConstraints or nil,
-            rewardPicks = rewardsConfigured
-                and rewardSystem
-                and rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex))
-                or EMPTY_LIST,
+            rewardPicks = rewardPicks,
+            selectionRequirements = selectionRequirements,
         }
         row.roomTopology = pylonRoomTopology(instance, slot, row)
         return rewardItems.attach(row)

@@ -3,6 +3,7 @@ local deps = ...
 local rewards = deps.rewards
 
 local timeline = deps.timeline
+local controlRequirements = deps.controlRequirements
 
 local valueStates = import("mods/route/value_states.lua")
 local common = import("mods/route/rows/common.lua")
@@ -31,6 +32,7 @@ return {
         valueStates = valueStates,
         timeline = timeline,
         rewards = rewards,
+        controlRequirements = controlRequirements,
     }),
     valueStates = valueStates,
 }

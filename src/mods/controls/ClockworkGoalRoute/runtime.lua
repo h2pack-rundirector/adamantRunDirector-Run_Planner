@@ -202,6 +202,12 @@ function runtime.create(fields, instance)
         local context = data.rowContext(instance, routeRows, rowIndex)
         local rewards = rewardsConfigured and rewardSystem.readRewards(fields.Rewards, rowIndex) or EMPTY_LIST
         local rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST
+        local rewardPicks = EMPTY_LIST
+        local selectionRequirements = EMPTY_LIST
+        if rewardsConfigured and rewardSystem ~= nil then
+            rewardPicks, selectionRequirements =
+                rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex))
+        end
         local row = {
             rowIndex = rowIndex,
             routeOrdinal = slot.routeOrdinal,
@@ -237,10 +243,8 @@ function runtime.create(fields, instance)
             rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
             rewardConstraints = surface and surface.rewardConstraints or nil,
             roomTopology = data.roomTopology(instance, routeRows, rowIndex),
-            rewardPicks = rewardsConfigured
-                and rewardSystem
-                and rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex))
-                or EMPTY_LIST,
+            rewardPicks = rewardPicks,
+            selectionRequirements = selectionRequirements,
         }
         return rewardItems.attach(row)
     end

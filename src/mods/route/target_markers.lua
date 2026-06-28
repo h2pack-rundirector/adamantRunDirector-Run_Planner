@@ -31,15 +31,32 @@ function targetMarkers.row(ctx, row, invalid, markerKind, opts)
         scope = opts.scope,
         locationLabel = opts.locationLabel,
         fields = {
-            valueTargets = targetValueTargets(row, opts),
+            controlTargets = invalid.controlTargets,
+            valueTargets = invalid.valueTargets or targetValueTargets(row, opts),
         },
     })
+end
+
+local function controlTargetValue(target)
+    if target.value ~= nil then
+        return target.value
+    elseif target.mode == "selected" then
+        return ""
+    end
+    return nil
 end
 
 function targetMarkers.valueStates(snapshot, rowIndex, controlAlias)
     local states = nil
     for _, invalid in ipairs(snapshot and snapshot.invalidRows or EMPTY_LIST) do
         if invalid.rowIndex == rowIndex then
+            for _, target in ipairs(invalid.controlTargets or EMPTY_LIST) do
+                local value = controlTargetValue(target)
+                if target.controlAlias == controlAlias and value ~= nil then
+                    states = states or {}
+                    valueStates.set(states, value, target.state or INVALID_VALUE_STATE)
+                end
+            end
             for _, target in ipairs(invalid.valueTargets or EMPTY_LIST) do
                 if target.controlAlias == controlAlias and target.value ~= nil and target.value ~= "" then
                     states = states or {}

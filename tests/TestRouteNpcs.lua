@@ -131,10 +131,20 @@ function TestRunPlannerRouteNpcs.testRouteNpcsUsesBiomeRoomTypeSelection()
     })
     control:setRouteContext(routeContext, "Underworld")
 
-    lu.assertEquals(control:biomeOptions(1).values, { "", "Disabled", "F" })
-    lu.assertEquals(control:biomeOptions(1).displayValues[""], "Vanilla")
+    lu.assertEquals(control:biomeOptions(1).values, { "Disabled", "F" })
+    lu.assertNil(control:biomeOptions(1).displayValues[""])
     lu.assertEquals(control:biomeOptions(1).displayValues.Disabled, "Disabled")
     lu.assertEquals(control:biomeOptions(1).displayValues.F, "Erebus")
+    local requiredBiome = control:rowValidation(1)
+    lu.assertEquals(requiredBiome.code, "selection_required")
+    lu.assertEquals(requiredBiome.controlTargets, {
+        {
+            tabKey = "npcs",
+            controlAlias = "BiomeKey",
+            state = 2,
+            mode = "selected",
+        },
+    })
 
     control:writeBiome(1, "Disabled")
     lu.assertEquals(fields.Targets:read(1, "BiomeKey"), "Disabled")
@@ -155,6 +165,17 @@ function TestRunPlannerRouteNpcs.testRouteNpcsUsesBiomeRoomTypeSelection()
     lu.assertEquals(fields.Targets:read(1, "BiomeKey"), "F")
     lu.assertEquals(control:roomOptions(1).values, { "", "3" })
     lu.assertEquals(control:roomOptions(1).displayValues["3"], "Depth 5 - C04")
+    local requiredRoom = control:rowValidation(1)
+    lu.assertEquals(requiredRoom.code, "selection_required")
+    lu.assertEquals(requiredRoom.controlTargets, {
+        {
+            tabKey = "npcs",
+            controlAlias = "RowIndex",
+            state = 2,
+            mode = "selected",
+        },
+    })
+    lu.assertEquals(control:valueStates(1, "RowIndex")[""], 2)
 
     control:writeRoom(1, "3")
     lu.assertEquals(fields.Targets:read(1, "RowIndex"), "3")
@@ -194,7 +215,7 @@ function TestRunPlannerRouteNpcs.testRouteNpcsUsesBiomeRoomTypeSelection()
     lu.assertEquals(fields.Targets:read(2, "RowIndex"), nil)
     lu.assertEquals(fields.Targets:read(2, "VariantKey"), nil)
     lu.assertEquals(fields.Targets:read(2, "TargetKey"), nil)
-    lu.assertTrue(control:rowValidation(2).valid)
+    lu.assertEquals(control:rowValidation(2).code, "selection_required")
 end
 
 function TestRunPlannerRouteNpcs.testRouteInvalidSuppressesNpcDecoration()

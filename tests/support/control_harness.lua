@@ -69,9 +69,14 @@ local function loadRouteDeps()
             rewardDomain = loadRewardDomain(),
         })
         local timeline = testImport("mods/route/timeline.lua")
+        local valueStates = testImport("mods/route/value_states.lua")
+        local controlRequirements = testImport("mods/route/control_requirements.lua", nil, {
+            valueStates = valueStates,
+        })
         local rows = testImport("mods/route/rows.lua", nil, {
             rewards = rewards,
             timeline = timeline,
+            controlRequirements = controlRequirements,
         })
         route = {
             common = rows.common,
@@ -82,6 +87,7 @@ local function loadRouteDeps()
             valueStates = rows.valueStates,
             rowEngine = rows.engine,
             timeline = timeline,
+            controlRequirements = controlRequirements,
             rewards = rewards,
         }
     end)
@@ -138,6 +144,10 @@ end
 local function loadRewardLegality()
     local semantics = testImport("mods/route/reward_planning/semantics.lua")
     local invalidLocations = testImport("mods/route/invalid_locations.lua")
+    local valueStates = testImport("mods/route/value_states.lua")
+    local controlRequirements = testImport("mods/route/control_requirements.lua", nil, {
+        valueStates = valueStates,
+    })
     return testImport("mods/route/reward_planning/legality.lua", nil, {
         conditions = loadRewardConditions(),
         rewardItems = testImport("mods/route/reward_planning/items.lua"),
@@ -150,8 +160,10 @@ local function loadRewardLegality()
             invalidLocations = invalidLocations,
         }),
         topologyBranches = testImport("mods/route/reward_planning/topology_branches.lua", nil, {
-            valueStates = testImport("mods/route/value_states.lua"),
+            valueStates = valueStates,
+            controlRequirements = controlRequirements,
         }),
+        controlRequirements = controlRequirements,
     })
 end
 
@@ -188,6 +200,8 @@ local function loadFixedLinearData()
         readCache = routeDeps.readCache,
         roomTopology = deps.roomTopology,
         roomStructure = deps.roomStructure,
+        valueStates = routeDeps.valueStates,
+        controlRequirements = routeDeps.controlRequirements,
     })
     return withTestImport(function()
         return testImport("mods/controls/FixedLinearRoute/data/data.lua", nil, deps)
@@ -211,6 +225,8 @@ local function loadClockworkGoalData()
         readCache = routeDeps.readCache,
         roomTopology = deps.roomTopology,
         roomStructure = deps.roomStructure,
+        valueStates = routeDeps.valueStates,
+        controlRequirements = routeDeps.controlRequirements,
     })
     return withTestImport(function()
         return testImport("mods/controls/ClockworkGoalRoute/data/data.lua", nil, deps)
@@ -242,6 +258,8 @@ local function loadFieldsCageDeps()
         readCache = routeDeps.readCache,
         roomTopology = deps.roomTopology,
         roomStructure = deps.roomStructure,
+        valueStates = routeDeps.valueStates,
+        controlRequirements = routeDeps.controlRequirements,
     })
     return deps
 end
@@ -572,6 +590,7 @@ local function routeRewardRow(rowIndex, rewardType, opts)
         rewards = opts.rewards or { rewardType },
         rewardLoot = opts.rewardLoot or {},
         rewardPicks = opts.rewardPicks or {},
+        selectionRequirements = opts.selectionRequirements or {},
         rewardSourceCount = opts.rewardSourceCount,
         invalidCode = opts.invalidCode,
         invalidReason = opts.invalidReason,

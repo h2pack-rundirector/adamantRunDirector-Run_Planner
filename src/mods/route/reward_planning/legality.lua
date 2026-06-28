@@ -5,6 +5,7 @@ local semantics = deps.semantics
 local rewardContext = deps.context
 local markers = deps.markers
 local topologyBranches = deps.topologyBranches
+local controlRequirements = deps.controlRequirements
 
 local rewardLegality = {}
 local EMPTY_LIST = {}
@@ -391,6 +392,66 @@ local function rewardLabel(value)
         return "Boon"
     end
     return tostring(value)
+end
+
+local function nonEmpty(value)
+    if value == nil or value == "" then
+        return nil
+    end
+    return tostring(value)
+end
+
+local function selectionRequirementLabel(requirement)
+    return nonEmpty(requirement and requirement.label)
+        or (requirement and requirement.kind == "boonSource" and "God" or nil)
+        or "Reward"
+end
+
+local function selectionRequirementAddress(item, requirement)
+    return nonEmpty(requirement and requirement.address)
+        or nonEmpty(item and item.address)
+        or "row"
+end
+
+local function selectionRequirementEvent(row, item, requirement)
+    local address = selectionRequirementAddress(item, requirement)
+    local tabKey = nonEmpty(requirement and requirement.tabKey) or "rewards"
+    return {
+        row = row,
+        item = item,
+        tabKey = tabKey,
+        rewardType = "SelectionRequirement",
+        address = address,
+        addressLabel = item and item.sourceLabel or nil,
+        controlTargets = controlRequirements.selectedTargets({
+            tabKey = tabKey,
+            address = address,
+            controlAlias = requirement.controlAlias,
+        }),
+        valueTargets = EMPTY_LIST,
+    }
+end
+
+local function selectionRequirementInvalid(row, item)
+    for _, requirement in ipairs(item and item.selectionRequirements or EMPTY_LIST) do
+        if requirement.controlAlias ~= nil and requirement.controlAlias ~= "" then
+            return selectionRequirementEvent(row, item, requirement), {
+                code = "selection_required",
+                message = selectionRequirementLabel(requirement) .. " needs a concrete selection",
+            }
+        end
+    end
+    return nil, nil
+end
+
+local function validateSelectionRequirements(context, result, seenInvalids, ctx, row, itemScratch)
+    for _, item in ipairs(rowRewardItems.collect(row, itemScratch)) do
+        local event, invalid = selectionRequirementInvalid(row, item)
+        if invalid ~= nil then
+            return addInvalid(context, result, seenInvalids, ctx, event, invalid)
+        end
+    end
+    return nil
 end
 
 local function rewardRowGroupConstraints(group)
@@ -821,6 +882,18 @@ function rewardLegality.evaluateRow(context, result, rewardCtx, ctx, row, scratc
     scratch.events = events
     scratch.rewardItems = rewardItemScratch
     clearMap(processedChoiceGroups)
+
+    local selectionInvalid = validateSelectionRequirements(
+        context,
+        result,
+        scratch.seenInvalids,
+        ctx,
+        row,
+        rewardItemScratch
+    )
+    if selectionInvalid ~= nil then
+        return selectionInvalid
+    end
 
     collectRewardBatches(row, batches, rewardItemScratch, events)
     for _, batch in ipairs(batches) do

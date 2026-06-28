@@ -48,8 +48,9 @@ end
 
 function runtime.snapshot(surface, fields, opts)
     local picks = {}
+    local selectionRequirements = {}
     if surface == nil or fields == nil then
-        return picks
+        return picks, selectionRequirements
     end
 
     for _, control in ipairs(surface.controls or {}) do
@@ -66,10 +67,25 @@ function runtime.snapshot(surface, fields, opts)
                     pick.rewardStore = control.rewardStore
                 end
                 picks[#picks + 1] = pick
+            else
+                local requirement = {
+                    tabKey = "rewards",
+                    key = control.key,
+                    kind = control.kind,
+                    controlAlias = control.alias,
+                    label = control.label,
+                }
+                if control.sourceIndex ~= nil then
+                    requirement.sourceIndex = control.sourceIndex
+                end
+                if control.rewardAddress ~= nil then
+                    requirement.address = control.rewardAddress
+                end
+                selectionRequirements[#selectionRequirements + 1] = requirement
             end
         end
     end
-    return picks
+    return picks, selectionRequirements
 end
 
 function runtime.surfaceFor(context)

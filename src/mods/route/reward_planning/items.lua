@@ -4,6 +4,7 @@ local REWARD_SOURCE_FIELDS = {
     "rewards",
     "rewardLoot",
     "rewardPicks",
+    "selectionRequirements",
     "rewardKind",
     "fixedRewardType",
     "rewardSourceCount",
@@ -71,21 +72,37 @@ local function copyRewardPick(pick)
         alias = pick.alias,
         storageAlias = pick.storageAlias,
         value = pick.value,
+        label = pick.label,
+        sourceIndex = pick.sourceIndex,
+        rewardAddress = pick.rewardAddress,
         rewardStore = pick.rewardStore,
     }
 end
 
-local function pickIndex(pick)
-    local alias = pick and pick.alias or ""
+local function copySelectionRequirement(requirement)
+    return {
+        tabKey = requirement.tabKey,
+        address = requirement.address,
+        key = requirement.key,
+        kind = requirement.kind,
+        controlAlias = requirement.controlAlias,
+        storageAlias = requirement.storageAlias,
+        label = requirement.label,
+        sourceIndex = requirement.sourceIndex,
+    }
+end
+
+local function rewardControlIndex(entry)
+    local alias = entry and (entry.alias or entry.controlAlias) or ""
     return math.floor(tonumber(string.match(alias, "^Reward(%d+)")) or 0)
 end
 
-local function picksForIndexRange(picks, minIndex, maxIndex)
+local function entriesForRewardAliasRange(entries, minIndex, maxIndex, copyEntry)
     local selected = {}
-    for _, pick in ipairs(picks or EMPTY_LIST) do
-        local index = pickIndex(pick)
+    for _, entry in ipairs(entries or EMPTY_LIST) do
+        local index = rewardControlIndex(entry)
         if index >= minIndex and index <= maxIndex then
-            selected[#selected + 1] = copyRewardPick(pick)
+            selected[#selected + 1] = copyEntry(entry)
         end
     end
     return selected
@@ -130,6 +147,7 @@ local function appendItem(items, row, source, address, sourceKind, sourceIndex)
         rewards = source.rewards or EMPTY_LIST,
         rewardLoot = source.rewardLoot or EMPTY_LIST,
         rewardPicks = source.rewardPicks or EMPTY_LIST,
+        selectionRequirements = source.selectionRequirements or EMPTY_LIST,
         fixedRewardType = source.fixedRewardType,
         rewardStore = source.rewardStore,
         shopProfile = source.shopProfile,
@@ -158,7 +176,18 @@ local function appendPrebossShopItem(items, row, source, offer, sourceKind, sour
         shopProfile = offer.shopProfile,
         rewards = rewards,
         rewardLoot = rewardLoot,
-        rewardPicks = picksForIndexRange(source.rewardPicks, offer.rewardAliasStart, offerEndIndex(offer)),
+        rewardPicks = entriesForRewardAliasRange(
+            source.rewardPicks,
+            offer.rewardAliasStart,
+            offerEndIndex(offer),
+            copyRewardPick
+        ),
+        selectionRequirements = entriesForRewardAliasRange(
+            source.selectionRequirements,
+            offer.rewardAliasStart,
+            offerEndIndex(offer),
+            copySelectionRequirement
+        ),
         rewardSourceCount = offer.rewardAliasCount,
         rewardGeneration = offer.rewardGeneration,
         rewardConstraints = source.rewardConstraints,
@@ -178,7 +207,18 @@ local function appendPrebossRoomStoreItem(items, row, source, offer, sourceKind,
         routeOrdinal = row and row.routeOrdinal or source.routeOrdinal,
         rewardKind = "roomStore",
         rewards = roomStoreRewardValues(source, offer),
-        rewardPicks = picksForIndexRange(source.rewardPicks, offer.rewardAliasStart, offerEndIndex(offer)),
+        rewardPicks = entriesForRewardAliasRange(
+            source.rewardPicks,
+            offer.rewardAliasStart,
+            offerEndIndex(offer),
+            copyRewardPick
+        ),
+        selectionRequirements = entriesForRewardAliasRange(
+            source.selectionRequirements,
+            offer.rewardAliasStart,
+            offerEndIndex(offer),
+            copySelectionRequirement
+        ),
         rewardStore = offer.rewardStore,
         rewardChoiceGroup = offer.rewardChoiceGroup,
         rewardAliasOffset = offer.rewardAliasStart - 1,

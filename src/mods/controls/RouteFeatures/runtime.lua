@@ -4,6 +4,7 @@ local deps = ...
 local data = deps.data
 local invalidLocations = deps.invalidLocations
 local targetMarkers = deps.targetMarkers
+local controlRequirements = deps.controlRequirements
 
 local runtime = {}
 
@@ -12,7 +13,7 @@ local EMPTY_LIST = {}
 local EMPTY_TARGETS = {
     values = { "" },
     displayValues = {
-        [""] = "Vanilla",
+        [""] = "No valid targets",
     },
     lookup = {},
 }
@@ -103,13 +104,9 @@ end
 
 local function buildBiomeOptions(instance, slot)
     local opts = {
-        values = { "" },
-        displayValues = {
-            [""] = "Vanilla",
-        },
-        lookup = {
-            [""] = true,
-        },
+        values = {},
+        displayValues = {},
+        lookup = {},
     }
 
     for _, biomeKey in ipairs(instance.route and instance.route.biomes or EMPTY_LIST) do
@@ -263,7 +260,25 @@ local function invalidForRow(row)
     return {
         code = row.invalidCode,
         message = row.invalidReason,
+        controlTargets = row.invalidControlTargets,
+        valueTargets = row.invalidValueTargets,
     }
+end
+
+local function roomSelectionRequired(slot)
+    return controlRequirements.invalid({
+        message = tostring(slot.label) .. " needs a target room",
+        tabKey = "features",
+        controlAlias = "RowIndex",
+    })
+end
+
+local function biomeSelectionRequired(slot)
+    return controlRequirements.invalid({
+        message = tostring(slot.label) .. " needs a target biome",
+        tabKey = "features",
+        controlAlias = "BiomeKey",
+    })
 end
 
 local function appendInvalidMarker(instance, invalidRows, row, markerKind, locationRow)
@@ -458,10 +473,10 @@ function runtime.create(fields, instance)
 
         local biomeKey = self:selectedBiomeKey(rowIndex)
         if biomeKey == "" then
-            return VALID
+            return biomeSelectionRequired(slot)
         end
         if self:selectedRowIndex(rowIndex) == "" then
-            return invalidStatus("feature_room_required", tostring(slot.label) .. " needs a target room")
+            return roomSelectionRequired(slot)
         end
 
         local targetKey = self:selectedTargetKey(rowIndex)
@@ -502,6 +517,8 @@ function runtime.create(fields, instance)
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,
+            invalidControlTargets = validation.controlTargets,
+            invalidValueTargets = validation.valueTargets,
             relatedRowIndex = validation.relatedRowIndex,
         }
     end

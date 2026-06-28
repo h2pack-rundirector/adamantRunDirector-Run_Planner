@@ -4,6 +4,7 @@ local runtime = import("mods/controls/RouteNpcs/runtime.lua", nil, {
     data = data,
     invalidLocations = deps.route.invalidLocations,
     targetMarkers = deps.route.targetMarkers,
+    controlRequirements = deps.route.controlRequirements,
 })
 local ui = import("mods/controls/RouteNpcs/ui.lua", nil, {
     data = data,

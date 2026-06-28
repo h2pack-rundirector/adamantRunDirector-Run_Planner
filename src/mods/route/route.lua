@@ -1,6 +1,6 @@
 local routeFactory = {}
 
-local function createRewardPlanning(invalidLocations, routeMarkers, legalityConditions)
+local function createRewardPlanning(invalidLocations, routeMarkers, legalityConditions, controlRequirements)
     local rewardItems = import("mods/route/reward_planning/items.lua")
     local rewardSemantics = import("mods/route/reward_planning/semantics.lua")
     local rewardMarkers = import("mods/route/reward_planning/marker_targets.lua", nil, {
@@ -17,7 +17,9 @@ local function createRewardPlanning(invalidLocations, routeMarkers, legalityCond
         markers = rewardMarkers,
         topologyBranches = import("mods/route/reward_planning/topology_branches.lua", nil, {
             valueStates = import("mods/route/value_states.lua"),
+            controlRequirements = controlRequirements,
         }),
+        controlRequirements = controlRequirements,
     })
 
     return {
@@ -52,10 +54,14 @@ function routeFactory.create(opts)
     local routePosition = import("mods/route/position.lua")
     local invalidLocations = import("mods/route/invalid_locations.lua")
     local routeMarkers = import("mods/route/markers.lua")
-    local planning = createRewardPlanning(invalidLocations, routeMarkers, rewards.legalityConditions)
+    local controlRequirements = import("mods/route/control_requirements.lua", nil, {
+        valueStates = import("mods/route/value_states.lua"),
+    })
+    local planning = createRewardPlanning(invalidLocations, routeMarkers, rewards.legalityConditions, controlRequirements)
     local rows = import("mods/route/rows.lua", nil, {
         rewards = rewards,
         timeline = routeTimeline,
+        controlRequirements = controlRequirements,
     })
     local targetMarkers = import("mods/route/target_markers.lua", nil, {
         markers = routeMarkers,
@@ -73,6 +79,7 @@ function routeFactory.create(opts)
         timeline = routeTimeline,
         markers = routeMarkers,
         targetMarkers = targetMarkers,
+        controlRequirements = controlRequirements,
         invalidLocations = invalidLocations,
         rewards = rewards,
         rewardItems = planning.rewardItems,
