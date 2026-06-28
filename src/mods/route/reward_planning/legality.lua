@@ -225,7 +225,7 @@ local function minRoomHistorySpacingInvalid(requirement, rewardCtx, ctx, event)
         return nil
     end
     local previousRunDepthCache = previousOrdinal + 1
-    if not routeQuery.minRoomsSinceDepth(ctx, previousRunDepthCache, requirement.min) then
+    if not routeQuery.requiredMinRoomsSinceRunDepth(ctx, previousRunDepthCache, requirement.min) then
         return requirement
     end
     return nil

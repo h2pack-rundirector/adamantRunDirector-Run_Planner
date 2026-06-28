@@ -1,6 +1,9 @@
 local lu = require("luaunit")
 local h = require("tests.support.control_harness")
-local routeQuery = h.testImport("mods/route/query.lua")
+local routeEvents = h.testImport("mods/route/events.lua")
+local routeQuery = h.testImport("mods/route/query.lua", nil, {
+    events = routeEvents,
+})
 
 -- luacheck: globals TestRunPlannerRouteQuery
 TestRunPlannerRouteQuery = {}
@@ -31,20 +34,82 @@ function TestRunPlannerRouteQuery.testDepthQueriesSupportExactEncounterDepth()
     lu.assertEquals(routeQuery.biomeEncounterDepth(context), 4)
 end
 
-function TestRunPlannerRouteQuery.testRunDepthDistanceQueries()
+function TestRunPlannerRouteQuery.testRequiredMinRoomsSinceRunDepth()
     local context = {
         runDepthCache = 16,
     }
 
-    lu.assertEquals(routeQuery.roomsSinceDepth(context, 7), 9)
-    lu.assertTrue(routeQuery.minRoomsSinceDepth(context, 7, 9))
-    lu.assertFalse(routeQuery.minRoomsSinceDepth(context, 7, 10))
-    lu.assertNil(routeQuery.roomsSinceDepth(context, nil))
-    lu.assertFalse(routeQuery.minRoomsSinceDepth(context, nil, 1))
+    lu.assertTrue(routeQuery.requiredMinRoomsSinceRunDepth(context, 7, 9))
+    lu.assertFalse(routeQuery.requiredMinRoomsSinceRunDepth(context, 7, 10))
+    lu.assertFalse(routeQuery.requiredMinRoomsSinceRunDepth(context, nil, 1))
 end
 
-function TestRunPlannerRouteQuery.testExitCountPrefersTopologyThenRowThenOption()
-    lu.assertEquals(routeQuery.exitCount({
+function TestRunPlannerRouteQuery.testRequiredMinRoomsSinceEventCanUseNamedAxis()
+    local history = routeEvents.createHistory()
+    routeEvents.emit(history, {
+        kind = "npc",
+        eventKey = "ArtemisCombatF",
+        runDepthCache = 7,
+        roomHistoryOrdinal = 8,
+    })
+    local context = {
+        runDepthCache = 16,
+        roomHistoryOrdinal = 12,
+    }
+
+    lu.assertTrue((routeQuery.requiredMinRoomsSinceEvent(history, context, {
+        eventKey = "ArtemisCombatF",
+        axis = "runDepthCache",
+        count = 9,
+    })))
+    lu.assertTrue((routeQuery.requiredMinRoomsSinceEvent(history, context, {
+        eventKey = "ArtemisCombatF",
+        axis = "roomHistory",
+        count = 4,
+    })))
+    lu.assertFalse((routeQuery.requiredMinRoomsSinceEvent(history, context, {
+        eventKey = "ArtemisCombatF",
+        axis = "roomHistory",
+        count = 5,
+    })))
+end
+
+function TestRunPlannerRouteQuery.testSumPrevRoomsUsesCurrentAndPreviousWindow()
+    local history = routeEvents.createHistory()
+    routeEvents.emit(history, {
+        kind = "npc",
+        eventKey = "CurrentNpc",
+        groupKey = "FieldNpc",
+        roomHistoryOrdinal = 12,
+    })
+    routeEvents.emit(history, {
+        kind = "npc",
+        eventKey = "RecentNpc",
+        groupKey = "FieldNpc",
+        roomHistoryOrdinal = 7,
+    })
+    routeEvents.emit(history, {
+        kind = "npc",
+        eventKey = "OldNpc",
+        groupKey = "ArachneCombat",
+        roomHistoryOrdinal = 6,
+    })
+    local context = {
+        roomHistoryOrdinal = 12,
+    }
+
+    lu.assertTrue((routeQuery.sumPrevRooms(history, context, {
+        groupKey = "FieldNpc",
+        count = 6,
+    })))
+    lu.assertFalse((routeQuery.sumPrevRooms(history, context, {
+        groupKey = "ArachneCombat",
+        count = 6,
+    })))
+end
+
+function TestRunPlannerRouteQuery.testRequiredMinExitsPrefersTopologyThenRowThenOption()
+    lu.assertTrue(routeQuery.requiredMinExits({
         valid = true,
         roomTopology = {
             exitCount = 3,
@@ -53,20 +118,20 @@ function TestRunPlannerRouteQuery.testExitCountPrefersTopologyThenRowThenOption(
         option = {
             exitCount = 1,
         },
-    }), 3)
-    lu.assertEquals(routeQuery.exitCount({
+    }, 3))
+    lu.assertTrue(routeQuery.requiredMinExits({
         valid = true,
         exitCount = 2,
         option = {
             exitCount = 1,
         },
-    }), 2)
-    lu.assertEquals(routeQuery.exitCount({
+    }, 2))
+    lu.assertTrue(routeQuery.requiredMinExits({
         valid = true,
         option = {
             exitCount = 1,
         },
-    }), 1)
+    }, 1))
 end
 
 function TestRunPlannerRouteQuery.testRequiredMinExitsRejectsUnusableRows()
