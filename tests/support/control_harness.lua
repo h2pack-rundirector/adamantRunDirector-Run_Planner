@@ -69,6 +69,7 @@ local function loadRouteDeps()
             rewardDomain = loadRewardDomain(),
         })
         local timeline = testImport("mods/route/timeline.lua")
+        local routeQuery = testImport("mods/route/query.lua")
         local valueStates = testImport("mods/route/value_states.lua")
         local controlRequirements = testImport("mods/route/control_requirements.lua", nil, {
             valueStates = valueStates,
@@ -77,6 +78,7 @@ local function loadRouteDeps()
             rewards = rewards,
             timeline = timeline,
             controlRequirements = controlRequirements,
+            query = routeQuery,
         })
         route = {
             common = rows.common,
@@ -87,6 +89,7 @@ local function loadRouteDeps()
             valueStates = rows.valueStates,
             rowEngine = rows.engine,
             timeline = timeline,
+            query = routeQuery,
             controlRequirements = controlRequirements,
             rewards = rewards,
         }
@@ -144,6 +147,7 @@ end
 local function loadRewardLegality()
     local semantics = testImport("mods/route/reward_planning/semantics.lua")
     local invalidLocations = testImport("mods/route/invalid_locations.lua")
+    local routeQuery = testImport("mods/route/query.lua")
     local valueStates = testImport("mods/route/value_states.lua")
     local controlRequirements = testImport("mods/route/control_requirements.lua", nil, {
         valueStates = valueStates,
@@ -164,6 +168,7 @@ local function loadRewardLegality()
             controlRequirements = controlRequirements,
         }),
         controlRequirements = controlRequirements,
+        query = routeQuery,
     })
 end
 

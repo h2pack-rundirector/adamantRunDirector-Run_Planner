@@ -1,5 +1,6 @@
 local deps = ...
 local common = deps.common
+local routeQuery = deps.query
 
 local requirements = {}
 local EMPTY_LIST = {}
@@ -8,25 +9,27 @@ local function status(code, message)
     return common.invalidStatus(code, message)
 end
 
-local function previousRoomExitCountSatisfied(route, instance, rows, rowIndex, requirement)
+local function previousRowForExitQuery(route, instance, rows, rowIndex)
     local previousIndex = rowIndex - 1
     if previousIndex < 1 then
-        return false
+        return nil
     end
 
     local previousValidation = route.validateRow(instance, rows, previousIndex)
-    if not previousValidation.valid then
-        return false
-    end
-
     local previousRoleKey = route.resolveRole(instance, rows, previousIndex)
-    if previousRoleKey == common.VANILLA_ROLE_KEY then
-        return false
-    end
-
     local _, previousOption = route.resolveOption(instance, rows, previousIndex, previousRoleKey)
-    local exitCount = previousOption and tonumber(previousOption.exitCount) or nil
-    return exitCount ~= nil and exitCount >= requirement.minCount
+    return {
+        valid = previousValidation.valid,
+        roleKey = previousRoleKey,
+        option = previousOption,
+    }
+end
+
+local function previousRoomExitCountSatisfied(route, instance, rows, rowIndex, requirement)
+    return routeQuery.requiredMinExits(
+        previousRowForExitQuery(route, instance, rows, rowIndex),
+        requirement.minCount
+    )
 end
 
 local function previousRoomExitCountStatus(route, instance, rows, rowIndex, requirement)
@@ -55,8 +58,11 @@ local function previousRoomExitCountStatus(route, instance, rows, rowIndex, requ
     end
 
     local _, previousOption = route.resolveOption(instance, rows, previousIndex, previousRoleKey)
-    local exitCount = previousOption and tonumber(previousOption.exitCount) or nil
-    if exitCount == nil or exitCount < requirement.minCount then
+    if not routeQuery.requiredMinExits({
+        valid = previousValidation.valid,
+        roleKey = previousRoleKey,
+        option = previousOption,
+    }, requirement.minCount) then
         return status(
             "previous_room_exit_count",
             "Previous planned room must have at least " .. tostring(requirement.minCount) .. " exits"

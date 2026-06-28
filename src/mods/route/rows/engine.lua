@@ -221,14 +221,6 @@ function rowEngine.create(adapter)
         if value == nil then
             return nil
         end
-        if type(value) == "table" then
-            local minCost = common.numericCost(value.min, 0)
-            local maxCost = common.numericCost(value.max, minCost)
-            if minCost == maxCost then
-                return minCost
-            end
-            return nil
-        end
         local cost = common.numericCost(value, 0)
         return cost
     end

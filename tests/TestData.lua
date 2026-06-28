@@ -575,19 +575,7 @@ local function assertMinibossCosts(role, expectedCosts)
     end
 end
 
-local function assertEncounterDepthCostRange(value, minCost, maxCost)
-    lu.assertEquals(value, {
-        min = minCost,
-        max = maxCost,
-    })
-end
-
 local function assertEncounterDepthCost(value, context)
-    if type(value) == "table" then
-        lu.assertNotNil(value.min, context .. " missing min encounter-depth cost")
-        lu.assertNotNil(value.max, context .. " missing max encounter-depth cost")
-        return
-    end
     lu.assertEquals(type(value), "number", context .. " missing encounter-depth cost")
 end
 
@@ -629,7 +617,8 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareEncounterDepthCosts()
     lu.assertEquals(biomes.lookup.I.rolesByKey.GoalCombat.biomeEncounterDepthCost, 1)
     lu.assertEquals(biomes.lookup.I.rolesByKey.RewardCombat.biomeEncounterDepthCost, 1)
     lu.assertEquals(biomes.lookup.N.rolesByKey.Combat.biomeEncounterDepthCost, 1)
-    assertEncounterDepthCostRange(biomes.lookup.O.rolesByKey.Combat.biomeEncounterDepthCost, 1, 2)
+    lu.assertNil(biomes.lookup.O.rolesByKey.Combat.biomeEncounterDepthCost)
+    lu.assertEquals(biomes.lookup.O.rolesByKey.Combat.encounterPolicy, "O_CombatData")
     lu.assertEquals(biomes.lookup.O.rolesByKey.Devotion.biomeEncounterDepthCost, 1)
     lu.assertEquals(biomes.lookup.P.rolesByKey.Combat.biomeEncounterDepthCost, 1)
     lu.assertEquals(biomes.lookup.Q.rolesByKey.Combat.biomeEncounterDepthCost, 1)
@@ -697,7 +686,7 @@ function TestRunPlannerData.testBiomeDefinitionsResolveRouteEncounterDepthCosts(
                 for _, option in ipairs(roleOptions(role)) do
                     assertEncounterDepthCost(option.biomeEncounterDepthCost, context .. "." .. tostring(option.key))
                 end
-            else
+            elseif role.encounterPolicy == nil then
                 assertEncounterDepthCost(role.biomeEncounterDepthCost, context)
             end
         end

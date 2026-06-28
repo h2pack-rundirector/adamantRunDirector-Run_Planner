@@ -65,7 +65,6 @@ return function(deps)
                 mapOptions = layout.combatRooms,
                 reward = rewards.none(),
                 encounterPolicy = "O_CombatData",
-                biomeEncounterDepthCost = routeRules.encounterDepthCost(1, 2),
             },
             {
                 key = "Story",

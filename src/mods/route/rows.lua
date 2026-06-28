@@ -4,6 +4,7 @@ local rewards = deps.rewards
 
 local timeline = deps.timeline
 local controlRequirements = deps.controlRequirements
+local routeQuery = deps.query
 
 local valueStates = import("mods/route/value_states.lua")
 local common = import("mods/route/rows/common.lua")
@@ -12,6 +13,7 @@ local readCache = import("mods/route/rows/read_cache.lua")
 local requirements = import("mods/route/rows/requirements.lua", nil, {
     common = common,
     rewards = rewards,
+    query = routeQuery,
 })
 local biomeRules = import("mods/route/rows/biome_rules.lua", nil, {
     common = common,

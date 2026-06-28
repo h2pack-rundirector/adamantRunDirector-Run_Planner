@@ -138,6 +138,18 @@ Route reward legality enforces the prior-god requirement, previous-room exit
 requirement, and one planned Devotion reward per biome. Full vanilla 15-room
 spacing and current-run encounter-depth checks remain deferred.
 
+Route query surface:
+
+- `CurrentRun.EncounterDepth` maps to exact scalar
+  `route.query.runEncounterDepth`.
+- `CurrentRun.BiomeEncounterDepth` maps to exact scalar
+  `route.query.biomeEncounterDepth`.
+- `RequiredMinExits` maps to `route.query.requiredMinExits`, which reads
+  topology `exitCount` first, then row-level `exitCount`, then option
+  `exitCount`.
+- `RequiredMinRoomsSinceEvent` maps to `route.query.minRoomsSince` over the
+  route room-history ordinal.
+
 Recommended model:
 
 - Keep `Devotion` in vanilla-derived reward bundles and filter it at the

@@ -6,6 +6,7 @@ local rewardContext = deps.context
 local markers = deps.markers
 local topologyBranches = deps.topologyBranches
 local controlRequirements = deps.controlRequirements
+local routeQuery = deps.query
 
 local rewardLegality = {}
 local EMPTY_LIST = {}
@@ -211,16 +212,7 @@ end
 
 local function previousRoomExitCountInvalid(requirement, rewardCtx, ctx)
     local previousRow = rewardContext.previousRow(rewardCtx, ctx.biomeKey)
-    if previousRow == nil
-        or previousRow.valid == false
-        or previousRow.roleKey == "Vanilla"
-        or previousRow.option == nil
-    then
-        return requirement
-    end
-
-    local exitCount = tonumber(previousRow.option.exitCount)
-    if exitCount == nil or exitCount < requirement.minCount then
+    if not routeQuery.requiredMinExits(previousRow, requirement.minCount) then
         return requirement
     end
     return nil

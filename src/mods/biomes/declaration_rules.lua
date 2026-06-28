@@ -68,13 +68,6 @@ function routeRules.previousRoomExitCount(minCount)
     }
 end
 
-function routeRules.encounterDepthCost(minCost, maxCost)
-    return {
-        min = minCost,
-        max = maxCost or minCost,
-    }
-end
-
 function routeRules.midshopRequirements()
     return {
         routeRules.previousRoomExitCount(2),
