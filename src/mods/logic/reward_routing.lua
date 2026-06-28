@@ -315,7 +315,7 @@ end
 
 local function plannedRewardItem(row, address)
     for _, item in ipairs(row and row.rewardItems or EMPTY_LIST) do
-        if item.valid ~= false then
+        if item.valid ~= false and item.active ~= false then
             local matchesAddress = (
                 address == nil
                     and (item.address == nil or item.address == "row")
@@ -344,6 +344,7 @@ local function plannedDefaultRewardItem(row)
 
     for _, candidate in ipairs(row and row.rewardItems or EMPTY_LIST) do
         if candidate.valid ~= false
+            and candidate.active ~= false
             and candidate.address == "prebossReward"
             and candidate.kind ~= "none"
             and candidate.kind ~= "vanilla"
@@ -357,6 +358,7 @@ end
 local function plannedShopItem(row, address)
     for _, item in ipairs(row and row.rewardItems or EMPTY_LIST) do
         if item.valid ~= false
+            and item.active ~= false
             and item.address == address
             and item.kind == "shop"
         then

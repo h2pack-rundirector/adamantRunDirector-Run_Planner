@@ -54,9 +54,11 @@ function rewardSystem.create(opts)
         isAlias = storage.isAlias,
         lootAlias = storage.lootAlias,
         readRewardLoot = storage.readRewardLoot,
+        readRewardStates = storage.readRewardStates,
         readRewards = storage.readRewards,
         resetRows = storage.resetRows,
         rewardAlias = storage.rewardAlias,
+        stateAlias = storage.stateAlias,
 
         catalogSurfaces = parts.catalogSurfaces,
         legalityConditions = parts.conditions,

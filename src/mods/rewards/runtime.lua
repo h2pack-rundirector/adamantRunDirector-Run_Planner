@@ -23,7 +23,7 @@ local function conditionActive(condition, fields)
         return true
     end
     for _, item in ipairs(condition.any or {}) do
-        if conditionMatches(item, fields) then
+        if conditionActive(item, fields) then
             return true
         end
     end
@@ -31,7 +31,7 @@ local function conditionActive(condition, fields)
         return false
     end
     for _, item in ipairs(condition.all or {}) do
-        if not conditionMatches(item, fields) then
+        if not conditionActive(item, fields) then
             return false
         end
     end
@@ -55,7 +55,7 @@ function runtime.snapshot(surface, fields, opts)
 
     for _, control in ipairs(surface.controls or {}) do
         if isControlVisible(control, fields, opts) then
-            local value = fields:read(control.alias) or ""
+            local value = fields:read(control.alias) or control.defaultValue or ""
             if value ~= "" then
                 local pick = {
                     key = control.key,
@@ -65,6 +65,12 @@ function runtime.snapshot(surface, fields, opts)
                 }
                 if control.rewardStore ~= nil then
                     pick.rewardStore = control.rewardStore
+                end
+                if control.sourceIndex ~= nil then
+                    pick.sourceIndex = control.sourceIndex
+                end
+                if control.rewardAddress ~= nil then
+                    pick.rewardAddress = control.rewardAddress
                 end
                 picks[#picks + 1] = pick
             else

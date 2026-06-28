@@ -47,6 +47,10 @@ function shopSurface.create(rewardDomain, context)
         local values, labels = common.uniqueNames(options, nil, nil, function(name)
             return common.rewardOptionLabel(rewardDomain, name)
         end)
+        controls[#controls + 1] = common.shopPurchaseCheckbox(storage.stateAlias(index), index, {
+            prefixLabel = slot.label,
+            rowIndex = index,
+        })
         controls[#controls + 1] = common.dropdown(
             rewardAlias,
             slot.key,
@@ -57,6 +61,7 @@ function shopSurface.create(rewardDomain, context)
                 kind = "shopOption",
                 controlWidth = 170,
                 labelWidth = 130,
+                drawLabel = "",
                 rowIndex = index,
             }
         )

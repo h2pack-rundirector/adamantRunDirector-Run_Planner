@@ -104,10 +104,6 @@ local function qSummitShopContext()
 end
 
 local function prebossContext()
-    local choiceGroup = {
-        key = "prebossChoice",
-        effectTiming = "sameChoiceUnion",
-    }
     return {
         kind = "preboss",
         offers = {
@@ -119,9 +115,9 @@ local function prebossContext()
                 rewardAliasStart = 1,
                 rewardAliasCount = 3,
                 rewardGeneration = {
-                    effectTiming = "afterNextRow",
+                    effectTiming = "afterBatch",
                 },
-                rewardChoiceGroup = choiceGroup,
+                requiredBranchValue = "Shop",
             },
             {
                 address = "prebossReward",
@@ -131,7 +127,7 @@ local function prebossContext()
                 ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
                 rewardAliasStart = 4,
                 rewardAliasCount = 2,
-                rewardChoiceGroup = choiceGroup,
+                requiredBranchValue = "FreeReward",
             },
         },
     }
@@ -155,6 +151,9 @@ local function drawableFields(values)
                 alias = alias,
                 read = function()
                     return values[alias]
+                end,
+                write = function(_, value)
+                    values[alias] = value
                 end,
             }
         end,
@@ -311,6 +310,10 @@ function TestRunPlannerRewards.testSemanticsCollectGodLootSources()
         rewardKind = "shop",
         rewards = { "RandomLoot", "BlindBoxLoot", "BoostedRandomLoot" },
         rewardLoot = { "ZeusUpgrade", "HeraUpgrade", "PoseidonUpgrade" },
+        rewardPicks = {
+            { key = "purchaseState:1", value = "Bought" },
+            { key = "purchaseState:3", value = "Bought" },
+        },
     }, sources), {
         "ZeusUpgrade",
         "PoseidonUpgrade",
@@ -754,17 +757,26 @@ function TestRunPlannerRewards.testCatalogBuildsCompositePrebossRewardSurface()
     lu.assertEquals(#surface.offers, 2)
     lu.assertEquals(surface.offers[1].address, "prebossShop")
     lu.assertEquals(surface.offers[2].address, "prebossReward")
-    lu.assertEquals(#surface.controls, 6)
-    lu.assertEquals(surface.controls[1].alias, "Reward1Key")
-    lu.assertEquals(surface.controls[1].key, "Boon")
-    lu.assertEquals(surface.controls[1].rewardAddress, "prebossShop")
-    lu.assertEquals(surface.controls[2].alias, "Reward1LootKey")
+    lu.assertEquals(#surface.controls, 10)
+    lu.assertEquals(surface.controls[1].alias, "PrebossBranchKey")
+    lu.assertEquals(surface.controls[1].key, "prebossBranch")
+    lu.assertEquals(surface.controls[2].alias, "Reward1StateKey")
+    lu.assertEquals(surface.controls[2].key, "purchaseState:1")
     lu.assertEquals(surface.controls[2].rewardAddress, "prebossShop")
-    lu.assertEquals(surface.controls[5].alias, "Reward4Key")
-    lu.assertEquals(surface.controls[5].key, "rewardType")
-    lu.assertEquals(surface.controls[5].label, "Free Reward")
-    lu.assertEquals(surface.controls[5].rewardAddress, "prebossReward")
-    lu.assertEquals(surface.controls[5].values, {
+    lu.assertEquals(surface.controls[3].alias, "Reward1Key")
+    lu.assertEquals(surface.controls[3].key, "Boon")
+    lu.assertEquals(surface.controls[3].rewardAddress, "prebossShop")
+    lu.assertEquals(surface.controls[4].alias, "Reward1LootKey")
+    lu.assertEquals(surface.controls[4].rewardAddress, "prebossShop")
+    lu.assertEquals(surface.controls[9].alias, "Reward4Key")
+    lu.assertEquals(surface.controls[9].key, "rewardType")
+    lu.assertEquals(surface.controls[9].label, "Free Reward")
+    lu.assertEquals(surface.controls[9].rewardAddress, "prebossReward")
+    lu.assertEquals(surface.controls[9].visibleWhen, {
+        alias = "PrebossBranchKey",
+        value = "FreeReward",
+    })
+    lu.assertEquals(surface.controls[9].values, {
         "Boon",
         "HermesUpgrade",
         "WeaponUpgrade",
@@ -774,10 +786,18 @@ function TestRunPlannerRewards.testCatalogBuildsCompositePrebossRewardSurface()
         "SpellDrop",
         "TalentDrop",
     })
-    lu.assertEquals(surface.controls[6].alias, "Reward5Key")
-    lu.assertEquals(surface.controls[6].visibleWhen, {
-        alias = "Reward4Key",
-        value = "Boon",
+    lu.assertEquals(surface.controls[10].alias, "Reward5Key")
+    lu.assertEquals(surface.controls[10].visibleWhen, {
+        all = {
+            {
+                alias = "PrebossBranchKey",
+                value = "FreeReward",
+            },
+            {
+                alias = "Reward4Key",
+                value = "Boon",
+            },
+        },
     })
 end
 
@@ -1108,8 +1128,16 @@ function TestRunPlannerRewards.testRuntimeSnapshotsShopBoonSourcePicks()
 
     lu.assertEquals(runtime.snapshot(surface, fakeFields({
         Reward1Key = "RandomLoot",
+        Reward1StateKey = "Bought",
         Reward1LootKey = "ZeusUpgrade",
     })), {
+        {
+            key = "purchaseState:1",
+            kind = "purchaseState",
+            alias = "Reward1StateKey",
+            value = "Bought",
+            sourceIndex = 1,
+        },
         {
             key = "Boon",
             kind = "shopOption",
@@ -1122,17 +1150,53 @@ function TestRunPlannerRewards.testRuntimeSnapshotsShopBoonSourcePicks()
             alias = "Reward1LootKey",
             value = "ZeusUpgrade",
         },
+        {
+            key = "purchaseState:2",
+            kind = "purchaseState",
+            alias = "Reward2StateKey",
+            value = "Skipped",
+            sourceIndex = 2,
+        },
+        {
+            key = "purchaseState:3",
+            kind = "purchaseState",
+            alias = "Reward3StateKey",
+            value = "Skipped",
+            sourceIndex = 3,
+        },
     })
 
     lu.assertEquals(runtime.snapshot(surface, fakeFields({
         Reward1Key = "BlindBoxLoot",
+        Reward1StateKey = "Skipped",
         Reward1LootKey = "ZeusUpgrade",
     })), {
+        {
+            key = "purchaseState:1",
+            kind = "purchaseState",
+            alias = "Reward1StateKey",
+            value = "Skipped",
+            sourceIndex = 1,
+        },
         {
             key = "Boon",
             kind = "shopOption",
             alias = "Reward1Key",
             value = "BlindBoxLoot",
+        },
+        {
+            key = "purchaseState:2",
+            kind = "purchaseState",
+            alias = "Reward2StateKey",
+            value = "Skipped",
+            sourceIndex = 2,
+        },
+        {
+            key = "purchaseState:3",
+            kind = "purchaseState",
+            alias = "Reward3StateKey",
+            value = "Skipped",
+            sourceIndex = 3,
         },
     })
 end
@@ -1208,6 +1272,9 @@ function TestRunPlannerRewards.testUiPassesRewardContextToExternalValueStates()
             Text = function() end,
             SameLine = function() end,
             SetCursorPosX = function() end,
+            Checkbox = function(_, current)
+                return current, false
+            end,
         },
         widgets = {
             dropdown = function(field, opts)
@@ -1237,6 +1304,103 @@ function TestRunPlannerRewards.testUiPassesRewardContextToExternalValueStates()
     lu.assertEquals(captured.Reward1Key.valueColors.Boon, { 1.0, 0.22, 0.16, 1.0 })
 end
 
+function TestRunPlannerRewards.testUiRendersShopPurchaseStateAtFrontOfOfferRow()
+    local ui, runtime = loadUi()
+    local surface = runtime.surfaceFor({
+        kind = "shop",
+        shopProfile = "WorldShop",
+    })
+    local drawOrder = {}
+    local draw = {
+        imgui = {
+            GetCursorPosX = function()
+                return 0
+            end,
+            AlignTextToFramePadding = function() end,
+            Text = function(text)
+                drawOrder[#drawOrder + 1] = "text:" .. text
+            end,
+            SameLine = function() end,
+            SetCursorPosX = function() end,
+            Checkbox = function(label, current)
+                drawOrder[#drawOrder + 1] = label
+                return current, false
+            end,
+        },
+        widgets = {
+            dropdown = function(field)
+                drawOrder[#drawOrder + 1] = field.alias
+                return false
+            end,
+        },
+    }
+
+    local fields = drawableFields({
+        Reward1Key = "RandomLoot",
+        Reward1LootKey = "AresUpgrade",
+        Reward1StateKey = "Skipped",
+    })
+    fields.rewardContext = {
+        rowIndex = 7,
+        address = "row",
+    }
+    ui.draw(draw, surface, fields)
+
+    lu.assertEquals(drawOrder[1], "text:Reward")
+    lu.assertEquals(drawOrder[2], "text:Offer 1")
+    lu.assertEquals(drawOrder[3], "Bought##7:row:Reward1StateKey")
+    lu.assertEquals(drawOrder[4], "Reward1Key")
+    lu.assertEquals(drawOrder[5], "Reward1LootKey")
+end
+
+function TestRunPlannerRewards.testUiWritesShopPurchaseStateWhenClicked()
+    local ui, runtime = loadUi()
+    local surface = runtime.surfaceFor({
+        kind = "shop",
+        shopProfile = "WorldShop",
+    })
+    local values = {
+        Reward1Key = "BlindBoxLoot",
+        Reward1StateKey = "Skipped",
+    }
+    local fields = drawableFields(values)
+    fields.rewardContext = {
+        rowIndex = 7,
+        address = "row",
+    }
+    local seenLabel
+    local checkboxCount = 0
+    local draw = {
+        imgui = {
+            GetCursorPosX = function()
+                return 0
+            end,
+            AlignTextToFramePadding = function() end,
+            Text = function() end,
+            SameLine = function() end,
+            SetCursorPosX = function() end,
+            Checkbox = function(label)
+                checkboxCount = checkboxCount + 1
+                if checkboxCount == 1 then
+                    seenLabel = label
+                    return true, true
+                end
+                return false, false
+            end,
+        },
+        widgets = {
+            dropdown = function()
+                return false
+            end,
+        },
+    }
+
+    lu.assertTrue(ui.draw(draw, surface, fields))
+
+    lu.assertEquals(seenLabel, "Bought##7:row:Reward1StateKey")
+    lu.assertEquals(values.Reward1StateKey, "Bought")
+end
+
 function TestRunPlannerRewards.testUiInvalidatesImmediatelyAfterRewardControlChanges()
     local ui, runtime = loadUi()
     local surface = runtime.surfaceFor(qSummitShopContext())
@@ -1251,6 +1415,9 @@ function TestRunPlannerRewards.testUiInvalidatesImmediatelyAfterRewardControlCha
             Text = function() end,
             SameLine = function() end,
             SetCursorPosX = function() end,
+            Checkbox = function(_, current)
+                return current, false
+            end,
         },
         widgets = {
             dropdown = function(field)
@@ -1324,10 +1491,13 @@ function TestRunPlannerRewards.testCatalogNormalizesStandardWorldShopSurface()
     })
 
     lu.assertEquals(surface.kind, "shop")
-    lu.assertEquals(#surface.controls, 4)
+    lu.assertEquals(#surface.controls, 7)
     lu.assertEquals(controlByKey(surface, "Boon").label, "Offer 1")
     lu.assertEquals(controlByKey(surface, "MajorNonBoon").label, "Offer 2")
     lu.assertEquals(controlByKey(surface, "Minor").label, "Offer 3")
+    lu.assertEquals(controlByKey(surface, "purchaseState:1").alias, "Reward1StateKey")
+    lu.assertEquals(controlByKey(surface, "purchaseState:2").alias, "Reward2StateKey")
+    lu.assertEquals(controlByKey(surface, "purchaseState:3").alias, "Reward3StateKey")
     lu.assertEquals(controlByKey(surface, "Boon").values, {
         "RandomLoot",
         "BlindBoxLoot",
@@ -1367,7 +1537,7 @@ function TestRunPlannerRewards.testCatalogNormalizesTartarusShopSurface()
     })
 
     lu.assertEquals(surface.kind, "shop")
-    lu.assertEquals(#surface.controls, 8)
+    lu.assertEquals(#surface.controls, 13)
     lu.assertEquals(controlByKey(surface, "Group1Offer1").label, "Offer 1")
     lu.assertEquals(controlByKey(surface, "Group2Offer1").label, "Offer 2")
     lu.assertEquals(controlByKey(surface, "Group3Offer1").label, "Offer 3")
@@ -1402,6 +1572,7 @@ function TestRunPlannerRewards.testCatalogNormalizesTartarusShopSurface()
     lu.assertEquals(controlByKey(surface, "Group5Offer1").displayValues.WeaponPointsRareDrop, "Nightmare")
     lu.assertEquals(controlByKey(surface, "Group5Offer1").displayValues.CardUpgradePointsDrop, "Moon Dust")
     lu.assertEquals(controlByKey(surface, "Group5Offer1").displayValues.CharonPointsDrop, "Obol Points")
+    lu.assertEquals(controlByKey(surface, "purchaseState:5").alias, "Reward5StateKey")
 end
 
 function TestRunPlannerRewards.testCatalogNormalizesCuratedShopSurface()
@@ -1412,7 +1583,7 @@ function TestRunPlannerRewards.testCatalogNormalizesCuratedShopSurface()
     })
 
     lu.assertEquals(surface.kind, "shop")
-    lu.assertEquals(#surface.controls, 10)
+    lu.assertEquals(#surface.controls, 16)
     lu.assertEquals(controlByKey(surface, "Group1Offer1").label, "Offer 1")
     lu.assertEquals(controlByKey(surface, "Group1Offer2").label, "Offer 2")
     lu.assertEquals(controlByKey(surface, "Group2Offer1").label, "Offer 3")
@@ -1436,6 +1607,7 @@ function TestRunPlannerRewards.testCatalogNormalizesCuratedShopSurface()
     lu.assertEquals(controlByKey(surface, "Group1Offer1Loot").alias, "Reward1LootKey")
     lu.assertEquals(controlByKey(surface, "Group1Offer2").values, controlByKey(surface, "Group1Offer1").values)
     lu.assertEquals(controlByKey(surface, "Group1Offer2Loot").alias, "Reward2LootKey")
+    lu.assertEquals(controlByKey(surface, "purchaseState:2").alias, "Reward2StateKey")
     lu.assertEquals(controlByKey(surface, "Group4Offer1").values, {
         "WeaponUpgradeDrop",
         "RandomLoot",

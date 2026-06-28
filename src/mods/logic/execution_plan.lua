@@ -49,6 +49,8 @@ local function compactRewardPicks(source)
             alias = pick.alias,
             storageAlias = pick.storageAlias,
             value = pick.value,
+            sourceIndex = pick.sourceIndex,
+            rewardAddress = pick.rewardAddress,
             rewardStore = pick.rewardStore,
         }
     end
@@ -71,7 +73,9 @@ local function compactRewardItem(item)
         shopProfile = item.shopProfile,
         rewardSourceCount = item.rewardSourceCount,
         valid = item.valid,
-        rewardChoiceGroup = item.rewardChoiceGroup,
+        active = item.active,
+        requiredBranchValue = item.requiredBranchValue,
+        branchValue = item.branchValue,
         rewardAliasOffset = item.rewardAliasOffset,
     }
 end

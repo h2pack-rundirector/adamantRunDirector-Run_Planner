@@ -17,10 +17,6 @@ local runtimeWithControls = harness.runtimeWithControls
 local runtimeForCatalog = harness.runtimeForCatalog
 
 local function prebossRewardOffers()
-    local choiceGroup = {
-        key = "prebossChoice",
-        effectTiming = "sameChoiceUnion",
-    }
     return {
         {
             address = "prebossShop",
@@ -30,9 +26,9 @@ local function prebossRewardOffers()
             rewardAliasStart = 1,
             rewardAliasCount = 3,
             rewardGeneration = {
-                effectTiming = "afterNextRow",
+                effectTiming = "afterBatch",
             },
-            rewardChoiceGroup = choiceGroup,
+            requiredBranchValue = "Shop",
         },
         {
             address = "prebossReward",
@@ -42,7 +38,7 @@ local function prebossRewardOffers()
             ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
             rewardAliasStart = 4,
             rewardAliasCount = 2,
-            rewardChoiceGroup = choiceGroup,
+            requiredBranchValue = "FreeReward",
         },
     }
 end
@@ -403,6 +399,14 @@ function TestRunPlannerLogicRoutePlan.testRoutePlanKeepsCompositePrebossRewardsO
                     rewardOffers = prebossRewardOffers(),
                     rewards = { "RandomLoot", "ArmorBoost", "SpellDrop", "Boon", "ZeusUpgrade" },
                     rewardLoot = { "DemeterUpgrade" },
+                    rewardPicks = {
+                        {
+                            key = "prebossBranch",
+                            kind = "prebossBranch",
+                            alias = "PrebossBranchKey",
+                            value = "FreeReward",
+                        },
+                    },
                 },
             },
         },
@@ -429,18 +433,14 @@ function TestRunPlannerLogicRoutePlan.testRoutePlanKeepsCompositePrebossRewardsO
     lu.assertNil(biome.plannedByRoomKey.F_PreBoss01)
     lu.assertNil(plan.executionPlan.reservedRoomKeys.F_PreBoss01)
     lu.assertEquals(primaryRewardItem(row).kind, "shop")
-    lu.assertEquals(primaryRewardItem(row).rewardChoiceGroup, {
-        key = "prebossChoice",
-        effectTiming = "sameChoiceUnion",
-    })
+    lu.assertFalse(primaryRewardItem(row).active)
+    lu.assertEquals(primaryRewardItem(row).requiredBranchValue, "Shop")
     lu.assertEquals(row.rewardItems[2].address, "prebossReward")
     lu.assertEquals(row.rewardItems[2].kind, "roomStore")
     lu.assertEquals(row.rewardItems[2].rewards[1], "Boon")
     lu.assertEquals(row.rewardItems[2].rewards[2], "ZeusUpgrade")
-    lu.assertEquals(row.rewardItems[2].rewardChoiceGroup, {
-        key = "prebossChoice",
-        effectTiming = "sameChoiceUnion",
-    })
+    lu.assertTrue(row.rewardItems[2].active)
+    lu.assertEquals(row.rewardItems[2].requiredBranchValue, "FreeReward")
 end
 
 function TestRunPlannerLogicRoutePlan.testRoutePlanIndexesPrebossMarkerWithoutRoomReservation()

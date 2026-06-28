@@ -34,10 +34,6 @@ local function rewardCandidateControl(kind, values, alias)
 end
 
 local function prebossRewardOffers()
-    local choiceGroup = {
-        key = "prebossChoice",
-        effectTiming = "sameChoiceUnion",
-    }
     return {
         {
             address = "prebossShop",
@@ -47,9 +43,9 @@ local function prebossRewardOffers()
             rewardAliasStart = 1,
             rewardAliasCount = 3,
             rewardGeneration = {
-                effectTiming = "afterNextRow",
+                effectTiming = "afterBatch",
             },
-            rewardChoiceGroup = choiceGroup,
+            requiredBranchValue = "Shop",
         },
         {
             address = "prebossReward",
@@ -59,7 +55,7 @@ local function prebossRewardOffers()
             ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
             rewardAliasStart = 4,
             rewardAliasCount = 2,
-            rewardChoiceGroup = choiceGroup,
+            requiredBranchValue = "FreeReward",
         },
     }
 end
@@ -74,7 +70,9 @@ local function prebossRewardRow(rowIndex, rewards)
         rewardKind = "preboss",
         rewardOffers = prebossRewardOffers(),
         rewards = rewards,
-        rewardPicks = {},
+        rewardPicks = {
+            { key = "prebossBranch", kind = "prebossBranch", alias = "PrebossBranchKey", value = "FreeReward" },
+        },
         biomeEncounterDepthCost = 0,
     }
 end
@@ -237,6 +235,7 @@ function TestRunPlannerRewardPlanning.testRewardItemsSplitCompositePrebossReward
             "DemeterUpgrade",
         },
         rewardPicks = {
+            { key = "prebossBranch", kind = "prebossBranch", alias = "PrebossBranchKey", value = "FreeReward" },
             { key = "Boon", kind = "shopOption", alias = "Reward1Key", value = "RandomLoot" },
             { key = "BoonLoot", kind = "boonSource", alias = "Reward1LootKey", value = "DemeterUpgrade" },
             { key = "rewardType", kind = "rewardType", alias = "Reward4Key", value = "Boon" },
@@ -252,10 +251,8 @@ function TestRunPlannerRewardPlanning.testRewardItemsSplitCompositePrebossReward
     lu.assertEquals(row.rewardItems[1].rewards[1], "RandomLoot")
     lu.assertEquals(row.rewardItems[1].rewardLoot[1], "DemeterUpgrade")
     lu.assertEquals(#row.rewardItems[1].rewardPicks, 2)
-    lu.assertEquals(row.rewardItems[1].rewardChoiceGroup, {
-        key = "prebossChoice",
-        effectTiming = "sameChoiceUnion",
-    })
+    lu.assertFalse(row.rewardItems[1].active)
+    lu.assertEquals(row.rewardItems[1].requiredBranchValue, "Shop")
     lu.assertEquals(row.rewardItems[2].address, "prebossReward")
     lu.assertEquals(row.rewardItems[2].rewardKind, "roomStore")
     lu.assertEquals(row.rewardItems[2].rewards, {
@@ -265,10 +262,8 @@ function TestRunPlannerRewardPlanning.testRewardItemsSplitCompositePrebossReward
     lu.assertEquals(row.rewardItems[2].rewardAliasOffset, 3)
     lu.assertEquals(row.rewardItems[2].rewardStore, "RunProgress")
     lu.assertEquals(#row.rewardItems[2].rewardPicks, 2)
-    lu.assertEquals(row.rewardItems[2].rewardChoiceGroup, {
-        key = "prebossChoice",
-        effectTiming = "sameChoiceUnion",
-    })
+    lu.assertTrue(row.rewardItems[2].active)
+    lu.assertEquals(row.rewardItems[2].requiredBranchValue, "FreeReward")
 end
 
 function TestRunPlannerRewardPlanning.testPrebossRewardMarkersUseShiftedAliases()
@@ -288,6 +283,7 @@ function TestRunPlannerRewardPlanning.testPrebossRewardMarkersUseShiftedAliases(
             "ZeusUpgrade",
         },
         rewardPicks = {
+            { key = "prebossBranch", kind = "prebossBranch", alias = "PrebossBranchKey", value = "FreeReward" },
             { key = "rewardType", kind = "rewardType", alias = "Reward4Key", value = "Boon" },
             { key = "boonSource", kind = "boonSource", alias = "Reward5Key", value = "ZeusUpgrade" },
         },
@@ -1066,6 +1062,9 @@ function TestRunPlannerRewardPlanning.testRouteContextMarksCandidatesInvalidBefo
         RouteF = fakeRouteControlSnapshot("RouteF", {
             routeRewardRow(1, "SpellDrop", {
                 rewardKind = "shop",
+                rewardPicks = {
+                    { key = "purchaseState:1", kind = "purchaseState", alias = "Reward1StateKey", value = "Bought" },
+                },
             }),
             routeRewardRow(2, "MaxHealthDrop"),
         }),
@@ -1089,6 +1088,9 @@ function TestRunPlannerRewardPlanning.testRouteContextAllowsCandidatesAfterPendi
         RouteF = fakeRouteControlSnapshot("RouteF", {
             routeRewardRow(1, "SpellDrop", {
                 rewardKind = "shop",
+                rewardPicks = {
+                    { key = "purchaseState:1", kind = "purchaseState", alias = "Reward1StateKey", value = "Bought" },
+                },
             }),
             routeRewardRow(2, "MaxHealthDrop"),
             routeRewardRow(3, "MaxHealthDrop"),
@@ -2122,6 +2124,9 @@ function TestRunPlannerRewardPlanning.testRouteContextInvalidatesSpellAfterPendi
         RouteF = fakeRouteControlSnapshot("RouteF", {
             routeRewardRow(1, "SpellDrop", {
                 rewardKind = "shop",
+                rewardPicks = {
+                    { key = "purchaseState:1", kind = "purchaseState", alias = "Reward1StateKey", value = "Bought" },
+                },
             }),
             routeRewardRow(2, "SpellDrop"),
         }),
@@ -2144,6 +2149,9 @@ function TestRunPlannerRewardPlanning.testRouteContextPromotesShopSpellAfterNext
         RouteF = fakeRouteControlSnapshot("RouteF", {
             routeRewardRow(1, "SpellDrop", {
                 rewardKind = "shop",
+                rewardPicks = {
+                    { key = "purchaseState:1", kind = "purchaseState", alias = "Reward1StateKey", value = "Bought" },
+                },
             }),
             routeRewardRow(2, "MaxHealthDrop"),
             routeRewardRow(3, "TalentDrop"),

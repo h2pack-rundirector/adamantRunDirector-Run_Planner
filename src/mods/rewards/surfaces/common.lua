@@ -5,6 +5,8 @@ local common = {}
 common.storage = storage
 common.MAJOR_VALUE = "Major"
 common.MINOR_VALUE = "Minor"
+common.SHOP_BOUGHT_VALUE = "Bought"
+common.SHOP_SKIPPED_VALUE = "Skipped"
 
 local OPTION_SOURCE_KEYS = {
     "rewardStores",
@@ -133,7 +135,7 @@ function common.dropdown(alias, key, label, values, labels, opts)
     opts = opts or {}
     local controlWidth = opts.controlWidth or 160
     local drawOpts = {
-        label = label,
+        label = opts.drawLabel or label,
         values = values,
         displayValues = labels,
         controlWidth = controlWidth,
@@ -152,6 +154,7 @@ function common.dropdown(alias, key, label, values, labels, opts)
         sourceIndex = opts.sourceIndex,
         rewardAddress = opts.rewardAddress,
         visibleWhen = opts.visibleWhen,
+        defaultValue = opts.defaultValue,
     }
     if label == "Reward" then
         control.genericRewardLabelHiddenDrawOpts = {
@@ -170,6 +173,23 @@ function common.dropdown(alias, key, label, values, labels, opts)
         control.rowIndex = opts.rowIndex
     end
     return control
+end
+
+function common.shopPurchaseCheckbox(alias, index, opts)
+    opts = opts or {}
+    local label = opts.label or "Bought"
+    return {
+        alias = alias,
+        key = "purchaseState:" .. tostring(index),
+        label = label,
+        prefixLabel = opts.prefixLabel,
+        kind = "purchaseState",
+        sourceIndex = index,
+        rewardAddress = opts.rewardAddress,
+        visibleWhen = opts.visibleWhen,
+        defaultValue = common.SHOP_SKIPPED_VALUE,
+        rowIndex = opts.rowIndex,
+    }
 end
 
 return common

@@ -1221,17 +1221,17 @@ function TestRunPlannerRouteUi.testRouteTemplateViewAllocationsStayBounded()
         {
             key = "F",
             template = loadFixedLinearTemplate(),
-            budgets = { rooms = 224, rewards = 128 },
+            budgets = { rooms = 224, rewards = 160 },
         },
         {
             key = "G",
             template = loadFixedLinearTemplate(),
-            budgets = { rooms = 192, rewards = 128 },
+            budgets = { rooms = 192, rewards = 160 },
         },
         {
             key = "H",
             template = loadFieldsCageTemplate(),
-            budgets = { rooms = 96, rewards = 96 },
+            budgets = { rooms = 96, rewards = 128 },
         },
         {
             key = "I",
@@ -1251,12 +1251,12 @@ function TestRunPlannerRouteUi.testRouteTemplateViewAllocationsStayBounded()
         {
             key = "P",
             template = loadFixedLinearTemplate(),
-            budgets = { rooms = 224, rewards = 128 },
+            budgets = { rooms = 224, rewards = 160 },
         },
         {
             key = "Q",
             template = loadFixedLinearTemplate(),
-            budgets = { rooms = 160, rewards = 96 },
+            budgets = { rooms = 160, rewards = 128 },
         },
     }
 

@@ -9,9 +9,25 @@ local SHOP_BOON_SOURCE_VALUES = {
     RandomLoot = true,
     BoostedRandomLoot = true,
 }
+local PREBOSS_BRANCH_VALUES = { "Shop", "FreeReward" }
+local PREBOSS_BRANCH_LABELS = {
+    Shop = "Shop",
+    FreeReward = "Free Reward",
+}
+
+local function branchVisibleWhen(offer)
+    return {
+        alias = storage.PREBOSS_BRANCH_ALIAS,
+        value = offer.requiredBranchValue,
+    }
+end
 
 local function rewardAliasForOffer(offer, offset)
     return storage.rewardAlias(offer.rewardAliasStart + offset - 1)
+end
+
+local function stateAliasForOffer(offer, offset)
+    return storage.stateAlias(offer.rewardAliasStart + offset - 1)
 end
 
 local function lootAliasForOffer(offer, offset)
@@ -53,15 +69,23 @@ end
 local function appendShopControls(rewardDomain, offer, controls, godValues, godLabels)
     local shop = rewardDomain.shops[offer.shopProfile] or {}
     local sourceIndexBySlotKey = {}
+    local visibleWhen = branchVisibleWhen(offer)
 
     for index, slot in ipairs(shop.slots or {}) do
         local rewardAlias = rewardAliasForOffer(offer, index)
         local lootAlias = lootAliasForOffer(offer, index)
+        local stateAlias = stateAliasForOffer(offer, index)
         sourceIndexBySlotKey[slot.key] = index
         local options = slot.options or common.optionsFor(rewardDomain, slot.optionSet)
         local values, labels = common.uniqueNames(options, nil, nil, function(name)
             return common.rewardOptionLabel(rewardDomain, name)
         end)
+        controls[#controls + 1] = common.shopPurchaseCheckbox(stateAlias, index, {
+            prefixLabel = slot.label,
+            rowIndex = index,
+            rewardAddress = offer.address,
+            visibleWhen = visibleWhen,
+        })
         controls[#controls + 1] = common.dropdown(
             rewardAlias,
             slot.key,
@@ -72,12 +96,25 @@ local function appendShopControls(rewardDomain, offer, controls, godValues, godL
                 kind = "shopOption",
                 controlWidth = 170,
                 labelWidth = 130,
+                drawLabel = "",
                 rowIndex = index,
                 rewardAddress = offer.address,
+                visibleWhen = visibleWhen,
             }
         )
         for _, itemName in ipairs(options) do
             if SHOP_BOON_SOURCE_VALUES[itemName] then
+                local lootVisibleWhen = {
+                    all = {
+                        visibleWhen,
+                        {
+                            any = {
+                                { alias = rewardAlias, value = "RandomLoot" },
+                                { alias = rewardAlias, value = "BoostedRandomLoot" },
+                            },
+                        },
+                    },
+                }
                 controls[#controls + 1] = common.dropdown(
                     lootAlias,
                     slot.key .. "Loot",
@@ -90,12 +127,7 @@ local function appendShopControls(rewardDomain, offer, controls, godValues, godL
                         labelWidth = 45,
                         rowIndex = index,
                         rewardAddress = offer.address,
-                        visibleWhen = {
-                            any = {
-                                { alias = rewardAlias, value = "RandomLoot" },
-                                { alias = rewardAlias, value = "BoostedRandomLoot" },
-                            },
-                        },
+                        visibleWhen = lootVisibleWhen,
                     }
                 )
                 break
@@ -109,6 +141,7 @@ end
 local function appendPrebossRewardControls(rewardDomain, offer, controls, godValues, godLabels)
     local rewardAlias = rewardAliasForOffer(offer, 1)
     local lootAlias = rewardAliasForOffer(offer, 2)
+    local visibleWhen = branchVisibleWhen(offer)
     local rewardTypes = common.optionsFor(rewardDomain, offer.rewardStore)
     local eligible = common.rewardTypeLookup(offer.eligibleRewardTypes)
     local ineligible = common.rewardTypeLookup(offer.ineligibleRewardTypes)
@@ -128,6 +161,7 @@ local function appendPrebossRewardControls(rewardDomain, offer, controls, godVal
             labelWidth = 130,
             rowIndex = offer.rewardAliasStart,
             rewardAddress = offer.address,
+            visibleWhen = visibleWhen,
         }
     )
     controls[#controls + 1] = common.dropdown(
@@ -143,9 +177,31 @@ local function appendPrebossRewardControls(rewardDomain, offer, controls, godVal
             rowIndex = offer.rewardAliasStart,
             rewardAddress = offer.address,
             visibleWhen = {
-                alias = rewardAlias,
-                value = "Boon",
+                all = {
+                    visibleWhen,
+                    {
+                        alias = rewardAlias,
+                        value = "Boon",
+                    },
+                },
             },
+        }
+    )
+end
+
+local function appendBranchControls(controls)
+    controls[#controls + 1] = common.dropdown(
+        storage.PREBOSS_BRANCH_ALIAS,
+        "prebossBranch",
+        "Branch",
+        PREBOSS_BRANCH_VALUES,
+        PREBOSS_BRANCH_LABELS,
+        {
+            kind = "prebossBranch",
+            controlWidth = 140,
+            labelWidth = 130,
+            rowIndex = 0,
+            rewardAddress = "prebossBranch",
         }
     )
 end
@@ -155,6 +211,7 @@ function prebossSurface.create(rewardDomain, context)
     local godValues, godLabels = common.godSourceOptions(rewardDomain)
     local shopOffer = offerByKind(context, "shop")
     local rewardOffer = offerByKind(context, "roomStore")
+    appendBranchControls(controls)
     local sourceIndexBySlotKey = appendShopControls(rewardDomain, shopOffer, controls, godValues, godLabels)
     appendPrebossRewardControls(rewardDomain, rewardOffer, controls, godValues, godLabels)
 

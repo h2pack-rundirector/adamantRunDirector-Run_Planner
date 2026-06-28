@@ -5,6 +5,7 @@ local SHOP_BOON_SOURCE_REWARDS = {
     RandomLoot = true,
     BoostedRandomLoot = true,
 }
+local SHOP_BOUGHT_VALUE = "Bought"
 
 local function clearList(list)
     for index = #list, 1, -1 do
@@ -34,6 +35,10 @@ local function pickValueByKind(item, kind)
         end
     end
     return nil
+end
+
+local function purchaseState(item, index)
+    return pickValue(item, "purchaseState:" .. tostring(index))
 end
 
 local function rewardValue(item, index)
@@ -115,7 +120,7 @@ local function effectTimingForItem(item)
 end
 
 function semantics.rewardType(item)
-    if item == nil or item.valid == false then
+    if item == nil or item.valid == false or item.active == false then
         return nil
     end
 
@@ -140,7 +145,7 @@ function semantics.rewardType(item)
 end
 
 function semantics.boonSource(item)
-    if item == nil or item.valid == false then
+    if item == nil or item.valid == false or item.active == false then
         return nil
     end
 
@@ -161,7 +166,7 @@ end
 function semantics.devotionSources(item, out)
     local sources = out or {}
     clearList(sources)
-    if item == nil or item.valid == false then
+    if item == nil or item.valid == false or item.active == false then
         return sources
     end
 
@@ -185,13 +190,15 @@ end
 function semantics.godLootSources(item, out)
     local sources = out or {}
     clearList(sources)
-    if item == nil or item.valid == false then
+    if item == nil or item.valid == false or item.active == false then
         return sources
     end
 
     if item.rewardKind == "shop" then
         for index, rewardType in ipairs(item.rewards or EMPTY_LIST) do
-            appendValue(sources, sourceForShopReward(item, index, rewardType))
+            if purchaseState(item, index) == SHOP_BOUGHT_VALUE then
+                appendValue(sources, sourceForShopReward(item, index, rewardType))
+            end
         end
         return sources
     elseif item.rewardKind == "fieldsCages" then
@@ -214,6 +221,9 @@ function semantics.isConcrete(item)
     if item == nil or item.valid == false then
         return false
     end
+    if item.active == false then
+        return true
+    end
 
     local kind = item.rewardKind
     if kind == "none" or kind == "fixedReward" or kind == "boonSource" or kind == "devotionPair" then
@@ -229,7 +239,12 @@ function semantics.isConcrete(item)
         end
         return false
     elseif kind == "shop" then
-        return rewardValue(item, 1) ~= nil
+        for index = 1, sourceCount(item) do
+            if rewardValue(item, index) == nil or purchaseState(item, index) == nil then
+                return false
+            end
+        end
+        return sourceCount(item) > 0
     elseif kind == "fieldsCages" then
         for index = 1, sourceCount(item) do
             if rewardValue(item, index) == nil then
@@ -242,7 +257,7 @@ function semantics.isConcrete(item)
 end
 
 function semantics.hasBannedValue(item, banned)
-    if item == nil or banned == nil then
+    if item == nil or item.active == false or banned == nil then
         return false
     end
     if item.rewardKind == "boonSource" and banned.Boon then
@@ -487,7 +502,7 @@ local function candidateDevotionSources(item, rewardType)
 end
 
 function semantics.candidateEventForControl(row, item, control, value, rewardAddress)
-    if item == nil or item.valid == false then
+    if item == nil or item.valid == false or item.active == false then
         return nil
     end
 
@@ -543,13 +558,13 @@ end
 
 function semantics.eventsForItem(item, row, out)
     local events = out or {}
-    if item == nil or item.valid == false then
+    if item == nil or item.valid == false or item.active == false then
         return events
     end
 
     if item.rewardKind == "shop" then
         for index, rewardType in ipairs(item.rewards or EMPTY_LIST) do
-            appendEvent(
+            local event = appendEvent(
                 events,
                 row,
                 item,
@@ -561,6 +576,9 @@ function semantics.eventsForItem(item, row, out)
                 nil,
                 index
             )
+            if event ~= nil and purchaseState(item, index) ~= SHOP_BOUGHT_VALUE then
+                event.acquired = false
+            end
         end
         return events
     elseif item.rewardKind == "fieldsCages" then

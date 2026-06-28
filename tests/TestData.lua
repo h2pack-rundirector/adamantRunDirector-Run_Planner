@@ -131,10 +131,6 @@ local function shopReward(shopProfile, opts)
 end
 
 local function prebossReward(shopProfile)
-    local choiceGroup = {
-        key = "prebossChoice",
-        effectTiming = "sameChoiceUnion",
-    }
     return {
         kind = "preboss",
         offers = {
@@ -146,9 +142,9 @@ local function prebossReward(shopProfile)
                 rewardAliasStart = 1,
                 rewardAliasCount = 3,
                 rewardGeneration = {
-                    effectTiming = "afterNextRow",
+                    effectTiming = "afterBatch",
                 },
-                rewardChoiceGroup = choiceGroup,
+                requiredBranchValue = "Shop",
             },
             {
                 address = "prebossReward",
@@ -158,7 +154,7 @@ local function prebossReward(shopProfile)
                 ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
                 rewardAliasStart = 4,
                 rewardAliasCount = 2,
-                rewardChoiceGroup = choiceGroup,
+                requiredBranchValue = "FreeReward",
             },
         },
     }

@@ -6,6 +6,8 @@ local ui = {}
 
 local ROW_HEADER_WIDTH = 80
 local GENERIC_REWARD_HEADER = "Reward"
+local SHOP_BOUGHT_VALUE = "Bought"
+local SHOP_SKIPPED_VALUE = "Skipped"
 
 local function conditionMatches(condition, fields)
     return fields:read(condition.alias) == condition.value
@@ -27,7 +29,7 @@ local function conditionActive(condition, fields)
         return true
     end
     for _, item in ipairs(condition.any or {}) do
-        if conditionMatches(item, fields) then
+        if conditionActive(item, fields) then
             return true
         end
     end
@@ -35,7 +37,7 @@ local function conditionActive(condition, fields)
         return false
     end
     for _, item in ipairs(condition.all or {}) do
-        if not conditionMatches(item, fields) then
+        if not conditionActive(item, fields) then
             return false
         end
     end
@@ -76,6 +78,28 @@ end
 
 local function drawControl(draw, fields, control, opts)
     local field = fields:get(control.alias)
+    if control.kind == "purchaseState" then
+        if control.prefixLabel ~= nil then
+            draw.imgui.AlignTextToFramePadding()
+            draw.imgui.Text(control.prefixLabel)
+            draw.imgui.SameLine()
+        end
+        local current = field:read() == SHOP_BOUGHT_VALUE
+        local label = control.label .. "##"
+            .. tostring(fields.rewardContext and fields.rewardContext.rowIndex or "")
+            .. ":"
+            .. tostring(fields.rewardContext and fields.rewardContext.address or "")
+            .. ":"
+            .. tostring(control.alias)
+        local nextValue, changed = draw.imgui.Checkbox(label, current)
+        if changed then
+            field:write(nextValue == true and SHOP_BOUGHT_VALUE or SHOP_SKIPPED_VALUE)
+            if opts ~= nil and opts.onControlChanged ~= nil then
+                opts.onControlChanged(control, fields, fields.rewardContext)
+            end
+        end
+        return changed
+    end
     local drawOpts = control.drawOpts
     if opts ~= nil
         and opts.hideGenericRewardLabel
@@ -116,6 +140,7 @@ local function drawGroupedControls(draw, surface, fields, opts)
     local startX = imgui.GetCursorPosX()
     local rowIndex = nil
     local drew = false
+    local rowDrew = false
     local changed = false
     local rowHeader = surface.rowHeader
     if opts ~= nil and opts.hideGenericRewardLabel and rowHeader == GENERIC_REWARD_HEADER then
@@ -128,11 +153,12 @@ local function drawGroupedControls(draw, surface, fields, opts)
             if rowIndex ~= control.rowIndex then
                 rowIndex = control.rowIndex
                 drawGroupedRowStart(imgui, startX, not drew and rowHeader or nil, reserveHeaderColumn)
-            else
+            elseif rowDrew then
                 imgui.SameLine()
             end
             changed = drawControl(draw, fields, control, opts) or changed
             drew = true
+            rowDrew = true
         end
     end
     return changed

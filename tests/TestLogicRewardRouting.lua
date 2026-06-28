@@ -13,10 +13,6 @@ local plannedBiomeSnapshot = harness.plannedBiomeSnapshot
 local runtimeForCatalog = harness.runtimeForCatalog
 
 local function prebossRewardOffers()
-    local choiceGroup = {
-        key = "prebossChoice",
-        effectTiming = "sameChoiceUnion",
-    }
     return {
         {
             address = "prebossShop",
@@ -26,9 +22,9 @@ local function prebossRewardOffers()
             rewardAliasStart = 1,
             rewardAliasCount = 3,
             rewardGeneration = {
-                effectTiming = "afterNextRow",
+                effectTiming = "afterBatch",
             },
-            rewardChoiceGroup = choiceGroup,
+            requiredBranchValue = "Shop",
         },
         {
             address = "prebossReward",
@@ -41,7 +37,7 @@ local function prebossRewardOffers()
             },
             rewardAliasStart = 4,
             rewardAliasCount = 2,
-            rewardChoiceGroup = choiceGroup,
+            requiredBranchValue = "FreeReward",
         },
     }
 end
@@ -573,6 +569,12 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingForcesCompositePrebos
                 },
                 rewardPicks = {
                     {
+                        key = "prebossBranch",
+                        kind = "prebossBranch",
+                        alias = "PrebossBranchKey",
+                        value = "FreeReward",
+                    },
+                    {
                         key = "Boon",
                         kind = "shopOption",
                         alias = "Reward1Key",
@@ -661,6 +663,12 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingDoesNotForcePrebossSh
                 },
                 rewardPicks = {
                     {
+                        key = "prebossBranch",
+                        kind = "prebossBranch",
+                        alias = "PrebossBranchKey",
+                        value = "Shop",
+                    },
+                    {
                         key = "Boon",
                         kind = "shopOption",
                         alias = "Reward1Key",
@@ -732,6 +740,12 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingForcesPrebossShopOpti
                         "DemeterUpgrade",
                     },
                     rewardPicks = {
+                        {
+                            key = "prebossBranch",
+                            kind = "prebossBranch",
+                            alias = "PrebossBranchKey",
+                            value = "Shop",
+                        },
                         {
                             key = "Boon",
                             kind = "shopOption",
@@ -833,6 +847,12 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingUsesCurrentRoomForPre
                     },
                     rewardPicks = {
                         {
+                            key = "prebossBranch",
+                            kind = "prebossBranch",
+                            alias = "PrebossBranchKey",
+                            value = "Shop",
+                        },
+                        {
                             key = "Boon",
                             kind = "shopOption",
                             alias = "Reward1Key",
@@ -922,6 +942,12 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingLeavesUnplannedPrebos
                     },
                     rewardPicks = {
                         {
+                            key = "prebossBranch",
+                            kind = "prebossBranch",
+                            alias = "PrebossBranchKey",
+                            value = "Shop",
+                        },
+                        {
                             key = "MajorNonBoon",
                             kind = "shopOption",
                             alias = "Reward2Key",
@@ -991,6 +1017,12 @@ function TestRunPlannerLogicRewardRouting.testRewardRoutingRespectsPrebossShopRe
                         "DemeterUpgrade",
                     },
                     rewardPicks = {
+                        {
+                            key = "prebossBranch",
+                            kind = "prebossBranch",
+                            alias = "PrebossBranchKey",
+                            value = "Shop",
+                        },
                         {
                             key = "Boon",
                             kind = "shopOption",

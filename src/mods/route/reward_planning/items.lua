@@ -11,7 +11,6 @@ local REWARD_SOURCE_FIELDS = {
     "rewardGeneration",
     "rewardConstraints",
     "rewardRowGroup",
-    "rewardChoiceGroup",
     "rewardAliasOffset",
     "rewardOffers",
 }
@@ -108,6 +107,25 @@ local function entriesForRewardAliasRange(entries, minIndex, maxIndex, copyEntry
     return selected
 end
 
+local function entryForAlias(entries, alias, copyEntry)
+    local selected = {}
+    for _, entry in ipairs(entries or EMPTY_LIST) do
+        if entry.alias == alias or entry.controlAlias == alias then
+            selected[#selected + 1] = copyEntry(entry)
+        end
+    end
+    return selected
+end
+
+local function valueForAlias(entries, alias)
+    for _, entry in ipairs(entries or EMPTY_LIST) do
+        if entry.alias == alias then
+            return entry.value
+        end
+    end
+    return nil
+end
+
 local function offerEndIndex(offer)
     return offer.rewardAliasStart + offer.rewardAliasCount - 1
 end
@@ -121,6 +139,21 @@ local function shopRewards(source, offer)
         rewardLoot[index] = source.rewardLoot and source.rewardLoot[sourceIndex] or nil
     end
     return rewards, rewardLoot
+end
+
+local function branchValue(source)
+    return valueForAlias(source.rewardPicks, "PrebossBranchKey")
+end
+
+local function branchSelectionRequirements(source)
+    return entryForAlias(source.selectionRequirements, "PrebossBranchKey", copySelectionRequirement)
+end
+
+local function appendSelectionRequirements(target, source)
+    for _, requirement in ipairs(source or EMPTY_LIST) do
+        target[#target + 1] = requirement
+    end
+    return target
 end
 
 local function roomStoreRewardValues(source, offer)
@@ -155,7 +188,6 @@ local function appendItem(items, row, source, address, sourceKind, sourceIndex)
         rewardGeneration = source.rewardGeneration,
         rewardConstraints = source.rewardConstraints,
         rewardRowGroup = source.rewardRowGroup,
-        rewardChoiceGroup = source.rewardChoiceGroup,
         rewardAliasOffset = source.rewardAliasOffset,
         rewardOffers = source.rewardOffers,
         valid = source.valid,
@@ -164,6 +196,13 @@ end
 
 local function appendPrebossShopItem(items, row, source, offer, sourceKind, sourceIndex)
     local rewards, rewardLoot = shopRewards(source, offer)
+    local selectionRequirements = entriesForRewardAliasRange(
+        source.selectionRequirements,
+        offer.rewardAliasStart,
+        offerEndIndex(offer),
+        copySelectionRequirement
+    )
+    appendSelectionRequirements(selectionRequirements, branchSelectionRequirements(source))
     items[#items + 1] = {
         address = offer.address,
         sourceLabel = offer.label,
@@ -182,16 +221,13 @@ local function appendPrebossShopItem(items, row, source, offer, sourceKind, sour
             offerEndIndex(offer),
             copyRewardPick
         ),
-        selectionRequirements = entriesForRewardAliasRange(
-            source.selectionRequirements,
-            offer.rewardAliasStart,
-            offerEndIndex(offer),
-            copySelectionRequirement
-        ),
+        selectionRequirements = selectionRequirements,
         rewardSourceCount = offer.rewardAliasCount,
         rewardGeneration = offer.rewardGeneration,
         rewardConstraints = source.rewardConstraints,
-        rewardChoiceGroup = offer.rewardChoiceGroup,
+        requiredBranchValue = offer.requiredBranchValue,
+        branchValue = branchValue(source),
+        active = branchValue(source) == offer.requiredBranchValue,
         valid = source.valid,
     }
 end
@@ -220,8 +256,10 @@ local function appendPrebossRoomStoreItem(items, row, source, offer, sourceKind,
             copySelectionRequirement
         ),
         rewardStore = offer.rewardStore,
-        rewardChoiceGroup = offer.rewardChoiceGroup,
         rewardAliasOffset = offer.rewardAliasStart - 1,
+        requiredBranchValue = offer.requiredBranchValue,
+        branchValue = branchValue(source),
+        active = branchValue(source) == offer.requiredBranchValue,
         valid = source.valid,
     }
 end

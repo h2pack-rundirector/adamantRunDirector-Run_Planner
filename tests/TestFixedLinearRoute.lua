@@ -122,7 +122,10 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(storage[2].row[6].key, "Reward6Key")
     lu.assertEquals(storage[2].row[7].key, "Reward1LootKey")
     lu.assertEquals(storage[2].row[12].key, "Reward6LootKey")
-    lu.assertEquals(storage[2].row[13].key, "SiblingRewardClassKey")
+    lu.assertEquals(storage[2].row[13].key, "Reward1StateKey")
+    lu.assertEquals(storage[2].row[18].key, "Reward6StateKey")
+    lu.assertEquals(storage[2].row[19].key, "PrebossBranchKey")
+    lu.assertEquals(storage[2].row[20].key, "SiblingRewardClassKey")
 
     instance = template.prepare({
         name = "RouteG",
@@ -131,8 +134,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     storage = template.storage(instance)
     lu.assertEquals(storage[1].row[4].key, "SiblingStructureKey")
     lu.assertEquals(storage[1].row[5].key, "SiblingStructure2Key")
-    lu.assertEquals(storage[2].row[13].key, "SiblingRewardClassKey")
-    lu.assertEquals(storage[2].row[14].key, "Sibling2RewardClassKey")
+    lu.assertEquals(storage[2].row[20].key, "SiblingRewardClassKey")
+    lu.assertEquals(storage[2].row[21].key, "Sibling2RewardClassKey")
 
     instance = template.prepare({
         name = "RouteQ",
@@ -141,7 +144,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     storage = template.storage(instance)
     lu.assertEquals(#storage[1].row, 3)
     lu.assertEquals(storage[1].row[3].key, "VariantKey")
-    lu.assertEquals(#storage[2].row, 12)
+    lu.assertEquals(#storage[2].row, 19)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingRewardBranchPlumbingFollowsTopologyBranch()
@@ -1223,7 +1226,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeSnapshotsPrebossRo
     lu.assertEquals(snapshot.rows[8].role.label, "Preboss Shop")
     lu.assertTrue(snapshot.rows[8].valid)
     lu.assertEquals(primaryRewardItem(snapshot.rows[8]).rewardKind, "shop")
-    lu.assertEquals(#primaryRewardItem(snapshot.rows[8]).rewardPicks, 0)
+    lu.assertEquals(#primaryRewardItem(snapshot.rows[8]).rewardPicks, 6)
 end
 
 function TestRunPlannerFixedLinearRoute.testSingleRoomRolesDefaultToConcreteOption()

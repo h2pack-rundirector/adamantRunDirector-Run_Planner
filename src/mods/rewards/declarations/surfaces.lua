@@ -7,13 +7,6 @@ local DEFAULT_SHOP_REWARD_GENERATION = {
     effectTiming = "afterNextRow",
 }
 
-local function prebossChoiceGroup()
-    return {
-        key = "prebossChoice",
-        effectTiming = "sameChoiceUnion",
-    }
-end
-
 local function copyList(items)
     local copy = {}
     for index, item in ipairs(items or {}) do
@@ -129,7 +122,7 @@ function rewards.preboss(shopProfile, rewardStore, opts)
         rewardStore = rewardStore,
         rewardAliasStart = 4,
         rewardAliasCount = 2,
-        rewardChoiceGroup = prebossChoiceGroup(),
+        requiredBranchValue = "FreeReward",
     }
     copyRewardFilters(roomOffer, opts, "", "")
 
@@ -143,8 +136,10 @@ function rewards.preboss(shopProfile, rewardStore, opts)
                 shopProfile = shopProfile,
                 rewardAliasStart = 1,
                 rewardAliasCount = 3,
-                rewardGeneration = DEFAULT_SHOP_REWARD_GENERATION,
-                rewardChoiceGroup = prebossChoiceGroup(),
+                rewardGeneration = {
+                    effectTiming = "afterBatch",
+                },
+                requiredBranchValue = "Shop",
             },
             roomOffer,
         },
