@@ -3,9 +3,9 @@ local common = deps.common
 local timeline = deps.timeline
 local rowEngine = deps.rowEngine
 
-local VANILLA_SIDE_ROOM_MODE = ""
 local ENABLED_SIDE_ROOM_MODE = "Enabled"
 local DISABLED_SIDE_ROOM_MODE = "Disabled"
+local SIDE_ROOM_ENTERED_ALIAS = "Entered"
 local SIDE_ROOM_ENCOUNTER_CLASS_ALIAS = "EncounterClassKey"
 local EMPTY_LIST = {}
 
@@ -130,7 +130,6 @@ local function sideRoomModes(instance)
         return modes
     end
     return {
-        { key = VANILLA_SIDE_ROOM_MODE, label = "Vanilla" },
         { key = DISABLED_SIDE_ROOM_MODE, label = "Disabled" },
         { key = ENABLED_SIDE_ROOM_MODE, label = "Enabled" },
     }
@@ -181,8 +180,13 @@ local function buildSideRoomRows()
         {
             key = "ModeKey",
             type = "string",
-            default = VANILLA_SIDE_ROOM_MODE,
+            default = DISABLED_SIDE_ROOM_MODE,
             maxLen = 16,
+        },
+        {
+            key = SIDE_ROOM_ENTERED_ALIAS,
+            type = "bool",
+            default = false,
         },
         {
             key = SIDE_ROOM_ENCOUNTER_CLASS_ALIAS,
@@ -311,6 +315,10 @@ function data.sideRoomModeAlias()
     return "ModeKey"
 end
 
+function data.sideRoomEnteredAlias()
+    return SIDE_ROOM_ENTERED_ALIAS
+end
+
 function data.sideRoomEncounterClassAlias()
     return SIDE_ROOM_ENCOUNTER_CLASS_ALIAS
 end
@@ -329,6 +337,10 @@ end
 
 function data.sideRoomEnabledMode()
     return ENABLED_SIDE_ROOM_MODE
+end
+
+function data.sideRoomDisabledMode()
+    return DISABLED_SIDE_ROOM_MODE
 end
 
 function data.sideRoomEncounterClassValues(instance, sideDoor)

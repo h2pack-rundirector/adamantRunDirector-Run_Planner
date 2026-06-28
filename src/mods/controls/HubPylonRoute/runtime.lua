@@ -130,13 +130,11 @@ local function rebuildSideRoomProbability(control, fields, instance)
     end
 
     for rowIndex = 1, control:rowCount() do
-        local slot = control:slot(rowIndex)
         for sideIndex = 1, data.sideDoorCountForRow(instance, control:routeRows(), rowIndex) do
             local sideRowIndex = data.sideRoomRowIndex(instance, rowIndex, sideIndex)
             sideRoomProbability.countSideDoor(
                 summary,
-                sideRowIndex and fields.SideRooms:read(sideRowIndex, data.sideRoomModeAlias()) or "",
-                slot and slot.routeOrdinal or 0
+                sideRowIndex and fields.SideRooms:read(sideRowIndex, data.sideRoomModeAlias()) or ""
             )
         end
     end
@@ -166,20 +164,20 @@ local function readSideRewardLoot(sideRewardRows, sideRowIndex)
     return loot
 end
 
-local function sideRoomMode(sideRows, sideRowIndex)
-    local mode = sideRows:read(sideRowIndex, data.sideRoomModeAlias()) or ""
-    if mode == "" then
-        return "", "Vanilla"
-    end
-    return mode, mode
-end
-
 local function sideRoomEncounterClass(instance, sideRows, sideRowIndex, sideDoor, enabled)
     local storedKey, resolvedKey = data.resolveSideRoomEncounterClass(instance, sideRows, sideRowIndex, sideDoor)
     if not enabled then
         return storedKey, nil
     end
     return storedKey, resolvedKey
+end
+
+local function sideRoomMode(sideRows, sideRowIndex)
+    local mode = sideRows:read(sideRowIndex, data.sideRoomModeAlias()) or ""
+    if mode == "" then
+        return "", data.sideRoomDisabledMode()
+    end
+    return mode, mode
 end
 
 local function sideRewardPicks(surface, sideRewardRows, sideRowIndex)
@@ -200,12 +198,13 @@ end
 local function sideRoomSnapshot(instance, fields, sideRowIndex, sideIndex, sideDoor, rewardsConfigured)
     local storedMode, mode = sideRoomMode(fields.SideRooms, sideRowIndex)
     local enabled = storedMode == data.sideRoomEnabledMode()
+    local entered = enabled and fields.SideRooms:read(sideRowIndex, data.sideRoomEnteredAlias()) == true
     local storedEncounterClassKey, encounterClassKey =
-        sideRoomEncounterClass(instance, fields.SideRooms, sideRowIndex, sideDoor, enabled)
-    local surface = rewardsConfigured and enabled and rewardSurfaceForContext(sideDoor.reward) or nil
+        sideRoomEncounterClass(instance, fields.SideRooms, sideRowIndex, sideDoor, entered)
+    local surface = rewardsConfigured and entered and rewardSurfaceForContext(sideDoor.reward) or nil
     local rewardPicks = EMPTY_LIST
     local selectionRequirements = EMPTY_LIST
-    if rewardsConfigured and enabled then
+    if rewardsConfigured and entered then
         rewardPicks, selectionRequirements = sideRewardPicks(surface, fields.SideRewards, sideRowIndex)
     end
     return {
@@ -214,6 +213,7 @@ local function sideRoomSnapshot(instance, fields, sideRowIndex, sideIndex, sideD
         roomKey = sideDoor.roomKey,
         modeKey = mode,
         storedModeKey = storedMode,
+        entered = entered,
         enabled = enabled,
         encounterClassKey = encounterClassKey,
         storedEncounterClassKey = storedEncounterClassKey,

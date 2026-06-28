@@ -89,12 +89,10 @@ function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
         chanceAfterMinimum = 0.3,
     })
     lu.assertEquals(instance.sideRoomModeValues, {
-        "",
         "Disabled",
         "Enabled",
     })
     lu.assertEquals(instance.sideRoomModeLabels, {
-        [""] = "Vanilla",
         Disabled = "Disabled",
         Enabled = "Enabled",
     })
@@ -136,9 +134,12 @@ function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
     lu.assertEquals(storage[3].defaultRows, 18)
     lu.assertEquals(storage[3].maxRows, 18)
     lu.assertEquals(storage[3].row[1].key, "ModeKey")
-    lu.assertEquals(storage[3].row[1].default, "")
-    lu.assertEquals(storage[3].row[2].key, "EncounterClassKey")
-    lu.assertEquals(storage[3].row[2].default, "")
+    lu.assertEquals(storage[3].row[1].default, "Disabled")
+    lu.assertEquals(storage[3].row[2].key, "Entered")
+    lu.assertEquals(storage[3].row[2].type, "bool")
+    lu.assertEquals(storage[3].row[2].default, false)
+    lu.assertEquals(storage[3].row[3].key, "EncounterClassKey")
+    lu.assertEquals(storage[3].row[3].default, "")
     lu.assertEquals(storage[4].key, "SideRewards")
     lu.assertEquals(storage[4].minRows, 18)
     lu.assertEquals(storage[4].row[1].key, "Reward1Key")
@@ -219,8 +220,8 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
             },
             {},
         }, {
-            { ModeKey = "Enabled" },
-            { ModeKey = "Disabled" },
+            { ModeKey = "Enabled", Entered = true },
+            { ModeKey = "Enabled", Entered = false },
             {},
         }, {
             { Reward1Key = "MaxHealthDrop" },
@@ -292,6 +293,7 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
     lu.assertEquals(snapshot.rows[4].sideRooms[1].doorId, 558352)
     lu.assertEquals(snapshot.rows[4].sideRooms[1].modeKey, "Enabled")
     lu.assertEquals(snapshot.rows[4].sideRooms[1].storedModeKey, "Enabled")
+    lu.assertTrue(snapshot.rows[4].sideRooms[1].entered)
     lu.assertTrue(snapshot.rows[4].sideRooms[1].enabled)
     lu.assertEquals(snapshot.rows[4].sideRooms[1].encounterClassKey, "Hard")
     lu.assertEquals(snapshot.rows[4].sideRooms[1].storedEncounterClassKey, "")
@@ -305,17 +307,19 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
         value = "MaxHealthDrop",
     })
     lu.assertEquals(snapshot.rows[4].sideRooms[2].roomKey, "N_Sub10")
-    lu.assertEquals(snapshot.rows[4].sideRooms[2].modeKey, "Disabled")
-    lu.assertEquals(snapshot.rows[4].sideRooms[2].storedModeKey, "Disabled")
-    lu.assertFalse(snapshot.rows[4].sideRooms[2].enabled)
+    lu.assertEquals(snapshot.rows[4].sideRooms[2].modeKey, "Enabled")
+    lu.assertEquals(snapshot.rows[4].sideRooms[2].storedModeKey, "Enabled")
+    lu.assertFalse(snapshot.rows[4].sideRooms[2].entered)
+    lu.assertTrue(snapshot.rows[4].sideRooms[2].enabled)
     lu.assertNil(snapshot.rows[4].sideRooms[2].encounterClassKey)
     lu.assertEquals(snapshot.rows[4].sideRooms[2].storedEncounterClassKey, "")
     lu.assertEquals(snapshot.rows[4].sideRooms[2].rewardStore, "SubRoomRewardsHard")
     lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 2).rewardKind, "none")
     lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 2).rewardPicks, {})
     lu.assertEquals(snapshot.rows[4].sideRooms[3].roomKey, "N_Sub07")
-    lu.assertEquals(snapshot.rows[4].sideRooms[3].modeKey, "Vanilla")
+    lu.assertEquals(snapshot.rows[4].sideRooms[3].modeKey, "Disabled")
     lu.assertEquals(snapshot.rows[4].sideRooms[3].storedModeKey, "")
+    lu.assertFalse(snapshot.rows[4].sideRooms[3].entered)
     lu.assertFalse(snapshot.rows[4].sideRooms[3].enabled)
     lu.assertNil(snapshot.rows[4].sideRooms[3].encounterClassKey)
     lu.assertEquals(snapshot.rows[4].sideRooms[3].storedEncounterClassKey, "")
@@ -368,22 +372,21 @@ function TestRunPlannerHubPylonRoute.testHubPylonSideRoomProbabilitySummary()
                 OptionKey = "N_Combat06",
             },
         }, {
-            { ModeKey = "Enabled" },
-            { ModeKey = "Disabled" },
+            { ModeKey = "Enabled", Entered = true },
+            { ModeKey = "Enabled", Entered = false },
             {},
             {},
-            { ModeKey = "Enabled" },
+            { ModeKey = "Enabled", Entered = true },
         }), instance)
     local summary = control:sideRoomProbabilitySummary()
 
     lu.assertEquals(summary.totalCount, 5)
-    lu.assertEquals(summary.enabledCount, 2)
-    lu.assertEquals(summary.disabledCount, 1)
-    lu.assertEquals(summary.vanillaCount, 2)
-    lu.assertAlmostEquals(summary.expectedOpenCount, 2.6, 0.001)
+    lu.assertEquals(summary.enabledCount, 3)
+    lu.assertEquals(summary.disabledCount, 2)
+    lu.assertAlmostEquals(summary.expectedOpenCount, 3, 0.001)
     lu.assertStrContains(summary.text, "Vanilla Side Rooms: min 0.5 per pylon, then 30.0% chance")
-    lu.assertStrContains(summary.text, "Current: 2 enabled / 1 disabled / 2 vanilla")
-    lu.assertStrContains(summary.text, "expected ~2.6 open")
+    lu.assertStrContains(summary.text, "Planned: 3 enabled / 2 disabled")
+    lu.assertStrContains(summary.text, "expected ~3.0 open")
 end
 
 function TestRunPlannerHubPylonRoute.testHubPylonPolicyAllowsDuplicateBoonSources()

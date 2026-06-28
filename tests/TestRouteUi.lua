@@ -126,6 +126,24 @@ local function fakeSnapshotControl(snapshot)
     }
 end
 
+local function createEnteredSideRoomFixture(catalog)
+    local template = loadHubPylonTemplate()
+    local control, instance = createUiControl(template, catalog.lookup.N, "RouteN")
+    local fields = control:fields()
+
+    fields.Rooms:get(4, "RoleKey"):write("Combat")
+    fields.Rooms:get(4, "OptionKey"):write("N_Combat12")
+
+    fields.SideRooms:get(1, "ModeKey"):write("Enabled")
+    fields.SideRooms:get(1, "Entered"):write(true)
+    fields.SideRewards:get(1, "Reward1Key"):write("MaxHealthDrop")
+
+    fields.SideRooms:get(2, "ModeKey"):write("Enabled")
+    fields.SideRooms:get(2, "Entered"):write(false)
+
+    return template, control, instance
+end
+
 local function validRouteSnapshot(controlName)
     return {
         controlName = controlName,
@@ -1353,6 +1371,27 @@ function TestRunPlannerRouteUi.testRouteTemplateViewAllocationsStayBounded()
     )
 end
 
+function TestRunPlannerRouteUi.testHubPylonEnteredSideRoomDrawAllocationsStayBounded()
+    local catalog = loadCatalog()
+    local draw = noOpDraw()
+    local iterations = 100
+    local template, control, instance = createEnteredSideRoomFixture(catalog)
+
+    local allocatedKb = measureAllocKb(iterations, function()
+        template.views.sideRooms(draw, control, instance)
+    end)
+
+    lu.assertTrue(
+        allocatedKb < 128,
+        string.format(
+            "RouteN entered side-room traversal allocated %.1f KB across %d no-op draws; budget %.1f KB",
+            allocatedKb,
+            iterations,
+            128
+        )
+    )
+end
+
 function TestRunPlannerRouteUi.testRouteTemplateViewCpuStaysBounded()
     local catalog = loadCatalog()
     local draw = noOpDraw()
@@ -1489,6 +1528,27 @@ function TestRunPlannerRouteUi.testRouteTemplateViewCpuStaysBounded()
             elapsedMs,
             iterations,
             150
+        )
+    )
+end
+
+function TestRunPlannerRouteUi.testHubPylonEnteredSideRoomDrawCpuStaysBounded()
+    local catalog = loadCatalog()
+    local draw = noOpDraw()
+    local iterations = 1000
+    local template, control, instance = createEnteredSideRoomFixture(catalog)
+
+    local elapsedMs = measureCpuMs(iterations, function()
+        template.views.sideRooms(draw, control, instance)
+    end)
+
+    lu.assertTrue(
+        elapsedMs < 350,
+        string.format(
+            "RouteN entered side-room traversal took %.1f ms across %d no-op draws; budget %.1f ms",
+            elapsedMs,
+            iterations,
+            350
         )
     )
 end

@@ -1160,9 +1160,8 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     lu.assertEquals(ephyra.slotLayout.fixedAfterHub[1].reward, shopReward("WorldShop"))
 
     lu.assertEquals(ephyra.hub.roomKey, "N_Hub")
-    lu.assertEquals(ephyra.hub.sideRoomAvailability.default, "")
+    lu.assertEquals(ephyra.hub.sideRoomAvailability.default, "Disabled")
     lu.assertEquals(ephyra.hub.sideRoomAvailability.modes, {
-        { key = "", label = "Vanilla" },
         { key = "Disabled", label = "Disabled" },
         { key = "Enabled", label = "Enabled" },
     })
@@ -1235,7 +1234,7 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     lu.assertEquals(ephyra.roomTopology.hub.minibossAvailability.mode, "oneOf")
     lu.assertEquals(ephyra.roomTopology.hub.minibossAvailability.rooms, { "N_MiniBoss01", "N_MiniBoss02" })
     lu.assertEquals(ephyra.hub.sideRoomAvailability.identity, "parentCombatRoomAndDoorId")
-    lu.assertEquals(ephyra.hub.sideRoomAvailability.default, "")
+    lu.assertEquals(ephyra.hub.sideRoomAvailability.default, "Disabled")
 end
 
 function TestRunPlannerData.testFieldsLayoutModelsCageRoute()

@@ -898,10 +898,11 @@ except for rooms reserved for future planned picks.
 
 Side-room identity is `parent combat room + door id`, not only `N_SubXX`,
 because the same subroom template can appear behind multiple parent rooms.
-Side-room controls should default to `Vanilla`; later UI can opt into `Force`
-or `Block` per side door and optionally force the side-room reward. The reward
-store comes from the subroom declaration: most use `SubRoomRewards`, while
-`N_Sub09`, `N_Sub10`, `N_Sub11`, and `N_Sub14` use `SubRoomRewardsHard`.
+Side-room controls default to `Disabled`; `Enabled` means the side door is open.
+An `Entered` checkbox records whether the player takes that side room and may
+configure its reward when rewards are configured. The reward store comes from
+the subroom declaration: most use `SubRoomRewards`, while `N_Sub09`, `N_Sub10`,
+`N_Sub11`, and `N_Sub14` use `SubRoomRewardsHard`.
 
 ## Implementation Phases
 

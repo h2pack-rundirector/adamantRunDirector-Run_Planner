@@ -82,7 +82,7 @@ end
 
 local function featureMatchesSideRoom(context, feature, biomeKey, sideRoom, sideRoomHistoryDepth)
     return sideRoom ~= nil
-        and sideRoom.enabled == true
+        and sideRoom.entered == true
         and sideRoom.roomKey ~= nil
         and feature.biomes
         and feature.biomes[biomeKey]

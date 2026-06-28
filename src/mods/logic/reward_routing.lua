@@ -285,7 +285,7 @@ local function sideRewardAddress(row, room, args)
     local doorId = args and args.Door and args.Door.ObjectId or nil
     local sideRoomKey = roomName(room)
     for _, sideRoom in ipairs(row and row.sideRooms or EMPTY_LIST) do
-        if sideRoom.enabled == true
+        if sideRoom.entered == true
             and sideRoom.doorId == doorId
             and sideRoom.roomKey == sideRoomKey
         then

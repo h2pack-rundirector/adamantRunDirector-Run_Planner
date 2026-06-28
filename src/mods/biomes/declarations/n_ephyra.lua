@@ -101,9 +101,8 @@ return function(deps)
                     minPerPylon = 0.5,
                     chanceAfterMinimum = 0.3,
                 },
-                default = "",
+                default = "Disabled",
                 modes = {
-                    { key = "", label = "Vanilla" },
                     { key = "Disabled", label = "Disabled" },
                     { key = "Enabled", label = "Enabled" },
                 },

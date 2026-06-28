@@ -25,6 +25,7 @@ local function resetSideRoomDetails(fields, sideRowIndex)
         return
     end
     fields.SideRooms:reset(sideRowIndex, data.sideRoomModeAlias())
+    fields.SideRooms:reset(sideRowIndex, data.sideRoomEnteredAlias())
     fields.SideRooms:reset(sideRowIndex, data.sideRoomEncounterClassAlias())
     resetSideRewardDetails(fields, sideRowIndex)
 end

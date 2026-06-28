@@ -859,6 +859,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesCanTargetEnabledSideRooms(
                                             {
                                                 sideIndex = 1,
                                                 roomKey = "N_Sub01",
+                                                entered = true,
                                                 enabled = true,
                                                 features = { surfaceShop = true },
                                             },
@@ -875,6 +876,7 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesCanTargetEnabledSideRooms(
                                             {
                                                 sideIndex = 1,
                                                 roomKey = "N_Sub03",
+                                                entered = true,
                                                 enabled = true,
                                                 features = { surfaceShop = true },
                                             },

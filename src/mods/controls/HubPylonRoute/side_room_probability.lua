@@ -1,8 +1,6 @@
 local sideRoomProbability = {}
 
-local VANILLA_MODE = ""
 local ENABLED_MODE = "Enabled"
-local DISABLED_MODE = "Disabled"
 
 local function percent(value)
     return string.format("%.1f%%", (value or 0) * 100)
@@ -31,7 +29,6 @@ function sideRoomProbability.createSummary(instance)
         minPerPylon = policy.minPerPylon or 0,
         chanceAfterMinimum = policy.chanceAfterMinimum or 0,
         totalCount = 0,
-        vanillaCount = 0,
         enabledCount = 0,
         disabledCount = 0,
         expectedOpenCount = 0,
@@ -39,13 +36,12 @@ function sideRoomProbability.createSummary(instance)
     }
 end
 
-function sideRoomProbability.countSideDoor(summary, mode, pylonOrdinal)
+function sideRoomProbability.countSideDoor(summary, mode)
     if summary == nil then
         return
     end
 
     summary.totalCount = summary.totalCount + 1
-    mode = mode or VANILLA_MODE
 
     if mode == ENABLED_MODE then
         summary.enabledCount = summary.enabledCount + 1
@@ -54,19 +50,7 @@ function sideRoomProbability.countSideDoor(summary, mode, pylonOrdinal)
         return
     end
 
-    if mode == DISABLED_MODE then
-        summary.disabledCount = summary.disabledCount + 1
-        return
-    end
-
-    summary.vanillaCount = summary.vanillaCount + 1
-    local minOpenCount = (pylonOrdinal or 0) * summary.minPerPylon
-    local openChance = summary.chanceAfterMinimum
-    if summary.expectedSpawnedCount < minOpenCount then
-        openChance = 1
-    end
-    summary.expectedOpenCount = summary.expectedOpenCount + openChance
-    summary.expectedSpawnedCount = summary.expectedSpawnedCount + openChance
+    summary.disabledCount = summary.disabledCount + 1
 end
 
 function sideRoomProbability.finish(summary)
@@ -78,13 +62,11 @@ function sideRoomProbability.finish(summary)
         .. oneDecimal(summary.minPerPylon)
         .. " per pylon, then "
         .. percent(summary.chanceAfterMinimum)
-        .. " chance    Current: "
+        .. " chance    Planned: "
         .. tostring(summary.enabledCount)
         .. " enabled / "
         .. tostring(summary.disabledCount)
-        .. " disabled / "
-        .. tostring(summary.vanillaCount)
-        .. " vanilla, expected ~"
+        .. " disabled, expected ~"
         .. oneDecimal(summary.expectedOpenCount)
         .. " open"
     return summary

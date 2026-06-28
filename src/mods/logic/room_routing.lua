@@ -5,9 +5,6 @@ local game = deps.game or {}
 
 local roomRouting = {}
 local startingBiome
-local SIDE_ROOM_ENABLED = "Enabled"
-local SIDE_ROOM_DISABLED = "Disabled"
-local SIDE_ROOM_VANILLA = "Vanilla"
 
 local FIXED_DEPTH_ROOM_BIOMES = {
     F = true,
@@ -622,15 +619,14 @@ end
 
 function roomRouting.checkNSubRoomDoorUnavailable(runtime, base, source, args)
     local sideRoom, planned, currentRun = plannedSideRoomForDoor(runtime, source)
-    local mode = sideRoom and sideRoom.modeKey or nil
-    if sideRoom == nil or mode == nil or mode == SIDE_ROOM_VANILLA then
+    if sideRoom == nil then
         return base(source, args)
     end
 
     local currentRoom = currentRun and currentRun.CurrentRoom or nil
     currentRoom.UnavailableDoors = currentRoom.UnavailableDoors or {}
 
-    if mode == SIDE_ROOM_DISABLED then
+    if sideRoom.enabled ~= true then
         currentRoom.UnavailableDoors[source.ObjectId] = true
         debugLog("side door " .. tostring(roomName(currentRoom))
             .. " door=" .. tostring(source.ObjectId)
@@ -639,7 +635,7 @@ function roomRouting.checkNSubRoomDoorUnavailable(runtime, base, source, args)
         return nil
     end
 
-    if mode == SIDE_ROOM_ENABLED then
+    if sideRoom.enabled == true then
         local beforeSpawned = math.floor(tonumber(currentRun.NumSubRoomsSpawned) or 0)
         local result = base(source, args)
         if not isDoorClosedForRun(currentRun, source)

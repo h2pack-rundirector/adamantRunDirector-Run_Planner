@@ -639,6 +639,7 @@ function TestRunPlannerLogicRoomRouting.testRoomRoutingDisablesPlannedEphyraSide
                         doorId = 558352,
                         roomKey = "N_Sub09",
                         modeKey = "Disabled",
+                        entered = false,
                         enabled = false,
                     },
                 },
@@ -701,6 +702,7 @@ function TestRunPlannerLogicRoomRouting.testRoomRoutingEnablesPlannedEphyraSideD
                         doorId = 558352,
                         roomKey = "N_Sub09",
                         modeKey = "Enabled",
+                        entered = false,
                         enabled = true,
                     },
                 },
@@ -739,7 +741,7 @@ function TestRunPlannerLogicRoomRouting.testRoomRoutingEnablesPlannedEphyraSideD
     lu.assertTrue(logsContain(logs, "side door N_Combat12 door=558352 enabled planned=N_Sub09 row=4"))
 end
 
-function TestRunPlannerLogicRoomRouting.testRoomRoutingLeavesVanillaEphyraSideDoorToBase()
+function TestRunPlannerLogicRoomRouting.testRoomRoutingTreatsBlankEphyraSideDoorAsDisabled()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
     local roomRouting = loadRoomRouting(routePlan)
@@ -761,7 +763,8 @@ function TestRunPlannerLogicRoomRouting.testRoomRoutingLeavesVanillaEphyraSideDo
                         sideIndex = 1,
                         doorId = 558352,
                         roomKey = "N_Sub09",
-                        modeKey = "Vanilla",
+                        modeKey = "Disabled",
+                        entered = false,
                         enabled = false,
                     },
                 },
@@ -781,18 +784,14 @@ function TestRunPlannerLogicRoomRouting.testRoomRoutingLeavesVanillaEphyraSideDo
 
     local baseCalled = false
     withCurrentRun(currentRun, function()
-        roomRouting.checkNSubRoomDoorUnavailable(runtime, function(source)
+        roomRouting.checkNSubRoomDoorUnavailable(runtime, function()
             baseCalled = true
-            currentRun.CurrentRoom.UnavailableDoors = {
-                [source.ObjectId] = true,
-            }
-            return "base"
         end, {
             ObjectId = 558352,
         }, {})
     end)
 
-    lu.assertTrue(baseCalled)
+    lu.assertFalse(baseCalled)
     lu.assertTrue(currentRun.CurrentRoom.UnavailableDoors[558352])
 end
 

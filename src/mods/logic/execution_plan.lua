@@ -131,6 +131,8 @@ local function compactSideRoom(entry)
         roomKey = entry.roomKey,
         doorId = entry.doorId,
         modeKey = entry.modeKey,
+        storedModeKey = entry.storedModeKey,
+        entered = entry.entered,
         enabled = entry.enabled,
         rewardStore = entry.rewardStore,
         features = copyMap(entry.features),
