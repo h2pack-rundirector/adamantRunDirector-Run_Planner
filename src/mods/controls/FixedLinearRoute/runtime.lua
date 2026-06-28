@@ -287,6 +287,67 @@ function runtime.create(fields, instance)
         return rewardItems.attach(row)
     end
 
+    function control:selectedRowSnapshot(rowIndex)
+        local slot = self:slot(rowIndex)
+        if slot == nil then
+            return nil
+        end
+
+        local roleKey = fields.Rooms:read(rowIndex, "RoleKey") or ""
+        local optionKey = fields.Rooms:read(rowIndex, "OptionKey") or ""
+        if slot.roleKey ~= nil then
+            roleKey = slot.roleKey
+            local _, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
+            optionKey = option and option.key or optionKey
+        end
+
+        local siblings = {}
+        for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
+            siblings[siblingIndex] = {
+                structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance, siblingIndex)) or "",
+            }
+        end
+
+        local siblingRewards = {}
+        for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
+            siblingRewards[siblingIndex] = {
+                rewardClassKey = fields.Rewards:read(rowIndex, data.siblingRewardClassAlias(instance, siblingIndex)) or "",
+            }
+        end
+
+        return {
+            rowIndex = rowIndex,
+            roleKey = roleKey,
+            optionKey = optionKey,
+            variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
+            topology = {
+                siblings = siblings,
+            },
+            rewards = {
+                row = {
+                    values = rewardSystem.readRewards(fields.Rewards, rowIndex),
+                    loot = rewardSystem.readRewardLoot(fields.Rewards, rowIndex),
+                },
+                sibling = siblingRewards,
+            },
+        }
+    end
+
+    function control:buildSelectedRowsSnapshot()
+        local rows = {}
+        for rowIndex = 1, self:rowCount() do
+            rows[#rows + 1] = self:selectedRowSnapshot(rowIndex)
+        end
+        return {
+            schema = "selectedRows.v1",
+            routeKey = instance.routeKey,
+            controlName = instance.name,
+            biomeKey = instance.biomeKey,
+            adapter = instance.biome.adapter,
+            rows = rows,
+        }
+    end
+
     function control:buildSnapshot()
         local rows = {}
         local invalidRows = {}
@@ -322,6 +383,8 @@ function runtime.create(fields, instance)
     function control:read(path, ...)
         if path == "snapshot" then
             return self:buildSnapshot()
+        elseif path == "selectedRowsSnapshot" then
+            return self:buildSelectedRowsSnapshot()
         elseif path == "row" then
             return self:rowSnapshot(...)
         end

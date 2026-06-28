@@ -4,6 +4,7 @@ local function copyPositionFields(target, source)
     target.routeKey = source and source.routeKey or nil
     target.controlName = source and source.controlName or nil
     target.biomeKey = source and source.biomeKey or nil
+    target.routeBiomeIndex = source and source.routeBiomeIndex or nil
     target.rowIndex = source and source.rowIndex or nil
     target.routeOrdinal = source and source.routeOrdinal or nil
     target.roomHistoryOrdinal = source and source.roomHistoryOrdinal or nil

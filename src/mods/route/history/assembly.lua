@@ -9,11 +9,16 @@ function historyAssembly.create()
         events = events,
         history = history,
     })
+    local adapters = {
+        fixedLinear = import("mods/route/history/adapters/fixed_linear.lua"),
+    }
     local builder = import("mods/route/history/builder.lua", nil, {
         history = history,
+        adapters = adapters,
     })
 
     return {
+        adapters = adapters,
         events = events,
         history = history,
         query = query,
