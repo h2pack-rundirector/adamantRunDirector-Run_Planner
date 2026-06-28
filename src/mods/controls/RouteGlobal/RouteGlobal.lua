@@ -13,6 +13,7 @@ local CONFIGURE_REWARDS_KEY = "ConfigureRewards"
 local CONFIGURE_NPCS_KEY = "ConfigureNpcs"
 local CONFIGURE_FEATURES_KEY = "ConfigureFeatures"
 local CONFIGURE_FEATURE_PREFIX = "ConfigureFeature"
+local CONFIGURED_BIOME_COUNT_KEY = "ConfiguredBiomeCount"
 local DISABLED_TEXT_COLOR = { 0.55, 0.55, 0.55, 1 }
 local REWARDS_DISABLED_NOTE = "Disabling rewards invalidates Trial rewards and disables NPC encounter planning."
 
@@ -56,6 +57,27 @@ local function routeHasFeature(routeLookup, feature)
         end
     end
     return false
+end
+
+local function routeBiomeCount(route)
+    return math.max(#(route and route.biomes or {}), 1)
+end
+
+local function clampConfiguredBiomeCount(instance, value)
+    local count = math.floor(tonumber(value) or routeBiomeCount(instance.route))
+    local maxCount = routeBiomeCount(instance.route)
+    if count < 1 then
+        return 1
+    end
+    if count > maxCount then
+        return maxCount
+    end
+    return count
+end
+
+local function biomeLabel(instance, biomeKey)
+    local biome = instance.biomeLookup and instance.biomeLookup[biomeKey] or nil
+    return tostring(biome and (biome.label or biome.key) or biomeKey or "")
 end
 
 local function copyColor(color)
@@ -134,6 +156,27 @@ local function buildGodSourceOptions(instance)
     instance.godSourceDirty = true
 end
 
+local function buildConfiguredBiomeOptions(instance)
+    local values = {}
+    local displayValues = {}
+    for index, biomeKey in ipairs(instance.route and instance.route.biomes or {}) do
+        local value = tostring(index)
+        values[#values + 1] = value
+        displayValues[value] = value .. " - " .. biomeLabel(instance, biomeKey)
+    end
+    if values[1] == nil then
+        values[1] = "1"
+        displayValues["1"] = "1"
+    end
+    instance.configuredBiomeCountOpts = {
+        label = "Configured Biomes",
+        values = values,
+        displayValues = displayValues,
+        labelWidth = 145,
+        controlWidth = 170,
+    }
+end
+
 local function buildFeatureConfigToggles(instance)
     local routeLookup = routeBiomeLookup(instance.route)
     instance.featureConfigToggles = {}
@@ -186,7 +229,9 @@ function RouteGlobal.prepare(instance)
     instance.route = instance.route or {}
     instance.routeKey = instance.route.key or instance.routeKey or instance.name
     instance.label = instance.label or "Global"
+    instance.biomeLookup = instance.biomeLookup or {}
     instance.gods = copyGods(instance.gods or (godData and godData.olympian()) or {})
+    buildConfiguredBiomeOptions(instance)
     buildFeatureConfigToggles(instance)
     instance.godBits = buildBits(instance.gods)
     buildGodSourceOptions(instance)
@@ -219,6 +264,12 @@ function RouteGlobal.storage(instance)
             default = true,
         }
     end
+    storage[#storage + 1] = {
+        key = CONFIGURED_BIOME_COUNT_KEY,
+        type = "string",
+        default = tostring(routeBiomeCount(instance.route)),
+        maxLen = 2,
+    }
     storage[#storage + 1] = {
         key = "GodPool",
         type = "packedInt",
@@ -294,6 +345,21 @@ function RouteGlobal.createRuntime(fields, instance)
             return true
         end
         return field:read() == true
+    end
+
+    function control:configuredBiomeCount()
+        local field = fields[CONFIGURED_BIOME_COUNT_KEY]
+        local rawValue = field and field.read and field:read() or nil
+        return clampConfiguredBiomeCount(instance, rawValue)
+    end
+
+    function control:writeConfiguredBiomeCount(rawValue)
+        local field = fields[CONFIGURED_BIOME_COUNT_KEY]
+        local count = clampConfiguredBiomeCount(instance, rawValue)
+        if field ~= nil and field.write ~= nil then
+            field:write(tostring(count))
+        end
+        self:invalidateConfiguration()
     end
 
     function control:isFeatureConfigured(featureKey)
@@ -380,6 +446,8 @@ function RouteGlobal.createRuntime(fields, instance)
             return self:enabledGods(...)
         elseif path == "godSourceValues" then
             return self:godSourceValues(...)
+        elseif path == "configuredBiomeCount" then
+            return self:configuredBiomeCount(...)
         end
         return nil
     end
@@ -400,6 +468,14 @@ function RouteGlobal.createUi(fields, instance)
 
     function control:configField(key)
         return fields[key]
+    end
+
+    function control:configuredBiomeCountField()
+        return fields[CONFIGURED_BIOME_COUNT_KEY]
+    end
+
+    function control:configuredBiomeCountOpts()
+        return instance.configuredBiomeCountOpts
     end
 
     function control:configLabel(key)
@@ -488,6 +564,10 @@ local function drawConfiguration(draw, control)
     draw.widgets.text("Configuration", { alignToFramePadding = true })
     local rewardsEnabled = control:isConfigEnabled(CONFIGURE_REWARDS_KEY)
     local featuresEnabled = control:isConfigEnabled(CONFIGURE_FEATURES_KEY)
+
+    if draw.widgets.dropdown(control:configuredBiomeCountField(), control:configuredBiomeCountOpts()) then
+        control:writeConfiguredBiomeCount(control:configuredBiomeCountField():read())
+    end
 
     for _, toggle in ipairs(control:configToggles()) do
         drawConfigCheckbox(draw, control, toggle, toggle.key == CONFIGURE_NPCS_KEY and not rewardsEnabled)

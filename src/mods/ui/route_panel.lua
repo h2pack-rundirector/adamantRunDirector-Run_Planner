@@ -49,6 +49,7 @@ function routePanel.create(deps)
     local activeRouteTabs = {}
     local routeAllTabs = {}
     local routeVisibleTabs = {}
+    local routeVisibleTabState = {}
 
     local function buildRegionTabs(routeControlTabs)
         routeNavOpts = {}
@@ -72,6 +73,7 @@ function routePanel.create(deps)
             end
             routeAllTabs[region] = tabs
             routeVisibleTabs[region] = visibleTabs
+            routeVisibleTabState[region] = nil
             routeNavOpts[region] = {
                 id = "RunPlanner" .. tostring(region) .. "Tabs",
                 navWidth = 180,
@@ -122,6 +124,12 @@ function routePanel.create(deps)
             return nil
         end
 
+        local generation = routeContext.routeGeneration and routeContext:routeGeneration(region) or nil
+        local state = routeVisibleTabState[region]
+        if generation ~= nil and state ~= nil and state.generation == generation then
+            return visibleTabs
+        end
+
         local snapshot = routeSnapshot(routeContext, region)
         clearList(visibleTabs)
         for _, tab in ipairs(routeAllTabs[region] or EMPTY_LIST) do
@@ -133,6 +141,11 @@ function routePanel.create(deps)
                 )
                 visibleTabs[#visibleTabs + 1] = tab
             end
+        end
+        if generation ~= nil then
+            routeVisibleTabState[region] = {
+                generation = generation,
+            }
         end
         return visibleTabs
     end

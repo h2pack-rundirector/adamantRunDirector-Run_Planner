@@ -10,7 +10,10 @@ local primaryRewardItem = harness.primaryRewardItem
 local loadCatalog = harness.loadCatalog
 local loadRunState = harness.loadRunState
 local loadRoutePlan = harness.loadRoutePlan
+local plannedBiomeSnapshot = harness.plannedBiomeSnapshot
 local invalidBiomeSnapshot = harness.invalidBiomeSnapshot
+local biomeControl = harness.biomeControl
+local runtimeWithControls = harness.runtimeWithControls
 local runtimeForCatalog = harness.runtimeForCatalog
 
 local function prebossRewardOffers()
@@ -243,6 +246,53 @@ function TestRunPlannerLogicRoutePlan.testRoutePlanCompilesRuntimeExecutionPlan(
     lu.assertEquals(primaryRewardItem(biome.plannedByRowIndex[1]).rewards[2], "ZeusUpgrade")
     lu.assertEquals(primaryRewardItem(biome.plannedByRowIndex[1]).picks[1].value, "ZeusUpgrade")
     lu.assertEquals(biome.plannedByRowIndex[3].features.chaos, true)
+end
+
+function TestRunPlannerLogicRoutePlan.testRoutePlanCompilesOnlyConfiguredBiomePrefix()
+    local catalog = loadCatalog()
+    local routePlan = loadRoutePlan()
+    local controls = {
+        RouteGlobalUnderworld = {
+            setRouteContext = function()
+            end,
+            configuredBiomeCount = function()
+                return 1
+            end,
+            isLayerConfigured = function(_, layer)
+                return layer == "rewards"
+            end,
+        },
+        RouteF = biomeControl(plannedBiomeSnapshot("F", "FixedLinearRoute", {
+            {
+                rowIndex = 1,
+                routeOrdinal = 1,
+                slotKind = "biomeRow",
+                roomKey = "F_Combat01",
+                roleKey = "Combat",
+                valid = true,
+            },
+        })),
+        RouteG = biomeControl(invalidBiomeSnapshot("G")),
+    }
+    local runtime = runtimeWithControls(routePlan, {
+        get = function(controlName)
+            return controls[controlName]
+        end,
+    })
+
+    local plan = routePlan.refresh(catalog, runtime, {
+        CurrentRoom = {
+            RoomSetName = "F",
+        },
+    }, {
+        StartingBiome = "F",
+    })
+
+    lu.assertTrue(plan.active)
+    lu.assertTrue(plan.valid)
+    lu.assertEquals(plan.executionPlan.biomeOrder, { "F" })
+    lu.assertNotNil(plan.executionPlan.biomes.F)
+    lu.assertNil(plan.executionPlan.biomes.G)
 end
 
 function TestRunPlannerLogicRoutePlan.testExecutionPlanPreservesDisabledNpcRows()

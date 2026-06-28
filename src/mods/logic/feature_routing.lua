@@ -126,6 +126,21 @@ local function hasPlannedFeature(plan, featureKey)
     return featurePlan ~= nil and featurePlan.rows ~= nil and featurePlan.rows[1] ~= nil
 end
 
+local function planIncludesBiome(plan, biomeKey)
+    return plan ~= nil
+        and biomeKey ~= nil
+        and plan.biomes ~= nil
+        and plan.biomes[biomeKey] ~= nil
+end
+
+local function scopeBiomeKey(currentRun, room, biomeKey)
+    if isEphyraSideRoom(room) then
+        local previousRoom = runState.previousRoom(currentRun)
+        return runState.roomSetName(previousRoom) or biomeKey
+    end
+    return biomeKey
+end
+
 local function setFeature(room, featureKey, planned)
     local flags = FEATURE_FLAGS[featureKey]
     if flags == nil then
@@ -160,6 +175,9 @@ function featureRouting.prepareRoomFeatures(runtime, currentRun)
     end
 
     local plannedRow, biomeKey = currentPlannedRow(plan, currentRun, room)
+    if not planIncludesBiome(plan, scopeBiomeKey(currentRun, room, biomeKey)) then
+        return nil
+    end
     local applied = {}
     for _, featureKey in ipairs(FEATURE_ORDER) do
         if hasPlannedFeature(plan, featureKey) then

@@ -328,6 +328,45 @@ function TestRunPlannerLogicNpcRouting.testNpcRoutingSuppressesDisabledNpc()
     })
 end
 
+function TestRunPlannerLogicNpcRouting.testNpcRoutingDoesNotSuppressAfterConfiguredPrefix()
+    local catalog = loadCatalog()
+    local room = plannedRoom(3, 4, "F_Combat04", "F")
+    local plan = planWithRows({
+        biomeOrder = {
+            "F",
+        },
+        room = room,
+        rows = {
+            disabledRow("Artemis", "FieldNpc"),
+        },
+    })
+    local runtime, routePlan = runtimeForPlan(plan)
+    local npcRouting = loadQuietNpcRouting(routePlan)
+    local args = {
+        LegalEncounters = {
+            "GenericCombatG",
+            "ArtemisCombatG",
+        },
+    }
+
+    local result, calledArgs = choose(npcRouting, runtime, catalog, {
+        CurrentRoom = {
+            Name = "G_Combat03",
+            RoomSetName = "G",
+        },
+        BiomeDepthCache = 3,
+    }, {
+        Name = "G_Combat04",
+        RoomSetName = "G",
+    }, args)
+
+    lu.assertEquals(result, {
+        "GenericCombatG",
+        "ArtemisCombatG",
+    })
+    lu.assertIs(calledArgs, args)
+end
+
 function TestRunPlannerLogicNpcRouting.testNpcRoutingFallsBackWhenLayerDisabled()
     local catalog = loadCatalog()
     local room = plannedRoom(3, 4, "F_Combat04")

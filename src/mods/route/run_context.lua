@@ -184,6 +184,48 @@ local function featureDefinitionForKey(context, route, featureKey)
     return nil
 end
 
+local function routeBiomeCount(route)
+    return #(route and route.biomes or EMPTY_LIST)
+end
+
+local function clampBiomeCount(value, route)
+    local maxCount = routeBiomeCount(route)
+    if maxCount <= 0 then
+        return 0
+    end
+    local count = math.floor(tonumber(value) or maxCount)
+    if count < 1 then
+        return 1
+    end
+    if count > maxCount then
+        return maxCount
+    end
+    return count
+end
+
+local function biomeKeyForControl(context, routeKey, controlName)
+    for biomeKey, info in pairs(context.routeInfoByRoute[routeKey] or {}) do
+        if info.controlName == controlName then
+            return biomeKey
+        end
+    end
+    return nil
+end
+
+local function featureInConfiguredScope(context, routeKey, feature)
+    local route = context.routes.lookup and context.routes.lookup[routeKey] or nil
+    local configuredCount = context:configuredBiomeCount(routeKey)
+    for routeBiomeIndex, biomeKey in ipairs(route and route.biomes or EMPTY_LIST) do
+        if routeBiomeIndex > configuredCount then
+            break
+        end
+        if feature and feature.biomes and feature.biomes[biomeKey] then
+            return true
+        end
+    end
+    return false
+end
+
 local function layerControlIndex(context, route, layer, controlName)
     if layer == "npcs" then
         return controlName == routeNpcControlName(route.key) and 1 or nil
@@ -358,6 +400,46 @@ function runContext.create(opts)
         return self:bindControl(control, routeKey)
     end
 
+    function context:configuredBiomeCount(routeKey)
+        local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
+        local control = self:controlByName(routeGlobalControlName(routeKey), routeKey)
+        local count = control ~= nil
+            and control.configuredBiomeCount ~= nil
+            and control:configuredBiomeCount()
+            or nil
+        return clampBiomeCount(count, route)
+    end
+
+    function context:isBiomeInConfiguredScope(routeKey, biomeKeyOrIndex)
+        if type(biomeKeyOrIndex) == "number" then
+            return biomeKeyOrIndex <= self:configuredBiomeCount(routeKey)
+        end
+        local info = self:routeInfo(routeKey, biomeKeyOrIndex)
+        return info ~= nil and info.index <= self:configuredBiomeCount(routeKey)
+    end
+
+    function context:configuredRoute(routeKey)
+        local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
+        if route == nil then
+            return nil
+        end
+
+        local configuredCount = self:configuredBiomeCount(routeKey)
+        if configuredCount >= routeBiomeCount(route) then
+            return route
+        end
+
+        local biomes = {}
+        for index = 1, configuredCount do
+            biomes[index] = route.biomes[index]
+        end
+        return {
+            key = route.key,
+            label = route.label,
+            biomes = biomes,
+        }
+    end
+
     function context:controlSnapshot(routeKey, biomeKey)
         return controlSnapshot(self, routeKey, biomeKey)
     end
@@ -391,6 +473,9 @@ function runContext.create(opts)
         if feature == nil then
             return true
         end
+        if not featureInConfiguredScope(self, routeKey, feature) then
+            return false
+        end
         local control = self:controlByName(routeGlobalControlName(routeKey), routeKey)
         if control ~= nil and control.isFeatureConfigured ~= nil then
             return control:isFeatureConfigured(feature.key) ~= false
@@ -417,6 +502,10 @@ function runContext.create(opts)
         end
         if controlName == routeNpcControlName(routeKey) then
             return self:isLayerConfigured(routeKey, "npcs")
+        end
+        local biomeKey = biomeKeyForControl(self, routeKey, controlName)
+        if biomeKey ~= nil then
+            return self:isBiomeInConfiguredScope(routeKey, biomeKey)
         end
         local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
         local featureKey = route ~= nil and featureKeyForControl(self, route, controlName) or nil
@@ -559,7 +648,11 @@ function runContext.create(opts)
 
         local previousSnapshotBuilding = self.snapshotBuilding
         self.snapshotBuilding = true
+        local configuredBiomeCount = self:configuredBiomeCount(route.key)
         for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
+            if routeBiomeIndex > configuredBiomeCount then
+                break
+            end
             local snapshot = controlSnapshot(self, route.key, biomeKey)
             snapshots[#snapshots + 1] = snapshot
             if routeLocalInvalid == nil then
@@ -628,6 +721,7 @@ function runContext.create(opts)
         return {
             routeKey = route.key,
             label = route.label,
+            configuredBiomeCount = configuredBiomeCount,
             valid = invalidRows[1] == nil,
             disabled = invalidRows[1] ~= nil,
             invalidRows = invalidRows,

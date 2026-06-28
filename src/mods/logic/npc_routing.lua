@@ -222,6 +222,13 @@ local function routeBiomeIndex(plan, biomeKey)
     return nil
 end
 
+local function planIncludesBiome(plan, biomeKey)
+    return plan ~= nil
+        and biomeKey ~= nil
+        and plan.biomes ~= nil
+        and plan.biomes[biomeKey] ~= nil
+end
+
 local function isFutureOrCurrentTarget(plan, row, plannedRow, biomeKey)
     if row == nil or row.target == nil then
         return false
@@ -315,6 +322,9 @@ function npcRouting.chooseEncounter(runtime, base, catalog, currentRun, room, ar
     end
 
     local plannedNpc, plannedRow, biomeKey = plannedNpcForRoom(plan, currentRun, room)
+    if not planIncludesBiome(plan, biomeKey) then
+        return base(currentRun, room, args)
+    end
     local encounterName = plannedNpc and plannedNpc.target and plannedNpc.target.encounterName or nil
     if encounterName ~= nil
         and containsEncounter(legalEncounters, encounterName)

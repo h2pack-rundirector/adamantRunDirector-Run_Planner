@@ -21,9 +21,10 @@ function TestRunPlannerRouteGlobal.testRouteGlobalTemplateStoresConfigurationAnd
         route = catalog.routes.lookup.Underworld,
         gods = catalog.gods,
         features = catalog.features,
+        biomeLookup = catalog.lookup,
     })
     local storage = template.storage(instance)
-    local control = template.createRuntime(routeUiFields(storage), instance)
+    local control = template.createUi(routeUiFields(storage), instance)
 
     lu.assertEquals(storage[1], {
         key = "ConfigureRewards",
@@ -45,11 +46,17 @@ function TestRunPlannerRouteGlobal.testRouteGlobalTemplateStoresConfigurationAnd
         type = "bool",
         default = true,
     })
-    lu.assertEquals(storage[5].key, "GodPool")
-    lu.assertEquals(storage[5].type, "packedInt")
-    lu.assertEquals(storage[5].width, 9)
-    lu.assertEquals(#storage[5].bits, 9)
-    lu.assertEquals(storage[5].bits[1], {
+    lu.assertEquals(storage[5], {
+        key = "ConfiguredBiomeCount",
+        type = "string",
+        default = "4",
+        maxLen = 2,
+    })
+    lu.assertEquals(storage[6].key, "GodPool")
+    lu.assertEquals(storage[6].type, "packedInt")
+    lu.assertEquals(storage[6].width, 9)
+    lu.assertEquals(#storage[6].bits, 9)
+    lu.assertEquals(storage[6].bits[1], {
         key = "AphroditeUpgrade",
         label = "Aphrodite",
         type = "bool",
@@ -57,6 +64,10 @@ function TestRunPlannerRouteGlobal.testRouteGlobalTemplateStoresConfigurationAnd
         width = 1,
         default = true,
     })
+    lu.assertEquals(control:configuredBiomeCount(), 4)
+    lu.assertEquals(control:configuredBiomeCountOpts().displayValues["2"], "2 - Oceanus")
+    control:writeConfiguredBiomeCount("2")
+    lu.assertEquals(control:configuredBiomeCount(), 2)
     lu.assertTrue(control:isGodEnabled("AphroditeUpgrade"))
     lu.assertEquals(control:enabledGods(), {
         "AphroditeUpgrade",

@@ -167,7 +167,9 @@ end
 
 function npcTargets.buildTargets(context, routeKey)
     local result = npcTargets.emptyTargets()
-    local route = context.routes.lookup and context.routes.lookup[routeKey] or nil
+    local route = context.configuredRoute and context:configuredRoute(routeKey)
+        or context.routes.lookup and context.routes.lookup[routeKey]
+        or nil
     if route == nil then
         return result
     end

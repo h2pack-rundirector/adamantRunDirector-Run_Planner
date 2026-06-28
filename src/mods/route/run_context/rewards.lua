@@ -180,7 +180,9 @@ end
 local function evaluateRouteLegality(context, routeKey, opts)
     opts = opts or {}
     local rewardLegalityEngine = opts.rewardLegality
-    local route = context.routes.lookup and context.routes.lookup[routeKey] or nil
+    local route = context.configuredRoute and context:configuredRoute(routeKey)
+        or context.routes.lookup and context.routes.lookup[routeKey]
+        or nil
     local result = rewardLegalityEngine ~= nil and rewardLegalityEngine.emptyResult() or newRewardLegalityResult()
     if route == nil or rewardLegalityEngine == nil or routeTimeline == nil then
         return result

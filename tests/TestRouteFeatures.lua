@@ -191,13 +191,83 @@ function TestRunPlannerRouteFeatures.testRouteFeaturesUsesBiomeRoomSelectionAndP
     control:writeTarget(1, "P:5")
     lu.assertEquals(control:rowValidation(1).code, "feature_target_unavailable")
     local featureSnapshot = control:buildSnapshot()
-    lu.assertEquals(featureSnapshot.invalidRows[1].locationLabel, "Surface Hermes Shrine Entry 1")
+    lu.assertEquals(featureSnapshot.invalidRows[1].locationLabel, "Olympus Depth 4 Entry 1")
 
     control:writeBiome(1, "")
     lu.assertEquals(fields.Targets:read(1, "BiomeKey"), nil)
     lu.assertEquals(fields.Targets:read(1, "RowIndex"), nil)
     lu.assertEquals(fields.Targets:read(1, "TargetKey"), nil)
     lu.assertEquals(control:rowValidation(1).code, "selection_required")
+end
+
+function TestRunPlannerRouteFeatures.testRouteFeaturesPreservesSelectedLabelsOutsideConfiguredPrefix()
+    local catalog = loadCatalog()
+    local route = {
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N", "O", "P" },
+    }
+    local template = loadRouteFeaturesTemplate()
+    local instance = template.prepare({
+        name = "RouteFeatureHermesShrineSurface",
+        route = route,
+        feature = catalog.features.byKey.HermesShrine,
+        biomeLookup = catalog.lookup,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Targets:get(1, "BiomeKey"):write("P")
+    fields.Targets:get(1, "RowIndex"):write("7")
+    fields.Targets:get(1, "TargetKey"):write("P:7")
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        biomes = catalog.lookup,
+        features = catalog.features,
+        controlResolver = function(controlName)
+            if controlName == "RouteGlobalSurface" then
+                return {
+                    isLayerConfigured = function()
+                        return true
+                    end,
+                    configuredBiomeCount = function()
+                        return 2
+                    end,
+                }
+            elseif controlName == "RouteP" then
+                return {
+                    read = function(_, path)
+                        if path == "snapshot" then
+                            return {
+                                valid = true,
+                                invalidRows = {},
+                                rows = normalizeRewardRows({
+                                    {
+                                        rowIndex = 7,
+                                        routeOrdinal = 6,
+                                        slotLabel = "Depth 6",
+                                        option = { key = "P_Combat02", label = "C02" },
+                                        features = { surfaceShop = true },
+                                        valid = true,
+                                    },
+                                }),
+                            }
+                        end
+                        return nil
+                    end,
+                }
+            end
+            return {
+                read = function(_, path)
+                    return path == "snapshot" and { valid = true, invalidRows = {}, rows = {} } or nil
+                end,
+            }
+        end,
+    })
+    local control = template.createRuntime(fields, instance)
+    control:setRouteContext(routeContext, "Surface")
+
+    lu.assertEquals(control:rowValidation(1).code, "feature_target_unavailable")
+    lu.assertEquals(control:biomeOptions(1).displayValues.P, "Olympus")
+    lu.assertEquals(control:roomOptions(1).displayValues["7"], "Depth 6 - C02")
 end
 
 function TestRunPlannerRouteFeatures.testRouteContextDisablesFeatureTargetsWhenFeaturesAreNotConfigured()
@@ -257,6 +327,77 @@ function TestRunPlannerRouteFeatures.testRouteContextDisablesFeatureTargetsWhenF
 
     lu.assertNil(targets.byFeature.surfaceShop)
     lu.assertNil(targets.byFeatureBiome.surfaceShop)
+end
+
+function TestRunPlannerRouteFeatures.testRouteContextBuildsFeatureTargetsOnlyInsideConfiguredPrefix()
+    local route = {
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G" },
+    }
+    local features = {
+        ordered = { "TestFeature" },
+        byKey = {
+            TestFeature = {
+                key = "TestFeature",
+                featureKey = "testFeature",
+                biomes = {
+                    F = true,
+                    G = true,
+                },
+            },
+        },
+    }
+    local function snapshot(biomeKey, roomKey)
+        return {
+            controlName = "Route" .. biomeKey,
+            valid = true,
+            invalidRows = {},
+            rows = normalizeRewardRows({
+                {
+                    rowIndex = 1,
+                    routeOrdinal = 1,
+                    slotLabel = "Depth 1",
+                    roleKey = "Combat",
+                    roomKey = roomKey,
+                    option = { key = roomKey, label = roomKey },
+                    valid = true,
+                    features = {
+                        testFeature = true,
+                    },
+                },
+            }),
+        }
+    end
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        features = features,
+        controlResolver = function(controlName)
+            if controlName == "RouteGlobalUnderworld" then
+                return {
+                    isLayerConfigured = function()
+                        return true
+                    end,
+                    configuredBiomeCount = function()
+                        return 1
+                    end,
+                }
+            elseif controlName == "RouteF" then
+                return { read = function(_, path) return path == "snapshot" and snapshot("F", "F_Combat01") or nil end }
+            elseif controlName == "RouteG" then
+                return { read = function(_, path) return path == "snapshot" and snapshot("G", "G_Combat01") or nil end }
+            end
+            return nil
+        end,
+    })
+
+    local targets = routeContext:featureTargets("Underworld")
+
+    for _, bucket in pairs(targets.byFeature) do
+        for _, candidate in pairs(bucket.lookup or {}) do
+            lu.assertNotEquals(candidate.biomeKey, "G")
+        end
+    end
 end
 
 function TestRunPlannerRouteFeatures.testRouteContextDisablesSpecificFeatureTargets()

@@ -45,6 +45,68 @@ local function loadRouteStatus()
     })
 end
 
+local function createRoutePanelFixture(activeRouteLabel, activeTabKey)
+    local system
+    withTestImport(function()
+        system = testImport("mods/systems.lua").create()
+    end)
+
+    local controlsByName = {}
+    local entriesByControl = {}
+
+    local draw = noOpDraw()
+    draw.imgui.BeginTabBar = function()
+        return true
+    end
+    draw.imgui.BeginTabItem = function(label)
+        return label == activeRouteLabel
+    end
+    draw.imgui.BeginChild = function()
+    end
+    draw.imgui.EndChild = function()
+    end
+    draw.nav = {
+        verticalTabs = function(opts)
+            opts.activeKey = activeTabKey
+            return activeTabKey
+        end,
+    }
+    draw.control = function(control, viewName)
+        local entry = entriesByControl[control]
+        local view = entry.template.views[viewName]
+        view(draw, control, entry.instance)
+    end
+
+    local function controlForName(controlName)
+        local cached = controlsByName[controlName]
+        if cached ~= nil then
+            return cached
+        end
+
+        local instance = system.routeControls[controlName]
+        local template = system.controlTemplates[instance.template]
+        local prepared = template.prepare(instance)
+        local control = template.createUi(routeUiFields(template.storage(prepared)), prepared)
+        controlsByName[controlName] = control
+        entriesByControl[control] = {
+            template = template,
+            instance = prepared,
+        }
+        return control
+    end
+
+    return {
+        ui = system.ui,
+        draw = draw,
+        ctx = {
+            draw = draw,
+            controls = {
+                get = controlForName,
+            },
+        },
+    }
+end
+
 local function fakeLayerConfig()
     return {
         isLayerConfigured = function(_, layer)
@@ -526,6 +588,56 @@ function TestRunPlannerRouteUi.testRouteContextAllowsEnrichmentColorsOnlyForVali
     routeContext:beginPass()
     lu.assertTrue(routeContext:overview("Underworld").valid)
     lu.assertTrue(routeContext:canUseEnrichmentColors("Underworld"))
+end
+
+function TestRunPlannerRouteUi.testRouteContextValidatesOnlyConfiguredBiomePrefix()
+    local controls = {
+        RouteGlobalUnderworld = {
+            isLayerConfigured = function(_, layer)
+                return layer ~= "rewards"
+            end,
+            configuredBiomeCount = function()
+                return 1
+            end,
+        },
+        RouteF = fakeSnapshotControl(validRouteSnapshot("RouteF")),
+        RouteG = fakeSnapshotControl({
+            controlName = "RouteG",
+            valid = false,
+            invalidRows = {
+                {
+                    controlName = "RouteG",
+                    biomeKey = "G",
+                    rowIndex = 1,
+                    message = "Hidden biome invalid",
+                },
+            },
+            rows = {},
+        }),
+    }
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F", "G" },
+            },
+        }),
+        controlResolver = function(controlName)
+            return controls[controlName]
+        end,
+    })
+
+    routeContext:beginPass()
+    local snapshot = routeContext:overview("Underworld")
+
+    lu.assertTrue(snapshot.valid)
+    lu.assertEquals(snapshot.configuredBiomeCount, 1)
+    lu.assertEquals(#snapshot.biomes, 1)
+    lu.assertTrue(routeContext:isControlConfigured("Underworld", "RouteF"))
+    lu.assertFalse(routeContext:isControlConfigured("Underworld", "RouteG"))
+    lu.assertTrue(routeContext:isBiomeInConfiguredScope("Underworld", "F"))
+    lu.assertFalse(routeContext:isBiomeInConfiguredScope("Underworld", "G"))
 end
 
 function TestRunPlannerRouteUi.testRoutePositionOrdersBiomeTabAndRow()
@@ -1379,6 +1491,72 @@ function TestRunPlannerRouteUi.testRouteTemplateViewCpuStaysBounded()
             150
         )
     )
+end
+
+function TestRunPlannerRouteUi.testRoutePanelDrawAllocationsStayBounded()
+    local iterations = 100
+    local cases = {
+        { routeLabel = "Underworld", tabKey = "Global", budgetKb = 48 },
+        { routeLabel = "Underworld", tabKey = "F", budgetKb = 32 },
+        { routeLabel = "Underworld", tabKey = "NPCs", budgetKb = 96 },
+        { routeLabel = "Underworld", tabKey = "Features", budgetKb = 48 },
+        { routeLabel = "Surface", tabKey = "Global", budgetKb = 48 },
+        { routeLabel = "Surface", tabKey = "N", budgetKb = 48 },
+        { routeLabel = "Surface", tabKey = "NPCs", budgetKb = 96 },
+        { routeLabel = "Surface", tabKey = "Features", budgetKb = 48 },
+    }
+
+    for _, case in ipairs(cases) do
+        local fixture = createRoutePanelFixture(case.routeLabel, case.tabKey)
+        local allocatedKb = measureAllocKb(iterations, function()
+            fixture.ui.drawTab(nil, fixture.ctx)
+        end)
+
+        lu.assertTrue(
+            allocatedKb < case.budgetKb,
+            string.format(
+                "%s %s panel draw allocated %.1f KB across %d no-op draws; budget %.1f KB",
+                case.routeLabel,
+                case.tabKey,
+                allocatedKb,
+                iterations,
+                case.budgetKb
+            )
+        )
+    end
+end
+
+function TestRunPlannerRouteUi.testRoutePanelDrawCpuStaysBounded()
+    local iterations = 1000
+    local cases = {
+        { routeLabel = "Underworld", tabKey = "Global", budgetMs = 120 },
+        { routeLabel = "Underworld", tabKey = "F", budgetMs = 160 },
+        { routeLabel = "Underworld", tabKey = "NPCs", budgetMs = 220 },
+        { routeLabel = "Underworld", tabKey = "Features", budgetMs = 120 },
+        { routeLabel = "Surface", tabKey = "Global", budgetMs = 120 },
+        { routeLabel = "Surface", tabKey = "N", budgetMs = 180 },
+        { routeLabel = "Surface", tabKey = "NPCs", budgetMs = 240 },
+        { routeLabel = "Surface", tabKey = "Features", budgetMs = 120 },
+    }
+
+    for _, case in ipairs(cases) do
+        local fixture = createRoutePanelFixture(case.routeLabel, case.tabKey)
+        local elapsedMs = measureCpuMs(iterations, function()
+            fixture.ui.drawTab(nil, fixture.ctx)
+        end)
+
+        lu.assertTrue(
+            elapsedMs < case.budgetMs,
+            string.format(
+                "%s %s panel draw took %.1f ms across %d no-op draws; budget %.1f ms",
+                case.routeLabel,
+                case.tabKey,
+                elapsedMs,
+                iterations,
+                case.budgetMs
+            )
+        )
+    end
 end
 
 function TestRunPlannerRouteUi.testRouteOverviewRebuildsOnlyWhenDirty()

@@ -2,9 +2,9 @@ local deps = ...
 local data = import("mods/controls/RouteNpcs/data.lua")
 local runtime = import("mods/controls/RouteNpcs/runtime.lua", nil, {
     data = data,
-    invalidLocations = deps.route.invalidLocations,
     targetMarkers = deps.route.targetMarkers,
     controlRequirements = deps.route.controlRequirements,
+    targetOptions = import("mods/controls/target_options.lua"),
 })
 local ui = import("mods/controls/RouteNpcs/ui.lua", nil, {
     data = data,

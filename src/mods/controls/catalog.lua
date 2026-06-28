@@ -174,6 +174,7 @@ function controls.build(catalog)
                 route = route,
                 gods = catalog.gods,
                 features = catalog.features,
+                biomeLookup = catalog.lookup,
             }
             instances[routeNpcControlName(route.key)] = {
                 template = "RouteNpcs",

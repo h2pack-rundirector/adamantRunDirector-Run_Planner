@@ -197,9 +197,9 @@ function TestRunPlannerRouteNpcs.testRouteNpcsUsesBiomeRoomTypeSelection()
     lu.assertEquals(control:rowValidation(2).code, "npc_room_occupied")
     local npcSnapshot = control:buildSnapshot()
     lu.assertEquals(#npcSnapshot.invalidRows, 2)
-    lu.assertEquals(npcSnapshot.invalidRows[1].locationLabel, "Underworld Nemesis")
+    lu.assertEquals(npcSnapshot.invalidRows[1].locationLabel, "Erebus Depth 5 - C04 [Random] Nemesis")
     lu.assertEquals(npcSnapshot.invalidRows[1].markerKind, "primary")
-    lu.assertEquals(npcSnapshot.invalidRows[2].locationLabel, "Underworld Artemis")
+    lu.assertEquals(npcSnapshot.invalidRows[2].locationLabel, "Erebus Depth 5 - C04 Artemis")
     lu.assertEquals(npcSnapshot.invalidRows[2].markerKind, "related")
     lu.assertEquals(control:valueStates(1, "RowIndex")["3"], 2)
     lu.assertEquals(control:valueStates(2, "RowIndex")["3"], 2)
@@ -338,6 +338,63 @@ function TestRunPlannerRouteNpcs.testRouteContextBuildsNpcTargetsFromValidCombat
         "",
         "F:3:ArachneCombatF",
     })
+end
+
+function TestRunPlannerRouteNpcs.testRouteContextBuildsNpcTargetsOnlyInsideConfiguredPrefix()
+    local catalog = loadCatalog()
+    local route = {
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F", "G" },
+    }
+    local function snapshot(biomeKey, roomKey)
+        return {
+            controlName = "Route" .. biomeKey,
+            valid = true,
+            invalidRows = {},
+            rows = normalizeRewardRows({
+                {
+                    rowIndex = 1,
+                    routeOrdinal = 1,
+                    slotLabel = "Depth 1",
+                    roleKey = "Combat",
+                    roomKey = roomKey,
+                    option = { key = roomKey, label = roomKey },
+                    valid = true,
+                },
+            }),
+        }
+    end
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        biomes = catalog.lookup,
+        npcs = catalog.npcs,
+        controlResolver = function(controlName)
+            if controlName == "RouteGlobalUnderworld" then
+                return {
+                    isLayerConfigured = function()
+                        return true
+                    end,
+                    configuredBiomeCount = function()
+                        return 1
+                    end,
+                }
+            elseif controlName == "RouteF" then
+                return { read = function(_, path) return path == "snapshot" and snapshot("F", "F_Combat01") or nil end }
+            elseif controlName == "RouteG" then
+                return { read = function(_, path) return path == "snapshot" and snapshot("G", "G_Combat01") or nil end }
+            end
+            return nil
+        end,
+    })
+
+    local targets = routeContext:npcTargets("Underworld")
+
+    for _, bucket in pairs(targets.byNpc) do
+        for _, candidate in pairs(bucket.lookup or {}) do
+            lu.assertNotEquals(candidate.biomeKey, "G")
+        end
+    end
 end
 
 function TestRunPlannerRouteNpcs.testRouteContextDisablesNpcTargetsWhenRewardsAreNotConfigured()
@@ -642,6 +699,92 @@ function TestRunPlannerRouteNpcs.testRouteContextFiltersOlympusNpcsByRoomTag()
         targets.byNpc.Icarus.displayValues["P:5:IcarusCombatP"],
         "Olympus Depth 4 - C17 (Outdoor)"
     )
+end
+
+function TestRunPlannerRouteNpcs.testRouteNpcsPreservesSelectedLabelsOutsideConfiguredPrefix()
+    local catalog = loadCatalog()
+    local fixedTemplate = loadFixedLinearTemplate()
+    local pInstance = fixedTemplate.prepare({
+        name = "RouteP",
+        biome = catalog.lookup.P,
+    })
+    local pControl = fixedTemplate.createRuntime(routeFields({
+        {},
+        { RoleKey = "Combat", OptionKey = "P_Combat02", Reward1Key = "Major", Reward2Key = "MaxHealthDrop" },
+        {
+            RoleKey = "Combat",
+            OptionKey = "P_Combat04",
+            SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "P_Combat07",
+            SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "P_Combat17",
+            SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+    }), pInstance)
+    local route = {
+        key = "Surface",
+        label = "Surface",
+        biomes = { "N", "O", "P" },
+    }
+    local template = loadRouteNpcsTemplate()
+    local instance = template.prepare({
+        name = "RouteNpcsSurface",
+        route = route,
+        npcs = catalog.npcs,
+        biomeLookup = catalog.lookup,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Targets:get(3, "BiomeKey"):write("P")
+    fields.Targets:get(3, "RowIndex"):write("5")
+    fields.Targets:get(3, "VariantKey"):write("IcarusCombatP")
+    fields.Targets:get(3, "TargetKey"):write("P:5:IcarusCombatP")
+
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({ route }),
+        biomes = catalog.lookup,
+        npcs = catalog.npcs,
+        controlResolver = function(controlName)
+            if controlName == "RouteGlobalSurface" then
+                return {
+                    isLayerConfigured = function()
+                        return true
+                    end,
+                    configuredBiomeCount = function()
+                        return 2
+                    end,
+                }
+            elseif controlName == "RouteP" then
+                return pControl
+            end
+            return {
+                read = function(_, path)
+                    return path == "snapshot" and { valid = true, invalidRows = {}, rows = {} } or nil
+                end,
+            }
+        end,
+    })
+    local control = template.createRuntime(fields, instance)
+    control:setRouteContext(routeContext, "Surface")
+
+    lu.assertTrue(control:slotInConfiguredScope(3))
+    lu.assertEquals(control:rowValidation(3).code, "npc_target_unavailable")
+    lu.assertEquals(control:biomeOptions(3).displayValues.P, "Olympus")
+    lu.assertEquals(control:roomOptions(3).displayValues["5"], "Depth 4 - C17 (Outdoor)")
 end
 
 function TestRunPlannerRouteNpcs.testRouteNpcsSnapshotValidatesTargetsAndSpacing()

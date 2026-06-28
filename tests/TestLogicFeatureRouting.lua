@@ -153,6 +153,35 @@ function TestRunPlannerLogicFeatureRouting.testFeatureRoutingForcesWellAndSuppre
     lu.assertFalse(currentRun.CurrentRoom.SurfaceShopChanceSuccess)
 end
 
+function TestRunPlannerLogicFeatureRouting.testFeatureRoutingDoesNotSuppressAfterConfiguredPrefix()
+    local row = plannedRoom(1, 1, "F_Combat01", "F")
+    local plan = planWithFeatures({
+        room = row,
+        byFeatureKey = {
+            wellShop = {
+                rows = {
+                    featureRow("wellShop", row),
+                },
+            },
+        },
+    })
+    local runtime, routePlan = runtimeForPlan(plan)
+    local featureRouting = quietFeatureRouting(routePlan)
+    local room = {
+        Name = "G_Combat01",
+        RoomSetName = "G",
+    }
+
+    local applied = featureRouting.prepareRoomFeatures(runtime, {
+        CurrentRoom = room,
+        BiomeDepthCache = 1,
+    })
+
+    lu.assertNil(applied)
+    lu.assertNil(room.ForceWellShop)
+    lu.assertNil(room.WellShopChanceSuccess)
+end
+
 function TestRunPlannerLogicFeatureRouting.testFeatureRoutingLeavesShopFeaturesVanillaWhenLayerDisabled()
     local row = plannedRoom(3, 4, "F_Combat04")
     local plan = planWithFeatures({

@@ -2,9 +2,9 @@
 
 local deps = ...
 local data = deps.data
-local invalidLocations = deps.invalidLocations
 local targetMarkers = deps.targetMarkers
 local controlRequirements = deps.controlRequirements
+local targetOptions = deps.targetOptions
 
 local runtime = {}
 
@@ -97,9 +97,18 @@ local function clearValueStateSnapshot(control)
     control._targetValueStateSnapshot = nil
 end
 
-local function biomeLabel(instance, biomeKey)
-    local biome = instance.biomeLookup and instance.biomeLookup[biomeKey] or nil
-    return biome and (biome.label or biome.key) or biomeKey
+local function routeGeneration(instance)
+    if instance.routeContext ~= nil and instance.routeContext.routeGeneration ~= nil then
+        return instance.routeContext:routeGeneration(instance.routeKey)
+    end
+    return 0
+end
+
+local function biomeInConfiguredScope(instance, biomeKey)
+    if instance.routeContext ~= nil and instance.routeContext.isBiomeInConfiguredScope ~= nil then
+        return instance.routeContext:isBiomeInConfiguredScope(instance.routeKey, biomeKey)
+    end
+    return true
 end
 
 local function buildBiomeOptions(instance, slot)
@@ -110,34 +119,18 @@ local function buildBiomeOptions(instance, slot)
     }
 
     for _, biomeKey in ipairs(instance.route and instance.route.biomes or EMPTY_LIST) do
-        if slot.feature and slot.feature.biomes and slot.feature.biomes[biomeKey] and opts.lookup[biomeKey] ~= true then
+        if biomeInConfiguredScope(instance, biomeKey)
+            and slot.feature
+            and slot.feature.biomes
+            and slot.feature.biomes[biomeKey]
+            and opts.lookup[biomeKey] ~= true
+        then
             opts.values[#opts.values + 1] = biomeKey
-            opts.displayValues[biomeKey] = biomeLabel(instance, biomeKey)
+            opts.displayValues[biomeKey] = targetOptions.biomeLabel(instance, biomeKey)
             opts.lookup[biomeKey] = true
         end
     end
     return opts
-end
-
-local function roomLabel(candidate)
-    local row = candidate and candidate.row or nil
-    if row == nil then
-        return "Room " .. tostring(candidate and candidate.rowIndex or "")
-    end
-
-    local label = tostring(row.slotLabel or ("Row " .. tostring(row.rowIndex or candidate.rowIndex or "")))
-    local optionLabel = row.option and (row.option.label or row.option.key) or nil
-    if optionLabel ~= nil then
-        label = label .. " - " .. tostring(optionLabel)
-    end
-    if candidate.sideRoom ~= nil then
-        label = label
-            .. " / Side "
-            .. tostring(candidate.sideIndex or candidate.sideRoom.sideIndex or "")
-            .. " - "
-            .. tostring(candidate.sideRoom.roomKey or "")
-    end
-    return label
 end
 
 local function ensureMap(parent, key)
@@ -149,27 +142,17 @@ local function ensureMap(parent, key)
     return map
 end
 
-local function newRoomOptions()
-    return {
-        values = { "" },
-        displayValues = {
-            [""] = "Select room",
-        },
-        lookup = {},
-    }
-end
-
 local function addRoomOption(index, candidate)
     local byBiome = ensureMap(index.roomsByBiome, candidate.biomeKey)
     local rowKey = tostring(candidate.targetRowIndex or candidate.rowIndex or "")
     local opts = byBiome.options
     if opts == nil then
-        opts = newRoomOptions()
+        opts = targetOptions.newRoomOptions()
         byBiome.options = opts
     end
     if opts.lookup[rowKey] == nil then
         opts.values[#opts.values + 1] = rowKey
-        opts.displayValues[rowKey] = roomLabel(candidate)
+        opts.displayValues[rowKey] = targetOptions.roomLabel(candidate)
         opts.lookup[rowKey] = candidate
     end
 end
@@ -281,7 +264,37 @@ local function biomeSelectionRequired(slot)
     })
 end
 
-local function appendInvalidMarker(instance, invalidRows, row, markerKind, locationRow)
+local function appendLabelPart(parts, value)
+    if value ~= nil and value ~= "" then
+        parts[#parts + 1] = tostring(value)
+    end
+end
+
+local function targetLocationLabel(control, instance, row)
+    local candidate = row and row.target or nil
+    local label = candidate and candidate.label or nil
+    if label == nil then
+        local parts = {}
+        appendLabelPart(parts, targetOptions.biomeLabel(instance, row and row.biomeKey))
+
+        local selectedRoomDisplayLabel = nil
+        if row ~= nil and row.targetRowIndex ~= nil and row.targetRowIndex ~= "" then
+            local roomOptions = control:roomOptions(row.rowIndex)
+            selectedRoomDisplayLabel = roomOptions.displayValues[tostring(row.targetRowIndex)]
+                or ("Room " .. tostring(row.targetRowIndex))
+        end
+        appendLabelPart(parts, selectedRoomDisplayLabel)
+        label = table.concat(parts, " ")
+    end
+
+    local entryLabel = row and row.label or nil
+    if entryLabel ~= nil and entryLabel ~= "" then
+        label = tostring(label) .. " " .. tostring(entryLabel)
+    end
+    return label
+end
+
+local function appendInvalidMarker(control, instance, invalidRows, row, markerKind)
     invalidRows[#invalidRows + 1] = targetMarkers.row(
         markerContext(instance, row),
         row,
@@ -289,7 +302,7 @@ local function appendInvalidMarker(instance, invalidRows, row, markerKind, locat
         markerKind,
         {
             scope = "feature",
-            locationLabel = invalidLocations.routeRow(instance, locationRow or row),
+            locationLabel = targetLocationLabel(control, instance, row),
         }
     )
 end
@@ -397,13 +410,24 @@ function runtime.create(fields, instance)
 
     function control:biomeOptions(rowIndex)
         self._biomeOptionsByRow = self._biomeOptionsByRow or {}
+        self._biomeOptionsGenerationByRow = self._biomeOptionsGenerationByRow or {}
+        local generation = routeGeneration(instance)
         local opts = self._biomeOptionsByRow[rowIndex]
-        if opts == nil then
+        if opts == nil or self._biomeOptionsGenerationByRow[rowIndex] ~= generation then
             local slot = self:slot(rowIndex)
             opts = slot ~= nil and buildBiomeOptions(instance, slot) or EMPTY_TARGETS
             self._biomeOptionsByRow[rowIndex] = opts
+            self._biomeOptionsGenerationByRow[rowIndex] = generation
         end
-        return opts
+        local selectedBiomeKey = self:selectedBiomeKey(rowIndex)
+        return targetOptions.copyWithSelected(
+            self,
+            "_selectedBiomeOptionsByRow",
+            rowIndex,
+            opts,
+            selectedBiomeKey,
+            targetOptions.biomeLabel(instance, selectedBiomeKey)
+        )
     end
 
     function control:roomOptions(rowIndex)
@@ -413,7 +437,29 @@ function runtime.create(fields, instance)
         end
 
         local byBiome = self:targetIndex(rowIndex).roomsByBiome[biomeKey]
-        return byBiome and byBiome.options or EMPTY_ROOMS
+        local opts = byBiome and byBiome.options or nil
+        if opts == nil then
+            self._selectedRoomOptionsByRow = self._selectedRoomOptionsByRow or {}
+            opts = self._selectedRoomOptionsByRow[rowIndex] or targetOptions.newRoomOptions()
+            self._selectedRoomOptionsByRow[rowIndex] = opts
+            targetOptions.resetRoomOptions(opts)
+        end
+        local selectedRowIndex = self:selectedRowIndex(rowIndex)
+        if selectedRowIndex == "" or opts.displayValues[selectedRowIndex] ~= nil then
+            return opts
+        end
+        return targetOptions.copyWithSelectedLazy(
+            self,
+            "_selectedRoomDisplayOptionsByRow",
+            rowIndex,
+            opts,
+            selectedRowIndex,
+            routeGeneration(instance),
+            targetOptions.selectedRoomLabel,
+            self,
+            instance,
+            rowIndex
+        )
     end
 
     function control:shouldRenderRoom(rowIndex)
@@ -531,13 +577,9 @@ function runtime.create(fields, instance)
             local row = self:rowSnapshot(rowIndex)
             rows[#rows + 1] = row
             if row ~= nil and not row.valid and not foundInvalid then
-                local locationRow = {
-                    label = tostring(instance.label or "") .. " " .. tostring(row.label or ""),
-                    rowIndex = row.rowIndex,
-                }
-                appendInvalidMarker(instance, invalidRows, row, "primary", locationRow)
+                appendInvalidMarker(self, instance, invalidRows, row, "primary")
                 if row.relatedRowIndex ~= nil and rows[row.relatedRowIndex] ~= nil then
-                    appendInvalidMarker(instance, invalidRows, rows[row.relatedRowIndex], "related")
+                    appendInvalidMarker(self, instance, invalidRows, rows[row.relatedRowIndex], "related")
                 end
                 foundInvalid = true
             end
@@ -554,9 +596,23 @@ function runtime.create(fields, instance)
         }
     end
 
+    function control:cacheValueStateSnapshot(snapshot)
+        local rowCount = self:rowCount()
+        local sources = {}
+        for rowIndex = 1, rowCount do
+            sources[rowIndex] = self:targetCandidates(rowIndex)
+        end
+        self._targetValueStateSnapshot = {
+            rowCount = rowCount,
+            sources = sources,
+            snapshot = snapshot,
+        }
+        return snapshot
+    end
+
     function control:read(path, ...)
         if path == "snapshot" then
-            return self:buildSnapshot()
+            return self:cacheValueStateSnapshot(self:buildSnapshot())
         elseif path == "row" then
             return self:rowSnapshot(...)
         end
@@ -579,17 +635,7 @@ function runtime.create(fields, instance)
             end
         end
 
-        local snapshot = self:buildSnapshot()
-        local sources = {}
-        for rowIndex = 1, rowCount do
-            sources[rowIndex] = self:targetCandidates(rowIndex)
-        end
-        self._targetValueStateSnapshot = {
-            rowCount = rowCount,
-            sources = sources,
-            snapshot = snapshot,
-        }
-        return snapshot
+        return self:cacheValueStateSnapshot(self:buildSnapshot())
     end
 
     function control:valueStates(rowIndex, controlAlias)
@@ -598,7 +644,11 @@ function runtime.create(fields, instance)
         then
             return nil
         end
-        return targetMarkers.valueStates(self:valueStateSnapshot(), rowIndex, controlAlias)
+        local snapshot = self:valueStateSnapshot()
+        if snapshot.invalidRows == nil or snapshot.invalidRows[1] == nil then
+            return nil
+        end
+        return targetMarkers.valueStates(snapshot, rowIndex, controlAlias)
     end
 
     function control:inactiveBoundary()

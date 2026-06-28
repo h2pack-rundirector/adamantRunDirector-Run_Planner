@@ -133,22 +133,25 @@ end
 
 local function drawRows(draw, control)
     local rowCount = control:rowCount()
-    if rowCount == 0 then
-        draw.imgui.Text("No route NPCs")
-        return
+    local allRowsInactive, inactiveAfterRowIndex = control:inactiveBoundary()
+    local drawnCount = 0
+    for rowIndex = 1, rowCount do
+        if control:slotInConfiguredScope(rowIndex) then
+            if drawnCount > 0 then
+                drawSeparator(draw.imgui)
+            end
+            drawnCount = drawnCount + 1
+            local inactive = decorations.pushInactive(
+                draw.imgui,
+                control:isRowInactive(rowIndex, allRowsInactive, inactiveAfterRowIndex)
+            )
+            drawTargetRow(draw, control, rowIndex)
+            decorations.popInactive(draw.imgui, inactive)
+        end
     end
 
-    local allRowsInactive, inactiveAfterRowIndex = control:inactiveBoundary()
-    for rowIndex = 1, rowCount do
-        if rowIndex > 1 then
-            drawSeparator(draw.imgui)
-        end
-        local inactive = decorations.pushInactive(
-            draw.imgui,
-            control:isRowInactive(rowIndex, allRowsInactive, inactiveAfterRowIndex)
-        )
-        drawTargetRow(draw, control, rowIndex)
-        decorations.popInactive(draw.imgui, inactive)
+    if drawnCount == 0 then
+        draw.imgui.Text("No route NPCs")
     end
 end
 
