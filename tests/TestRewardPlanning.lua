@@ -55,6 +55,8 @@ local function prebossRewardOffers()
             ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
             rewardAliasStart = 4,
             rewardAliasCount = 2,
+            generated = true,
+            offerCount = 1,
             requiredBranchValue = "FreeReward",
         },
     }
@@ -261,6 +263,9 @@ function TestRunPlannerRewardPlanning.testRewardItemsSplitCompositePrebossReward
     })
     lu.assertEquals(row.rewardItems[2].rewardAliasOffset, 3)
     lu.assertEquals(row.rewardItems[2].rewardStore, "RunProgress")
+    lu.assertTrue(row.rewardItems[2].generated)
+    lu.assertEquals(row.rewardItems[2].offerCount, 1)
+    lu.assertEquals(row.rewardItems[2].ineligibleRewardTypes, { "Devotion", "RoomMoneyDrop" })
     lu.assertEquals(#row.rewardItems[2].rewardPicks, 2)
     lu.assertTrue(row.rewardItems[2].active)
     lu.assertEquals(row.rewardItems[2].requiredBranchValue, "FreeReward")

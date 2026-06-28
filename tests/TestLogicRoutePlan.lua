@@ -38,6 +38,8 @@ local function prebossRewardOffers()
             ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
             rewardAliasStart = 4,
             rewardAliasCount = 2,
+            generated = true,
+            offerCount = 1,
             requiredBranchValue = "FreeReward",
         },
     }
@@ -439,6 +441,9 @@ function TestRunPlannerLogicRoutePlan.testRoutePlanKeepsCompositePrebossRewardsO
     lu.assertEquals(row.rewardItems[2].kind, "roomStore")
     lu.assertEquals(row.rewardItems[2].rewards[1], "Boon")
     lu.assertEquals(row.rewardItems[2].rewards[2], "ZeusUpgrade")
+    lu.assertTrue(row.rewardItems[2].generated)
+    lu.assertEquals(row.rewardItems[2].offerCount, 1)
+    lu.assertEquals(row.rewardItems[2].ineligibleRewardTypes, { "Devotion", "RoomMoneyDrop" })
     lu.assertTrue(row.rewardItems[2].active)
     lu.assertEquals(row.rewardItems[2].requiredBranchValue, "FreeReward")
 end

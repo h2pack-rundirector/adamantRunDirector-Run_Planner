@@ -154,6 +154,8 @@ local function prebossReward(shopProfile)
                 ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
                 rewardAliasStart = 4,
                 rewardAliasCount = 2,
+                generated = true,
+                offerCount = 1,
                 requiredBranchValue = "FreeReward",
             },
         },
