@@ -135,8 +135,14 @@ Tartarus `Devotion` requirements include:
 Planner status: Devotion is modeled as a selectable reward on F/G/I
 devotion-capable combat maps, while O keeps its special `O_Devotion01` room.
 Route reward legality enforces the prior-god requirement, previous-room exit
-requirement, and one planned Devotion reward per biome. Full vanilla 15-room
-spacing and current-run encounter-depth checks remain deferred.
+requirement, 15-room spacing, current-run encounter depth, and one planned
+Devotion reward per biome. Biome encounter-depth gating for Devotion is still
+missing.
+
+Encounter depth note: `runEncounterDepth` and `biomeEncounterDepth` are known
+scalar route values now. The old bounded encounter-depth model has been
+removed. Conditions should read the exact scalar from `route.query` and apply
+their predicate at the condition site.
 
 Route query surface:
 
@@ -144,11 +150,14 @@ Route query surface:
   `route.query.runEncounterDepth`.
 - `CurrentRun.BiomeEncounterDepth` maps to exact scalar
   `route.query.biomeEncounterDepth`.
+- `CurrentRun.EnteredBiomes` maps to exact scalar
+  `route.query.enteredBiomes`.
 - `RequiredMinExits` maps to `route.query.requiredMinExits`, which reads
   topology `exitCount` first, then row-level `exitCount`, then option
   `exitCount`.
-- `RequiredMinRoomsSinceEvent` maps to `route.query.minRoomsSince` over the
-  route room-history ordinal.
+- `RequiredMinRoomsSinceEvent` maps to `route.query.minRoomsSinceDepth` over
+  `CurrentRun.RunDepthCache`-style depths. Vanilla `SumPrevRooms` is a
+  backwards room-history window operator, not an absolute run counter.
 
 Recommended model:
 

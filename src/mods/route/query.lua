@@ -17,6 +17,10 @@ function query.biomeDepthCache(context)
     return context and context.biomeDepthCache or nil
 end
 
+function query.enteredBiomes(context)
+    return context and context.routeBiomeIndex or nil
+end
+
 function query.runEncounterDepth(context)
     return context and context.runEncounterDepth or nil
 end
@@ -25,16 +29,16 @@ function query.biomeEncounterDepth(context)
     return context and context.biomeEncounterDepth or nil
 end
 
-function query.roomsSince(context, previousRoomHistoryOrdinal)
-    local current = context and context.roomHistoryOrdinal or nil
-    if current == nil or previousRoomHistoryOrdinal == nil then
+function query.roomsSinceDepth(context, previousRunDepthCache)
+    local current = query.runDepthCache(context)
+    if current == nil or previousRunDepthCache == nil then
         return nil
     end
-    return current - previousRoomHistoryOrdinal
+    return current - previousRunDepthCache
 end
 
-function query.minRoomsSince(context, previousRoomHistoryOrdinal, count)
-    local rooms = query.roomsSince(context, previousRoomHistoryOrdinal)
+function query.minRoomsSinceDepth(context, previousRunDepthCache, count)
+    local rooms = query.roomsSinceDepth(context, previousRunDepthCache)
     return rooms ~= nil and rooms >= count
 end
 

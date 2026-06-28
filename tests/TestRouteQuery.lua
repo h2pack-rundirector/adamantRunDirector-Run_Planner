@@ -9,12 +9,14 @@ function TestRunPlannerRouteQuery.testDepthQueriesReadRouteContext()
     local context = {
         runDepthCache = 12,
         biomeDepthCache = 5,
+        routeBiomeIndex = 3,
         runEncounterDepth = 7,
         biomeEncounterDepth = 3,
     }
 
     lu.assertEquals(routeQuery.runDepthCache(context), 12)
     lu.assertEquals(routeQuery.biomeDepthCache(context), 5)
+    lu.assertEquals(routeQuery.enteredBiomes(context), 3)
     lu.assertEquals(routeQuery.runEncounterDepth(context), 7)
     lu.assertEquals(routeQuery.biomeEncounterDepth(context), 3)
 end
@@ -29,16 +31,16 @@ function TestRunPlannerRouteQuery.testDepthQueriesSupportExactEncounterDepth()
     lu.assertEquals(routeQuery.biomeEncounterDepth(context), 4)
 end
 
-function TestRunPlannerRouteQuery.testRoomHistoryDistanceQueries()
+function TestRunPlannerRouteQuery.testRunDepthDistanceQueries()
     local context = {
-        roomHistoryOrdinal = 15,
+        runDepthCache = 16,
     }
 
-    lu.assertEquals(routeQuery.roomsSince(context, 6), 9)
-    lu.assertTrue(routeQuery.minRoomsSince(context, 6, 9))
-    lu.assertFalse(routeQuery.minRoomsSince(context, 6, 10))
-    lu.assertNil(routeQuery.roomsSince(context, nil))
-    lu.assertFalse(routeQuery.minRoomsSince(context, nil, 1))
+    lu.assertEquals(routeQuery.roomsSinceDepth(context, 7), 9)
+    lu.assertTrue(routeQuery.minRoomsSinceDepth(context, 7, 9))
+    lu.assertFalse(routeQuery.minRoomsSinceDepth(context, 7, 10))
+    lu.assertNil(routeQuery.roomsSinceDepth(context, nil))
+    lu.assertFalse(routeQuery.minRoomsSinceDepth(context, nil, 1))
 end
 
 function TestRunPlannerRouteQuery.testExitCountPrefersTopologyThenRowThenOption()
