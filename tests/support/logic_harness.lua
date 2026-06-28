@@ -51,8 +51,13 @@ end
 local function loadRewardLegality()
     local semantics = testImport("mods/route/reward_planning/semantics.lua")
     local invalidLocations = testImport("mods/route/invalid_locations.lua")
+    local routeEvents = testImport("mods/route/events.lua")
+    local routeHistory = testImport("mods/route/history.lua", nil, {
+        events = routeEvents,
+    })
     local routeQuery = testImport("mods/route/query.lua", nil, {
-        events = testImport("mods/route/events.lua"),
+        events = routeEvents,
+        history = routeHistory,
     })
     local valueStates = testImport("mods/route/value_states.lua")
     local controlRequirements = testImport("mods/route/control_requirements.lua", nil, {

@@ -4,6 +4,7 @@ local query = {}
 
 local VANILLA_ROLE_KEY = "Vanilla"
 local routeEvents = deps.events
+local routeHistory = deps.history
 
 local function numeric(value)
     if value == nil then
@@ -56,7 +57,7 @@ end
 local function anyEventInWindow(history, context, requirement, defaultAxis)
     local axis = requirement and requirement.axis or defaultAxis
     local count = requirement and requirement.count or nil
-    for _, event in ipairs(routeEvents.list(history)) do
+    for _, event in ipairs(routeHistory.entries(history)) do
         if eventInAxisWindow(event, context, axis, count)
             and routeEvents.matchesSpec(event, requirement)
         then
@@ -111,7 +112,7 @@ function query.requiredMinRoomsSinceRunDepth(context, previousRunDepthCache, cou
 end
 
 function query.requiredMinRoomsSinceEvent(history, context, requirement)
-    local event = routeEvents.lastEvent(history, requirement and requirement.eventKey)
+    local event = routeHistory.lastEvent(history, requirement and requirement.eventKey)
     if event == nil then
         return true, nil
     end

@@ -1,8 +1,12 @@
 local lu = require("luaunit")
 local h = require("tests.support.control_harness")
 local routeEvents = h.testImport("mods/route/events.lua")
+local routeHistory = h.testImport("mods/route/history.lua", nil, {
+    events = routeEvents,
+})
 local routeQuery = h.testImport("mods/route/query.lua", nil, {
     events = routeEvents,
+    history = routeHistory,
 })
 
 -- luacheck: globals TestRunPlannerRouteQuery
@@ -45,8 +49,8 @@ function TestRunPlannerRouteQuery.testRequiredMinRoomsSinceRunDepth()
 end
 
 function TestRunPlannerRouteQuery.testRequiredMinRoomsSinceEventCanUseNamedAxis()
-    local history = routeEvents.createHistory()
-    routeEvents.emit(history, {
+    local history = routeHistory.create()
+    routeHistory.emit(history, {
         kind = "npc",
         eventKey = "ArtemisCombatF",
         runDepthCache = 7,
@@ -75,20 +79,20 @@ function TestRunPlannerRouteQuery.testRequiredMinRoomsSinceEventCanUseNamedAxis(
 end
 
 function TestRunPlannerRouteQuery.testSumPrevRoomsUsesCurrentAndPreviousWindow()
-    local history = routeEvents.createHistory()
-    routeEvents.emit(history, {
+    local history = routeHistory.create()
+    routeHistory.emit(history, {
         kind = "npc",
         eventKey = "CurrentNpc",
         groupKey = "FieldNpc",
         roomHistoryOrdinal = 12,
     })
-    routeEvents.emit(history, {
+    routeHistory.emit(history, {
         kind = "npc",
         eventKey = "RecentNpc",
         groupKey = "FieldNpc",
         roomHistoryOrdinal = 7,
     })
-    routeEvents.emit(history, {
+    routeHistory.emit(history, {
         kind = "npc",
         eventKey = "OldNpc",
         groupKey = "ArachneCombat",

@@ -53,8 +53,12 @@ function routeFactory.create(opts)
 
     local routeTimeline = import("mods/route/timeline.lua")
     local routeEvents = import("mods/route/events.lua")
+    local routeHistory = import("mods/route/history.lua", nil, {
+        events = routeEvents,
+    })
     local routeQuery = import("mods/route/query.lua", nil, {
         events = routeEvents,
+        history = routeHistory,
     })
     local routePosition = import("mods/route/position.lua")
     local invalidLocations = import("mods/route/invalid_locations.lua")
@@ -91,6 +95,7 @@ function routeFactory.create(opts)
         timeline = routeTimeline,
         query = routeQuery,
         events = routeEvents,
+        history = routeHistory,
         markers = routeMarkers,
         targetMarkers = targetMarkers,
         controlRequirements = controlRequirements,

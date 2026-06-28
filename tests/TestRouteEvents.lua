@@ -1,8 +1,12 @@
 local lu = require("luaunit")
 local h = require("tests.support.control_harness")
 local routeEvents = h.testImport("mods/route/events.lua")
+local routeHistory = h.testImport("mods/route/history.lua", nil, {
+    events = routeEvents,
+})
 local routeQuery = h.testImport("mods/route/query.lua", nil, {
     events = routeEvents,
+    history = routeHistory,
 })
 
 -- luacheck: globals TestRunPlannerRouteEvents
@@ -104,14 +108,14 @@ function TestRunPlannerRouteEvents.testFeatureTargetNormalizesFeatureKey()
 end
 
 function TestRunPlannerRouteEvents.testHistoryIndexesEventsByEventAndGroup()
-    local history = routeEvents.createHistory()
-    local reward = routeEvents.emitAt(history, rowContext(), {
+    local history = routeHistory.create()
+    local reward = routeHistory.emitAt(history, rowContext(), {
         kind = "reward",
         eventKey = "Devotion",
         rewardType = "Devotion",
         address = "row",
     })
-    local npc = routeEvents.emit(history, {
+    local npc = routeHistory.emit(history, {
         kind = "npc",
         eventKey = "ArtemisCombatG",
         routeGroup = "FieldNpc",
@@ -124,14 +128,48 @@ function TestRunPlannerRouteEvents.testHistoryIndexesEventsByEventAndGroup()
         },
     })
 
-    lu.assertIs(routeEvents.lastEvent(history, "Devotion"), reward)
-    lu.assertIs(routeEvents.lastEvent(history, "ArtemisCombatG"), npc)
-    lu.assertIs(routeEvents.lastInGroup(history, "FieldNpc"), npc)
+    lu.assertIs(routeHistory.lastEvent(history, "Devotion"), reward)
+    lu.assertIs(routeHistory.lastEvent(history, "ArtemisCombatG"), npc)
+    lu.assertIs(routeHistory.lastInGroup(history, "FieldNpc"), npc)
+    lu.assertEquals(routeHistory.count(history, { kind = "reward" }), 1)
+    lu.assertEquals(routeHistory.count(history, { kind = "npc" }), 1)
+end
+
+function TestRunPlannerRouteEvents.testHistoryIndexesRewardFacts()
+    local history = routeHistory.create()
+    local selected = routeHistory.emitAt(history, rowContext(), {
+        kind = "reward",
+        eventKey = "Loot",
+        rewardType = "Boon",
+        biomeKey = "F",
+        sourceValues = { "DemeterUpgrade", "ZeusUpgrade" },
+    })
+    local pending = routeHistory.emitAt(history, {
+        biomeKey = "G",
+        rowIndex = 3,
+    }, {
+        kind = "reward",
+        eventKey = "Loot",
+        rewardType = "WeaponUpgradeDrop",
+        timing = "pendingOffer",
+        sourceValues = { "Hammer" },
+    })
+
+    lu.assertIs(routeHistory.rewardEntries(history, "Boon")[1], selected)
+    lu.assertIs(routeHistory.biomeRewardEntries(history, "F", "Boon")[1], selected)
+    lu.assertEquals(routeHistory.count(history, {
+        kind = "reward",
+        rewardType = "Boon",
+        biomeKey = "F",
+    }), 1)
+    lu.assertIs(routeHistory.pendingRewardEntries(history, "WeaponUpgradeDrop")[1], pending)
+    lu.assertTrue(routeHistory.hasPendingReward(history, "WeaponUpgradeDrop"))
+    lu.assertIs(routeHistory.sourceEntries(history, "DemeterUpgrade")[1], selected)
 end
 
 function TestRunPlannerRouteEvents.testMinRoomsSinceEventUsesRunDepthCache()
-    local history = routeEvents.createHistory()
-    routeEvents.emitAt(history, {
+    local history = routeHistory.create()
+    routeHistory.emitAt(history, {
         runDepthCache = 10,
     }, {
         kind = "reward",
@@ -159,8 +197,8 @@ function TestRunPlannerRouteEvents.testMinRoomsSinceEventUsesRunDepthCache()
 end
 
 function TestRunPlannerRouteEvents.testSumPrevRoomsScansInternalWindow()
-    local history = routeEvents.createHistory()
-    local fieldNpc = routeEvents.emit(history, {
+    local history = routeHistory.create()
+    local fieldNpc = routeHistory.emit(history, {
         kind = "npc",
         eventKey = "ArtemisCombatF",
         routeGroup = "FieldNpc",
@@ -171,7 +209,7 @@ function TestRunPlannerRouteEvents.testSumPrevRoomsScansInternalWindow()
             roomHistoryOrdinal = 8,
         },
     })
-    routeEvents.emit(history, {
+    routeHistory.emit(history, {
         kind = "npc",
         eventKey = "ArachneCombatF",
         routeGroup = "ArachneCombat",
