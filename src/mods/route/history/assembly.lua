@@ -13,6 +13,11 @@ function historyAssembly.create(opts)
     local loot = import("mods/route/history/loot.lua", nil, {
         history = history,
     })
+    local findings = import("mods/route/history/findings.lua")
+    local valueStates = import("mods/route/value_states.lua")
+    local feedback = import("mods/route/history/feedback.lua", nil, {
+        valueStates = valueStates,
+    })
     local rewardCandidates = import("mods/route/history/candidates/rewards.lua", nil, {
         rewardDomain = opts.rewardDomain,
     })
@@ -57,8 +62,15 @@ function historyAssembly.create(opts)
         history = history,
         query = query,
     })
+    local candidateValidator = import("mods/route/history/validator/candidates.lua", nil, {
+        history = history,
+        findings = findings,
+        rewards = rewardValidator,
+        selectedLegalityRules = opts.selectedLegalityRules,
+    })
     local validator = import("mods/route/history/validator.lua", nil, {
         biomeStructure = biomeStructureValidator,
+        candidates = candidateValidator,
         rewards = rewardValidator,
         selectedLegalityRules = opts.selectedLegalityRules,
     })
@@ -66,6 +78,8 @@ function historyAssembly.create(opts)
     return {
         adapters = adapters,
         events = events,
+        feedback = feedback,
+        findings = findings,
         history = history,
         loot = loot,
         roomCandidates = roomCandidates,

@@ -9,8 +9,12 @@ local historySystem = h.withTestImport(function()
 end)
 local routeHistory = historySystem.history
 local routeLoot = historySystem.loot
+local historyFeedback = historySystem.feedback
 local historyBuilder = historySystem.builder
 local historyValidator = historySystem.validator
+local valueStates = h.withTestImport(function()
+    return h.testImport("mods/route/value_states.lua")
+end)
 
 -- luacheck: globals TestRunPlannerRouteHistoryValidator
 TestRunPlannerRouteHistoryValidator = {}
@@ -72,6 +76,7 @@ local function emitRoom(history, roomHistoryOrdinal, fields)
         roomKey = fields and fields.roomKey or "Room" .. tostring(roomHistoryOrdinal),
         topology = fields and fields.topology or nil,
         reward = fields and fields.reward or nil,
+        rewardCandidates = fields and fields.rewardCandidates or nil,
     })
 end
 
@@ -86,6 +91,15 @@ local function emitLoot(history, room, lootType, fields)
         sourceValues = fields and fields.sourceValues or nil,
         lootName = fields and fields.lootName or nil,
     })
+end
+
+local function firstFinding(result, kind, field, expected)
+    for _, finding in ipairs(result and result.findings or {}) do
+        if finding.kind == kind and (field == nil or finding[field] == expected) then
+            return finding
+        end
+    end
+    return nil
 end
 
 function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateConcreteRoom()
@@ -116,6 +130,126 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateConcre
     lu.assertEquals(result.invalids[1].code, "option_limit")
     lu.assertEquals(result.invalids[1].biomeKey, "F")
     lu.assertEquals(result.invalids[1].roomKey, "F_Combat02")
+end
+
+function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRoomFindings()
+    local route = {
+        key = "Underworld",
+        biomes = { "F" },
+    }
+    local history, catalog = buildHistory(route, "F", h.loadFixedLinearTemplate(), {
+        {
+            OptionKey = "F_Opening01",
+            Reward1Key = "SpellDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat01",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+    })
+
+    local result = historyValidator.validate({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+
+    local finding = firstFinding(result, "roomCandidateInvalid", "roomKey", "F_Story01")
+    lu.assertNotNil(finding)
+    lu.assertEquals(finding.reason, "biome_depth_unavailable")
+    lu.assertEquals(finding.axis, "biomeDepthCache")
+    lu.assertEquals(finding.biomeKey, "F")
+
+    local feedback = historyFeedback.fromFindings(result.findings)
+    local states = historyFeedback.valueStatesForControl(feedback, "F", finding.rowIndex, "OptionKey")
+    lu.assertEquals(states.F_Story01, valueStates.HIDDEN)
+end
+
+function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsSiblingFindings()
+    local route = {
+        key = "Underworld",
+        biomes = { "F" },
+    }
+    local history, catalog = buildHistory(route, "F", h.loadFixedLinearTemplate(), {
+        {
+            OptionKey = "F_Opening01",
+            Reward1Key = "SpellDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat01",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+    })
+
+    local result = historyValidator.validate({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+
+    local finding = firstFinding(result, "siblingCandidateInvalid", "structureKey", "F_Story01")
+    lu.assertNotNil(finding)
+    lu.assertEquals(finding.reason, "biome_depth_unavailable")
+    lu.assertEquals(finding.siblingIndex, 1)
+
+    local feedback = historyFeedback.fromFindings(result.findings)
+    local states = historyFeedback.valueStatesForControl(feedback, "F", finding.rowIndex, "SiblingStructureKey")
+    lu.assertEquals(states.F_Story01, valueStates.HIDDEN)
+end
+
+function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRewardFindings()
+    local history = routeHistory.create()
+    emitRoom(history, 1, {
+        rewardCandidates = {
+            {
+                kind = "rewardType",
+                address = "row",
+                rewardClass = "Major",
+                rewardStore = "RunProgress",
+                rewardTypes = { "TalentDrop" },
+            },
+        },
+    })
+
+    local result = validateHistory(history)
+
+    local finding = firstFinding(result, "rewardCandidateInvalid", "rewardType", "TalentDrop")
+    lu.assertNotNil(finding)
+    lu.assertEquals(finding.reason, "talent_requires_spell")
+    lu.assertEquals(finding.rewardClass, "Major")
+
+    local feedback = historyFeedback.fromFindings(result.findings)
+    local states = historyFeedback.valueStatesForControl(feedback, "F", 1, "Reward2Key")
+    lu.assertEquals(states.TalentDrop, valueStates.INVALID)
+end
+
+function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsFieldsCageRewardFindings()
+    local history = routeHistory.create()
+    emitRoom(history, 1, {
+        biomeKey = "H",
+        rewardCandidates = {
+            {
+                kind = "rewardType",
+                address = "cage:2",
+                rewardStore = "RunProgress",
+                rewardTypes = { "TalentDrop" },
+            },
+        },
+    })
+
+    local result = validateHistory(history)
+
+    local finding = firstFinding(result, "rewardCandidateInvalid", "rewardType", "TalentDrop")
+    lu.assertNotNil(finding)
+    lu.assertEquals(finding.address, "cage:2")
+
+    local feedback = historyFeedback.fromFindings(result.findings)
+    local states = historyFeedback.valueStatesForControl(feedback, "H", 1, "Reward2Key")
+    lu.assertEquals(states.TalentDrop, valueStates.INVALID)
 end
 
 function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMissingFieldsBridgeForcePressure()

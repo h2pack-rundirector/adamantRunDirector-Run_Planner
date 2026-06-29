@@ -46,7 +46,13 @@ local function compare(value, comparison, target)
     return false
 end
 
-local function skipped(requirement, entry)
+local function skipped(requirement, entry, opts)
+    if opts ~= nil
+        and opts.skipRequirementKinds ~= nil
+        and opts.skipRequirementKinds[requirement.kind]
+    then
+        return true
+    end
     for _, biomeKey in ipairs(requirement.exceptBiomes or EMPTY_LIST) do
         if biomeKey == entry.biomeKey then
             return true
@@ -136,9 +142,9 @@ end
 
 local evaluateRequirement
 
-local function evaluateAll(history, entry, requirements)
+local function evaluateAll(history, entry, requirements, opts)
     for _, requirement in ipairs(requirements or EMPTY_LIST) do
-        local invalid = evaluateRequirement(history, entry, requirement)
+        local invalid = evaluateRequirement(history, entry, requirement, opts)
         if invalid ~= nil then
             return invalid
         end
@@ -146,10 +152,10 @@ local function evaluateAll(history, entry, requirements)
     return nil
 end
 
-local function evaluateAny(history, entry, requirement)
+local function evaluateAny(history, entry, requirement, opts)
     local firstInvalid = nil
     for _, child in ipairs(requirement.requirements or EMPTY_LIST) do
-        local invalid = evaluateRequirement(history, entry, child)
+        local invalid = evaluateRequirement(history, entry, child, opts)
         if invalid == nil then
             return nil
         end
@@ -160,16 +166,16 @@ local function evaluateAny(history, entry, requirement)
     })
 end
 
-function evaluateRequirement(history, entry, requirement)
-    if skipped(requirement, entry) then
+function evaluateRequirement(history, entry, requirement, opts)
+    if skipped(requirement, entry, opts) then
         return nil
     end
 
     local kind = requirement.kind
     if kind == "All" then
-        return evaluateAll(history, entry, requirement.requirements)
+        return evaluateAll(history, entry, requirement.requirements, opts)
     elseif kind == "Any" then
-        return evaluateAny(history, entry, requirement)
+        return evaluateAny(history, entry, requirement, opts)
     elseif kind == "LootTypeHistory" then
         local count = lootTypeHistoryCount(history, entry, requirement.countOf)
         if not compare(count, requirement.comparison, requirement.value) then
@@ -227,6 +233,20 @@ function evaluateRequirement(history, entry, requirement)
     return nil
 end
 
+function rewardValidator.rulesByTarget(rules)
+    return buildRulesByTarget(rules)
+end
+
+function rewardValidator.invalidForLootType(history, entry, lootType, rulesByTarget, opts)
+    for _, rule in ipairs((rulesByTarget or {})[lootType] or EMPTY_LIST) do
+        local invalid = evaluateAll(history, entry, rule.requirements, opts)
+        if invalid ~= nil then
+            return invalid
+        end
+    end
+    return nil
+end
+
 local function invalidAt(entry, invalid)
     return {
         code = invalid.code,
@@ -249,14 +269,17 @@ function rewardValidator.validate(args)
     local history = args and args.history or nil
     local rulesByTarget = buildRulesByTarget(args and args.selectedLegalityRules)
     for _, loot in ipairs(routeHistory.byKind(history, "loot")) do
-        for _, rule in ipairs(rulesByTarget[loot.lootType] or EMPTY_LIST) do
-            local invalid = evaluateAll(history, loot, rule.requirements)
-            if invalid ~= nil then
-                return {
-                    valid = false,
-                    invalids = { invalidAt(loot, invalid) },
-                }
-            end
+        local invalid = rewardValidator.invalidForLootType(
+            history,
+            loot,
+            loot.lootType,
+            rulesByTarget
+        )
+        if invalid ~= nil then
+            return {
+                valid = false,
+                invalids = { invalidAt(loot, invalid) },
+            }
         end
     end
     return validResult()
