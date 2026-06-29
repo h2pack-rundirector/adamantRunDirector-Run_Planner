@@ -16,6 +16,7 @@ local runtime = import("mods/controls/FieldsCageRoute/runtime.lua", nil, {
     rewardItems = deps.route.rewardItems,
     roomStructure = biomeHelpers.roomStructure,
     invalidLocations = deps.route.invalidLocations,
+    controlRequirements = deps.route.controlRequirements,
 })
 local ui = import("mods/controls/FieldsCageRoute/ui/ui.lua", nil, {
     data = data,

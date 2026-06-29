@@ -18,6 +18,7 @@ end
 function planner.draw(draw, control, instance)
     local imgui = draw.imgui
     local tabId = tostring(control:name()) .. "RoutePlanTabs"
+    decorations.drawPlannerCompletionStatus(draw, instance)
     if not imgui.BeginTabBar(tabId) then
         rooms.draw(draw, control, instance)
         return

@@ -8,6 +8,7 @@ local rewardItems = deps.rewardItems
 local roomStructure = deps.roomStructure
 local sideRoomProbability = deps.sideRoomProbability
 local invalidLocations = deps.invalidLocations
+local controlRequirements = deps.controlRequirements
 
 local runtime = {}
 local EMPTY_LIST = {}
@@ -419,6 +420,7 @@ function runtime.create(fields, instance)
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,
+            invalidCompletion = validation.completion == true,
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
             rewards = rewardsConfigured and rewardSystem.readRewards(fields.Rewards, rowIndex) or EMPTY_LIST,
             rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
@@ -486,22 +488,30 @@ function runtime.create(fields, instance)
     function control:buildSnapshot()
         local rows = {}
         local invalidRows = {}
+        local completionInvalidRows = {}
         local seenInvalids = {}
         self:beginReadPass()
         for rowIndex = 1, self:rowCount() do
             local row = self:rowSnapshot(rowIndex)
             rows[#rows + 1] = row
             if row ~= nil and not row.valid then
-                appendInvalidRow(invalidRows, seenInvalids, {
+                local invalidRow = {
                     rowIndex = row.rowIndex,
                     routeOrdinal = row.routeOrdinal,
                     locationLabel = invalidLocations.biomeRow(instance, row),
                     code = row.invalidCode,
                     message = row.invalidReason,
-                })
+                }
+                appendInvalidRow(invalidRows, seenInvalids, invalidRow)
+                if controlRequirements.isCompletionInvalid(row) then
+                    completionInvalidRows[#completionInvalidRows + 1] = invalidRow
+                end
             end
         end
         self:endReadPass()
+        instance.completionInvalidMessage = completionInvalidRows[1] ~= nil
+                and ("Data incomplete: " .. tostring(completionInvalidRows[1].message or completionInvalidRows[1].code))
+            or nil
         return {
             controlName = instance.name,
             biomeKey = instance.biomeKey,
@@ -509,6 +519,7 @@ function runtime.create(fields, instance)
             valid = invalidRows[1] == nil,
             disabled = invalidRows[1] ~= nil,
             invalidRows = invalidRows,
+            completionInvalidRows = completionInvalidRows,
             rows = rows,
         }
     end

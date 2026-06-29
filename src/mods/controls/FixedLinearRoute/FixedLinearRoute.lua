@@ -17,6 +17,7 @@ local runtime = import("mods/controls/FixedLinearRoute/runtime.lua", nil, {
     roomStructure = biomeHelpers.roomStructure,
     rewardRatio = biomeHelpers.rewardRatio,
     invalidLocations = deps.route.invalidLocations,
+    controlRequirements = deps.route.controlRequirements,
 })
 local ui = import("mods/controls/FixedLinearRoute/ui/ui.lua", nil, {
     data = data,

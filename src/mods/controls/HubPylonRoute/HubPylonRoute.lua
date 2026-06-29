@@ -10,6 +10,7 @@ local runtime = import("mods/controls/HubPylonRoute/runtime.lua", nil, {
     roomStructure = biomeHelpers.roomStructure,
     sideRoomProbability = sideRoomProbability,
     invalidLocations = deps.route.invalidLocations,
+    controlRequirements = deps.route.controlRequirements,
 })
 local ui = import("mods/controls/HubPylonRoute/ui/ui.lua", nil, {
     data = data,

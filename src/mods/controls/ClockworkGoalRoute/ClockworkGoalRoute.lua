@@ -16,6 +16,7 @@ local runtime = import("mods/controls/ClockworkGoalRoute/runtime.lua", nil, {
     rewardItems = deps.route.rewardItems,
     roomStructure = biomeHelpers.roomStructure,
     invalidLocations = deps.route.invalidLocations,
+    controlRequirements = deps.route.controlRequirements,
 })
 local ui = import("mods/controls/ClockworkGoalRoute/ui/ui.lua", nil, {
     data = data,

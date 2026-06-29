@@ -108,6 +108,18 @@ local function missingControlInvalid(context, routeBiomeIndex, biomeKey)
     }
 end
 
+local function firstCompletionInvalid(routeBiomeIndex, biomeKey, snapshot)
+    local invalid = snapshot and snapshot.completionInvalidRows and snapshot.completionInvalidRows[1] or nil
+    if invalid == nil then
+        return nil
+    end
+    return copyInvalidRow(invalid, {
+        biomeKey = biomeKey,
+        routeBiomeIndex = routeBiomeIndex,
+        controlName = snapshot.controlName or routeControlName(biomeKey),
+    })
+end
+
 local function invalidLocationLabel(context, invalid)
     if invalid == nil then
         return nil
@@ -521,6 +533,7 @@ function runContext.create(opts)
         local previousSnapshotBuilding = self.snapshotBuilding
         self.snapshotBuilding = true
         local configuredBiomeCount = self:configuredBiomeCount(route.key)
+        local completionInvalid = nil
         for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
             if routeBiomeIndex > configuredBiomeCount then
                 break
@@ -530,17 +543,22 @@ function runContext.create(opts)
             if missingInvalid == nil and not snapshot then
                 missingInvalid = missingControlInvalid(self, routeBiomeIndex, biomeKey)
             end
+            if completionInvalid == nil and snapshot then
+                completionInvalid = firstCompletionInvalid(routeBiomeIndex, biomeKey, snapshot)
+            end
         end
         self.snapshotBuilding = previousSnapshotBuilding
 
-        local _, historyResult = self:historyFeedback(route.key)
         if missingInvalid ~= nil then
             invalidRows[1] = missingInvalid
-        elseif historyResult ~= nil and historyResult.valid == false then
-            appendHistoryInvalidRows(self, invalidRows, historyResult.invalids)
+        elseif completionInvalid == nil then
+            local _, historyResult = self:historyFeedback(route.key)
+            if historyResult ~= nil and historyResult.valid == false then
+                appendHistoryInvalidRows(self, invalidRows, historyResult.invalids)
+            end
         end
 
-        local routeValid = invalidRows[1] == nil
+        local routeValid = invalidRows[1] == nil and completionInvalid == nil
         layerStatus.route.evaluated = true
         layerStatus.route.valid = routeValid
 
@@ -548,8 +566,14 @@ function runContext.create(opts)
             routeKey = route.key,
             label = route.label,
             configuredBiomeCount = configuredBiomeCount,
-            valid = invalidRows[1] == nil,
-            disabled = invalidRows[1] ~= nil,
+            valid = routeValid,
+            disabled = not routeValid,
+            incomplete = completionInvalid ~= nil,
+            incompleteBiomeKey = completionInvalid and completionInvalid.biomeKey or nil,
+            incompleteControlName = completionInvalid and completionInvalid.controlName or nil,
+            incompleteMessage = completionInvalid
+                    and ("Data entry incomplete: finish " .. biomeLabel(self, completionInvalid.biomeKey))
+                or nil,
             invalidRows = invalidRows,
             blockingHorizon = blockingHorizon(self, route, invalidRows[1]),
             layerStatus = layerStatus,

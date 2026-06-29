@@ -39,22 +39,27 @@ end
 function routeStatus.drawRouteStatus(draw, routeSnapshot)
     local label = tostring((routeSnapshot and routeSnapshot.label) or (routeSnapshot and routeSnapshot.routeKey) or "Route")
     local valid = routeSnapshot ~= nil and routeSnapshot.valid
+    local incomplete = routeSnapshot ~= nil and routeSnapshot.incomplete == true
     local invalidRows, primaryInvalid
-    if not valid then
+    if not valid and not incomplete then
         invalidRows, primaryInvalid = firstInvalid(routeSnapshot)
     end
-    local primaryMessage = invalidText(primaryInvalid)
-    local status = valid and "Valid" or "Invalid"
+    local primaryMessage = incomplete and routeSnapshot.incompleteMessage or invalidText(primaryInvalid)
+    local status = valid and "Valid" or (incomplete and "Incomplete" or "Invalid")
     local text = label .. " " .. status .. (primaryMessage ~= nil and ":" or "")
     local imgui = draw.imgui
     local invalidColor = decorations.invalidColor()
-    decorations.drawColoredText(imgui, valid and decorations.validColor() or invalidColor, text)
+    local statusColor = valid and decorations.validColor() or (incomplete and decorations.warningColor() or invalidColor)
+    decorations.drawColoredText(imgui, statusColor, text)
 
     if primaryMessage == nil then
         return
     end
 
-    drawMessageLine(imgui, invalidColor, primaryMessage, true)
+    drawMessageLine(imgui, statusColor, primaryMessage, true)
+    if incomplete then
+        return
+    end
     for index = 2, #invalidRows do
         local related = invalidRows[index]
         if related.markerKind ~= "related" then

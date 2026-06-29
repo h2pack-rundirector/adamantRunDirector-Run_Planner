@@ -598,6 +598,7 @@ local function routeRewardRow(rowIndex, rewardType, opts)
         rewardSourceCount = opts.rewardSourceCount,
         invalidCode = opts.invalidCode,
         invalidReason = opts.invalidReason,
+        invalidCompletion = opts.invalidCompletion,
         locationLabel = opts.locationLabel,
         rewardConstraints = opts.rewardConstraints,
         rewardRowGroup = opts.rewardRowGroup,
@@ -612,21 +613,27 @@ local function fakeRouteControlSnapshot(controlName, rows)
             if path == "snapshot" then
                 local snapshotRows = normalizeRewardRows(rows or {})
                 local invalidRows = {}
+                local completionInvalidRows = {}
                 for _, row in ipairs(snapshotRows) do
                     if row.valid == false then
-                        invalidRows[#invalidRows + 1] = {
+                        local invalidRow = {
                             rowIndex = row.rowIndex,
                             routeOrdinal = row.routeOrdinal,
                             locationLabel = row.locationLabel or row.slotLabel or ("Row " .. tostring(row.rowIndex)),
                             code = row.invalidCode or "test_invalid",
                             message = row.invalidReason or row.message or "Test invalid",
                         }
+                        invalidRows[#invalidRows + 1] = invalidRow
+                        if row.invalidCompletion == true then
+                            completionInvalidRows[#completionInvalidRows + 1] = invalidRow
+                        end
                     end
                 end
                 return {
                     controlName = controlName,
                     valid = invalidRows[1] == nil,
                     invalidRows = invalidRows,
+                    completionInvalidRows = completionInvalidRows,
                     rows = snapshotRows,
                 }
             end

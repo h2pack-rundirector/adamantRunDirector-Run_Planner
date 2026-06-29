@@ -778,6 +778,37 @@ function TestRunPlannerRewardPlanning.testRouteContextMarksRequiredVisibleReward
     lu.assertNil(states.ZeusUpgrade)
 end
 
+function TestRunPlannerRewardPlanning.testRouteContextPrioritizesTemplateCompletionInvalid()
+    local routeContext = rewardLegalityRouteContext({
+        key = "Underworld",
+        label = "Underworld",
+        biomes = { "F" },
+    }, {
+        RouteF = fakeRouteControlSnapshot("RouteF", {
+            routeRewardRow(1, "MaxHealthDrop", {
+                valid = false,
+                invalidCode = "option_required",
+                invalidReason = "Choose a room",
+                invalidCompletion = true,
+            }),
+            routeRewardRow(2, "SpellDrop"),
+            routeRewardRow(3, "SpellDrop"),
+        }),
+    }, {
+        biomes = {
+            F = { label = "Erebus" },
+        },
+    })
+
+    local overview = routeContext:overview("Underworld")
+
+    lu.assertFalse(overview.valid)
+    lu.assertTrue(overview.incomplete)
+    lu.assertEquals(overview.incompleteBiomeKey, "F")
+    lu.assertEquals(overview.incompleteMessage, "Data entry incomplete: finish Erebus")
+    lu.assertEquals(#overview.invalidRows, 0)
+end
+
 function TestRunPlannerRewardPlanning.testRouteContextMarksRelatedRewardParticipantValue()
     local control = rewardCandidateControl("rewardType", {
         "",
