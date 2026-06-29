@@ -608,36 +608,45 @@ local function routeRewardRow(rowIndex, rewardType, opts)
 end
 
 local function fakeRouteControlSnapshot(controlName, rows)
+    local snapshotRows = normalizeRewardRows(rows or {})
+    local function completionReport()
+        local invalidRows = {}
+        local completionInvalidRows = {}
+        for _, row in ipairs(snapshotRows) do
+            if row.valid == false then
+                local invalidRow = {
+                    rowIndex = row.rowIndex,
+                    routeOrdinal = row.routeOrdinal,
+                    locationLabel = row.locationLabel or row.slotLabel or ("Row " .. tostring(row.rowIndex)),
+                    code = row.invalidCode or "test_invalid",
+                    message = row.invalidReason or row.message or "Test invalid",
+                }
+                invalidRows[#invalidRows + 1] = invalidRow
+                if row.invalidCompletion == true then
+                    completionInvalidRows[#completionInvalidRows + 1] = invalidRow
+                end
+            end
+        end
+        return {
+            controlName = controlName,
+            valid = invalidRows[1] == nil,
+            disabled = invalidRows[1] ~= nil,
+            completionInvalidRows = completionInvalidRows,
+        }
+    end
+
     return {
         read = function(_, path)
-            if path == "snapshot" then
-                local snapshotRows = normalizeRewardRows(rows or {})
-                local invalidRows = {}
-                local completionInvalidRows = {}
-                for _, row in ipairs(snapshotRows) do
-                    if row.valid == false then
-                        local invalidRow = {
-                            rowIndex = row.rowIndex,
-                            routeOrdinal = row.routeOrdinal,
-                            locationLabel = row.locationLabel or row.slotLabel or ("Row " .. tostring(row.rowIndex)),
-                            code = row.invalidCode or "test_invalid",
-                            message = row.invalidReason or row.message or "Test invalid",
-                        }
-                        invalidRows[#invalidRows + 1] = invalidRow
-                        if row.invalidCompletion == true then
-                            completionInvalidRows[#completionInvalidRows + 1] = invalidRow
-                        end
-                    end
-                end
-                return {
-                    controlName = controlName,
-                    valid = invalidRows[1] == nil,
-                    invalidRows = invalidRows,
-                    completionInvalidRows = completionInvalidRows,
-                    rows = snapshotRows,
-                }
+            if path == "completion" then
+                return completionReport()
             end
             return nil
+        end,
+        rowCount = function()
+            return #snapshotRows
+        end,
+        rowSnapshot = function(_, rowIndex)
+            return snapshotRows[rowIndex]
         end,
     }
 end
@@ -734,6 +743,32 @@ local function firstValidDevotionRows()
     }
 end
 
+local function buildRuntimeRowsSnapshot(control)
+    local rows = {}
+    local invalidRows = {}
+    for rowIndex = 1, control:rowCount() do
+        local row = control:rowSnapshot(rowIndex)
+        rows[#rows + 1] = row
+        if row and row.valid == false then
+            invalidRows[#invalidRows + 1] = {
+                rowIndex = row.rowIndex,
+                routeOrdinal = row.routeOrdinal,
+                code = row.invalidCode,
+                message = row.invalidReason,
+                tabKey = row.invalidTabKey,
+                controlTargets = row.invalidControlTargets,
+                valueTargets = row.invalidValueTargets,
+            }
+        end
+    end
+    local snapshot = control:read("completion")
+    snapshot.rows = rows
+    snapshot.invalidRows = invalidRows[1] ~= nil and invalidRows or nil
+    snapshot.valid = invalidRows[1] == nil
+    snapshot.disabled = invalidRows[1] ~= nil
+    return snapshot
+end
+
 return {
     testImport = testImport,
     withTestImport = withTestImport,
@@ -780,4 +815,5 @@ fakeTimelineBiome = fakeTimelineBiome,
     devotionRewardRow = devotionRewardRow,
     boonRewardRow = boonRewardRow,
     firstValidDevotionRows = firstValidDevotionRows,
+    buildRuntimeRowsSnapshot = buildRuntimeRowsSnapshot,
 }

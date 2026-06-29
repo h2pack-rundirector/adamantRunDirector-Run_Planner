@@ -9,7 +9,6 @@ local fakeRows = h.fakeRows
 local routeFields = h.routeFields
 local routeUiFields = h.routeUiFields
 local noOpDraw = h.noOpDraw
-local attachSingleBiomeRouteContext = h.attachSingleBiomeRouteContext
 local valueStates = dofile("src/mods/route/value_states.lua")
 
 -- luacheck: globals TestRunPlannerFieldsCageRoute
@@ -210,7 +209,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeResolvesOnlyConcrete
                 Reward2Key = "WeaponUpgrade",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertEquals(snapshot.rows[2].roomTopology, {
@@ -345,7 +344,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSharedStructureSurvivesWhen
         end,
     }, "Underworld")
 
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertEquals(snapshot.rows[2].exitCount, 2)
@@ -423,7 +422,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnaps
             },
             {},
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertEquals(snapshot.biomeKey, "H")
     lu.assertEquals(snapshot.adapter, "fieldsCageRoute")
@@ -561,7 +560,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeInvalidatesCageCount
                 VariantKey = "ThreeRewards",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -586,7 +585,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeInvalidatesForcedCag
                 VariantKey = "TwoRewards",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -612,7 +611,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRequiresPickedCageCountForT
                 SiblingStructureKey = "CombatCage2",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -639,7 +638,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRequiresSiblingStructureFor
             },
         }
     local control = template.createRuntime(routeFields(rows), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
     local data = loadFieldsCageData()
     local routeRows = fakeRows(rows)
 
@@ -682,7 +681,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsMismatchedSiblingCom
                 Reward3Key = "StackUpgrade",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -751,7 +750,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsPreviouslyGeneratedS
                 Reward2Key = "StackUpgrade",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -778,7 +777,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsUnresolvedForcedTopo
             },
             hCombatTwoRewardRow("H_Combat06", "ZeusUpgrade"),
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -828,7 +827,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsPickThreeMissingForc
             },
             hCombatTwoRewardRow("H_Combat05", "ApolloUpgrade"),
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -860,7 +859,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageAllowsPickThreeBridgeWithCo
                 Reward1Key = "ZeusUpgrade",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertEquals(snapshot.rows[4].roomTopology, {
@@ -896,7 +895,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageAllowsPickThreeMinibossPair
             },
             hCombatTwoRewardRow("H_Combat05", "ApolloUpgrade"),
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertEquals(snapshot.rows[4].roomTopology, {
@@ -944,7 +943,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsLateSingleMinibossTo
                 Reward2Key = "StackUpgrade",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -976,7 +975,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageAllowsLatePairedMinibossTop
                 Reward1Key = "ZeusUpgrade",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertEquals(snapshot.rows[4].roomTopology.sibling.roomKey, "H_MiniBoss02")
@@ -1010,7 +1009,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageEarlyPickedMinibossClosesFo
                 Reward2Key = "WeaponUpgrade",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertEquals(snapshot.rows[5].roomTopology.selected.structure, "CombatCage2")
@@ -1040,7 +1039,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsSiblingStructureOuts
                 SiblingStructureKey = "Bridge",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -1067,7 +1066,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsSiblingStructureMatc
                 Reward1Key = "ZeusUpgrade",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -1094,7 +1093,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageAllowsSiblingStructureWithD
                 Reward1Key = "ZeusUpgrade",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertEquals(snapshot.rows[3].roomTopology, {
@@ -1143,7 +1142,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsSiblingRoomPlannedEl
                 Reward1Key = "ZeusUpgrade",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -1180,7 +1179,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsMinibossSiblingAfter
                 Reward2Key = "WeaponUpgrade",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -1190,7 +1189,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRejectsMinibossSiblingAfter
     lu.assertNil(snapshot.rows[5].roomTopology)
 end
 
-function TestRunPlannerFieldsCageRoute.testFieldsCagePolicyRejectsDuplicateBoonSourcesInSameCageSet()
+function TestRunPlannerFieldsCageRoute.testFieldsCageExportsDuplicateBoonSourcesInSameCageSet()
     local catalog = loadCatalog()
     local template = loadFieldsCageTemplate()
     local instance = template.prepare({
@@ -1211,18 +1210,15 @@ function TestRunPlannerFieldsCageRoute.testFieldsCagePolicyRejectsDuplicateBoonS
                 Reward3Key = "HermesUpgrade",
             },
         }), instance)
-    attachSingleBiomeRouteContext(control, "Underworld", "H")
-    local snapshot = control:buildSnapshot()
+    local snapshot = control:buildSelectedRowsSnapshot()
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertTrue(snapshot.disabled)
-    lu.assertEquals(#snapshot.invalidRows, 1)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
-    lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_boon_source")
-    lu.assertEquals(snapshot.rows[2].invalidCode, "duplicate_boon_source")
+    lu.assertEquals(snapshot.rows[2].rewards.row.values[1], "Boon")
+    lu.assertEquals(snapshot.rows[2].rewards.row.loot[1], "PoseidonUpgrade")
+    lu.assertEquals(snapshot.rows[2].rewards.row.values[2], "Boon")
+    lu.assertEquals(snapshot.rows[2].rewards.row.loot[2], "PoseidonUpgrade")
 end
 
-function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimePolicyRejectsDuplicateNonBoonRewards()
+function TestRunPlannerFieldsCageRoute.testFieldsCageExportsDuplicateNonBoonRewards()
     local catalog = loadCatalog()
     local template = loadFieldsCageTemplate()
     local instance = template.prepare({
@@ -1241,18 +1237,9 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimePolicyRejectsDuplica
             },
         })
     local runtimeControl = template.createRuntime(fields, instance)
-    attachSingleBiomeRouteContext(runtimeControl, "Underworld", "H")
-
-    local row = runtimeControl:rowSnapshot(2)
-    lu.assertFalse(row.valid)
-    lu.assertEquals(row.invalidCode, "duplicate_reward_type")
-
-    local snapshot = runtimeControl:buildSnapshot()
-    lu.assertFalse(snapshot.valid)
-    lu.assertEquals(#snapshot.invalidRows, 1)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
-    lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_reward_type")
-    lu.assertEquals(snapshot.rows[2].invalidCode, "duplicate_reward_type")
+    local snapshot = runtimeControl:buildSelectedRowsSnapshot()
+    lu.assertEquals(snapshot.rows[2].rewards.row.values[1], "MaxHealthDrop")
+    lu.assertEquals(snapshot.rows[2].rewards.row.values[2], "MaxHealthDrop")
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageValueStatesEchoBeforeThirdPick()

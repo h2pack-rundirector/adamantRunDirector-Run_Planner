@@ -61,6 +61,62 @@ local function routeRewardValueStates(instance, rowIndex, rewardAddress, control
     return nil
 end
 
+local function completionStatus(status)
+    if status ~= nil and not status.valid and controlRequirements.isCompletionInvalid(status) then
+        return status
+    end
+    return common.validStatus()
+end
+
+local function formValidation(instance, routeRows, rowIndex)
+    local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
+    if roleKey == nil or roleKey == "" then
+        return controlRequirements.invalid({
+            code = "role_required",
+            message = "Choose a room type",
+            tabKey = "rooms",
+            controlAlias = "RoleKey",
+            label = "Room type",
+        })
+    end
+    if role == nil then
+        return controlRequirements.invalid({
+            code = "unknown_role",
+            message = "Unknown route role: " .. tostring(roleKey),
+            tabKey = "rooms",
+            controlAlias = "RoleKey",
+            label = "Room type",
+        })
+    end
+
+    local options = data.optionListForRole(role)
+    if #options == 0 then
+        return common.validStatus()
+    end
+
+    local optionKey = routeRows and routeRows:read(rowIndex, "OptionKey") or ""
+    local _, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
+    if optionKey ~= "" and option == nil then
+        return controlRequirements.invalid({
+            code = "unknown_option",
+            message = "Unknown route option: " .. tostring(optionKey),
+            tabKey = "rooms",
+            controlAlias = "OptionKey",
+            label = tostring(role.label or roleKey),
+        })
+    end
+    if optionKey == "" and (role.requiresConcreteOption or #options > 1) then
+        return controlRequirements.invalid({
+            code = "option_required",
+            message = "Choose a " .. tostring(role.label or roleKey),
+            tabKey = "rooms",
+            controlAlias = "OptionKey",
+            label = tostring(role.label or roleKey),
+        })
+    end
+    return common.validStatus()
+end
+
 local function prewarmRewardSurface(role, option)
     rewardSurface(role, option)
 end
@@ -196,25 +252,25 @@ function runtime.create(fields, instance)
     end
 
     function control:rowValidation(rowIndex)
-        local validation = data.validateRow(instance, routeRows, rowIndex)
+        local validation = formValidation(instance, routeRows, rowIndex)
         if not validation.valid then
             return validation
         end
 
         local topologyInvalid = data.validateRoomTopology(instance, routeRows, rowIndex)
-        if topologyInvalid ~= nil and not topologyInvalid.valid then
+        if controlRequirements.isCompletionInvalid(topologyInvalid) then
             return topologyInvalid
         end
 
         if not self:rewardsConfigured() then
-            return validation
+            return common.validStatus()
         end
 
         local rewardInvalid = routeRewardValidation(instance, rowIndex)
-        if rewardInvalid ~= nil and not rewardInvalid.valid then
+        if controlRequirements.isCompletionInvalid(rewardInvalid) then
             return rewardInvalid
         end
-        return validation
+        return completionStatus(validation)
     end
 
     function control:beginReadPass()
@@ -357,29 +413,31 @@ function runtime.create(fields, instance)
         }
     end
 
-    function control:buildSnapshot()
-        local rows = {}
-        local invalidRows = {}
+    local function buildCompletionReport(self)
         local completionInvalidRows = {}
         self:beginReadPass()
         for rowIndex = 1, self:rowCount() do
-            local row = self:rowSnapshot(rowIndex)
-            rows[#rows + 1] = row
-            if row ~= nil and not row.valid then
+            local validation = self:rowValidation(rowIndex)
+            if controlRequirements.isCompletionInvalid(validation) then
+                local slot = self:slot(rowIndex)
+                local row = {
+                    rowIndex = rowIndex,
+                    routeOrdinal = slot and slot.routeOrdinal or nil,
+                    slotLabel = slot and slot.label or nil,
+                    invalidCode = validation.code,
+                    invalidReason = validation.message,
+                }
                 local invalidRow = {
-                    rowIndex = row.rowIndex,
+                    rowIndex = rowIndex,
                     routeOrdinal = row.routeOrdinal,
                     locationLabel = invalidLocations.biomeRow(instance, row),
-                    code = row.invalidCode,
-                    message = row.invalidReason,
-                    tabKey = row.invalidTabKey,
-                    controlTargets = row.invalidControlTargets,
-                    valueTargets = row.invalidValueTargets,
+                    code = validation.code,
+                    message = validation.message,
+                    tabKey = validation.tabKey,
+                    controlTargets = validation.controlTargets,
+                    valueTargets = validation.valueTargets,
                 }
-                invalidRows[#invalidRows + 1] = invalidRow
-                if controlRequirements.isCompletionInvalid(row) then
-                    completionInvalidRows[#completionInvalidRows + 1] = invalidRow
-                end
+                completionInvalidRows[#completionInvalidRows + 1] = invalidRow
             end
         end
         self:endReadPass()
@@ -390,17 +448,15 @@ function runtime.create(fields, instance)
             controlName = instance.name,
             biomeKey = instance.biomeKey,
             adapter = instance.biome.adapter,
-            valid = invalidRows[1] == nil,
-            disabled = invalidRows[1] ~= nil,
-            invalidRows = invalidRows,
+            valid = completionInvalidRows[1] == nil,
+            disabled = completionInvalidRows[1] ~= nil,
             completionInvalidRows = completionInvalidRows,
-            rows = rows,
         }
     end
 
     function control:read(path, ...)
-        if path == "snapshot" then
-            return self:buildSnapshot()
+        if path == "completion" then
+            return buildCompletionReport(self)
         elseif path == "selectedRowsSnapshot" then
             return self:buildSelectedRowsSnapshot()
         elseif path == "row" then

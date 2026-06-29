@@ -9,7 +9,6 @@ local fakeRows = h.fakeRows
 local routeFields = h.routeFields
 local routeUiFields = h.routeUiFields
 local noOpDraw = h.noOpDraw
-local attachSingleBiomeRouteContext = h.attachSingleBiomeRouteContext
 local valueStates = dofile("src/mods/route/value_states.lua")
 
 -- luacheck: globals TestRunPlannerClockworkGoalRoute
@@ -148,7 +147,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTopologyModelsGenerat
             Reward1Key = "MaxHealthDrop",
         },
     }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertEquals(snapshot.rows[3].roomTopology, {
         kind = "clockworkSiblingChoice",
@@ -175,7 +174,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTopologyRequiresExact
         name = "RouteI",
         biome = catalog.lookup.I,
     })
-    local noGoal = template.createRuntime(routeFields({
+    local noGoalControl = template.createRuntime(routeFields({
         {},
         { RouteKindKey = "Goal", OptionKey = "I_Combat01" },
         {
@@ -184,7 +183,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTopologyRequiresExact
             SiblingStructureKey = "CombatReward",
             Reward1Key = "MaxHealthDrop",
         },
-    }), instance):buildSnapshot()
+    }), instance)
+    local noGoal = h.buildRuntimeRowsSnapshot(noGoalControl)
 
     lu.assertFalse(noGoal.valid)
     lu.assertEquals(noGoal.rows[3].invalidCode, "clockwork_sibling_goal_door_count")
@@ -193,7 +193,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTopologyRequiresExact
         name = "RouteI",
         biome = catalog.lookup.I,
     })
-    local twoGoals = template.createRuntime(routeFields({
+    local twoGoalsControl = template.createRuntime(routeFields({
         {},
         { RouteKindKey = "Goal", OptionKey = "I_Combat01" },
         {
@@ -201,7 +201,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTopologyRequiresExact
             OptionKey = "I_Combat03",
             SiblingStructureKey = "CombatGoal",
         },
-    }), instance):buildSnapshot()
+    }), instance)
+    local twoGoals = h.buildRuntimeRowsSnapshot(twoGoalsControl)
 
     lu.assertFalse(twoGoals.valid)
     lu.assertEquals(twoGoals.rows[3].invalidCode, "clockwork_sibling_goal_door_count")
@@ -270,14 +271,15 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTopologyRequiresGoalA
         name = "RouteI",
         biome = catalog.lookup.I,
     })
-    local goalAfterSingleExit = template.createRuntime(routeFields({
+    local goalAfterSingleExitControl = template.createRuntime(routeFields({
         {},
         { RouteKindKey = "Goal", OptionKey = "I_Combat02" },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat03",
         },
-    }), instance):buildSnapshot()
+    }), instance)
+    local goalAfterSingleExit = h.buildRuntimeRowsSnapshot(goalAfterSingleExitControl)
 
     lu.assertTrue(goalAfterSingleExit.valid)
 end
@@ -468,7 +470,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTopologyRequiresSibli
         },
     }
     local control = template.createRuntime(routeFields(rows), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
     local data = loadClockworkGoalData()
     local routeRows = fakeRows(rows)
 
@@ -628,7 +630,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRuntimeBuildsValidate
             {},
             {},
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertEquals(snapshot.biomeKey, "I")
     lu.assertEquals(snapshot.adapter, "clockworkGoal")
@@ -769,7 +771,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalCombatCanSelectDevoti
             Reward4Key = "ApolloUpgrade",
         },
     }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertEquals(snapshot.rows[3].roleKey, "RewardCombat")
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardKind, "roomStore")
@@ -781,7 +783,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalCombatCanSelectDevoti
     lu.assertEquals(primaryRewardItem(snapshot.rows[3]).rewardPicks[3].value, "ApolloUpgrade")
 end
 
-function TestRunPlannerClockworkGoalRoute.testClockworkGoalInvalidatesDuplicateTrialRewardGods()
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalExportsDuplicateTrialRewardGods()
     local catalog = loadCatalog()
     local template = loadClockworkGoalTemplate()
     local instance = template.prepare({
@@ -800,14 +802,11 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalInvalidatesDuplicateT
             Reward4Key = "ZeusUpgrade",
         },
     }), instance)
-    attachSingleBiomeRouteContext(control, "Underworld", "I")
-    local snapshot = control:buildSnapshot()
+    local snapshot = control:buildSelectedRowsSnapshot()
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertFalse(snapshot.rows[3].valid)
-    lu.assertEquals(snapshot.rows[3].invalidCode, "duplicate_devotion_god")
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 3)
-    lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_devotion_god")
+    lu.assertEquals(snapshot.rows[3].rewards.row.values[1], "Devotion")
+    lu.assertEquals(snapshot.rows[3].rewards.row.values[3], "ZeusUpgrade")
+    lu.assertEquals(snapshot.rows[3].rewards.row.values[4], "ZeusUpgrade")
 end
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCountersAndSidePaths()
@@ -1017,7 +1016,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalAllowsPostGoalExtensi
         biome = catalog.lookup.I,
     })
     local control = template.createRuntime(routeFields(rowData), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertEquals(snapshot.clockwork.goalCount, 5)

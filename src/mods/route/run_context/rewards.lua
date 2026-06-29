@@ -206,7 +206,7 @@ local function evaluateRouteLegality(context, routeKey, opts)
     routeTimeline.walkRoute(route, {
         biomeLookup = context.biomeLookup,
         snapshotForBiome = function(_, biomeKey)
-            return context:controlSnapshot(route.key, biomeKey)
+            return context:legacyRowsReport(route.key, biomeKey)
         end,
         onRow = function(rowContext)
             if stopped then
@@ -290,7 +290,7 @@ function rewards.create(opts)
     end
 
     function rewardState.rowValidation(context, routeKey, biomeKey, rowIndex)
-        if context.snapshotBuilding or context.rewardLegalityBuilding then
+        if context.completionBuilding or context.rewardLegalityBuilding then
             return nil
         end
 
@@ -310,7 +310,7 @@ function rewards.create(opts)
         _fields,
         _rewardContext
     )
-        if context.snapshotBuilding or context.rewardLegalityBuilding then
+        if context.completionBuilding or context.rewardLegalityBuilding then
             return nil
         end
         if routeKey == nil or biomeKey == nil or rowIndex == nil or controlAlias == nil then

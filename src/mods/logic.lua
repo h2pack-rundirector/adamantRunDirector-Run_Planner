@@ -2,9 +2,6 @@ local deps = ...
 local logic = {}
 
 local catalog = deps.catalog
-local routePlan = deps.routePlan
-local roomRouting = deps.roomRouting
-local rewardRouting = deps.rewardRouting
 local liveGameValidator = deps.liveGameValidator
 local rewards = deps.rewards
 
@@ -23,19 +20,7 @@ local function registerLiveValidation(moduleRef)
     end)
 end
 
-function logic.defineCache(moduleRef)
-    routePlan.defineCache(moduleRef)
-end
-
-function logic.registerHooks(moduleRef)
-    routePlan.registerHooks(moduleRef, catalog)
-    roomRouting.registerHooks(moduleRef, catalog)
-    rewardRouting.registerHooks(moduleRef, catalog)
-end
-
 function logic.attach(moduleRef)
-    logic.defineCache(moduleRef)
-    logic.registerHooks(moduleRef)
     registerLiveValidation(moduleRef)
 end
 

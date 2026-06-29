@@ -27,13 +27,13 @@ local function copyInvalidRow(invalidRow, extras)
     return copied
 end
 
-local function routeSnapshotCache(context, routeKey)
-    local snapshots = context.snapshotByRoute[routeKey]
-    if snapshots == nil then
-        snapshots = {}
-        context.snapshotByRoute[routeKey] = snapshots
+local function routeCompletionCache(context, routeKey)
+    local reports = context.completionByRoute[routeKey]
+    if reports == nil then
+        reports = {}
+        context.completionByRoute[routeKey] = reports
     end
-    return snapshots
+    return reports
 end
 
 local function routeOverviewState(context, routeKey)
@@ -81,16 +81,35 @@ local function applyRouteFeedback(context, route, feedback)
     end
 end
 
-local function controlSnapshot(context, routeKey, biomeKey)
-    local snapshots = routeSnapshotCache(context, routeKey)
-    if snapshots[biomeKey] ~= nil then
-        return snapshots[biomeKey]
+local function controlCompletionReport(context, routeKey, biomeKey)
+    local reports = routeCompletionCache(context, routeKey)
+    if reports[biomeKey] ~= nil then
+        return reports[biomeKey]
     end
 
     local control = context:controlForBiome(routeKey, biomeKey)
-    local snapshot = control ~= nil and control.read ~= nil and control:read("snapshot") or nil
-    snapshots[biomeKey] = snapshot or false
-    return snapshot
+    local report = control ~= nil and control.read ~= nil and control:read("completion") or nil
+    reports[biomeKey] = report or false
+    return report
+end
+
+local function legacyRowsReport(context, routeKey, biomeKey)
+    local control = context:controlForBiome(routeKey, biomeKey)
+    if control == nil or control.rowSnapshot == nil or control.rowCount == nil then
+        return nil
+    end
+
+    local rows = {}
+    for rowIndex = 1, control:rowCount() do
+        rows[#rows + 1] = control:rowSnapshot(rowIndex)
+    end
+    local completion = controlCompletionReport(context, routeKey, biomeKey)
+    return {
+        controlName = completion and completion.controlName or nil,
+        biomeKey = biomeKey,
+        adapter = completion and completion.adapter or nil,
+        rows = rows,
+    }
 end
 
 local function selectedRowsSnapshot(context, routeKey, biomeKey)
@@ -102,9 +121,7 @@ local function selectedRowsSnapshot(context, routeKey, biomeKey)
     if selected ~= nil then
         return selected
     end
-    local cached = routeSnapshotCache(context, routeKey)[biomeKey]
-    local snapshot = cached ~= nil and cached ~= false and cached or control:read("snapshot")
-    return snapshot and snapshot.rows or nil
+    return nil
 end
 
 local function missingControlInvalid(context, routeBiomeIndex, biomeKey)
@@ -118,15 +135,15 @@ local function missingControlInvalid(context, routeBiomeIndex, biomeKey)
     }
 end
 
-local function firstCompletionInvalid(routeBiomeIndex, biomeKey, snapshot)
-    local invalid = snapshot and snapshot.completionInvalidRows and snapshot.completionInvalidRows[1] or nil
+local function firstCompletionInvalid(routeBiomeIndex, biomeKey, completion)
+    local invalid = completion and completion.completionInvalidRows and completion.completionInvalidRows[1] or nil
     if invalid == nil then
         return nil
     end
     return copyInvalidRow(invalid, {
         biomeKey = biomeKey,
         routeBiomeIndex = routeBiomeIndex,
-        controlName = snapshot.controlName or routeControlName(biomeKey),
+        controlName = completion.controlName or routeControlName(biomeKey),
     })
 end
 
@@ -197,7 +214,7 @@ function runContext.create(opts)
         biomeLookup = opts.biomes or {},
         controlResolver = opts.controlResolver,
         controls = opts.controls,
-        snapshotByRoute = {},
+        completionByRoute = {},
         overviewByRoute = {},
         rewardLegalityByRoute = {},
         historyFeedbackByRoute = {},
@@ -211,7 +228,7 @@ function runContext.create(opts)
 
     function context:beginPass(controls)
         self.controls = controls or self.controls
-        clearMap(self.snapshotByRoute)
+        clearMap(self.completionByRoute)
     end
 
     function context:bindControl(control, routeKey)
@@ -238,7 +255,7 @@ function runContext.create(opts)
             routeOverviewState(self, route.key).dirty = true
             bumpRouteGeneration(self, route.key)
         end
-        clearMap(self.snapshotByRoute)
+        clearMap(self.completionByRoute)
         clearMap(self.rewardLegalityByRoute)
         clearMap(self.historyFeedbackByRoute)
     end
@@ -249,7 +266,7 @@ function runContext.create(opts)
             if routeInfos[biomeKey] ~= nil then
                 routeOverviewState(self, routeKey).dirty = true
                 bumpRouteGeneration(self, routeKey)
-                self.snapshotByRoute[routeKey] = nil
+                self.completionByRoute[routeKey] = nil
                 self.rewardLegalityByRoute[routeKey] = nil
                 self.historyFeedbackByRoute[routeKey] = nil
                 marked = true
@@ -264,7 +281,7 @@ function runContext.create(opts)
         if routeKey ~= nil then
             routeOverviewState(self, routeKey).dirty = true
             bumpRouteGeneration(self, routeKey)
-            self.snapshotByRoute[routeKey] = nil
+            self.completionByRoute[routeKey] = nil
             self.rewardLegalityByRoute[routeKey] = nil
             self.historyFeedbackByRoute[routeKey] = nil
             return
@@ -344,8 +361,12 @@ function runContext.create(opts)
         }
     end
 
-    function context:controlSnapshot(routeKey, biomeKey)
-        return controlSnapshot(self, routeKey, biomeKey)
+    function context:controlCompletionReport(routeKey, biomeKey)
+        return controlCompletionReport(self, routeKey, biomeKey)
+    end
+
+    function context:legacyRowsReport(routeKey, biomeKey)
+        return legacyRowsReport(self, routeKey, biomeKey)
     end
 
     function context:godSourceForRoute(routeKey)
@@ -521,24 +542,24 @@ function runContext.create(opts)
             }
         end
 
-        local previousSnapshotBuilding = self.snapshotBuilding
-        self.snapshotBuilding = true
+        local previousCompletionBuilding = self.completionBuilding
+        self.completionBuilding = true
         local configuredBiomeCount = self:configuredBiomeCount(route.key)
         local completionInvalid = nil
         for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
             if routeBiomeIndex > configuredBiomeCount then
                 break
             end
-            local snapshot = controlSnapshot(self, route.key, biomeKey)
-            snapshots[#snapshots + 1] = snapshot
-            if missingInvalid == nil and not snapshot then
+            local completion = controlCompletionReport(self, route.key, biomeKey)
+            snapshots[#snapshots + 1] = completion
+            if missingInvalid == nil and not completion then
                 missingInvalid = missingControlInvalid(self, routeBiomeIndex, biomeKey)
             end
-            if completionInvalid == nil and snapshot then
-                completionInvalid = firstCompletionInvalid(routeBiomeIndex, biomeKey, snapshot)
+            if completionInvalid == nil and completion then
+                completionInvalid = firstCompletionInvalid(routeBiomeIndex, biomeKey, completion)
             end
         end
-        self.snapshotBuilding = previousSnapshotBuilding
+        self.completionBuilding = previousCompletionBuilding
 
         local routeFeedback
         if missingInvalid ~= nil then
@@ -596,13 +617,13 @@ function runContext.create(opts)
     end
 
     function context:blockingHorizon(routeKey)
-        local snapshot = self:overview(routeKey)
-        return snapshot and snapshot.blockingHorizon or nil
+        local overview = self:overview(routeKey)
+        return overview and overview.blockingHorizon or nil
     end
 
     function context:canUseEnrichmentColors(routeKey)
-        local snapshot = self:overview(routeKey)
-        return snapshot ~= nil and snapshot.valid == true
+        local overview = self:overview(routeKey)
+        return overview ~= nil and overview.valid == true
     end
 
     function context:isRouteBiomeInactive(routeKey, biomeKey)

@@ -228,7 +228,7 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
             {},
             {},
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertEquals(snapshot.biomeKey, "N")
     lu.assertEquals(snapshot.adapter, "hubPylon")
@@ -530,12 +530,12 @@ function TestRunPlannerHubPylonRoute.testHubPylonPolicyAllowsDuplicateBoonSource
     local routeContext = surfaceRouteContext(control)
     control:setRouteContext(routeContext, "Surface")
     local overview = routeContext:overview("Surface")
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(overview.valid)
     lu.assertTrue(snapshot.valid)
     lu.assertFalse(snapshot.disabled)
-    lu.assertEquals(#snapshot.invalidRows, 0)
+    lu.assertNil(snapshot.invalidRows)
     lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardPicks[2].value, "ZeusUpgrade")
     lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardPicks[2].value, "ZeusUpgrade")
 end

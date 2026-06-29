@@ -156,8 +156,16 @@ end
 local function fakeSnapshotControl(snapshot)
     return {
         read = function(_, path)
-            if path == "snapshot" then
-                return snapshot
+            if path == "completion" then
+                return {
+                    controlName = snapshot.controlName,
+                    biomeKey = snapshot.biomeKey,
+                    adapter = snapshot.adapter,
+                    valid = snapshot.valid,
+                    disabled = snapshot.disabled,
+                    completionInvalidRows = snapshot.invalidRows,
+                    routeFeedback = snapshot.routeFeedback,
+                }
             end
             return nil
         end,
@@ -1255,13 +1263,12 @@ function TestRunPlannerRouteUi.testRouteOverviewRebuildsOnlyWhenDirty()
         controlResolver = function(controlName)
             return {
                 read = function(_, path)
-                    if path == "snapshot" then
+                    if path == "completion" then
                         readsByControl[controlName] = (readsByControl[controlName] or 0) + 1
                         return {
                             controlName = controlName,
                             valid = true,
-                            invalidRows = {},
-                            rows = {},
+                            completionInvalidRows = {},
                         }
                     end
                     return nil

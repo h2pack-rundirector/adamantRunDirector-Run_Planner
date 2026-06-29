@@ -14,8 +14,6 @@ local routeFields = h.routeFields
 local routeUiFields = h.routeUiFields
 local noOpDraw = h.noOpDraw
 local buildThessalyRuntime = h.buildThessalyRuntime
-local attachSingleBiomeRouteContext = h.attachSingleBiomeRouteContext
-local valueStates = h.testImport("mods/route/value_states.lua")
 
 -- luacheck: globals TestRunPlannerMultiEncounterRoute
 TestRunPlannerMultiEncounterRoute = {}
@@ -81,7 +79,7 @@ function TestRunPlannerMultiEncounterRoute.testThessalyRequiresStoryOrShopByDept
         thessalyCombat("O_Combat05"),
         thessalyCombat("O_Combat06"),
     })
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
@@ -102,7 +100,7 @@ function TestRunPlannerMultiEncounterRoute.testThessalyDepthFiveStorySatisfiesDe
         thessalyCombat("O_Combat05"),
         { RoleKey = "Story", OptionKey = "O_Story01" },
     })
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertFalse(snapshot.disabled)
@@ -118,7 +116,7 @@ function TestRunPlannerMultiEncounterRoute.testThessalyPriorShopSatisfiesDeadlin
         { RoleKey = "Midshop", OptionKey = "O_Shop01" },
         thessalyCombat("O_Combat06"),
     })
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertFalse(snapshot.disabled)
@@ -349,7 +347,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterSnapshotUsesSelecte
             VariantKey = "TwoCombats",
         },
     }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertEquals(snapshot.rows[2].roomKey, "O_Combat01")
 end
@@ -409,26 +407,9 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRequiresWheelOfferC
             VariantKey = "TwoCombats",
         },
     }), instance)
-    local routeContext = attachSingleBiomeRouteContext(control, "Surface", "O")
-    local snapshot = control:buildSnapshot()
-    local wheelStates = routeContext:rewardValueStates("Surface", "O", 2, "encounter:1", "WheelOffer1Key", {
-        values = {
-            "",
-            "OneChoice",
-            "TwoChoices",
-        },
-    })
+    local snapshot = control:buildSelectedRowsSnapshot()
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertTrue(snapshot.disabled)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
-    lu.assertEquals(snapshot.invalidRows[1].code, "ship_wheel_offer_count_required")
-    lu.assertEquals(wheelStates[""], valueStates.INVALID)
-    lu.assertNil(wheelStates.OneChoice)
-    lu.assertNil(wheelStates.TwoChoices)
-    lu.assertEquals(snapshot.rows[2].invalidCode, "ship_wheel_offer_count_required")
-    lu.assertEquals(snapshot.rows[2].roomTopology.kind, "shipCombat")
-    lu.assertNil(snapshot.rows[2].roomTopology.encounters[1].wheelOfferCount)
+    lu.assertEquals(snapshot.rows[2].rewards.encounter[1].wheelOfferKey, "")
 end
 
 function TestRunPlannerMultiEncounterRoute.testMultiEncounterRoomTopologySurvivesWhenRewardsDisabled()
@@ -463,7 +444,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRoomTopologySurvive
         end,
     }, "Surface")
 
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertEquals(snapshot.rows[3].roomTopology, {
@@ -570,7 +551,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
             },
             {},
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertEquals(snapshot.biomeKey, "O")
     lu.assertEquals(snapshot.adapter, "multiEncounterFixed")
@@ -707,7 +688,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValida
     lu.assertEquals(primaryRewardItem(snapshot.rows[8]).rewardKind, "shop")
 end
 
-function TestRunPlannerMultiEncounterRoute.testMultiEncounterInvalidatesDuplicateTrialRewardGods()
+function TestRunPlannerMultiEncounterRoute.testMultiEncounterExportsDuplicateTrialRewardGods()
     local catalog = loadCatalog()
     local template = loadMultiEncounterTemplate()
     local instance = template.prepare({
@@ -725,14 +706,10 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterInvalidatesDuplicat
             Reward2Key = "ZeusUpgrade",
         },
     }), instance)
-    attachSingleBiomeRouteContext(control, "Surface", "O")
-    local snapshot = control:buildSnapshot()
+    local snapshot = control:buildSelectedRowsSnapshot()
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertFalse(snapshot.rows[4].valid)
-    lu.assertEquals(snapshot.rows[4].invalidCode, "duplicate_devotion_god")
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 4)
-    lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_devotion_god")
+    lu.assertEquals(snapshot.rows[4].rewards.row.values[1], "ZeusUpgrade")
+    lu.assertEquals(snapshot.rows[4].rewards.row.values[2], "ZeusUpgrade")
 end
 
 function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeInvalidatesUnavailableCombatCount()
@@ -750,7 +727,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeInvalidatesU
                 VariantKey = "ThreeCombats",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)

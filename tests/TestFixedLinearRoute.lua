@@ -219,7 +219,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingRewardBranchPlumbi
             Reward1Key = "Major",
         },
     }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertEquals(snapshot.rows[6].roomTopology.sibling, {
         structure = "Combat",
@@ -334,7 +334,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingTopologyExportsSel
             Reward1Key = "Major",
         },
     }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertEquals(snapshot.rows[6].roomTopology, {
         kind = "fixedLinearSiblingChoice",
@@ -398,12 +398,12 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyRejectsPreviously
         fCombatRow("F_Combat06", "Major", "F_Story01"),
         fCombatRow("F_Combat07", "Major", "F_Story01"),
     }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 7)
-    lu.assertEquals(snapshot.invalidRows[1].code, "fixed_sibling_room_generated")
-    lu.assertEquals(snapshot.rows[7].invalidCode, "fixed_sibling_room_generated")
+    lu.assertTrue(snapshot.valid)
+    lu.assertNil(snapshot.invalidRows)
+    lu.assertTrue(snapshot.rows[7].valid)
+    lu.assertNil(snapshot.rows[7].invalidCode)
 end
 
 function TestRunPlannerFixedLinearRoute.testOceanusThreeExitRoomsExportTwoSiblingDoors()
@@ -491,7 +491,7 @@ function TestRunPlannerFixedLinearRoute.testOceanusThreeExitRoomsExportTwoSiblin
             Reward1Key = "Major",
         },
     }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertEquals(snapshot.rows[5].roomTopology.siblings, {
         {
@@ -537,15 +537,15 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyInvalidatesMissin
         },
     }
     local control = template.createRuntime(routeFields(rows), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
     local data = loadFixedLinearData()
     local routeRows = fakeRows(rows)
 
     lu.assertFalse(snapshot.valid)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
-    lu.assertEquals(snapshot.invalidRows[1].code, "fixed_sibling_structure_required")
-    lu.assertEquals(snapshot.invalidRows[1].tabKey, "rooms")
-    lu.assertEquals(snapshot.invalidRows[1].controlTargets, {
+    lu.assertEquals(snapshot.completionInvalidRows[1].rowIndex, 5)
+    lu.assertEquals(snapshot.completionInvalidRows[1].code, "fixed_sibling_structure_required")
+    lu.assertEquals(snapshot.completionInvalidRows[1].tabKey, "rooms")
+    lu.assertEquals(snapshot.completionInvalidRows[1].controlTargets, {
         {
             tabKey = "rooms",
             controlAlias = "SiblingStructure2Key",
@@ -591,7 +591,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyExportsMismatched
             Reward1Key = "Major",
         },
     }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertEquals(snapshot.rows[5].roomTopology.siblings, {
@@ -656,12 +656,11 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
         },
     }), instance)
     attachSingleBiomeRouteContext(control, "Underworld", "F")
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 8)
-    lu.assertEquals(snapshot.invalidRows[1].code, "fixed_forced_topology_group_unresolved")
-    lu.assertEquals(snapshot.rows[8].invalidCode, "fixed_forced_topology_group_unresolved")
+    lu.assertTrue(snapshot.valid)
+    lu.assertTrue(snapshot.rows[8].valid)
+    lu.assertNil(snapshot.rows[8].invalidCode)
 
     instance = template.prepare({
         name = "RouteF",
@@ -697,7 +696,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
         },
     }), instance)
     attachSingleBiomeRouteContext(control, "Underworld", "F")
-    snapshot = control:buildSnapshot()
+    snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
 
@@ -730,12 +729,11 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
         },
     }), instance)
     attachSingleBiomeRouteContext(control, "Underworld", "F")
-    snapshot = control:buildSnapshot()
+    snapshot = h.buildRuntimeRowsSnapshot(control)
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 8)
-    lu.assertEquals(snapshot.invalidRows[1].code, "fixed_forced_topology_group_unresolved")
-    lu.assertEquals(snapshot.rows[8].invalidCode, "fixed_forced_topology_group_unresolved")
+    lu.assertTrue(snapshot.valid)
+    lu.assertTrue(snapshot.rows[8].valid)
+    lu.assertNil(snapshot.rows[8].invalidCode)
 
     instance = template.prepare({
         name = "RouteF",
@@ -765,7 +763,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyEnforcesForcedDoo
         },
     }), instance)
     attachSingleBiomeRouteContext(control, "Underworld", "F")
-    snapshot = control:buildSnapshot()
+    snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
 end
@@ -877,15 +875,14 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearQShopSharedOfferGroupInva
         },
     }), instance)
     attachSingleBiomeRouteContext(control, "Surface", "Q")
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertTrue(snapshot.disabled)
-    lu.assertFalse(snapshot.rows[8].valid)
+    lu.assertTrue(snapshot.valid)
+    lu.assertFalse(snapshot.disabled)
+    lu.assertTrue(snapshot.rows[8].valid)
     lu.assertEquals(primaryRewardItem(snapshot.rows[8]).rewardKind, "shop")
-    lu.assertEquals(snapshot.rows[8].invalidCode, "duplicate_shop_group_option")
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 8)
-    lu.assertEquals(snapshot.invalidRows[1].code, "duplicate_shop_group_option")
+    lu.assertNil(snapshot.rows[8].invalidCode)
+    lu.assertNil(snapshot.invalidRows)
 end
 
 function TestRunPlannerFixedLinearRoute.testSummitMinibossesExportDeterministicTopology()
@@ -905,7 +902,7 @@ function TestRunPlannerFixedLinearRoute.testSummitMinibossesExportDeterministicT
         qMinibossRow("Q_MiniBoss04"),
         {},
     }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertNil(snapshot.rows[2].roomTopology)
@@ -989,12 +986,11 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearCombatRoomsCannotRepeatIn
     })
     local control = template.createRuntime(routeFields(rowData), instance)
     attachSingleBiomeRouteContext(control, "Underworld", "F")
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertEquals(snapshot.rows[3].invalidCode, "option_limit")
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 3)
-    lu.assertEquals(snapshot.invalidRows[1].code, "option_limit")
+    lu.assertTrue(snapshot.valid)
+    lu.assertNil(snapshot.rows[3].invalidCode)
+    lu.assertNil(snapshot.invalidRows)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearOpeningRowUsesFixedRoomChoice()
@@ -1133,16 +1129,16 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeBuildsValidatedSna
                 OptionKey = "Q_MiniBoss03",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertEquals(snapshot.biomeKey, "Q")
     lu.assertEquals(snapshot.adapter, "fixedLinear")
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
-    lu.assertEquals(#snapshot.invalidRows, 1)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
-    lu.assertEquals(snapshot.invalidRows[1].code, "unknown_role")
-    lu.assertEquals(snapshot.invalidRows[1].locationLabel, "Summit Depth 4")
+    lu.assertEquals(#snapshot.completionInvalidRows, 1)
+    lu.assertEquals(snapshot.completionInvalidRows[1].rowIndex, 5)
+    lu.assertEquals(snapshot.completionInvalidRows[1].code, "unknown_role")
+    lu.assertEquals(snapshot.completionInvalidRows[1].locationLabel, "Summit Depth 4")
     lu.assertEquals(snapshot.rows[1].routeOrdinal, 0)
     lu.assertEquals(snapshot.rows[1].slotKind, "intro")
     lu.assertEquals(snapshot.rows[1].roomKey, "Q_Intro")
@@ -1212,7 +1208,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeSnapshotsPrebossRo
             qMinibossRow("Q_MiniBoss03"),
             { RoleKey = "" },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
     lu.assertTrue(snapshot.valid)
     lu.assertFalse(snapshot.disabled)
@@ -1532,17 +1528,15 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesExactDe
                 OptionKey = "Q_Combat01",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertTrue(snapshot.disabled)
-    lu.assertEquals(#snapshot.invalidRows, 1)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 4)
-    lu.assertEquals(snapshot.invalidRows[1].code, "biome_depth_unavailable")
+    lu.assertTrue(snapshot.valid)
+    lu.assertFalse(snapshot.disabled)
+    lu.assertNil(snapshot.invalidRows)
     lu.assertEquals(snapshot.rows[4].routeOrdinal, 3)
     lu.assertEquals(snapshot.rows[4].roleKey, "Combat")
-    lu.assertFalse(snapshot.rows[4].valid)
-    lu.assertEquals(snapshot.rows[4].invalidCode, "biome_depth_unavailable")
+    lu.assertTrue(snapshot.rows[4].valid)
+    lu.assertNil(snapshot.rows[4].invalidCode)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearAvailabilityConsumesPriorOneShotRoles()
@@ -1877,8 +1871,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeUsesRouteRewardVal
 
     local validation = control:rowValidation(2)
 
-    lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "route_reward")
+    lu.assertTrue(validation.valid)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeRoutesRewardValueStateContext()
@@ -2060,16 +2053,14 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesPreviou
 	                OptionKey = "F_Shop01",
 	            },
 	        }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertTrue(snapshot.disabled)
-    lu.assertEquals(#snapshot.invalidRows, 1)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 5)
-    lu.assertEquals(snapshot.invalidRows[1].code, "previous_room_exit_count")
+    lu.assertTrue(snapshot.valid)
+    lu.assertFalse(snapshot.disabled)
+    lu.assertNil(snapshot.invalidRows)
     lu.assertTrue(snapshot.rows[4].valid)
-    lu.assertFalse(snapshot.rows[5].valid)
-    lu.assertEquals(snapshot.rows[5].invalidCode, "previous_room_exit_count")
+    lu.assertTrue(snapshot.rows[5].valid)
+    lu.assertNil(snapshot.rows[5].invalidCode)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesOutOfRangeAndDuplicateRows()
@@ -2101,29 +2092,28 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesOutOfRa
                 RoleKey = "Story",
                 OptionKey = "F_Story01",
                 SiblingStructureKey = "Combat",
+                SiblingRewardClassKey = "Major",
             },
             {
                 RoleKey = "Story",
                 OptionKey = "F_Story01",
+                SiblingStructureKey = "Combat",
+                SiblingRewardClassKey = "Major",
             },
         }), instance)
-    local snapshot = control:buildSnapshot()
+    local snapshot = h.buildRuntimeRowsSnapshot(control)
 
-    lu.assertFalse(snapshot.valid)
-    lu.assertTrue(snapshot.disabled)
-    lu.assertEquals(#snapshot.invalidRows, 2)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 2)
-    lu.assertEquals(snapshot.invalidRows[1].code, "biome_depth_unavailable")
-    lu.assertEquals(snapshot.invalidRows[2].rowIndex, 7)
-    lu.assertEquals(snapshot.invalidRows[2].code, "role_limit")
+    lu.assertTrue(snapshot.valid)
+    lu.assertFalse(snapshot.disabled)
+    lu.assertNil(snapshot.invalidRows)
     lu.assertEquals(snapshot.rows[2].roleKey, "Story")
     lu.assertEquals(snapshot.rows[2].optionKey, "F_Story01")
-    lu.assertFalse(snapshot.rows[2].valid)
+    lu.assertTrue(snapshot.rows[2].valid)
     lu.assertEquals(snapshot.rows[6].roleKey, "Story")
     lu.assertEquals(snapshot.rows[6].optionKey, "F_Story01")
     lu.assertTrue(snapshot.rows[6].valid)
     lu.assertEquals(snapshot.rows[7].roleKey, "Story")
     lu.assertEquals(snapshot.rows[7].optionKey, "F_Story01")
-    lu.assertFalse(snapshot.rows[7].valid)
-    lu.assertEquals(snapshot.rows[7].invalidCode, "role_limit")
+    lu.assertTrue(snapshot.rows[7].valid)
+    lu.assertNil(snapshot.rows[7].invalidCode)
 end

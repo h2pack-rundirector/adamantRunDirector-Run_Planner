@@ -228,23 +228,6 @@ local function sideRoomSnapshot(instance, fields, sideRowIndex, sideIndex, sideD
     }
 end
 
-local function invalidRowKey(rowIndex, code)
-    return tostring(rowIndex or "") .. ":" .. tostring(code or "")
-end
-
-local function appendInvalidRow(invalidRows, seenInvalids, invalid)
-    if invalid == nil or invalid.rowIndex == nil then
-        return
-    end
-
-    local key = invalidRowKey(invalid.rowIndex, invalid.code)
-    if seenInvalids[key] then
-        return
-    end
-    seenInvalids[key] = true
-    invalidRows[#invalidRows + 1] = invalid
-end
-
 local function sideRoomSnapshots(instance, fields, routeRows, rowIndex, rewardsConfigured)
     local sideRooms = {}
     for sideIndex = 1, data.sideDoorCountForRow(instance, routeRows, rowIndex) do
@@ -490,27 +473,31 @@ function runtime.create(fields, instance)
         }
     end
 
-    function control:buildSnapshot()
-        local rows = {}
-        local invalidRows = {}
+    local function buildCompletionReport(self)
         local completionInvalidRows = {}
-        local seenInvalids = {}
         self:beginReadPass()
         for rowIndex = 1, self:rowCount() do
-            local row = self:rowSnapshot(rowIndex)
-            rows[#rows + 1] = row
-            if row ~= nil and not row.valid then
+            local validation = self:rowValidation(rowIndex)
+            if controlRequirements.isCompletionInvalid(validation) then
+                local slot = self:slot(rowIndex)
+                local row = {
+                    rowIndex = rowIndex,
+                    routeOrdinal = slot and slot.routeOrdinal or nil,
+                    slotLabel = slot and slot.label or nil,
+                    invalidCode = validation.code,
+                    invalidReason = validation.message,
+                }
                 local invalidRow = {
-                    rowIndex = row.rowIndex,
+                    rowIndex = rowIndex,
                     routeOrdinal = row.routeOrdinal,
                     locationLabel = invalidLocations.biomeRow(instance, row),
-                    code = row.invalidCode,
-                    message = row.invalidReason,
+                    code = validation.code,
+                    message = validation.message,
+                    tabKey = validation.tabKey,
+                    controlTargets = validation.controlTargets,
+                    valueTargets = validation.valueTargets,
                 }
-                appendInvalidRow(invalidRows, seenInvalids, invalidRow)
-                if controlRequirements.isCompletionInvalid(row) then
-                    completionInvalidRows[#completionInvalidRows + 1] = invalidRow
-                end
+                completionInvalidRows[#completionInvalidRows + 1] = invalidRow
             end
         end
         self:endReadPass()
@@ -521,17 +508,15 @@ function runtime.create(fields, instance)
             controlName = instance.name,
             biomeKey = instance.biomeKey,
             adapter = instance.biome.adapter,
-            valid = invalidRows[1] == nil,
-            disabled = invalidRows[1] ~= nil,
-            invalidRows = invalidRows,
+            valid = completionInvalidRows[1] == nil,
+            disabled = completionInvalidRows[1] ~= nil,
             completionInvalidRows = completionInvalidRows,
-            rows = rows,
         }
     end
 
     function control:read(path, ...)
-        if path == "snapshot" then
-            return self:buildSnapshot()
+        if path == "completion" then
+            return buildCompletionReport(self)
         elseif path == "selectedRowsSnapshot" then
             return self:buildSelectedRowsSnapshot()
         elseif path == "row" then
