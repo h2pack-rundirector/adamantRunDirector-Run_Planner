@@ -12,6 +12,7 @@ function historyAssembly.create()
     local adapters = {
         fieldsCageRoute = import("mods/route/history/adapters/fields_cage.lua"),
         fixedLinear = import("mods/route/history/adapters/fixed_linear.lua"),
+        multiEncounterFixed = import("mods/route/history/adapters/multi_encounter_fixed.lua"),
     }
     local builder = import("mods/route/history/builder.lua", nil, {
         history = history,

@@ -132,6 +132,76 @@ local function fullHFieldsRows()
     }
 end
 
+local function oCombatRow(optionKey, variantKey)
+    return {
+        RoleKey = "Combat",
+        OptionKey = optionKey,
+        VariantKey = variantKey or "TwoCombats",
+    }
+end
+
+local function fullOThessalyRows()
+    return {
+        {},
+        oCombatRow("O_Combat01"),
+        oCombatRow("O_Combat02", "ThreeCombats"),
+        {
+            RoleKey = "Story",
+            OptionKey = "O_Story01",
+        },
+        {
+            RoleKey = "Fountain",
+            OptionKey = "O_Reprieve01",
+            Reward1Key = "Minor",
+            Reward4Key = "RoomMoneyDrop",
+        },
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "O_MiniBoss02",
+            Reward1Key = "ZeusUpgrade",
+        },
+        oCombatRow("O_Combat05"),
+        {
+            Reward1Key = "RandomLoot",
+            Reward1LootKey = "ApolloUpgrade",
+            Reward1StateKey = "Bought",
+        },
+    }
+end
+
+local function fullOThessalyEncounterRewardRows()
+    return {
+        {
+            WheelOffer1Key = "OneChoice",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+        {},
+        {
+            WheelOffer1Key = "TwoChoices",
+            Reward1Key = "Major",
+            Reward2Key = "Boon",
+            Reward3Key = "ApolloUpgrade",
+        },
+        {
+            WheelOffer2Key = "TwoChoices",
+            Reward1Key = "Minor",
+            Reward4Key = "RoomMoneyDrop",
+        },
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {
+            WheelOffer1Key = "OneChoice",
+            Reward1Key = "Major",
+            Reward2Key = "MaxManaDrop",
+        },
+    }
+end
+
 local function withShopOnlyPreboss(biome)
     local copy = {}
     for key, value in pairs(biome) do
@@ -514,4 +584,135 @@ function TestRunPlannerRouteHistoryBuilder.testFieldsCageEntriesCarryTopologyAnd
     lu.assertEquals(rooms[6].reward.offers[1].rewardType, "RandomLoot")
     lu.assertEquals(rooms[6].reward.offers[1].boonSource, "ApolloUpgrade")
     lu.assertTrue(rooms[6].reward.offers[1].bought)
+end
+
+function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedBuildsThessalySpine()
+    local catalog = h.loadCatalog()
+    local template = h.loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local control = template.createRuntime(
+        h.routeFields(fullOThessalyRows(), nil, nil, fullOThessalyEncounterRewardRows()),
+        instance
+    )
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = {
+            key = "Surface",
+            biomes = { "O" },
+        },
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "O" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    lu.assertEquals(#rooms, 10)
+    lu.assertEquals(rooms[1].eventKey, "O_Intro")
+    lu.assertEquals(rooms[1].roleKey, "Intro")
+    lu.assertEquals(rooms[1].biomeDepthCache, 1)
+    lu.assertEquals(rooms[1].biomeEncounterDepth, 1)
+    lu.assertEquals(rooms[2].eventKey, "O_Combat01")
+    lu.assertEquals(rooms[2].roleKey, "Combat")
+    lu.assertEquals(rooms[2].routeOrdinal, 1)
+    lu.assertEquals(rooms[3].eventKey, "O_Combat02")
+    lu.assertEquals(rooms[3].variantKey, "ThreeCombats")
+    lu.assertEquals(rooms[8].eventKey, "Preboss")
+    lu.assertEquals(rooms[8].reward.kind, "shop")
+    lu.assertEquals(rooms[9].eventKey, "Boss")
+    lu.assertEquals(rooms[9].sourceKind, "afterBiome")
+    lu.assertEquals(rooms[10].eventKey, "O_PostBoss01")
+    lu.assertEquals(rooms[10].sourceKind, "afterBiome")
+end
+
+function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedTracksShipEncounterDepth()
+    local catalog = h.loadCatalog()
+    local template = h.loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local control = template.createRuntime(
+        h.routeFields(fullOThessalyRows(), nil, nil, fullOThessalyEncounterRewardRows()),
+        instance
+    )
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = {
+            key = "Surface",
+            biomes = { "O" },
+        },
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "O" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    lu.assertEquals(rooms[2].biomeDepthCache, 1)
+    lu.assertEquals(rooms[2].biomeEncounterDepth, 1)
+    lu.assertEquals(rooms[3].biomeDepthCache, 2)
+    lu.assertEquals(rooms[3].biomeEncounterDepth, 2)
+    lu.assertEquals(rooms[4].biomeDepthCache, 3)
+    lu.assertEquals(rooms[4].biomeEncounterDepth, 4)
+    lu.assertEquals(rooms[7].biomeDepthCache, 6)
+    lu.assertEquals(rooms[7].biomeEncounterDepth, 5)
+    lu.assertEquals(rooms[8].biomeDepthCache, 7)
+    lu.assertEquals(rooms[8].biomeEncounterDepth, 6)
+end
+
+function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedEntriesCarryEncounterRewards()
+    local catalog = h.loadCatalog()
+    local template = h.loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local control = template.createRuntime(
+        h.routeFields(fullOThessalyRows(), nil, nil, fullOThessalyEncounterRewardRows()),
+        instance
+    )
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = {
+            key = "Surface",
+            biomes = { "O" },
+        },
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "O" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    lu.assertEquals(rooms[2].reward.kind, "multiEncounter")
+    lu.assertEquals(#rooms[2].reward.encounters, 1)
+    lu.assertEquals(rooms[2].reward.encounters[1].key, "Encounter1")
+    lu.assertEquals(rooms[2].reward.encounters[1].wheelOfferCount, 1)
+    lu.assertEquals(rooms[2].reward.encounters[1].reward.rewardType, "MaxHealthDrop")
+    lu.assertEquals(rooms[3].reward.kind, "multiEncounter")
+    lu.assertEquals(#rooms[3].reward.encounters, 2)
+    lu.assertEquals(rooms[3].reward.encounters[1].reward.rewardType, "Boon")
+    lu.assertEquals(rooms[3].reward.encounters[1].reward.boonSource, "ApolloUpgrade")
+    lu.assertEquals(rooms[3].reward.encounters[2].reward.rewardClass, "Minor")
+    lu.assertEquals(rooms[3].reward.encounters[2].reward.rewardStore, "MetaProgress")
+    lu.assertEquals(rooms[3].reward.encounters[2].reward.rewardType, "RoomMoneyDrop")
+    lu.assertEquals(rooms[3].reward.encounters[2].biomeEncounterDepth, 3)
+    lu.assertEquals(rooms[3].topology.kind, "shipCombat")
+    lu.assertEquals(rooms[3].topology.encounters[2].wheelOfferCount, 2)
 end

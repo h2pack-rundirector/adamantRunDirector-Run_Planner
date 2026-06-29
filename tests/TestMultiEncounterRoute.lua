@@ -62,6 +62,16 @@ local function thessalyRouteFields(rows, sideRows, sideRewardRows, encounterRewa
     return routeFields(rows, sideRows, sideRewardRows, encounterRewardRows or thessalyEncounterRewardRows(rows))
 end
 
+local function buildThessalyControlWithEncounterRewards(rows)
+    local catalog = loadCatalog()
+    local template = loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    return template.createRuntime(thessalyRouteFields(rows), instance)
+end
+
 function TestRunPlannerMultiEncounterRoute.testThessalyRequiresStoryOrShopByDepthFive()
     local control = buildThessalyRuntime({
         {},
@@ -228,6 +238,55 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterStorageMatchesThess
     lu.assertEquals(routeData.rowContext(instance, rows, 4).biomeEncounterDepth, 3)
     lu.assertEquals(routeData.rowContext(instance, rows, 5).biomeEncounterDepth, 4)
     lu.assertEquals(routeData.rowContext(instance, rows, 6).biomeEncounterDepth, 6)
+end
+
+function TestRunPlannerMultiEncounterRoute.testMultiEncounterEmitsDumbSelectedRowsSnapshot()
+    local control = buildThessalyControlWithEncounterRewards({
+        {},
+        thessalyCombat("O_Combat01"),
+        thessalyCombat("O_Combat02", "ThreeCombats"),
+    })
+
+    local snapshot = control:buildSelectedRowsSnapshot()
+
+    lu.assertEquals(snapshot.schema, "selectedRows.v1")
+    lu.assertEquals(snapshot.controlName, "RouteO")
+    lu.assertEquals(snapshot.biomeKey, "O")
+    lu.assertEquals(snapshot.adapter, "multiEncounterFixed")
+    lu.assertNil(snapshot.rows[1].valid)
+    lu.assertNil(snapshot.rows[1].roomTopology)
+    lu.assertNil(snapshot.rows[1].rewardItems)
+    lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
+    lu.assertEquals(snapshot.rows[1].optionKey, "O_Intro")
+    lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
+    lu.assertEquals(snapshot.rows[2].optionKey, "O_Combat01")
+    lu.assertEquals(snapshot.rows[2].variantKey, "TwoCombats")
+    lu.assertEquals(#snapshot.rows[2].rewards.encounter, 1)
+    lu.assertEquals(snapshot.rows[2].rewards.encounter[1].legIndex, 1)
+    lu.assertEquals(snapshot.rows[2].rewards.encounter[1].wheelOfferKey, "OneChoice")
+    lu.assertEquals(snapshot.rows[2].rewards.encounter[1].values[1], "Major")
+    lu.assertEquals(snapshot.rows[2].rewards.encounter[1].values[2], "MaxHealthDrop")
+    lu.assertEquals(snapshot.rows[3].roleKey, "Combat")
+    lu.assertEquals(snapshot.rows[3].optionKey, "O_Combat02")
+    lu.assertEquals(snapshot.rows[3].variantKey, "ThreeCombats")
+    lu.assertEquals(#snapshot.rows[3].rewards.encounter, 2)
+    lu.assertEquals(snapshot.rows[3].rewards.encounter[2].legIndex, 2)
+    lu.assertEquals(snapshot.rows[3].rewards.encounter[2].wheelOfferKey, "TwoChoices")
+    lu.assertEquals(snapshot.rows[3].rewards.encounter[2].values[1], "Major")
+end
+
+function TestRunPlannerMultiEncounterRoute.testMultiEncounterReadSelectedRowsSnapshot()
+    local control = buildThessalyControlWithEncounterRewards({
+        {},
+        thessalyCombat("O_Combat01"),
+    })
+
+    local snapshot = control:read("selectedRowsSnapshot")
+
+    lu.assertEquals(snapshot.schema, "selectedRows.v1")
+    lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
+    lu.assertEquals(snapshot.rows[2].optionKey, "O_Combat01")
+    lu.assertEquals(snapshot.rows[2].rewards.encounter[1].wheelOfferKey, "OneChoice")
 end
 
 function TestRunPlannerMultiEncounterRoute.testMultiEncounterRewardRatioSummaryCountsEncounterLegs()
