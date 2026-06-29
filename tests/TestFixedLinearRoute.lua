@@ -1136,7 +1136,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeBuildsValidatedSna
     local snapshot = control:buildSnapshot()
 
     lu.assertEquals(snapshot.biomeKey, "Q")
-    lu.assertEquals(snapshot.adapter, "scriptedFixedLinear")
+    lu.assertEquals(snapshot.adapter, "fixedLinear")
     lu.assertFalse(snapshot.valid)
     lu.assertTrue(snapshot.disabled)
     lu.assertEquals(#snapshot.invalidRows, 1)

@@ -58,7 +58,7 @@ function historyBuilder.build(args)
     for routeBiomeIndex, biomeKey in ipairs(route and route.biomes or EMPTY_LIST) do
         local snapshot = args.snapshotForBiome and args.snapshotForBiome(route.key, biomeKey) or nil
         local biome = args.biomeLookup and args.biomeLookup[biomeKey] or nil
-        local adapter = snapshot and adapters[snapshot.adapter] or nil
+        local adapter = snapshot and biome and adapters[biome.adapter] or nil
         local builtBiome = false
         if adapter ~= nil then
             adapter.build({

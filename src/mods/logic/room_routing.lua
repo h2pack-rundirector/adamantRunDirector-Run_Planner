@@ -22,7 +22,6 @@ local FIXED_DEPTH_ROOM_ADAPTERS = {
     fieldsCageRoute = true,
     fixedLinear = true,
     multiEncounterFixed = true,
-    scriptedFixedLinear = true,
     FieldsCageRoute = true,
     FixedLinearRoute = true,
     MultiEncounterFixedRoute = true,

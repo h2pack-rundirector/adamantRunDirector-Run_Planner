@@ -11,7 +11,7 @@ return function(deps)
         key = "Q",
         label = "Summit",
         region = "Surface",
-        adapter = "scriptedFixedLinear",
+        adapter = "fixedLinear",
         roomTopology = topology,
         timeline = parser.standardTimeline("Q", {
             postBossFeatures = { surfaceShop = true },

@@ -6,7 +6,6 @@ local TEMPLATE_BY_ADAPTER = {
     fixedLinear = "FixedLinearRoute",
     hubPylon = "HubPylonRoute",
     multiEncounterFixed = "MultiEncounterFixedRoute",
-    scriptedFixedLinear = "FixedLinearRoute",
 }
 
 local GLOBAL_TAB_KEY = "Global"

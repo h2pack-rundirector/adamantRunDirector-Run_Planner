@@ -27,16 +27,16 @@ local function axisValue(object, axis)
     return field and object and object[field] or nil
 end
 
-local function roomsSinceDepth(context, previousRunDepthCache)
-    local current = context and context.runDepthCache or nil
+local function roomsSinceDepth(entry, previousRunDepthCache)
+    local current = entry and entry.runDepthCache or nil
     if current == nil or previousRunDepthCache == nil then
         return nil
     end
     return current - previousRunDepthCache
 end
 
-local function axisDistance(context, event, axis)
-    local current = axisValue(context, axis)
+local function axisDistance(entry, event, axis)
+    local current = axisValue(entry, axis)
     local previous = axisValue(event, axis)
     if current == nil or previous == nil then
         return nil
@@ -44,8 +44,8 @@ local function axisDistance(context, event, axis)
     return current - previous
 end
 
-local function eventInAxisWindow(event, context, axis, count)
-    local current = axisValue(context, axis)
+local function eventInAxisWindow(event, entry, axis, count)
+    local current = axisValue(entry, axis)
     local previous = axisValue(event, axis)
     if current == nil or previous == nil then
         return false
@@ -54,11 +54,11 @@ local function eventInAxisWindow(event, context, axis, count)
     return previous <= current and previous >= current - window
 end
 
-local function anyEventInWindow(history, context, requirement, defaultAxis)
+local function anyEventInWindow(history, entry, requirement, defaultAxis)
     local axis = requirement and requirement.axis or defaultAxis
     local count = requirement and requirement.count or nil
     for _, event in ipairs(routeHistory.entries(history)) do
-        if eventInAxisWindow(event, context, axis, count)
+        if eventInAxisWindow(event, entry, axis, count)
             and routeEvents.matchesSpec(event, requirement)
         then
             return true, event
@@ -86,45 +86,45 @@ local function exitCount(row)
     return numeric(row.option and row.option.exitCount)
 end
 
-function query.runDepthCache(context)
-    return context and context.runDepthCache or nil
+function query.runDepthCache(entry)
+    return entry and entry.runDepthCache or nil
 end
 
-function query.biomeDepthCache(context)
-    return context and context.biomeDepthCache or nil
+function query.biomeDepthCache(entry)
+    return entry and entry.biomeDepthCache or nil
 end
 
-function query.enteredBiomes(context)
-    return context and context.routeBiomeIndex or nil
+function query.enteredBiomes(entry)
+    return entry and entry.routeBiomeIndex or nil
 end
 
-function query.runEncounterDepth(context)
-    return context and context.runEncounterDepth or nil
+function query.runEncounterDepth(entry)
+    return entry and entry.runEncounterDepth or nil
 end
 
-function query.biomeEncounterDepth(context)
-    return context and context.biomeEncounterDepth or nil
+function query.biomeEncounterDepth(entry)
+    return entry and entry.biomeEncounterDepth or nil
 end
 
-function query.requiredMinRoomsSinceRunDepth(context, previousRunDepthCache, count)
-    local rooms = roomsSinceDepth(context, previousRunDepthCache)
+function query.requiredMinRoomsSinceRunDepth(entry, previousRunDepthCache, count)
+    local rooms = roomsSinceDepth(entry, previousRunDepthCache)
     return rooms ~= nil and rooms >= count
 end
 
-function query.requiredMinRoomsSinceEvent(history, context, requirement)
+function query.requiredMinRoomsSinceEvent(history, entry, requirement)
     local event = routeHistory.lastEvent(history, requirement and requirement.eventKey)
     if event == nil then
         return true, nil
     end
-    local distance = axisDistance(context, event, requirement.axis or "runDepthCache")
+    local distance = axisDistance(entry, event, requirement.axis or "runDepthCache")
     if distance == nil then
         return false, event
     end
     return distance == 0 or distance >= requirement.count, event
 end
 
-function query.sumPrevRooms(history, context, requirement)
-    return anyEventInWindow(history, context, requirement, "roomHistory")
+function query.sumPrevRooms(history, entry, requirement)
+    return anyEventInWindow(history, entry, requirement, "roomHistory")
 end
 
 function query.requiredMinExits(row, count)

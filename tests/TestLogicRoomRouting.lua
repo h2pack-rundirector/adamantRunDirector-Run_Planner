@@ -201,7 +201,7 @@ function TestRunPlannerLogicRoomRouting.testRoomRoutingSupportsSummitLinearAdapt
         },
     })
     local runtime = runtimeForCatalog(routePlan, catalog, {
-        Q = plannedBiomeSnapshot("Q", "scriptedFixedLinear", {
+        Q = plannedBiomeSnapshot("Q", "fixedLinear", {
             {
                 rowIndex = 3,
                 routeOrdinal = 3,
