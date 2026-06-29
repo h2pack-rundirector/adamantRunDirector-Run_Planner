@@ -2,7 +2,6 @@ local deps = ... or {}
 
 local query = {}
 
-local VANILLA_ROLE_KEY = "Vanilla"
 local routeEvents = deps.events
 local routeHistory = deps.history
 
@@ -11,6 +10,13 @@ local function numeric(value)
         return nil
     end
     return tonumber(value)
+end
+
+local function nonEmpty(value)
+    if value == nil or value == "" then
+        return nil
+    end
+    return value
 end
 
 local AXIS_FIELDS = {
@@ -25,6 +31,37 @@ end
 local function axisValue(object, axis)
     local field = axisField(axis)
     return field and object and object[field] or nil
+end
+
+local function strictlyBefore(entry, candidate)
+    local currentRoomHistory = entry and entry.roomHistoryOrdinal or nil
+    local candidateRoomHistory = candidate and candidate.roomHistoryOrdinal or nil
+    if currentRoomHistory ~= nil and candidateRoomHistory ~= nil then
+        return candidateRoomHistory < currentRoomHistory
+    end
+
+    local currentBiomeIndex = entry and entry.routeBiomeIndex or nil
+    local candidateBiomeIndex = candidate and candidate.routeBiomeIndex or nil
+    if currentBiomeIndex ~= nil and candidateBiomeIndex ~= nil and currentBiomeIndex ~= candidateBiomeIndex then
+        return candidateBiomeIndex < currentBiomeIndex
+    end
+
+    local currentOrdinal = entry and entry.routeOrdinal or nil
+    local candidateOrdinal = candidate and candidate.routeOrdinal or nil
+    if currentOrdinal ~= nil and candidateOrdinal ~= nil then
+        return candidateOrdinal < currentOrdinal
+    end
+
+    return false
+end
+
+local function latestByRoomHistory(currentLatest, candidate)
+    if currentLatest == nil then
+        return candidate
+    end
+    return (candidate.roomHistoryOrdinal or 0) > (currentLatest.roomHistoryOrdinal or 0)
+        and candidate
+        or currentLatest
 end
 
 local function roomsSinceDepth(entry, previousRunDepthCache)
@@ -68,7 +105,7 @@ local function anyEventInWindow(history, entry, requirement, defaultAxis)
 end
 
 local function exitCount(row)
-    if row == nil or row.valid == false or row.roleKey == VANILLA_ROLE_KEY then
+    if row == nil or row.valid == false then
         return nil
     end
 
@@ -83,7 +120,12 @@ local function exitCount(row)
         return value
     end
 
-    return numeric(row.option and row.option.exitCount)
+    value = numeric(row.option and row.option.exitCount)
+    if value ~= nil then
+        return value
+    end
+
+    return row.topology and row.topology.exits and #row.topology.exits or nil
 end
 
 function query.runDepthCache(entry)
@@ -112,19 +154,100 @@ function query.requiredMinRoomsSinceRunDepth(entry, previousRunDepthCache, count
 end
 
 function query.requiredMinRoomsSinceEvent(history, entry, requirement)
-    local event = routeHistory.lastEvent(history, requirement and requirement.eventKey)
-    if event == nil then
+    local previous = query.lastEventBefore(history, entry, requirement)
+    if previous == nil then
         return true, nil
     end
-    local distance = axisDistance(entry, event, requirement.axis or "runDepthCache")
+    local distance = axisDistance(entry, previous, requirement.axis or "runDepthCache")
     if distance == nil then
-        return false, event
+        return false, previous
     end
-    return distance == 0 or distance >= requirement.count, event
+    return distance == 0 or distance >= requirement.count, previous
 end
 
 function query.sumPrevRooms(history, entry, requirement)
     return anyEventInWindow(history, entry, requirement, "roomHistory")
+end
+
+function query.lastEventBefore(history, entry, spec)
+    local latest = nil
+    for _, event in ipairs(routeHistory.entries(history)) do
+        if strictlyBefore(entry, event) and routeEvents.matchesSpec(event, spec) then
+            latest = latestByRoomHistory(latest, event)
+        end
+    end
+    return latest
+end
+
+function query.lootTypeHistoryCount(history, entry, lootType)
+    local count = 0
+    for _, loot in ipairs(routeHistory.lootEntries(history, lootType)) do
+        if strictlyBefore(entry, loot) then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+function query.hasLootType(history, entry, lootType)
+    return query.lootTypeHistoryCount(history, entry, lootType) > 0
+end
+
+function query.lastLootType(history, entry, lootType)
+    local latest = nil
+    for _, loot in ipairs(routeHistory.lootEntries(history, lootType)) do
+        if strictlyBefore(entry, loot) then
+            latest = latestByRoomHistory(latest, loot)
+        end
+    end
+    return latest
+end
+
+function query.biomeUseRecordCount(history, entry, lootType)
+    local biomeKey = entry and entry.biomeKey or nil
+    local count = 0
+    for _, loot in ipairs(routeHistory.biomeLootEntries(history, biomeKey, lootType)) do
+        if strictlyBefore(entry, loot) then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+function query.hasBiomeUseRecord(history, entry, lootType)
+    return query.biomeUseRecordCount(history, entry, lootType) > 0
+end
+
+function query.hasLootSource(history, entry, sourceValue)
+    sourceValue = nonEmpty(sourceValue)
+    if sourceValue == nil then
+        return false
+    end
+    for _, loot in ipairs(routeHistory.sourceEntries(history, sourceValue)) do
+        if strictlyBefore(entry, loot) then
+            return true
+        end
+    end
+    return false
+end
+
+function query.distinctLootSourceCount(history, entry, sourceValues)
+    local count = 0
+    for _, sourceValue in ipairs(sourceValues or {}) do
+        if query.hasLootSource(history, entry, sourceValue) then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+function query.requiredNotInStore(history, entry, lootType)
+    for _, loot in ipairs(routeHistory.pendingLootEntries(history, lootType)) do
+        if strictlyBefore(entry, loot) then
+            return false, loot
+        end
+    end
+    return true, nil
 end
 
 function query.requiredMinExits(row, count)
