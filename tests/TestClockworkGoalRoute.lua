@@ -683,6 +683,73 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRuntimeBuildsValidate
     lu.assertTrue(snapshot.rows[14].valid)
 end
 
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalEmitsDumbSelectedRowsSnapshot()
+    local catalog = loadCatalog()
+    local template = loadClockworkGoalTemplate()
+    local instance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        { RouteKindKey = "Goal", OptionKey = "I_Combat01" },
+        {
+            RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat",
+            OptionKey = "I_Combat03",
+            SiblingStructureKey = "CombatGoal",
+            Reward1Key = "MaxHealthDrop",
+        },
+    }), instance)
+
+    local snapshot = control:buildSelectedRowsSnapshot()
+
+    lu.assertEquals(snapshot.schema, "selectedRows.v1")
+    lu.assertEquals(snapshot.controlName, "RouteI")
+    lu.assertEquals(snapshot.biomeKey, "I")
+    lu.assertEquals(snapshot.adapter, "clockworkGoal")
+    lu.assertEquals(snapshot.clockwork.goalCount, 1)
+    lu.assertEquals(snapshot.clockwork.requiredGoals, 5)
+    lu.assertEquals(snapshot.clockwork.nonGoalRewardCount, 1)
+    lu.assertNil(snapshot.rows[1].valid)
+    lu.assertNil(snapshot.rows[1].roomTopology)
+    lu.assertNil(snapshot.rows[1].rewardItems)
+    lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
+    lu.assertEquals(snapshot.rows[1].optionKey, "I_Intro")
+    lu.assertEquals(snapshot.rows[2].roleKey, "GoalCombat")
+    lu.assertEquals(snapshot.rows[2].optionKey, "I_Combat01")
+    lu.assertEquals(snapshot.rows[2].routeKindKey, "Goal")
+    lu.assertTrue(snapshot.rows[2].state.countsGoal)
+    lu.assertFalse(snapshot.rows[2].state.countsNonGoalReward)
+    lu.assertEquals(snapshot.rows[3].roleKey, "RewardCombat")
+    lu.assertEquals(snapshot.rows[3].optionKey, "I_Combat03")
+    lu.assertEquals(snapshot.rows[3].routeKindKey, "NonGoal")
+    lu.assertEquals(snapshot.rows[3].nonGoalKindKey, "RewardCombat")
+    lu.assertEquals(snapshot.rows[3].state.priorGoals, 1)
+    lu.assertFalse(snapshot.rows[3].state.countsGoal)
+    lu.assertTrue(snapshot.rows[3].state.countsNonGoalReward)
+    lu.assertEquals(snapshot.rows[3].topology.siblings[1].structureKey, "CombatGoal")
+    lu.assertEquals(snapshot.rows[3].rewards.row.values[1], "MaxHealthDrop")
+end
+
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalReadSelectedRowsSnapshot()
+    local catalog = loadCatalog()
+    local template = loadClockworkGoalTemplate()
+    local instance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        { RouteKindKey = "Goal", OptionKey = "I_Combat01" },
+    }), instance)
+
+    local snapshot = control:read("selectedRowsSnapshot")
+
+    lu.assertEquals(snapshot.schema, "selectedRows.v1")
+    lu.assertEquals(snapshot.rows[2].roleKey, "GoalCombat")
+    lu.assertEquals(snapshot.rows[2].optionKey, "I_Combat01")
+end
+
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalCombatCanSelectDevotionRewardSurface()
     local catalog = loadCatalog()
     local template = loadClockworkGoalTemplate()

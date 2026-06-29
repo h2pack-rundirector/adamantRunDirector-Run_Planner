@@ -75,6 +75,13 @@ local function roomOptions(slot)
     return options
 end
 
+local function selectedRoomKey(slot, option)
+    if option ~= nil and option.key ~= nil and option.key ~= "" then
+        return option.key
+    end
+    return slot and slot.roomKey or nil
+end
+
 function runtime.create(fields, instance)
     prewarmRewardSurfaces(instance)
     local routeRows = createRouteRows(fields)
@@ -249,6 +256,80 @@ function runtime.create(fields, instance)
         return rewardItems.attach(row)
     end
 
+    function control:selectedRowSnapshot(rowIndex)
+        local slot = self:slot(rowIndex)
+        if slot == nil then
+            return nil
+        end
+
+        local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
+        local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
+        if slot.roleKey ~= nil then
+            roleKey = slot.roleKey
+            optionKey = selectedRoomKey(slot, option) or optionKey
+        end
+
+        local siblings = {}
+        for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
+            siblings[siblingIndex] = {
+                structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance, siblingIndex)) or "",
+            }
+        end
+
+        return {
+            rowIndex = rowIndex,
+            roleKey = roleKey,
+            optionKey = optionKey,
+            variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
+            routeKindKey = data.readRouteKind(instance, routeRows, rowIndex),
+            nonGoalKindKey = data.readNonGoalKind(instance, routeRows, rowIndex),
+            state = {
+                inactive = data.isInactiveRouteRow(instance, routeRows, rowIndex) == true,
+                priorGoals = data.priorGoalCount(instance, routeRows, rowIndex),
+                countsGoal = data.rowCountsGoal(instance, routeRows, rowIndex, role, option),
+                countsNonGoalReward = data.rowCountsNonGoalReward(instance, routeRows, rowIndex, role, option),
+            },
+            topology = {
+                siblings = siblings,
+            },
+            rewards = {
+                row = {
+                    values = rewardSystem.readRewards(fields.Rewards, rowIndex),
+                    loot = rewardSystem.readRewardLoot(fields.Rewards, rowIndex),
+                    states = rewardSystem.readRewardStates(fields.Rewards, rowIndex),
+                    branchKey = fields.Rewards:read(rowIndex, rewardSystem.PREBOSS_BRANCH_ALIAS) or "",
+                },
+            },
+        }
+    end
+
+    function control:buildSelectedRowsSnapshot()
+        local rows = {}
+        self:beginReadPass()
+        for rowIndex = 1, self:rowCount() do
+            rows[#rows + 1] = self:selectedRowSnapshot(rowIndex)
+        end
+        local goalCount = data.countGoals(instance, routeRows)
+        local nonGoalCount = data.countNonGoals(instance, routeRows)
+        local storyCount = data.countStories(instance, routeRows)
+        self:endReadPass()
+        return {
+            schema = "selectedRows.v1",
+            routeKey = instance.routeKey,
+            controlName = instance.name,
+            biomeKey = instance.biomeKey,
+            adapter = instance.biome.adapter,
+            clockwork = {
+                goalCount = goalCount,
+                requiredGoals = data.requiredGoals(instance),
+                nonGoalRewardCount = nonGoalCount,
+                maxNonGoalRewards = data.maxNonGoalRewards(instance),
+                storyCount = storyCount,
+            },
+            rows = rows,
+        }
+    end
+
     function control:buildSnapshot()
         local rows = {}
         local invalidRows = {}
@@ -294,6 +375,8 @@ function runtime.create(fields, instance)
     function control:read(path, ...)
         if path == "snapshot" then
             return self:buildSnapshot()
+        elseif path == "selectedRowsSnapshot" then
+            return self:buildSelectedRowsSnapshot()
         elseif path == "row" then
             return self:rowSnapshot(...)
         end

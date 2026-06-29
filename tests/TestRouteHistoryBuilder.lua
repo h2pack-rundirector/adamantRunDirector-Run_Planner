@@ -202,6 +202,60 @@ local function fullOThessalyEncounterRewardRows()
     }
 end
 
+local function iGoal(optionKey, siblingKey)
+    return {
+        RouteKindKey = "Goal",
+        OptionKey = optionKey,
+        SiblingStructureKey = siblingKey,
+    }
+end
+
+local function iRewardCombat(optionKey, siblingKey, rewardType)
+    return {
+        RouteKindKey = "NonGoal",
+        NonGoalKindKey = "RewardCombat",
+        OptionKey = optionKey,
+        SiblingStructureKey = siblingKey,
+        Reward1Key = rewardType or "MaxHealthDrop",
+    }
+end
+
+local function fullITartarusRows()
+    return {
+        {},
+        iGoal("I_Combat01"),
+        iRewardCombat("I_Combat03", "CombatGoal", "MaxHealthDrop"),
+        iGoal("I_Combat04", "I_Story01"),
+        {
+            RouteKindKey = "NonGoal",
+            NonGoalKindKey = "Story",
+            OptionKey = "I_Story01",
+            SiblingStructureKey = "CombatGoal",
+        },
+        iGoal("I_Combat09", "CombatReward"),
+        {
+            RouteKindKey = "NonGoal",
+            NonGoalKindKey = "Fountain",
+            OptionKey = "I_Reprieve01",
+            SiblingStructureKey = "CombatGoal",
+            Reward1Key = "MaxManaDrop",
+        },
+        iGoal("I_Combat10", "CombatReward"),
+        {
+            RouteKindKey = "NonGoal",
+            NonGoalKindKey = "Miniboss",
+            OptionKey = "I_MiniBoss01",
+            SiblingStructureKey = "CombatGoal",
+            Reward1Key = "ZeusUpgrade",
+        },
+        iGoal("I_Combat11", "CombatReward"),
+        iRewardCombat("I_Combat12", "Preboss", "RoomMoneyDrop"),
+        {},
+        {},
+        {},
+    }
+end
+
 local function withShopOnlyPreboss(biome)
     local copy = {}
     for key, value in pairs(biome) do
@@ -715,4 +769,124 @@ function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedEntriesCarryEn
     lu.assertEquals(rooms[3].reward.encounters[2].biomeEncounterDepth, 3)
     lu.assertEquals(rooms[3].topology.kind, "shipCombat")
     lu.assertEquals(rooms[3].topology.encounters[2].wheelOfferCount, 2)
+end
+
+function TestRunPlannerRouteHistoryBuilder.testClockworkGoalBuildsTartarusSpine()
+    local catalog = h.loadCatalog()
+    local template = h.loadClockworkGoalTemplate()
+    local instance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local control = template.createRuntime(h.routeFields(fullITartarusRows()), instance)
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = {
+            key = "Underworld",
+            biomes = { "I" },
+        },
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "I" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    lu.assertEquals(#rooms, 14)
+    lu.assertEquals(rooms[1].eventKey, "I_Intro")
+    lu.assertEquals(rooms[1].roleKey, "Intro")
+    lu.assertEquals(rooms[2].eventKey, "I_Combat01")
+    lu.assertEquals(rooms[2].roleKey, "GoalCombat")
+    lu.assertEquals(rooms[3].eventKey, "I_Combat03")
+    lu.assertEquals(rooms[3].roleKey, "RewardCombat")
+    lu.assertEquals(rooms[11].eventKey, "I_Combat12")
+    lu.assertEquals(rooms[12].eventKey, "Preboss")
+    lu.assertEquals(rooms[12].roleKey, "Preboss")
+    lu.assertEquals(rooms[13].eventKey, "Boss")
+    lu.assertEquals(rooms[13].sourceKind, "afterBiome")
+    lu.assertEquals(rooms[14].eventKey, "I_PostBoss01")
+    lu.assertEquals(rooms[14].sourceKind, "afterBiome")
+end
+
+function TestRunPlannerRouteHistoryBuilder.testClockworkGoalSkipsInactiveRowsAndKeepsCounters()
+    local catalog = h.loadCatalog()
+    local template = h.loadClockworkGoalTemplate()
+    local instance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local control = template.createRuntime(h.routeFields(fullITartarusRows()), instance)
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = {
+            key = "Underworld",
+            biomes = { "I" },
+        },
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "I" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    lu.assertEquals(rooms[11].rowIndex, 11)
+    lu.assertEquals(rooms[11].roomHistoryOrdinal, 11)
+    lu.assertEquals(rooms[12].rowIndex, 14)
+    lu.assertEquals(rooms[12].roomHistoryOrdinal, 12)
+    lu.assertEquals(rooms[12].biomeDepthCache, 11)
+    lu.assertEquals(rooms[12].biomeEncounterDepth, 9)
+end
+
+function TestRunPlannerRouteHistoryBuilder.testClockworkGoalEntriesCarryTopologyAndRewards()
+    local catalog = h.loadCatalog()
+    local template = h.loadClockworkGoalTemplate()
+    local instance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local control = template.createRuntime(h.routeFields(fullITartarusRows()), instance)
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = {
+            key = "Underworld",
+            biomes = { "I" },
+        },
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "I" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    lu.assertEquals(rooms[3].reward.kind, "roomStore")
+    lu.assertEquals(rooms[3].reward.rewardStore, "TartarusRewards")
+    lu.assertEquals(rooms[3].reward.rewardType, "MaxHealthDrop")
+    lu.assertEquals(rooms[3].topology.kind, "clockworkSiblingChoice")
+    lu.assertEquals(rooms[3].topology.selected.structure, "RewardCombat")
+    lu.assertEquals(rooms[3].topology.sibling.structure, "GoalCombat")
+    lu.assertTrue(rooms[3].topology.sibling.isClockworkGoal)
+
+    lu.assertEquals(rooms[7].roleKey, "Fountain")
+    lu.assertEquals(rooms[7].reward.rewardStore, "TartarusRewards")
+    lu.assertEquals(rooms[7].reward.rewardType, "MaxManaDrop")
+    lu.assertEquals(rooms[9].roleKey, "Miniboss")
+    lu.assertEquals(rooms[9].reward.rewardStore, "RunProgress")
+    lu.assertEquals(rooms[9].reward.rewardType, "Boon")
+    lu.assertEquals(rooms[9].reward.boonSource, "ZeusUpgrade")
+    lu.assertEquals(rooms[11].topology.sibling.structure, "Preboss")
+    lu.assertTrue(rooms[11].topology.sibling.isPreboss)
+    lu.assertEquals(rooms[12].reward.kind, "shop")
+    lu.assertEquals(rooms[12].reward.shopProfile, "I_WorldShop")
 end
