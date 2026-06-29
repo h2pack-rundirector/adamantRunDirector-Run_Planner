@@ -1,4 +1,7 @@
+local deps = ... or {}
+
 local multiEncounterFixed = {}
+local rewardCandidates = deps.rewardCandidates
 
 local EMPTY_LIST = {}
 local BIOME_ENCOUNTER_DEPTH_START = 1
@@ -284,6 +287,14 @@ local function selectedEncounterRewardSummary(leg, encounterReward)
     return selectedRewardFromMajorMinor(leg.reward, encounterReward)
 end
 
+local function encounterRewardCandidates(leg, legIndex)
+    local candidates = rewardCandidates.forContext(leg.reward)
+    for _, candidate in ipairs(candidates) do
+        candidate.address = "encounter:" .. tostring(legIndex)
+    end
+    return candidates
+end
+
 local function encounterRewardAt(selectedRow, legIndex)
     for _, reward in ipairs(selectedRow and selectedRow.rewards and selectedRow.rewards.encounter or EMPTY_LIST) do
         if reward.legIndex == legIndex then
@@ -309,6 +320,7 @@ local function encounterSnapshots(context, selectedRow, resolved)
                 biomeEncounterDepth = context.biomeState.biomeEncounterDepth + legIndex - 1,
                 runEncounterDepth = context.routeState.runEncounterDepth + legIndex - 1,
                 reward = selectedEncounterRewardSummary(leg, encounterReward),
+                rewardCandidates = encounterRewardCandidates(leg, legIndex),
             }
         end
     end
@@ -339,6 +351,12 @@ local function attachShipCombat(context, roomEntry, selectedRow, resolved)
         kind = "multiEncounter",
         encounters = encounters,
     }
+    roomEntry.rewardCandidates = {}
+    for _, encounter in ipairs(encounters) do
+        for _, candidate in ipairs(encounter.rewardCandidates or EMPTY_LIST) do
+            roomEntry.rewardCandidates[#roomEntry.rewardCandidates + 1] = candidate
+        end
+    end
     roomEntry.topology = {
         kind = "shipCombat",
         encounters = topologyEncounters,

@@ -1,4 +1,7 @@
+local deps = ... or {}
+
 local hubPylon = {}
+local rewardCandidates = deps.rewardCandidates
 
 local EMPTY_LIST = {}
 local BIOME_ENCOUNTER_DEPTH_START = 1
@@ -226,6 +229,7 @@ local function emitPhysical(context, args)
         source = args.source,
     })
     entry.reward = args.reward
+    entry.rewardCandidates = args.rewardCandidates
     entry.topology = args.topology
 
     context.routeState.runEncounterDepth = context.routeState.runEncounterDepth + biomeEncounterDepthCost
@@ -256,6 +260,7 @@ local function emitFixed(context, selectedRow, slot)
         variantKey = selectedRow.variantKey,
         source = selectedRow,
         reward = reward,
+        rewardCandidates = rewardCandidates.forContext(rewardContext(role, option)),
         topology = topology,
         biomeDepthCacheCost = traversalCost(context, key, "biomeDepthCacheCost", 1),
         biomeEncounterDepthCost = traversalCost(context, key, "biomeEncounterDepthCost", 0),
@@ -294,6 +299,10 @@ local function emitSideRoom(context, selectedRow, sideRoom)
         encounterClassKey = sideRoom.encounterClassKey,
         source = sideRoom,
         reward = sideRoomRewardSummary(sideRoom),
+        rewardCandidates = rewardCandidates.forContext({
+            kind = "roomStore",
+            rewardStore = sideRoom.rewardStore,
+        }),
         biomeDepthCacheCost = traversalCost(context, "sideRoom", "biomeDepthCacheCost", 1),
         biomeEncounterDepthCost = traversalCost(context, "sideRoom", "biomeEncounterDepthCost", 0),
     })
@@ -332,6 +341,7 @@ local function emitPylon(context, selectedRow, slot)
         variantKey = selectedRow.variantKey,
         source = selectedRow,
         reward = selectedRewardSummary(rewardContextValue, selectedRow.rewards),
+        rewardCandidates = rewardCandidates.forContext(rewardContextValue),
         topology = pylonTopologySummary(context, selectedRow, rewardContextValue),
         biomeDepthCacheCost = traversalCost(context, "pylonEntry", "biomeDepthCacheCost", 1),
         biomeEncounterDepthCost = numericCost(

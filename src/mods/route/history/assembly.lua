@@ -13,12 +13,25 @@ function historyAssembly.create(opts)
     local loot = import("mods/route/history/loot.lua", nil, {
         history = history,
     })
+    local rewardCandidates = import("mods/route/history/reward_candidates.lua", nil, {
+        rewardDomain = opts.rewardDomain,
+    })
     local adapters = {
-        clockworkGoal = import("mods/route/history/adapters/clockwork_goal.lua"),
-        fieldsCageRoute = import("mods/route/history/adapters/fields_cage.lua"),
-        fixedLinear = import("mods/route/history/adapters/fixed_linear.lua"),
-        hubPylon = import("mods/route/history/adapters/hub_pylon.lua"),
-        multiEncounterFixed = import("mods/route/history/adapters/multi_encounter_fixed.lua"),
+        clockworkGoal = import("mods/route/history/adapters/clockwork_goal.lua", nil, {
+            rewardCandidates = rewardCandidates,
+        }),
+        fieldsCageRoute = import("mods/route/history/adapters/fields_cage.lua", nil, {
+            rewardCandidates = rewardCandidates,
+        }),
+        fixedLinear = import("mods/route/history/adapters/fixed_linear.lua", nil, {
+            rewardCandidates = rewardCandidates,
+        }),
+        hubPylon = import("mods/route/history/adapters/hub_pylon.lua", nil, {
+            rewardCandidates = rewardCandidates,
+        }),
+        multiEncounterFixed = import("mods/route/history/adapters/multi_encounter_fixed.lua", nil, {
+            rewardCandidates = rewardCandidates,
+        }),
     }
     local builder = import("mods/route/history/builder.lua", nil, {
         history = history,
@@ -43,6 +56,7 @@ function historyAssembly.create(opts)
         events = events,
         history = history,
         loot = loot,
+        rewardCandidates = rewardCandidates,
         query = query,
         builder = builder,
         validator = validator,

@@ -1,4 +1,7 @@
+local deps = ... or {}
+
 local fieldsCage = {}
+local rewardCandidates = deps.rewardCandidates
 
 local EMPTY_LIST = {}
 local BIOME_ENCOUNTER_DEPTH_START = 1
@@ -386,6 +389,9 @@ local function appendRoom(history, routeHistory, context, selectedRow, resolved)
         source = selectedRow,
     })
     entry.reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards, resolved.sourceCount)
+    entry.rewardCandidates = rewardCandidates.forContext(resolved.rewardContext, {
+        sourceCount = resolved.sourceCount,
+    })
     return entry
 end
 

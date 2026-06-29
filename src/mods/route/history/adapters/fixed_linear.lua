@@ -1,4 +1,7 @@
+local deps = ... or {}
+
 local fixedLinear = {}
+local rewardCandidates = deps.rewardCandidates
 
 local EMPTY_LIST = {}
 local BIOME_ENCOUNTER_DEPTH_START = 1
@@ -379,6 +382,7 @@ local function appendRoom(history, routeHistory, context, selectedRow, resolved)
         source = selectedRow,
     })
     entry.reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards)
+    entry.rewardCandidates = rewardCandidates.forContext(resolved.rewardContext)
     return entry
 end
 
