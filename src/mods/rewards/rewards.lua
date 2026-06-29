@@ -49,6 +49,7 @@ function rewardSystem.create(opts)
 
     return {
         SLOT_COUNT = storage.SLOT_COUNT,
+        PREBOSS_BRANCH_ALIAS = storage.PREBOSS_BRANCH_ALIAS,
         buildRows = storage.buildRows,
         fields = storage.fields,
         isAlias = storage.isAlias,

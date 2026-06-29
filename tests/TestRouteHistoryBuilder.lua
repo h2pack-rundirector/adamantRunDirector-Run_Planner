@@ -41,15 +41,18 @@ local function fullFErebusRows()
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat04",
+            SiblingStructureKey = "F_Story01",
             Reward1Key = "Major",
             Reward2Key = "StackUpgrade",
         },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat05",
+            SiblingStructureKey = "Combat",
             Reward1Key = "Major",
             Reward2Key = "Boon",
             Reward3Key = "ZeusUpgrade",
+            SiblingRewardClassKey = "Major",
         },
         {
             RoleKey = "Combat",
@@ -82,10 +85,35 @@ local function fullFErebusRows()
             Reward2Key = "MaxHealthDrop",
         },
         {
-            Reward1Key = "Shop",
-            Reward2Key = "FreeReward",
+            PrebossBranchKey = "FreeReward",
+            Reward4Key = "Boon",
+            Reward5Key = "ZeusUpgrade",
         },
     }
+end
+
+local function withShopOnlyPreboss(biome)
+    local copy = {}
+    for key, value in pairs(biome) do
+        copy[key] = value
+    end
+    copy.slotLayout = {}
+    for key, value in pairs(biome.slotLayout) do
+        copy.slotLayout[key] = value
+    end
+    copy.slotLayout.special = {}
+    for ordinal, special in pairs(biome.slotLayout.special or {}) do
+        local specialCopy = {}
+        for key, value in pairs(special) do
+            specialCopy[key] = value
+        end
+        copy.slotLayout.special[ordinal] = specialCopy
+    end
+    copy.slotLayout.special[11].reward = {
+        kind = "shop",
+        shopProfile = "WorldShop",
+    }
+    return copy
 end
 
 function TestRunPlannerRouteHistoryBuilder.testFixedLinearEmitsDumbSelectedRowsSnapshot()
@@ -126,6 +154,7 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearEmitsDumbSelectedRowsS
     lu.assertEquals(snapshot.rows[2].topology.siblings[1].structureKey, "Combat")
     lu.assertEquals(snapshot.rows[2].rewards.row.values[1], "Major")
     lu.assertEquals(snapshot.rows[2].rewards.row.values[2], "MaxHealthDrop")
+    lu.assertEquals(snapshot.rows[2].rewards.row.states[1], "")
     lu.assertEquals(snapshot.rows[2].rewards.sibling[1].rewardClassKey, "Major")
 end
 
@@ -219,4 +248,129 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearBuildsFullDeclaredFEre
     lu.assertEquals(rooms[14].eventKey, "F_PostBoss01")
     lu.assertEquals(rooms[14].sourceKind, "afterBiome")
     lu.assertEquals(rooms[14].roomHistoryOrdinal, 14)
+end
+
+function TestRunPlannerRouteHistoryBuilder.testFixedLinearRoomEntriesCarryNextChoiceTopology()
+    local catalog = h.loadCatalog()
+    local template = h.loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(h.routeFields(fullFErebusRows()), instance)
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = catalog.routes.lookup.Underworld,
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "F" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    lu.assertEquals(rooms[1].topology.kind, "fixedLinearNextChoice")
+    lu.assertEquals(rooms[1].topology.exits[1].branch, "picked")
+    lu.assertEquals(rooms[1].topology.exits[1].roomKey, "F_Combat01")
+    lu.assertEquals(rooms[1].topology.exits[1].reward.kind, "majorMinor")
+    lu.assertEquals(rooms[1].topology.exits[1].reward.rewardStore, "RunProgress")
+    lu.assertEquals(rooms[1].topology.exits[1].reward.rewardType, "MaxHealthDrop")
+
+    lu.assertEquals(rooms[5].topology.exits[1].branch, "picked")
+    lu.assertEquals(rooms[5].topology.exits[1].roomKey, "F_Combat05")
+    lu.assertEquals(rooms[5].topology.exits[2].branch, "sibling")
+    lu.assertEquals(rooms[5].topology.exits[2].structure, "Story")
+    lu.assertEquals(rooms[5].topology.exits[2].roomKey, "F_Story01")
+    lu.assertNil(rooms[5].topology.exits[2].reward)
+
+    lu.assertEquals(rooms[6].topology.exits[1].branch, "picked")
+    lu.assertEquals(rooms[6].topology.exits[1].roomKey, "F_Combat06")
+    lu.assertEquals(rooms[6].topology.exits[1].reward.rewardType, "MaxHealthDrop")
+    lu.assertEquals(rooms[6].topology.exits[2].branch, "sibling")
+    lu.assertEquals(rooms[6].topology.exits[2].structure, "Combat")
+    lu.assertEquals(rooms[6].topology.exits[2].reward.rewardClass, "Major")
+    lu.assertEquals(rooms[6].topology.exits[2].reward.rewardStore, "RunProgress")
+end
+
+function TestRunPlannerRouteHistoryBuilder.testFixedLinearPrebossBranchesGeneratedTopologyAndOutcome()
+    local catalog = h.loadCatalog()
+    local template = h.loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(h.routeFields(fullFErebusRows()), instance)
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = catalog.routes.lookup.Underworld,
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "F" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    local prePreboss = rooms[11]
+    lu.assertEquals(prePreboss.eventKey, "F_Combat10")
+    lu.assertEquals(#prePreboss.topology.exits, 2)
+    lu.assertEquals(prePreboss.topology.exits[1].branch, "sibling")
+    lu.assertEquals(prePreboss.topology.exits[1].structure, "PrebossShop")
+    lu.assertEquals(prePreboss.topology.exits[1].rewardBranchKey, "Shop")
+    lu.assertEquals(prePreboss.topology.exits[1].reward.kind, "shop")
+    lu.assertEquals(prePreboss.topology.exits[1].reward.shopProfile, "WorldShop")
+    lu.assertEquals(prePreboss.topology.exits[2].branch, "picked")
+    lu.assertEquals(prePreboss.topology.exits[2].structure, "PrebossFreeReward")
+    lu.assertEquals(prePreboss.topology.exits[2].rewardBranchKey, "FreeReward")
+    lu.assertEquals(prePreboss.topology.exits[2].reward.kind, "roomStore")
+    lu.assertEquals(prePreboss.topology.exits[2].reward.rewardStore, "RunProgress")
+    lu.assertEquals(prePreboss.topology.exits[2].reward.ineligibleRewardTypes[1], "Devotion")
+
+    local preboss = rooms[12]
+    lu.assertEquals(preboss.eventKey, "Preboss")
+    lu.assertEquals(preboss.reward.kind, "preboss")
+    lu.assertEquals(preboss.reward.branch, "FreeReward")
+    lu.assertEquals(preboss.reward.reward.rewardStore, "RunProgress")
+    lu.assertEquals(preboss.reward.reward.rewardType, "Boon")
+    lu.assertEquals(preboss.reward.reward.boonSource, "ZeusUpgrade")
+end
+
+function TestRunPlannerRouteHistoryBuilder.testFixedLinearPrebossShopOnlyDoesNotGenerateBranches()
+    local catalog = h.loadCatalog()
+    local template = h.loadFixedLinearTemplate()
+    local biome = withShopOnlyPreboss(catalog.lookup.F)
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = biome,
+    })
+    local control = template.createRuntime(h.routeFields(fullFErebusRows()), instance)
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = catalog.routes.lookup.Underworld,
+        biomeLookup = {
+            F = biome,
+        },
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "F" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    local prePreboss = rooms[11]
+    lu.assertEquals(#prePreboss.topology.exits, 1)
+    lu.assertEquals(prePreboss.topology.exits[1].branch, "picked")
+    lu.assertEquals(prePreboss.topology.exits[1].structure, "Preboss")
+    lu.assertNil(prePreboss.topology.exits[1].rewardBranchKey)
+    lu.assertEquals(prePreboss.topology.exits[1].reward.kind, "shop")
+    lu.assertEquals(prePreboss.topology.exits[1].reward.shopProfile, "WorldShop")
 end
