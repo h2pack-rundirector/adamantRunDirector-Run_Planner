@@ -13,11 +13,11 @@ function historyAssembly.create(opts)
     local loot = import("mods/route/history/loot.lua", nil, {
         history = history,
     })
-    local rewardCandidates = import("mods/route/history/reward_candidates.lua", nil, {
+    local rewardCandidates = import("mods/route/history/candidates/rewards.lua", nil, {
         rewardDomain = opts.rewardDomain,
     })
-    local roomCandidates = import("mods/route/history/room_candidates.lua")
-    local siblingCandidates = import("mods/route/history/sibling_candidates.lua")
+    local roomCandidates = import("mods/route/history/candidates/rooms.lua")
+    local siblingCandidates = import("mods/route/history/candidates/siblings.lua")
     local adapters = {
         clockworkGoal = import("mods/route/history/adapters/clockwork_goal.lua", nil, {
             rewardCandidates = rewardCandidates,
