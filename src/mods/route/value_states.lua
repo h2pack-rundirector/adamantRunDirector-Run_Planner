@@ -1,3 +1,7 @@
+local policy = _G.import
+    and _G.import("mods/route/value_state_policy.lua")
+    or dofile("src/mods/route/value_state_policy.lua")
+
 local valueStates = {}
 
 valueStates.NORMAL = 0
@@ -5,9 +9,7 @@ valueStates.HIDDEN = 1
 valueStates.INVALID = 2
 valueStates.WARNING = 3
 
-valueStates.failureCodeStates = {
-    biome_depth_unavailable = valueStates.HIDDEN,
-}
+valueStates.policy = policy
 
 local function normalize(state)
     local value = math.floor(tonumber(state) or valueStates.NORMAL)
@@ -29,10 +31,7 @@ function valueStates.merge(first, second)
 end
 
 function valueStates.forFailureCode(code)
-    if code == nil then
-        return valueStates.INVALID
-    end
-    return valueStates.failureCodeStates[code] or valueStates.INVALID
+    return policy.valueStateForFailureCode(valueStates, code)
 end
 
 function valueStates.forFailureCodeOrNormal(code)
@@ -47,6 +46,10 @@ function valueStates.forStatus(status)
         return valueStates.NORMAL
     end
     return valueStates.forFailureCode(status.code)
+end
+
+function valueStates.forTopologySiblingStatus(namespace, status)
+    return policy.valueStateForTopologySiblingStatus(valueStates, namespace, status)
 end
 
 function valueStates.set(target, key, state)

@@ -587,18 +587,7 @@ function roomTopology.isSiblingTopologyStatus(policy, status)
 end
 
 function roomTopology.valueStateForSiblingStatus(policy, status)
-    if status == nil or status.valid then
-        return valueStates.NORMAL
-    end
-    if status.code == statusCode(policy, "sibling_same_room")
-        or status.code == statusCode(policy, "sibling_room_planned")
-        or status.code == statusCode(policy, "sibling_miniboss_after_selected")
-        or status.code == statusCode(policy, "sibling_same_sibling_room")
-        or status.code == statusCode(policy, "sibling_room_generated")
-    then
-        return valueStates.HIDDEN
-    end
-    return valueStates.forStatus(status)
+    return valueStates.forTopologySiblingStatus(policy and policy.namespace, status)
 end
 
 function roomTopology.fillSiblingValueStates(policy, ctx, states)
