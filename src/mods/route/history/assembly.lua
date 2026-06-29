@@ -1,6 +1,7 @@
 local historyAssembly = {}
 
-function historyAssembly.create()
+function historyAssembly.create(opts)
+    opts = opts or {}
     local events = import("mods/route/history/events.lua")
     local history = import("mods/route/history/history.lua", nil, {
         events = events,
@@ -27,8 +28,14 @@ function historyAssembly.create()
     local biomeStructureValidator = import("mods/route/history/validator/biome_structure.lua", nil, {
         history = history,
     })
+    local rewardValidator = import("mods/route/history/validator/rewards.lua", nil, {
+        history = history,
+        query = query,
+    })
     local validator = import("mods/route/history/validator.lua", nil, {
         biomeStructure = biomeStructureValidator,
+        rewards = rewardValidator,
+        selectedLegalityRules = opts.selectedLegalityRules,
     })
 
     return {

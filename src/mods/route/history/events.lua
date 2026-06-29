@@ -27,6 +27,9 @@ local function matchesSpec(event, spec)
     if spec.groupKey ~= nil and event.groupKey ~= spec.groupKey then
         return false
     end
+    if spec.lootType ~= nil and event.lootType ~= spec.lootType then
+        return false
+    end
     return true
 end
 
