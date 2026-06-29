@@ -1174,6 +1174,39 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
     lu.assertEquals(ephyra.roomTopology.hub.selectedDoorCount, 6)
     lu.assertEquals(ephyra.roomTopology.hub.availableDoorCount, { min = 9, max = 10 })
     lu.assertEquals(ephyra.roomTopology.hub.effectTiming, "afterGroup")
+    lu.assertEquals(ephyra.roomTopology.hub.traversal, {
+        opening = {
+            biomeDepthCacheCost = 1,
+            biomeEncounterDepthCost = 1,
+        },
+        preHub = {
+            biomeDepthCacheCost = 1,
+            biomeEncounterDepthCost = 0,
+        },
+        hubVisit = {
+            biomeDepthCacheCost = 1,
+            biomeEncounterDepthCost = 0,
+        },
+        pylonEntry = {
+            biomeDepthCacheCost = 1,
+        },
+        sideRoom = {
+            biomeDepthCacheCost = 1,
+            biomeEncounterDepthCost = 0,
+        },
+        pylonRestore = {
+            biomeDepthCacheCost = 1,
+            biomeEncounterDepthCost = 0,
+        },
+        hubReturn = {
+            biomeDepthCacheCost = 1,
+            biomeEncounterDepthCost = 0,
+        },
+        preboss = {
+            biomeDepthCacheCost = 1,
+            biomeEncounterDepthCost = 0,
+        },
+    })
     lu.assertEquals(#ephyra.roomTopology.hub.doorRooms, 26)
     lu.assertEquals(ephyra.roomTopology.hub.rewardRowGroup, {
         key = "N_HubPylons",

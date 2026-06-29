@@ -12,6 +12,39 @@ return function(deps)
             selectedDoorCount = 6,
             rewardRowGroup = rewardLayout.hubPylons,
             effectTiming = "afterGroup",
+            traversal = {
+                opening = {
+                    biomeDepthCacheCost = 1,
+                    biomeEncounterDepthCost = 1,
+                },
+                preHub = {
+                    biomeDepthCacheCost = 1,
+                    biomeEncounterDepthCost = 0,
+                },
+                hubVisit = {
+                    biomeDepthCacheCost = 1,
+                    biomeEncounterDepthCost = 0,
+                },
+                pylonEntry = {
+                    biomeDepthCacheCost = 1,
+                },
+                sideRoom = {
+                    biomeDepthCacheCost = 1,
+                    biomeEncounterDepthCost = 0,
+                },
+                pylonRestore = {
+                    biomeDepthCacheCost = 1,
+                    biomeEncounterDepthCost = 0,
+                },
+                hubReturn = {
+                    biomeDepthCacheCost = 1,
+                    biomeEncounterDepthCost = 0,
+                },
+                preboss = {
+                    biomeDepthCacheCost = 1,
+                    biomeEncounterDepthCost = 0,
+                },
+            },
             doorRooms = layout.hubDoorRooms,
             minibossAvailability = {
                 mode = "oneOf",

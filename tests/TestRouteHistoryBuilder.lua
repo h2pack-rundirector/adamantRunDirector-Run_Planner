@@ -256,6 +256,65 @@ local function fullITartarusRows()
     }
 end
 
+local function fullNEphyraRows()
+    return {
+        { Reward1Key = "SpellDrop" },
+        { Reward1Key = "WeaponUpgrade" },
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat12",
+            Reward1Key = "Boon",
+            Reward2Key = "ZeusUpgrade",
+        },
+        {
+            RoleKey = "Story",
+            OptionKey = "N_Story01",
+        },
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "N_MiniBoss02",
+            Reward1Key = "AphroditeUpgrade",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat05",
+            Reward1Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat06",
+            Reward1Key = "RoomMoneyDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat13",
+            Reward1Key = "MaxManaDrop",
+        },
+        {
+            Reward1Key = "RandomLoot",
+            Reward1LootKey = "ApolloUpgrade",
+            Reward1StateKey = "Bought",
+        },
+    }
+end
+
+local function fullNEphyraSideRows()
+    return {
+        { ModeKey = "Enabled", Entered = true },
+        { ModeKey = "Enabled", Entered = false },
+        {},
+    }
+end
+
+local function fullNEphyraSideRewardRows()
+    return {
+        { Reward1Key = "MaxHealthDrop" },
+        {},
+        {},
+    }
+end
+
 local function withShopOnlyPreboss(biome)
     local copy = {}
     for key, value in pairs(biome) do
@@ -889,4 +948,161 @@ function TestRunPlannerRouteHistoryBuilder.testClockworkGoalEntriesCarryTopology
     lu.assertTrue(rooms[11].topology.sibling.isPreboss)
     lu.assertEquals(rooms[12].reward.kind, "shop")
     lu.assertEquals(rooms[12].reward.shopProfile, "I_WorldShop")
+end
+
+function TestRunPlannerRouteHistoryBuilder.testHubPylonBuildsAccurateEphyraTraversal()
+    local catalog = h.loadCatalog()
+    local template = h.loadHubPylonTemplate()
+    local instance = template.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local control = template.createRuntime(
+        h.routeFields(fullNEphyraRows(), fullNEphyraSideRows(), fullNEphyraSideRewardRows()),
+        instance
+    )
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = {
+            key = "Surface",
+            biomes = { "N" },
+        },
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "N" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    lu.assertEquals(#rooms, 20)
+    lu.assertEquals(rooms[1].eventKey, "N_Opening01")
+    lu.assertEquals(rooms[2].eventKey, "N_PreHub01")
+    lu.assertEquals(rooms[3].eventKey, "N_Hub")
+    lu.assertEquals(rooms[3].sourceKind, "row")
+    lu.assertEquals(rooms[4].eventKey, "N_Combat12")
+    lu.assertEquals(rooms[4].sourceKind, "row")
+    lu.assertEquals(rooms[5].eventKey, "N_Sub09")
+    lu.assertEquals(rooms[5].sourceKind, "sideRoom")
+    lu.assertEquals(rooms[5].sideIndex, 1)
+    lu.assertEquals(rooms[5].encounterClassKey, "Hard")
+    lu.assertEquals(rooms[6].eventKey, "N_Combat12")
+    lu.assertEquals(rooms[6].sourceKind, "pylonRestore")
+    lu.assertEquals(rooms[7].eventKey, "N_Hub")
+    lu.assertEquals(rooms[7].sourceKind, "hubReturn")
+    lu.assertEquals(rooms[8].eventKey, "N_Story01")
+    lu.assertEquals(rooms[9].eventKey, "N_Hub")
+    lu.assertEquals(rooms[10].eventKey, "N_MiniBoss02")
+    lu.assertEquals(rooms[16].eventKey, "N_Combat13")
+    lu.assertEquals(rooms[17].eventKey, "N_Hub")
+    lu.assertEquals(rooms[17].sourceKind, "hubReturn")
+    lu.assertEquals(rooms[18].eventKey, "Preboss")
+    lu.assertEquals(rooms[19].eventKey, "Boss")
+    lu.assertEquals(rooms[20].eventKey, "N_PostBoss01")
+end
+
+function TestRunPlannerRouteHistoryBuilder.testHubPylonTraversalCountersFollowEphyraModel()
+    local catalog = h.loadCatalog()
+    local template = h.loadHubPylonTemplate()
+    local instance = template.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local control = template.createRuntime(
+        h.routeFields(fullNEphyraRows(), fullNEphyraSideRows(), fullNEphyraSideRewardRows()),
+        instance
+    )
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = {
+            key = "Surface",
+            biomes = { "N" },
+        },
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "N" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    lu.assertEquals(rooms[1].roomHistoryOrdinal, 1)
+    lu.assertEquals(rooms[1].biomeDepthCache, 1)
+    lu.assertEquals(rooms[1].biomeEncounterDepth, 1)
+    lu.assertEquals(rooms[2].roomHistoryOrdinal, 2)
+    lu.assertEquals(rooms[2].biomeDepthCache, 2)
+    lu.assertEquals(rooms[2].biomeEncounterDepth, 2)
+    lu.assertEquals(rooms[3].roomHistoryOrdinal, 3)
+    lu.assertEquals(rooms[3].biomeDepthCache, 3)
+    lu.assertEquals(rooms[3].biomeEncounterDepth, 2)
+    lu.assertEquals(rooms[4].roomHistoryOrdinal, 4)
+    lu.assertEquals(rooms[4].biomeDepthCache, 4)
+    lu.assertEquals(rooms[4].biomeEncounterDepth, 2)
+    lu.assertEquals(rooms[5].roomHistoryOrdinal, 5)
+    lu.assertEquals(rooms[5].biomeDepthCache, 5)
+    lu.assertEquals(rooms[5].biomeEncounterDepth, 3)
+    lu.assertEquals(rooms[6].roomHistoryOrdinal, 6)
+    lu.assertEquals(rooms[6].biomeDepthCache, 6)
+    lu.assertEquals(rooms[6].biomeEncounterDepth, 3)
+    lu.assertEquals(rooms[8].eventKey, "N_Story01")
+    lu.assertEquals(rooms[8].biomeEncounterDepth, 3)
+    lu.assertEquals(rooms[10].eventKey, "N_MiniBoss02")
+    lu.assertEquals(rooms[10].biomeEncounterDepth, 3)
+    lu.assertEquals(rooms[18].eventKey, "Preboss")
+    lu.assertEquals(rooms[18].roomHistoryOrdinal, 18)
+    lu.assertEquals(rooms[18].biomeDepthCache, 18)
+    lu.assertEquals(rooms[18].biomeEncounterDepth, 7)
+end
+
+function TestRunPlannerRouteHistoryBuilder.testHubPylonEntriesCarryHubAndSideRewards()
+    local catalog = h.loadCatalog()
+    local template = h.loadHubPylonTemplate()
+    local instance = template.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local control = template.createRuntime(
+        h.routeFields(fullNEphyraRows(), fullNEphyraSideRows(), fullNEphyraSideRewardRows()),
+        instance
+    )
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = {
+            key = "Surface",
+            biomes = { "N" },
+        },
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "N" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    lu.assertEquals(rooms[3].topology.kind, "hubDoorBatch")
+    lu.assertEquals(rooms[3].topology.hub.generatedDoorCount, 10)
+    lu.assertEquals(rooms[4].topology.kind, "hubDoorBatchPick")
+    lu.assertEquals(rooms[4].topology.selected.structure, "Combat")
+    lu.assertEquals(rooms[4].topology.selected.rewardStore, "HubRewards")
+    lu.assertEquals(rooms[4].reward.kind, "roomStore")
+    lu.assertEquals(rooms[4].reward.rewardStore, "HubRewards")
+    lu.assertEquals(rooms[4].reward.rewardType, "Boon")
+    lu.assertEquals(rooms[4].reward.boonSource, "ZeusUpgrade")
+    lu.assertEquals(rooms[5].reward.kind, "roomStore")
+    lu.assertEquals(rooms[5].reward.rewardStore, "SubRoomRewardsHard")
+    lu.assertEquals(rooms[5].reward.rewardType, "MaxHealthDrop")
+    lu.assertEquals(rooms[10].reward.rewardStore, "RunProgress")
+    lu.assertEquals(rooms[10].reward.rewardType, "Boon")
+    lu.assertEquals(rooms[10].reward.boonSource, "AphroditeUpgrade")
+    lu.assertEquals(rooms[18].reward.kind, "shop")
+    lu.assertEquals(rooms[18].reward.shopProfile, "WorldShop")
 end

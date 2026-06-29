@@ -431,6 +431,58 @@ function runtime.create(fields, instance)
         return rewardItems.attach(row)
     end
 
+    function control:selectedRowSnapshot(rowIndex)
+        local slot = self:slot(rowIndex)
+        if slot == nil then
+            return nil
+        end
+
+        local roleKey = data.resolveRole(instance, routeRows, rowIndex)
+        local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
+        return {
+            rowIndex = rowIndex,
+            routeOrdinal = slot.routeOrdinal,
+            slotKind = slot.kind or "biomeRow",
+            slotLabel = slot.label,
+            isBiomeEntry = slot.isBiomeEntry == true,
+            roleKey = roleKey,
+            optionKey = optionKey,
+            variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
+            roomKey = selectedRoomKey(slot, option),
+            hubDoorId = option and option.hubDoorId or slot.hubDoorId,
+            sideRooms = sideRoomSnapshots(instance, fields, routeRows, rowIndex, self:rewardsConfigured()),
+            topology = {
+                hub = slot.kind == "biomeRow" and hubTopology(instance) or nil,
+            },
+            rewards = {
+                row = {
+                    values = rewardSystem.readRewards(fields.Rewards, rowIndex),
+                    loot = rewardSystem.readRewardLoot(fields.Rewards, rowIndex),
+                    states = rewardSystem.readRewardStates(fields.Rewards, rowIndex),
+                    branchKey = fields.Rewards:read(rowIndex, rewardSystem.PREBOSS_BRANCH_ALIAS) or "",
+                },
+            },
+        }
+    end
+
+    function control:buildSelectedRowsSnapshot()
+        local rows = {}
+        self:beginReadPass()
+        for rowIndex = 1, self:rowCount() do
+            rows[#rows + 1] = self:selectedRowSnapshot(rowIndex)
+        end
+        self:endReadPass()
+        return {
+            schema = "selectedRows.v1",
+            routeKey = instance.routeKey,
+            controlName = instance.name,
+            biomeKey = instance.biomeKey,
+            adapter = instance.biome.adapter,
+            hub = hubTopology(instance),
+            rows = rows,
+        }
+    end
+
     function control:buildSnapshot()
         local rows = {}
         local invalidRows = {}
@@ -464,6 +516,8 @@ function runtime.create(fields, instance)
     function control:read(path, ...)
         if path == "snapshot" then
             return self:buildSnapshot()
+        elseif path == "selectedRowsSnapshot" then
+            return self:buildSelectedRowsSnapshot()
         elseif path == "row" then
             return self:rowSnapshot(...)
         end
