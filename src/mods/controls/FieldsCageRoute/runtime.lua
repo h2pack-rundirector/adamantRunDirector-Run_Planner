@@ -310,6 +310,7 @@ function runtime.create(fields, instance)
                     values = rewardSystem.readRewards(fields.Rewards, rowIndex),
                     loot = rewardSystem.readRewardLoot(fields.Rewards, rowIndex),
                     states = rewardSystem.readRewardStates(fields.Rewards, rowIndex),
+                    branchKey = fields.Rewards:read(rowIndex, rewardSystem.PREBOSS_BRANCH_ALIAS) or "",
                 },
             },
         }

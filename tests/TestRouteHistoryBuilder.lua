@@ -92,6 +92,46 @@ local function fullFErebusRows()
     }
 end
 
+local function fullHFieldsRows()
+    return {
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "H_Combat04",
+            VariantKey = "ThreeRewards",
+            Reward1Key = "Boon",
+            Reward1LootKey = "PoseidonUpgrade",
+            Reward2Key = "HermesUpgrade",
+            Reward3Key = "StackUpgrade",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "H_Combat09",
+            VariantKey = "TwoRewards",
+            SiblingStructureKey = "CombatCage2",
+            Reward1Key = "Boon",
+            Reward1LootKey = "HestiaUpgrade",
+            Reward2Key = "WeaponUpgrade",
+        },
+        {
+            RoleKey = "Bridge",
+            SiblingStructureKey = "H_MiniBoss02",
+        },
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "H_MiniBoss01",
+            SiblingStructureKey = "CombatCage2",
+            Reward1Key = "ZeusUpgrade",
+        },
+        {
+            PrebossBranchKey = "Shop",
+            Reward1Key = "RandomLoot",
+            Reward1LootKey = "ApolloUpgrade",
+            Reward1StateKey = "Bought",
+        },
+    }
+end
+
 local function withShopOnlyPreboss(biome)
     local copy = {}
     for key, value in pairs(biome) do
@@ -373,4 +413,105 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearPrebossShopOnlyDoesNot
     lu.assertNil(prePreboss.topology.exits[1].rewardBranchKey)
     lu.assertEquals(prePreboss.topology.exits[1].reward.kind, "shop")
     lu.assertEquals(prePreboss.topology.exits[1].reward.shopProfile, "WorldShop")
+end
+
+function TestRunPlannerRouteHistoryBuilder.testFieldsCageBuildsFieldsSpine()
+    local catalog = h.loadCatalog()
+    local template = h.loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(h.routeFields(fullHFieldsRows()), instance)
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = {
+            key = "Underworld",
+            biomes = { "H" },
+        },
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "H" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    lu.assertEquals(#rooms, 8)
+    lu.assertEquals(rooms[1].eventKey, "H_Intro")
+    lu.assertEquals(rooms[1].roleKey, "Intro")
+    lu.assertEquals(rooms[1].routeOrdinal, nil)
+    lu.assertEquals(rooms[1].roomHistoryOrdinal, 1)
+    lu.assertEquals(rooms[1].biomeDepthCache, 1)
+    lu.assertEquals(rooms[1].biomeEncounterDepth, 1)
+    lu.assertEquals(rooms[2].eventKey, "H_Combat04")
+    lu.assertEquals(rooms[2].roleKey, "Combat")
+    lu.assertEquals(rooms[2].routeOrdinal, 1)
+    lu.assertEquals(rooms[2].variantKey, "ThreeRewards")
+    lu.assertEquals(rooms[3].eventKey, "H_Combat09")
+    lu.assertEquals(rooms[4].eventKey, "H_Bridge01")
+    lu.assertEquals(rooms[5].eventKey, "H_MiniBoss01")
+    lu.assertEquals(rooms[6].eventKey, "Preboss")
+    lu.assertEquals(rooms[7].eventKey, "Boss")
+    lu.assertEquals(rooms[7].sourceKind, "afterBiome")
+    lu.assertEquals(rooms[8].eventKey, "H_PostBoss01")
+    lu.assertEquals(rooms[8].sourceKind, "afterBiome")
+end
+
+function TestRunPlannerRouteHistoryBuilder.testFieldsCageEntriesCarryTopologyAndRewards()
+    local catalog = h.loadCatalog()
+    local template = h.loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(h.routeFields(fullHFieldsRows()), instance)
+    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+
+    local history = historyBuilder.build({
+        route = {
+            key = "Underworld",
+            biomes = { "H" },
+        },
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function(_, biomeKey)
+            if biomeKey == "H" then
+                return selectedSnapshot
+            end
+            return nil
+        end,
+    })
+
+    local rooms = roomEvents(history)
+    lu.assertEquals(rooms[2].topology.kind, "fieldsChoice")
+    lu.assertEquals(rooms[2].topology.selected.structure, "CombatCage3")
+    lu.assertEquals(rooms[2].topology.selected.offerCount, 3)
+    lu.assertEquals(rooms[2].topology.sibling.structure, "CombatCage3")
+    lu.assertEquals(rooms[2].topology.sibling.offerCount, 3)
+    lu.assertEquals(rooms[2].reward.kind, "fieldsCages")
+    lu.assertEquals(rooms[2].reward.sourceCount, 3)
+    lu.assertEquals(rooms[2].reward.picks[1].rewardType, "Boon")
+    lu.assertEquals(rooms[2].reward.picks[1].boonSource, "PoseidonUpgrade")
+    lu.assertEquals(rooms[2].reward.picks[2].rewardType, "HermesUpgrade")
+    lu.assertEquals(rooms[2].reward.picks[3].rewardType, "StackUpgrade")
+
+    lu.assertEquals(rooms[4].topology.selected.structure, "Bridge")
+    lu.assertEquals(rooms[4].topology.sibling.structure, "Miniboss")
+    lu.assertEquals(rooms[4].topology.sibling.roomKey, "H_MiniBoss02")
+    lu.assertEquals(rooms[4].topology.sibling.eligibleRewardTypes[1], "Boon")
+
+    lu.assertEquals(rooms[5].topology.selected.structure, "Miniboss")
+    lu.assertEquals(rooms[5].topology.selected.roomKey, "H_MiniBoss01")
+    lu.assertEquals(rooms[5].reward.kind, "roomStore")
+    lu.assertEquals(rooms[5].reward.rewardType, "Boon")
+    lu.assertEquals(rooms[5].reward.boonSource, "ZeusUpgrade")
+
+    lu.assertEquals(rooms[6].reward.kind, "preboss")
+    lu.assertEquals(rooms[6].reward.branch, "Shop")
+    lu.assertEquals(rooms[6].reward.offers[1].rewardType, "RandomLoot")
+    lu.assertEquals(rooms[6].reward.offers[1].boonSource, "ApolloUpgrade")
+    lu.assertTrue(rooms[6].reward.offers[1].bought)
 end
