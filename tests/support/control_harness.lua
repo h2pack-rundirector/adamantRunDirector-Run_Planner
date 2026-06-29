@@ -143,14 +143,6 @@ local function loadRouteGlobalTemplate()
     return loadControlTemplates().RouteGlobal
 end
 
-local function loadRouteNpcsTemplate()
-    return loadControlTemplates().RouteNpcs
-end
-
-local function loadRouteFeaturesTemplate()
-    return loadControlTemplates().RouteFeatures
-end
-
 local function loadRewardLegality()
     local semantics = testImport("mods/route/reward_planning/semantics.lua")
     local invalidLocations = testImport("mods/route/invalid_locations.lua")
@@ -183,22 +175,6 @@ local function loadRewardLegality()
         }),
         controlRequirements = controlRequirements,
         query = routeQuery,
-    })
-end
-
-local function loadRouteTargets(timeline, rewardItems, semantics)
-    local targetCommon = testImport("mods/route/run_context/targets/common.lua")
-    return testImport("mods/route/run_context/targets.lua", nil, {
-        npcs = testImport("mods/route/run_context/targets/npcs.lua", nil, {
-            timeline = timeline,
-            rewardItems = rewardItems,
-            semantics = semantics,
-            common = targetCommon,
-        }),
-        features = testImport("mods/route/run_context/targets/features.lua", nil, {
-            timeline = timeline,
-            common = targetCommon,
-        }),
     })
 end
 
@@ -289,22 +265,23 @@ local function loadFieldsCageData()
     end)
 end
 
-local function loadRunContext()
+local function loadRunContext(opts)
+    opts = opts or {}
     local timeline = testImport("mods/route/timeline.lua")
     local rewardItems = testImport("mods/route/reward_planning/items.lua")
     local semantics = testImport("mods/route/reward_planning/semantics.lua")
     local rewards = importHarness.loadRewards()
-    local historySystem = withTestImport(function()
-        return testImport("mods/route/history/assembly.lua").create({
-            rewardDomain = rewards.rewardDomain,
-            selectedLegalityRules = rewards.selectedLegalityRules,
-        })
-    end)
+    local historySystem = opts.historySystem
+        or withTestImport(function()
+            return testImport("mods/route/history/assembly.lua").create({
+                rewardDomain = rewards.rewardDomain,
+                selectedLegalityRules = rewards.selectedLegalityRules,
+            })
+        end)
     return testImport("mods/route/run_context.lua", nil, {
         controls = testImport("mods/route/run_context/controls.lua"),
         historySystem = historySystem,
         position = testImport("mods/route/position.lua"),
-        targets = loadRouteTargets(timeline, rewardItems, semantics),
         rewards = testImport("mods/route/run_context/rewards.lua", nil, {
             rewardLegality = loadRewardLegality(),
             rewardItems = rewardItems,
@@ -660,9 +637,10 @@ end
 
 local function rewardLegalityRouteContext(route, controls, opts)
     opts = opts or {}
+    local catalog = opts.biomes == nil and loadCatalog() or nil
     return loadRunContext().create({
         routes = routeDefinitions({ route }),
-        biomes = opts.biomes or {},
+        biomes = opts.biomes or catalog.lookup,
         controlResolver = function(controlName)
             return controls[controlName]
         end,
@@ -673,6 +651,7 @@ local function attachSingleBiomeRouteContext(control, routeKey, biomeKey, opts)
     opts = opts or {}
     routeKey = routeKey or "TestRoute"
     biomeKey = biomeKey or control:biomeKey()
+    local catalog = opts.biomes == nil and loadCatalog() or nil
     local routeContext = loadRunContext().create({
         routes = routeDefinitions({
             {
@@ -681,7 +660,7 @@ local function attachSingleBiomeRouteContext(control, routeKey, biomeKey, opts)
                 biomes = { biomeKey },
             },
         }),
-        biomes = opts.biomes or {},
+        biomes = opts.biomes or catalog.lookup,
         controlResolver = function(controlName)
             if controlName == control:name() then
                 return control
@@ -763,10 +742,7 @@ return {
     loadMultiEncounterTemplate = loadMultiEncounterTemplate,
     loadFieldsCageTemplate = loadFieldsCageTemplate,
     loadRouteGlobalTemplate = loadRouteGlobalTemplate,
-    loadRouteNpcsTemplate = loadRouteNpcsTemplate,
-    loadRouteFeaturesTemplate = loadRouteFeaturesTemplate,
     loadRewardLegality = loadRewardLegality,
-    loadRouteTargets = loadRouteTargets,
     loadFixedLinearData = loadFixedLinearData,
     loadClockworkGoalData = loadClockworkGoalData,
     loadHubPylonData = loadHubPylonData,

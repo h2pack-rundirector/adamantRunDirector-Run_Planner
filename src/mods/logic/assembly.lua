@@ -22,22 +22,12 @@ function assembly.create(opts)
         routePlan = routePlan,
         runState = runState,
     })
-    local npcRouting = import("mods/logic/npc_routing.lua", nil, {
-        routePlan = routePlan,
-        runState = runState,
-    })
-    local featureRouting = import("mods/logic/feature_routing.lua", nil, {
-        routePlan = routePlan,
-        runState = runState,
-    })
 
     return import("mods/logic.lua", nil, {
         catalog = catalog,
         routePlan = routePlan,
         roomRouting = roomRouting,
         rewardRouting = rewardRouting,
-        npcRouting = npcRouting,
-        featureRouting = featureRouting,
         liveGameValidator = import("mods/biomes/live_validator.lua"),
         rewards = opts.rewards,
     })

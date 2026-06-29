@@ -83,22 +83,6 @@ local function loadRewardLegality()
     })
 end
 
-local function loadRouteTargets(timeline, rewardItems, semantics)
-    local targetCommon = testImport("mods/route/run_context/targets/common.lua")
-    return testImport("mods/route/run_context/targets.lua", nil, {
-        npcs = testImport("mods/route/run_context/targets/npcs.lua", nil, {
-            timeline = timeline,
-            rewardItems = rewardItems,
-            semantics = semantics,
-            common = targetCommon,
-        }),
-        features = testImport("mods/route/run_context/targets/features.lua", nil, {
-            timeline = timeline,
-            common = targetCommon,
-        }),
-    })
-end
-
 local function loadRoutePlan()
     local timeline = testImport("mods/route/timeline.lua")
     local rewardItems = testImport("mods/route/reward_planning/items.lua")
@@ -117,7 +101,6 @@ local function loadRoutePlan()
         routeContext = testImport("mods/route/run_context.lua", nil, {
             controls = testImport("mods/route/run_context/controls.lua"),
             historySystem = historySystem,
-            targets = loadRouteTargets(timeline, rewardItems, semantics),
             rewards = testImport("mods/route/run_context/rewards.lua", nil, {
                 rewardLegality = loadRewardLegality(),
                 rewardItems = rewardItems,
@@ -139,22 +122,6 @@ end
 
 local function loadRewardRouting(routePlan, game)
     return testImport("mods/logic/reward_routing.lua", nil, {
-        routePlan = routePlan,
-        runState = testImport("mods/logic/run_state.lua"),
-        game = game,
-    })
-end
-
-local function loadNpcRouting(routePlan, game)
-    return testImport("mods/logic/npc_routing.lua", nil, {
-        routePlan = routePlan,
-        runState = testImport("mods/logic/run_state.lua"),
-        game = game,
-    })
-end
-
-local function loadFeatureRouting(routePlan, game)
-    return testImport("mods/logic/feature_routing.lua", nil, {
         routePlan = routePlan,
         runState = testImport("mods/logic/run_state.lua"),
         game = game,
@@ -207,16 +174,19 @@ local function invalidBiomeSnapshot(biomeKey)
     return {
         controlName = "Route" .. biomeKey,
         biomeKey = biomeKey,
+        adapter = "FixedLinearRoute",
         valid = false,
         disabled = true,
-        invalidRows = {
+        invalidRows = {},
+        rows = normalizeRewardRows({
             {
                 rowIndex = 1,
-                code = "test_invalid",
-                message = "test invalid",
+                routeOrdinal = 1,
+                slotKind = "biomeRow",
+                roleKey = "MissingRole",
+                roomKey = "MissingRoom",
             },
-        },
-        rows = {},
+        }),
     }
 end
 
@@ -306,12 +276,9 @@ return {
     loadCatalog = loadCatalog,
     loadRunState = loadRunState,
     loadRewardLegality = loadRewardLegality,
-    loadRouteTargets = loadRouteTargets,
     loadRoutePlan = loadRoutePlan,
     loadRoomRouting = loadRoomRouting,
     loadRewardRouting = loadRewardRouting,
-    loadNpcRouting = loadNpcRouting,
-    loadFeatureRouting = loadFeatureRouting,
     logsContain = logsContain,
     availableDoorCount = availableDoorCount,
     validBiomeSnapshot = validBiomeSnapshot,

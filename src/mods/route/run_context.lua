@@ -1,6 +1,5 @@
 local deps = ... or {}
 local routeControls = deps.controls
-local routeTargets = deps.targets
 local routeRewards = deps.rewards
 local routePosition = deps.position
 local historySystem = deps.historySystem
@@ -10,17 +9,7 @@ local EMPTY_LIST = {}
 
 local routeControlName = routeControls.routeControlName
 local routeGlobalControlName = routeControls.routeGlobalControlName
-local routeNpcControlName = routeControls.routeNpcControlName
-local routeFeatureControlName = routeControls.routeFeatureControlName
 local buildRouteInfo = routeControls.buildRouteInfo
-local buildRouteFeatureKeysByRoute = routeControls.buildRouteFeatureKeysByRoute
-local routeFeatureKeys = routeControls.routeFeatureKeys
-
-local LAYER_ORDER = {
-    route = 1,
-    npcs = 2,
-    features = 3,
-}
 
 local function biomeLabel(context, biomeKey)
     local biome = context and context.biomeLookup and context.biomeLookup[biomeKey] or nil
@@ -69,30 +58,6 @@ local function bumpRouteGeneration(context, routeKey)
     context.generationByRoute[routeKey] = (context.generationByRoute[routeKey] or 0) + 1
 end
 
-local function routeNpcTargetsState(context, routeKey)
-    local state = context.npcTargetsByRoute[routeKey]
-    if state == nil then
-        state = {
-            dirty = true,
-            targets = nil,
-        }
-        context.npcTargetsByRoute[routeKey] = state
-    end
-    return state
-end
-
-local function routeFeatureTargetsState(context, routeKey)
-    local state = context.featureTargetsByRoute[routeKey]
-    if state == nil then
-        state = {
-            dirty = true,
-            targets = nil,
-        }
-        context.featureTargetsByRoute[routeKey] = state
-    end
-    return state
-end
-
 local function routeHistoryFeedbackState(context, routeKey)
     local state = context.historyFeedbackByRoute[routeKey]
     if state == nil then
@@ -120,7 +85,16 @@ end
 
 local function selectedRowsSnapshot(context, routeKey, biomeKey)
     local control = context:controlForBiome(routeKey, biomeKey)
-    return control ~= nil and control.read ~= nil and control:read("selectedRowsSnapshot") or nil
+    if control == nil or control.read == nil then
+        return nil
+    end
+    local selected = control:read("selectedRowsSnapshot")
+    if selected ~= nil then
+        return selected
+    end
+    local cached = routeSnapshotCache(context, routeKey)[biomeKey]
+    local snapshot = cached ~= nil and cached ~= false and cached or control:read("snapshot")
+    return snapshot and snapshot.rows or nil
 end
 
 local function missingControlInvalid(context, routeBiomeIndex, biomeKey)
@@ -134,73 +108,36 @@ local function missingControlInvalid(context, routeBiomeIndex, biomeKey)
     }
 end
 
-local function firstLocalInvalid(snapshot, biomeKey, routeBiomeIndex)
-    local invalid = snapshot and snapshot.invalidRows and snapshot.invalidRows[1] or nil
+local function invalidLocationLabel(context, invalid)
     if invalid == nil then
         return nil
     end
-    return copyInvalidRow(invalid, {
-        biomeKey = biomeKey,
-        routeBiomeIndex = routeBiomeIndex,
-        controlName = snapshot.controlName,
-    })
+    local label = biomeLabel(context, invalid.biomeKey)
+    if invalid.rowIndex ~= nil then
+        return label .. " Row " .. tostring(invalid.rowIndex)
+    end
+    return label
 end
 
-local function appendFirstInvalid(invalidRows, invalid)
-    if invalid ~= nil and invalidRows[1] == nil then
-        invalidRows[1] = invalid
-    end
-end
-
-local function appendInvalidRows(invalidRows, source)
-    for _, invalid in ipairs(source or EMPTY_LIST) do
-        appendInvalidRow(invalidRows, invalid)
-    end
-end
-
-local function rewardBoundaryForInvalid(invalid)
-    if invalid == nil then
-        return nil
-    end
-    if invalid.routeOrdinal ~= nil then
-        return {
-            stopBeforeRouteOrdinal = invalid.routeOrdinal,
-        }
-    end
-    if invalid.routeBiomeIndex ~= nil then
-        return {
-            stopBeforeBiomeIndex = invalid.routeBiomeIndex,
-        }
-    end
-    return nil
-end
-
-local function featureControlIndex(context, route, controlName)
-    for index, featureKey in ipairs(routeFeatureKeys(context, route)) do
-        if controlName == routeFeatureControlName(route.key, featureKey) then
-            return index
+local function appendHistoryInvalidRows(context, invalidRows, invalids)
+    for index, invalid in ipairs(invalids or EMPTY_LIST) do
+        appendInvalidRow(invalidRows, invalid, {
+            layer = "route",
+            markerKind = index == 1 and "primary" or invalid.markerKind,
+            locationLabel = invalid.locationLabel or invalidLocationLabel(context, invalid),
+        })
+        if index == 1 then
+            for _, related in ipairs(invalid.relatedEvents or EMPTY_LIST) do
+                appendInvalidRow(invalidRows, related, {
+                    layer = "route",
+                    markerKind = "related",
+                    locationLabel = related.locationLabel or invalidLocationLabel(context, related),
+                    message = related.message or invalid.message,
+                    code = related.code or invalid.code,
+                })
+            end
         end
     end
-    return nil
-end
-
-local function featureKeyForControl(context, route, controlName)
-    for _, featureKey in ipairs(routeFeatureKeys(context, route)) do
-        if controlName == routeFeatureControlName(route.key, featureKey) then
-            return featureKey
-        end
-    end
-    return nil
-end
-
-local function featureDefinitionForKey(context, route, featureKey)
-    for _, routeFeatureKey in ipairs(routeFeatureKeys(context, route)) do
-        local feature = context.features.byKey and context.features.byKey[routeFeatureKey] or nil
-        if feature ~= nil and (feature.key == featureKey or feature.featureKey == featureKey) then
-            return feature
-        end
-    end
-    return nil
 end
 
 local function routeBiomeCount(route)
@@ -231,38 +168,9 @@ local function biomeKeyForControl(context, routeKey, controlName)
     return nil
 end
 
-local function featureInConfiguredScope(context, routeKey, feature)
-    local route = context.routes.lookup and context.routes.lookup[routeKey] or nil
-    local configuredCount = context:configuredBiomeCount(routeKey)
-    for routeBiomeIndex, biomeKey in ipairs(route and route.biomes or EMPTY_LIST) do
-        if routeBiomeIndex > configuredCount then
-            break
-        end
-        if feature and feature.biomes and feature.biomes[biomeKey] then
-            return true
-        end
-    end
-    return false
-end
-
-local function layerControlIndex(context, route, layer, controlName)
-    if layer == "npcs" then
-        return controlName == routeNpcControlName(route.key) and 1 or nil
-    elseif layer == "features" then
-        return featureControlIndex(context, route, controlName)
-    end
-    return nil
-end
-
-local function layerForInvalid(context, route, invalid)
+local function layerForInvalid(invalid)
     if invalid.layer ~= nil then
         return invalid.layer
-    end
-    if invalid.controlName == routeNpcControlName(route.key) then
-        return "npcs"
-    end
-    if featureControlIndex(context, route, invalid.controlName) ~= nil then
-        return "features"
     end
     return "route"
 end
@@ -273,7 +181,7 @@ local function blockingHorizon(context, route, invalid)
     end
 
     local horizon = copyInvalidRow(invalid, {
-        layer = layerForInvalid(context, route, invalid),
+        layer = layerForInvalid(invalid),
         routeKey = route.key,
     })
     if horizon.routeBiomeIndex == nil and horizon.biomeKey ~= nil then
@@ -281,12 +189,6 @@ local function blockingHorizon(context, route, invalid)
         horizon.routeBiomeIndex = info and info.index or nil
     end
     return horizon
-end
-
-local function layerInactive(horizon, layer)
-    local horizonOrder = horizon and LAYER_ORDER[horizon.layer] or nil
-    local layerOrder = LAYER_ORDER[layer]
-    return horizonOrder ~= nil and layerOrder ~= nil and layerOrder > horizonOrder
 end
 
 local function clearMap(map)
@@ -303,15 +205,10 @@ function runContext.create(opts)
         routeInfoByRoute = routeInfoByRoute,
         routeInfoByBiome = routeInfoByBiome,
         biomeLookup = opts.biomes or {},
-        npcs = opts.npcs or {},
-        features = opts.features or {},
         controlResolver = opts.controlResolver,
         controls = opts.controls,
-        routeFeatureKeysByRoute = buildRouteFeatureKeysByRoute(opts.routes, opts.features),
         snapshotByRoute = {},
         overviewByRoute = {},
-        npcTargetsByRoute = {},
-        featureTargetsByRoute = {},
         rewardLegalityByRoute = {},
         historyFeedbackByRoute = {},
         godSourceByRoute = {},
@@ -352,8 +249,6 @@ function runContext.create(opts)
             bumpRouteGeneration(self, route.key)
         end
         clearMap(self.snapshotByRoute)
-        clearMap(self.npcTargetsByRoute)
-        clearMap(self.featureTargetsByRoute)
         clearMap(self.rewardLegalityByRoute)
         clearMap(self.historyFeedbackByRoute)
     end
@@ -365,8 +260,6 @@ function runContext.create(opts)
                 routeOverviewState(self, routeKey).dirty = true
                 bumpRouteGeneration(self, routeKey)
                 self.snapshotByRoute[routeKey] = nil
-                self.npcTargetsByRoute[routeKey] = nil
-                self.featureTargetsByRoute[routeKey] = nil
                 self.rewardLegalityByRoute[routeKey] = nil
                 self.historyFeedbackByRoute[routeKey] = nil
                 marked = true
@@ -382,8 +275,6 @@ function runContext.create(opts)
             routeOverviewState(self, routeKey).dirty = true
             bumpRouteGeneration(self, routeKey)
             self.snapshotByRoute[routeKey] = nil
-            self.npcTargetsByRoute[routeKey] = nil
-            self.featureTargetsByRoute[routeKey] = nil
             self.rewardLegalityByRoute[routeKey] = nil
             self.historyFeedbackByRoute[routeKey] = nil
             return
@@ -487,53 +378,13 @@ function runContext.create(opts)
         return true
     end
 
-    function context:isFeatureConfigured(routeKey, featureKey)
-        if not self:isLayerConfigured(routeKey, "features") then
-            return false
-        end
-        local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
-        local feature = route ~= nil and featureDefinitionForKey(self, route, featureKey) or nil
-        if feature == nil then
-            return true
-        end
-        if not featureInConfiguredScope(self, routeKey, feature) then
-            return false
-        end
-        local control = self:controlByName(routeGlobalControlName(routeKey), routeKey)
-        if control ~= nil and control.isFeatureConfigured ~= nil then
-            return control:isFeatureConfigured(feature.key) ~= false
-        end
-        return true
-    end
-
-    function context:hasConfiguredFeatures(routeKey)
-        local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
-        if route == nil or not self:isLayerConfigured(routeKey, "features") then
-            return false
-        end
-        for _, featureKey in ipairs(routeFeatureKeys(self, route)) do
-            if self:isFeatureConfigured(routeKey, featureKey) then
-                return true
-            end
-        end
-        return false
-    end
-
     function context:isControlConfigured(routeKey, controlName)
         if controlName == routeGlobalControlName(routeKey) then
             return true
         end
-        if controlName == routeNpcControlName(routeKey) then
-            return self:isLayerConfigured(routeKey, "npcs")
-        end
         local biomeKey = biomeKeyForControl(self, routeKey, controlName)
         if biomeKey ~= nil then
             return self:isBiomeInConfiguredScope(routeKey, biomeKey)
-        end
-        local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
-        local featureKey = route ~= nil and featureKeyForControl(self, route, controlName) or nil
-        if featureKey ~= nil then
-            return self:isFeatureConfigured(routeKey, featureKey)
         end
         return true
     end
@@ -541,59 +392,10 @@ function runContext.create(opts)
     function context:attachControls()
         for _, route in ipairs(self.routes.ordered or EMPTY_LIST) do
             self:godSourceForRoute(route.key)
-            self:controlByName(routeNpcControlName(route.key), route.key)
-            for _, featureKey in ipairs(routeFeatureKeys(self, route)) do
-                self:controlByName(routeFeatureControlName(route.key, featureKey), route.key)
-            end
             for _, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
                 self:controlForBiome(route.key, biomeKey)
             end
         end
-    end
-
-    function context:npcTargets(routeKey)
-        local state = routeNpcTargetsState(self, routeKey)
-        if state.dirty or state.targets == nil then
-            if self:isLayerConfigured(routeKey, "npcs") then
-                state.targets = routeTargets.buildNpcTargets(self, routeKey)
-            else
-                state.targets = routeTargets.emptyNpcTargets()
-            end
-            state.dirty = false
-        end
-        return state.targets
-    end
-
-    function context:npcTargetsForSlot(routeKey, npcKey, biomeKey)
-        local targets = self:npcTargets(routeKey)
-        if biomeKey ~= nil then
-            return targets.byNpcBiome[npcKey] and targets.byNpcBiome[npcKey][biomeKey] or nil
-        end
-        return targets.byNpc[npcKey]
-    end
-
-    function context:featureTargets(routeKey)
-        local state = routeFeatureTargetsState(self, routeKey)
-        if state.dirty or state.targets == nil then
-            if self:isLayerConfigured(routeKey, "features") then
-                state.targets = routeTargets.buildFeatureTargets(self, routeKey)
-            else
-                state.targets = routeTargets.emptyFeatureTargets()
-            end
-            state.dirty = false
-        end
-        return state.targets
-    end
-
-    function context:featureTargetsForSlot(routeKey, featureKey, biomeKey)
-        if not self:isFeatureConfigured(routeKey, featureKey) then
-            return nil
-        end
-        local targets = self:featureTargets(routeKey)
-        if biomeKey ~= nil then
-            return targets.byFeatureBiome[featureKey] and targets.byFeatureBiome[featureKey][biomeKey] or nil
-        end
-        return targets.byFeature[featureKey]
     end
 
     function context:rewardLegality(routeKey, rewardOpts)
@@ -614,7 +416,7 @@ function runContext.create(opts)
         fields,
         rewardContext
     )
-        return self.rewardState.valueStates(
+        local states = self.rewardState.valueStates(
             self,
             routeKey,
             biomeKey,
@@ -625,6 +427,16 @@ function runContext.create(opts)
             fields,
             rewardContext
         )
+        local historyStates = self:historyValueStates(routeKey, biomeKey, rowIndex, controlAlias)
+        if historyStates == nil then
+            return states
+        elseif states == nil then
+            return historyStates
+        end
+        for value, state in pairs(historyStates) do
+            states[value] = state
+        end
+        return states
     end
 
     function context:historyFeedback(routeKey)
@@ -680,22 +492,10 @@ function runContext.create(opts)
         local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
         local snapshots = {}
         local invalidRows = {}
-        local routeLocalInvalid
-        local npcSnapshot
-        local featureSnapshots = {}
+        local missingInvalid
         local layerStatus = {
             route = {
                 canDecorate = true,
-                evaluated = false,
-                valid = nil,
-            },
-            npcs = {
-                canDecorate = false,
-                evaluated = false,
-                valid = nil,
-            },
-            features = {
-                canDecorate = false,
                 evaluated = false,
                 valid = nil,
             },
@@ -727,68 +527,22 @@ function runContext.create(opts)
             end
             local snapshot = controlSnapshot(self, route.key, biomeKey)
             snapshots[#snapshots + 1] = snapshot
-            if routeLocalInvalid == nil then
-                if not snapshot then
-                    routeLocalInvalid = missingControlInvalid(self, routeBiomeIndex, biomeKey)
-                else
-                    routeLocalInvalid = firstLocalInvalid(snapshot, biomeKey, routeBiomeIndex)
-                end
+            if missingInvalid == nil and not snapshot then
+                missingInvalid = missingControlInvalid(self, routeBiomeIndex, biomeKey)
             end
         end
         self.snapshotBuilding = previousSnapshotBuilding
 
-        if self:isLayerConfigured(route.key, "rewards") then
-            local rewardInvalidRows = self:rewardLegality(route.key, rewardBoundaryForInvalid(routeLocalInvalid)).invalidRows
-            if rewardInvalidRows[1] ~= nil then
-                appendInvalidRows(invalidRows, rewardInvalidRows)
-            else
-                appendFirstInvalid(invalidRows, routeLocalInvalid)
-            end
-        else
-            appendFirstInvalid(invalidRows, routeLocalInvalid)
+        local _, historyResult = self:historyFeedback(route.key)
+        if missingInvalid ~= nil then
+            invalidRows[1] = missingInvalid
+        elseif historyResult ~= nil and historyResult.valid == false then
+            appendHistoryInvalidRows(self, invalidRows, historyResult.invalids)
         end
 
         local routeValid = invalidRows[1] == nil
-        local npcsConfigured = self:isLayerConfigured(route.key, "npcs")
         layerStatus.route.evaluated = true
         layerStatus.route.valid = routeValid
-        layerStatus.npcs.canDecorate = routeValid
-
-        if routeValid and npcsConfigured then
-            local npcControl = self:controlByName(routeNpcControlName(route.key), route.key)
-            if npcControl ~= nil and npcControl.read ~= nil then
-                layerStatus.npcs.evaluated = true
-                npcSnapshot = npcControl:read("snapshot")
-                local invalidRow = npcSnapshot and npcSnapshot.invalidRows and npcSnapshot.invalidRows[1] or nil
-                if invalidRow ~= nil then
-                    appendInvalidRows(invalidRows, npcSnapshot.invalidRows)
-                end
-            end
-        end
-
-        local npcsValid = not npcsConfigured or invalidRows[1] == nil
-        local featuresConfigured = self:hasConfiguredFeatures(route.key)
-        layerStatus.npcs.valid = npcsValid
-        layerStatus.features.canDecorate = routeValid and npcsValid
-
-        if routeValid and npcsValid and featuresConfigured then
-            for _, featureKey in ipairs(routeFeatureKeys(self, route)) do
-                if self:isFeatureConfigured(route.key, featureKey) then
-                    local featureControl = self:controlByName(routeFeatureControlName(route.key, featureKey), route.key)
-                    if featureControl ~= nil and featureControl.read ~= nil then
-                        layerStatus.features.evaluated = true
-                        local featureSnapshot = featureControl:read("snapshot")
-                        featureSnapshots[#featureSnapshots + 1] = featureSnapshot
-                        local invalidRow = featureSnapshot and featureSnapshot.invalidRows and featureSnapshot.invalidRows[1] or nil
-                        if invalidRow ~= nil then
-                            appendInvalidRows(invalidRows, featureSnapshot.invalidRows)
-                            break
-                        end
-                    end
-                end
-            end
-        end
-        layerStatus.features.valid = not featuresConfigured or invalidRows[1] == nil
 
         return {
             routeKey = route.key,
@@ -800,8 +554,6 @@ function runContext.create(opts)
             blockingHorizon = blockingHorizon(self, route, invalidRows[1]),
             layerStatus = layerStatus,
             biomes = snapshots,
-            npcs = npcSnapshot,
-            features = featureSnapshots,
         }
     end
 
@@ -810,19 +562,9 @@ function runContext.create(opts)
         return snapshot and snapshot.blockingHorizon or nil
     end
 
-    function context:canDecorateLayer(routeKey, layer)
-        local snapshot = self:overview(routeKey)
-        local status = snapshot and snapshot.layerStatus and snapshot.layerStatus[layer] or nil
-        return status == nil or status.canDecorate ~= false
-    end
-
     function context:canUseEnrichmentColors(routeKey)
         local snapshot = self:overview(routeKey)
         return snapshot ~= nil and snapshot.valid == true
-    end
-
-    function context:isLayerInactive(routeKey, layer)
-        return layerInactive(self:blockingHorizon(routeKey), layer)
     end
 
     function context:isRouteBiomeInactive(routeKey, biomeKey)
@@ -858,46 +600,7 @@ function runContext.create(opts)
         )
     end
 
-    function context:isTargetRowInactive(routeKey, layer, controlName, rowIndex)
-        local allInactive, inactiveAfterRowIndex = self:targetInactiveBoundary(routeKey, layer, controlName)
-        return allInactive
-            or (
-                inactiveAfterRowIndex ~= nil
-                and rowIndex ~= nil
-                and rowIndex > inactiveAfterRowIndex
-            )
-    end
-
-    function context:targetInactiveBoundary(routeKey, layer, controlName)
-        if self:isLayerInactive(routeKey, layer) then
-            return true, nil
-        end
-
-        local horizon = self:blockingHorizon(routeKey)
-        if horizon == nil or horizon.layer ~= layer then
-            return false, nil
-        end
-
-        local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
-        if route == nil then
-            return false, nil
-        end
-
-        local targetIndex = layerControlIndex(self, route, layer, controlName)
-        local horizonIndex = layerControlIndex(self, route, layer, horizon.controlName)
-        if targetIndex == nil or horizonIndex == nil then
-            return false, nil
-        end
-        if targetIndex ~= horizonIndex then
-            return targetIndex > horizonIndex, nil
-        end
-        return false, horizon.rowIndex
-    end
-
     function context:isNavTabInactive(routeKey, tab)
-        if tab.layer ~= nil then
-            return self:isLayerInactive(routeKey, tab.layer)
-        end
         return self:isRouteBiomeInactive(routeKey, tab.key)
     end
 

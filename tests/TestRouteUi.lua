@@ -9,8 +9,6 @@ local loadHubPylonTemplate = h.loadHubPylonTemplate
 local loadMultiEncounterTemplate = h.loadMultiEncounterTemplate
 local loadFieldsCageTemplate = h.loadFieldsCageTemplate
 local loadRouteGlobalTemplate = h.loadRouteGlobalTemplate
-local loadRouteNpcsTemplate = h.loadRouteNpcsTemplate
-local loadRouteFeaturesTemplate = h.loadRouteFeaturesTemplate
 local loadRunContext = h.loadRunContext
 local routeDefinitions = h.routeDefinitions
 local routeUiFields = h.routeUiFields
@@ -43,6 +41,32 @@ local function loadRouteStatus()
     return chunk({
         decorations = loadDecorations(),
     })
+end
+
+local function fakeHistorySystem(result)
+    return {
+        builder = {
+            build = function()
+                return {}
+            end,
+        },
+        validator = {
+            validate = function()
+                return result
+            end,
+        },
+        feedback = {
+            fromFindings = function()
+                return {}
+            end,
+            valueStatesForControl = function()
+                return nil
+            end,
+            rowInactive = function()
+                return false
+            end,
+        },
+    }
 end
 
 local function createRoutePanelFixture(activeRouteLabel, activeTabKey)
@@ -257,15 +281,11 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
         "RouteG",
         "RouteH",
         "RouteI",
-        "RouteNpcsUnderworld",
-        "RouteFeatureStygianWellUnderworld",
         "RouteGlobalSurface",
         "RouteN",
         "RouteO",
         "RouteP",
         "RouteQ",
-        "RouteNpcsSurface",
-        "RouteFeatureHermesShrineSurface",
     })
     lu.assertEquals(routeControlTabs.Underworld, {
         { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
@@ -273,15 +293,6 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
         { key = "G", label = "Oceanus", controlName = "RouteG" },
         { key = "H", label = "Fields", controlName = "RouteH" },
         { key = "I", label = "Tartarus", controlName = "RouteI" },
-        { key = "NPCs", label = "NPCs", layer = "npcs", controlName = "RouteNpcsUnderworld" },
-        {
-            key = "Features",
-            label = "Features",
-            layer = "features",
-            controlNames = {
-                "RouteFeatureStygianWellUnderworld",
-            },
-        },
     })
     lu.assertEquals(routeControlTabs.Surface, {
         { key = "Global", label = "Global", controlName = "RouteGlobalSurface" },
@@ -289,226 +300,17 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
         { key = "O", label = "Thessaly", controlName = "RouteO" },
         { key = "P", label = "Olympus", controlName = "RouteP" },
         { key = "Q", label = "Summit", controlName = "RouteQ" },
-        { key = "NPCs", label = "NPCs", layer = "npcs", controlName = "RouteNpcsSurface" },
-        {
-            key = "Features",
-            label = "Features",
-            layer = "features",
-            controlNames = {
-                "RouteFeatureHermesShrineSurface",
-            },
-        },
     })
     lu.assertEquals(controls.RouteGlobalUnderworld.template, "RouteGlobal")
     lu.assertEquals(controls.RouteF.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteG.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteH.template, "FieldsCageRoute")
     lu.assertEquals(controls.RouteI.template, "ClockworkGoalRoute")
-    lu.assertEquals(controls.RouteNpcsUnderworld.template, "RouteNpcs")
-    lu.assertEquals(controls.RouteFeatureStygianWellUnderworld.template, "RouteFeatures")
     lu.assertEquals(controls.RouteGlobalSurface.template, "RouteGlobal")
     lu.assertEquals(controls.RouteN.template, "HubPylonRoute")
     lu.assertEquals(controls.RouteO.template, "MultiEncounterFixedRoute")
     lu.assertEquals(controls.RouteP.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteQ.template, "FixedLinearRoute")
-    lu.assertEquals(controls.RouteNpcsSurface.template, "RouteNpcs")
-    lu.assertEquals(controls.RouteFeatureHermesShrineSurface.template, "RouteFeatures")
-end
-
-function TestRunPlannerRouteUi.testRouteUiHidesTabsForDisabledLayers()
-    local routeUi
-    local capturedTabs
-    local routeContext = {
-        beginPass = function()
-        end,
-        bindControl = function(_, control)
-            return control
-        end,
-        overview = function(_, routeKey)
-            return {
-                routeKey = routeKey,
-                valid = true,
-            }
-        end,
-        isLayerConfigured = function(_, _, layer)
-            return layer ~= "npcs" and layer ~= "features"
-        end,
-        isControlConfigured = function()
-            return true
-        end,
-        isNavTabInactive = function()
-            return false
-        end,
-    }
-    withTestImport(function()
-        routeUi = testImport("mods/ui.lua", nil, {
-            routes = routeDefinitions({
-                {
-                    key = "Underworld",
-                    label = "Underworld",
-                    biomes = { "F" },
-                },
-            }),
-            routeControlTabs = {
-                Underworld = {
-                    { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
-                    { key = "F", label = "Erebus", controlName = "RouteF" },
-                    { key = "NPCs", label = "NPCs", layer = "npcs", controlName = "RouteNpcsUnderworld" },
-                    { key = "Features", label = "Features", layer = "features", controlNames = {} },
-                },
-            },
-            routeContext = {
-                create = function()
-                    return routeContext
-                end,
-            },
-            routeStatus = {
-                drawRouteStatus = function()
-                end,
-            },
-        })
-    end)
-    local draw = noOpDraw()
-    draw.imgui.BeginTabBar = function()
-        return true
-    end
-    draw.imgui.BeginTabItem = function(label)
-        return label == "Underworld"
-    end
-    draw.imgui.BeginChild = function()
-    end
-    draw.imgui.EndChild = function()
-    end
-    draw.nav = {
-        verticalTabs = function(opts)
-            capturedTabs = opts.tabs
-            return opts.tabs[1] and opts.tabs[1].key or nil
-        end,
-    }
-    draw.control = function()
-    end
-
-    routeUi.drawTab(nil, {
-        draw = draw,
-        controls = {
-            get = function()
-                return {}
-            end,
-        },
-    })
-
-    lu.assertEquals(capturedTabs, {
-        { key = "Global", label = "Global", controlNames = { "RouteGlobalUnderworld" } },
-        { key = "F", label = "Erebus", controlNames = { "RouteF" } },
-    })
-end
-
-function TestRunPlannerRouteUi.testRouteUiFiltersDisabledFeatureControls()
-    local routeUi
-    local capturedTabs
-    local drawnControls = {}
-    local routeContext = {
-        beginPass = function()
-        end,
-        bindControl = function(_, control)
-            return control
-        end,
-        overview = function(_, routeKey)
-            return {
-                routeKey = routeKey,
-                valid = true,
-                invalidRows = {},
-            }
-        end,
-        isLayerConfigured = function()
-            return true
-        end,
-        isControlConfigured = function(_, _, controlName)
-            return controlName ~= "RouteFeatureStygianWellUnderworld"
-        end,
-        isNavTabInactive = function()
-            return false
-        end,
-    }
-    withTestImport(function()
-        routeUi = testImport("mods/ui.lua", nil, {
-            routes = routeDefinitions({
-                {
-                    key = "Underworld",
-                    label = "Underworld",
-                    biomes = { "F" },
-                },
-            }),
-            routeControlTabs = {
-                Underworld = {
-                    { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
-                    {
-                        key = "Features",
-                        label = "Features",
-                        layer = "features",
-                        controlNames = {
-                            "RouteFeatureStygianWellUnderworld",
-                            "RouteFeatureHermesShrineUnderworld",
-                        },
-                    },
-                },
-            },
-            routeContext = {
-                create = function()
-                    return routeContext
-                end,
-            },
-            routeStatus = {
-                drawRouteStatus = function()
-                end,
-            },
-        })
-    end)
-    local draw = noOpDraw()
-    draw.imgui.BeginTabBar = function()
-        return true
-    end
-    draw.imgui.BeginTabItem = function(label)
-        return label == "Underworld"
-    end
-    draw.imgui.BeginChild = function()
-    end
-    draw.imgui.EndChild = function()
-    end
-    draw.nav = {
-        verticalTabs = function(opts)
-            capturedTabs = opts.tabs
-            return "Features"
-        end,
-    }
-    draw.control = function(control)
-        drawnControls[#drawnControls + 1] = control.name
-    end
-
-    routeUi.drawTab(nil, {
-        draw = draw,
-        controls = {
-            get = function(controlName)
-                return { name = controlName }
-            end,
-        },
-    })
-
-    lu.assertEquals(capturedTabs, {
-        { key = "Global", label = "Global", controlNames = { "RouteGlobalUnderworld" } },
-        {
-            key = "Features",
-            label = "Features",
-            layer = "features",
-            controlNames = {
-                "RouteFeatureStygianWellUnderworld",
-                "RouteFeatureHermesShrineUnderworld",
-            },
-        },
-    })
-    lu.assertEquals(drawnControls, {
-        "RouteFeatureHermesShrineUnderworld",
-    })
 end
 
 function TestRunPlannerRouteUi.testDecorationsNavInvalidScansAllRowsAndPrefersControlOwnership()
@@ -517,9 +319,9 @@ function TestRunPlannerRouteUi.testDecorationsNavInvalidScansAllRowsAndPrefersCo
         valid = false,
         invalidRows = {
             {
-                controlName = "RouteNpcsUnderworld",
+                controlName = "RouteGlobalUnderworld",
                 biomeKey = "F",
-                message = "NPC conflict",
+                message = "Global conflict",
             },
             {
                 controlName = "RouteF",
@@ -534,8 +336,8 @@ function TestRunPlannerRouteUi.testDecorationsNavInvalidScansAllRowsAndPrefersCo
         controlNames = { "RouteF" },
     }))
     lu.assertTrue(decorations.navTabInvalid(snapshot, {
-        key = "NPCs",
-        controlNames = { "RouteNpcsUnderworld" },
+        key = "Global",
+        controlNames = { "RouteGlobalUnderworld" },
     }))
 end
 
@@ -558,7 +360,23 @@ function TestRunPlannerRouteUi.testRouteContextExposesRouteBlockingHorizon()
         }),
         RouteG = fakeSnapshotControl(validRouteSnapshot("RouteG")),
     }
-    local routeContext = loadRunContext().create({
+    local routeContext = loadRunContext({
+        historySystem = fakeHistorySystem({
+            valid = false,
+            findings = {},
+            invalids = {
+                {
+                    biomeKey = "F",
+                    routeBiomeIndex = 1,
+                    rowIndex = 2,
+                    routeOrdinal = 2,
+                    tabKey = "rooms",
+                    controlName = "RouteF",
+                    message = "First route invalid",
+                },
+            },
+        }),
+    }).create({
         routes = routeDefinitions({
             {
                 key = "Underworld",
@@ -580,8 +398,6 @@ function TestRunPlannerRouteUi.testRouteContextExposesRouteBlockingHorizon()
     lu.assertTrue(routeContext:isRouteRowInactive("Underworld", "F", 3))
     lu.assertFalse(routeContext:isRouteBiomeInactive("Underworld", "F"))
     lu.assertTrue(routeContext:isRouteBiomeInactive("Underworld", "G"))
-    lu.assertTrue(routeContext:isLayerInactive("Underworld", "npcs"))
-    lu.assertTrue(routeContext:isLayerInactive("Underworld", "features"))
     lu.assertFalse(routeContext:canUseEnrichmentColors("Underworld"))
 end
 
@@ -712,7 +528,23 @@ function TestRunPlannerRouteUi.testRouteContextDoesNotApplyLaterBiomeRowHorizonT
         }),
         RouteI = fakeSnapshotControl(validRouteSnapshot("RouteI")),
     }
-    local routeContext = loadRunContext().create({
+    local routeContext = loadRunContext({
+        historySystem = fakeHistorySystem({
+            valid = false,
+            findings = {},
+            invalids = {
+                {
+                    biomeKey = "H",
+                    routeBiomeIndex = 3,
+                    rowIndex = 2,
+                    routeOrdinal = 2,
+                    tabKey = "rooms",
+                    controlName = "RouteH",
+                    message = "Fields invalid",
+                },
+            },
+        }),
+    }).create({
         routes = routeDefinitions({
             {
                 key = "Underworld",
@@ -734,120 +566,6 @@ function TestRunPlannerRouteUi.testRouteContextDoesNotApplyLaterBiomeRowHorizonT
     lu.assertFalse(routeContext:isRouteRowInactive("Underworld", "H", 2))
     lu.assertTrue(routeContext:isRouteRowInactive("Underworld", "H", 3))
     lu.assertTrue(routeContext:isRouteRowInactive("Underworld", "I", 1))
-end
-
-function TestRunPlannerRouteUi.testRouteContextExposesTargetLayerInactiveRows()
-    local controls = {
-        RouteGlobalUnderworld = fakeLayerConfig(),
-        RouteF = fakeSnapshotControl(validRouteSnapshot("RouteF")),
-        RouteNpcsUnderworld = fakeSnapshotControl({
-            controlName = "RouteNpcsUnderworld",
-            valid = false,
-            invalidRows = {
-                {
-                    controlName = "RouteNpcsUnderworld",
-                    rowIndex = 1,
-                    message = "NPC conflict",
-                },
-            },
-        }),
-    }
-    local routeContext = loadRunContext().create({
-        routes = routeDefinitions({
-            {
-                key = "Underworld",
-                label = "Underworld",
-                biomes = { "F" },
-            },
-        }),
-        controlResolver = function(controlName)
-            return controls[controlName]
-        end,
-    })
-
-    routeContext:beginPass()
-    local snapshot = routeContext:overview("Underworld")
-
-    lu.assertEquals(snapshot.blockingHorizon.layer, "npcs")
-    lu.assertFalse(routeContext:isTargetRowInactive("Underworld", "npcs", "RouteNpcsUnderworld", 1))
-    lu.assertTrue(routeContext:isTargetRowInactive("Underworld", "npcs", "RouteNpcsUnderworld", 2))
-    lu.assertTrue(routeContext:isLayerInactive("Underworld", "features"))
-    lu.assertTrue(routeContext:isTargetRowInactive(
-        "Underworld",
-        "features",
-        "RouteFeatureStygianWellUnderworld",
-        1
-    ))
-end
-
-function TestRunPlannerRouteUi.testRouteContextOrdersFeatureTargetRows()
-    local controls = {
-        RouteGlobalUnderworld = fakeLayerConfig(),
-        RouteF = fakeSnapshotControl(validRouteSnapshot("RouteF")),
-        RouteNpcsUnderworld = fakeSnapshotControl({
-            controlName = "RouteNpcsUnderworld",
-            valid = true,
-            invalidRows = {},
-        }),
-        RouteFeatureStygianWellUnderworld = fakeSnapshotControl({
-            controlName = "RouteFeatureStygianWellUnderworld",
-            valid = false,
-            invalidRows = {
-                {
-                    controlName = "RouteFeatureStygianWellUnderworld",
-                    rowIndex = 1,
-                    message = "Feature conflict",
-                },
-            },
-        }),
-        RouteFeatureHermesShrineUnderworld = fakeSnapshotControl({
-            controlName = "RouteFeatureHermesShrineUnderworld",
-            valid = true,
-            invalidRows = {},
-        }),
-    }
-    local routeContext = loadRunContext().create({
-        routes = routeDefinitions({
-            {
-                key = "Underworld",
-                label = "Underworld",
-                biomes = { "F" },
-            },
-        }),
-        features = {
-            ordered = { "StygianWell", "HermesShrine" },
-            byKey = {
-                StygianWell = { key = "StygianWell", biomes = { F = true } },
-                HermesShrine = { key = "HermesShrine", biomes = { F = true } },
-            },
-        },
-        controlResolver = function(controlName)
-            return controls[controlName]
-        end,
-    })
-
-    routeContext:beginPass()
-    local snapshot = routeContext:overview("Underworld")
-
-    lu.assertEquals(snapshot.blockingHorizon.layer, "features")
-    lu.assertFalse(routeContext:isTargetRowInactive(
-        "Underworld",
-        "features",
-        "RouteFeatureStygianWellUnderworld",
-        1
-    ))
-    lu.assertTrue(routeContext:isTargetRowInactive(
-        "Underworld",
-        "features",
-        "RouteFeatureStygianWellUnderworld",
-        2
-    ))
-    lu.assertTrue(routeContext:isTargetRowInactive(
-        "Underworld",
-        "features",
-        "RouteFeatureHermesShrineUnderworld",
-        1
-    ))
 end
 
 function TestRunPlannerRouteUi.testDecorationsApplyInactiveAsScopedTextColor()
@@ -1204,31 +922,6 @@ function TestRunPlannerRouteUi.testRouteTemplateViewsSupportNoOpUiTraversal()
     local globalControl = globalTemplate.createUi(routeUiFields(globalTemplate.storage(globalInstance)), globalInstance)
     globalTemplate.views.planner(draw, globalControl, globalInstance)
 
-    local routeNpcsTemplate = loadRouteNpcsTemplate()
-    local routeNpcsInstance = routeNpcsTemplate.prepare({
-        name = "RouteNpcsUnderworld",
-        route = catalog.routes.lookup.Underworld,
-        npcs = catalog.npcs,
-        biomeLookup = catalog.lookup,
-    })
-    local routeNpcsControl = routeNpcsTemplate.createUi(
-        routeUiFields(routeNpcsTemplate.storage(routeNpcsInstance)),
-        routeNpcsInstance
-    )
-    routeNpcsTemplate.views.planner(draw, routeNpcsControl, routeNpcsInstance)
-
-    local routeFeaturesTemplate = loadRouteFeaturesTemplate()
-    local routeFeaturesInstance = routeFeaturesTemplate.prepare({
-        name = "RouteFeatureStygianWellUnderworld",
-        route = catalog.routes.lookup.Underworld,
-        feature = catalog.features.byKey.StygianWell,
-        biomeLookup = catalog.lookup,
-    })
-    local routeFeaturesControl = routeFeaturesTemplate.createUi(
-        routeUiFields(routeFeaturesTemplate.storage(routeFeaturesInstance)),
-        routeFeaturesInstance
-    )
-    routeFeaturesTemplate.views.planner(draw, routeFeaturesControl, routeFeaturesInstance)
 end
 
 function TestRunPlannerRouteUi.testRouteTemplateViewAllocationsStayBounded()
@@ -1322,53 +1015,6 @@ function TestRunPlannerRouteUi.testRouteTemplateViewAllocationsStayBounded()
         )
     )
 
-    local routeNpcsTemplate = loadRouteNpcsTemplate()
-    local routeNpcsInstance = routeNpcsTemplate.prepare({
-        name = "RouteNpcsUnderworld",
-        route = catalog.routes.lookup.Underworld,
-        npcs = catalog.npcs,
-        biomeLookup = catalog.lookup,
-    })
-    local routeNpcsControl = routeNpcsTemplate.createUi(
-        routeUiFields(routeNpcsTemplate.storage(routeNpcsInstance)),
-        routeNpcsInstance
-    )
-    allocatedKb = measureAllocKb(iterations, function()
-        routeNpcsTemplate.views.planner(draw, routeNpcsControl, routeNpcsInstance)
-    end)
-    lu.assertTrue(
-        allocatedKb < 96,
-        string.format(
-            "RouteNpcs traversal allocated %.1f KB across %d no-op draws; budget %.1f KB",
-            allocatedKb,
-            iterations,
-            96
-        )
-    )
-
-    local routeFeaturesTemplate = loadRouteFeaturesTemplate()
-    local routeFeaturesInstance = routeFeaturesTemplate.prepare({
-        name = "RouteFeatureStygianWellUnderworld",
-        route = catalog.routes.lookup.Underworld,
-        feature = catalog.features.byKey.StygianWell,
-        biomeLookup = catalog.lookup,
-    })
-    local routeFeaturesControl = routeFeaturesTemplate.createUi(
-        routeUiFields(routeFeaturesTemplate.storage(routeFeaturesInstance)),
-        routeFeaturesInstance
-    )
-    allocatedKb = measureAllocKb(iterations, function()
-        routeFeaturesTemplate.views.planner(draw, routeFeaturesControl, routeFeaturesInstance)
-    end)
-    lu.assertTrue(
-        allocatedKb < 64,
-        string.format(
-            "RouteFeatures traversal allocated %.1f KB across %d no-op draws; budget %.1f KB",
-            allocatedKb,
-            iterations,
-            64
-        )
-    )
 end
 
 function TestRunPlannerRouteUi.testHubPylonEnteredSideRoomDrawAllocationsStayBounded()
@@ -1483,53 +1129,6 @@ function TestRunPlannerRouteUi.testRouteTemplateViewCpuStaysBounded()
         )
     )
 
-    local routeNpcsTemplate = loadRouteNpcsTemplate()
-    local routeNpcsInstance = routeNpcsTemplate.prepare({
-        name = "RouteNpcsUnderworld",
-        route = catalog.routes.lookup.Underworld,
-        npcs = catalog.npcs,
-        biomeLookup = catalog.lookup,
-    })
-    local routeNpcsControl = routeNpcsTemplate.createUi(
-        routeUiFields(routeNpcsTemplate.storage(routeNpcsInstance)),
-        routeNpcsInstance
-    )
-    elapsedMs = measureCpuMs(iterations, function()
-        routeNpcsTemplate.views.planner(draw, routeNpcsControl, routeNpcsInstance)
-    end)
-    lu.assertTrue(
-        elapsedMs < 250,
-        string.format(
-            "RouteNpcs traversal took %.1f ms across %d no-op draws; budget %.1f ms",
-            elapsedMs,
-            iterations,
-            250
-        )
-    )
-
-    local routeFeaturesTemplate = loadRouteFeaturesTemplate()
-    local routeFeaturesInstance = routeFeaturesTemplate.prepare({
-        name = "RouteFeatureStygianWellUnderworld",
-        route = catalog.routes.lookup.Underworld,
-        feature = catalog.features.byKey.StygianWell,
-        biomeLookup = catalog.lookup,
-    })
-    local routeFeaturesControl = routeFeaturesTemplate.createUi(
-        routeUiFields(routeFeaturesTemplate.storage(routeFeaturesInstance)),
-        routeFeaturesInstance
-    )
-    elapsedMs = measureCpuMs(iterations, function()
-        routeFeaturesTemplate.views.planner(draw, routeFeaturesControl, routeFeaturesInstance)
-    end)
-    lu.assertTrue(
-        elapsedMs < 150,
-        string.format(
-            "RouteFeatures traversal took %.1f ms across %d no-op draws; budget %.1f ms",
-            elapsedMs,
-            iterations,
-            150
-        )
-    )
 end
 
 function TestRunPlannerRouteUi.testHubPylonEnteredSideRoomDrawCpuStaysBounded()
@@ -1558,12 +1157,8 @@ function TestRunPlannerRouteUi.testRoutePanelDrawAllocationsStayBounded()
     local cases = {
         { routeLabel = "Underworld", tabKey = "Global", budgetKb = 48 },
         { routeLabel = "Underworld", tabKey = "F", budgetKb = 32 },
-        { routeLabel = "Underworld", tabKey = "NPCs", budgetKb = 96 },
-        { routeLabel = "Underworld", tabKey = "Features", budgetKb = 48 },
         { routeLabel = "Surface", tabKey = "Global", budgetKb = 48 },
         { routeLabel = "Surface", tabKey = "N", budgetKb = 48 },
-        { routeLabel = "Surface", tabKey = "NPCs", budgetKb = 96 },
-        { routeLabel = "Surface", tabKey = "Features", budgetKb = 48 },
     }
 
     for _, case in ipairs(cases) do
@@ -1591,12 +1186,8 @@ function TestRunPlannerRouteUi.testRoutePanelDrawCpuStaysBounded()
     local cases = {
         { routeLabel = "Underworld", tabKey = "Global", budgetMs = 120 },
         { routeLabel = "Underworld", tabKey = "F", budgetMs = 160 },
-        { routeLabel = "Underworld", tabKey = "NPCs", budgetMs = 220 },
-        { routeLabel = "Underworld", tabKey = "Features", budgetMs = 120 },
         { routeLabel = "Surface", tabKey = "Global", budgetMs = 120 },
         { routeLabel = "Surface", tabKey = "N", budgetMs = 180 },
-        { routeLabel = "Surface", tabKey = "NPCs", budgetMs = 240 },
-        { routeLabel = "Surface", tabKey = "Features", budgetMs = 120 },
     }
 
     for _, case in ipairs(cases) do

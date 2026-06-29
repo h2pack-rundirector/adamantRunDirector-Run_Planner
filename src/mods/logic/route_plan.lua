@@ -59,8 +59,6 @@ local function buildContext(catalog, runtime)
     return routeContext.create({
         routes = catalog.routes,
         biomes = catalog.lookup,
-        npcs = catalog.npcs,
-        features = catalog.features,
         controlResolver = controlResolver(runtime),
     })
 end
@@ -69,8 +67,8 @@ local function routeLayers(context, routeKey)
     return {
         rooms = true,
         rewards = context:isLayerConfigured(routeKey, "rewards") ~= false,
-        npcs = context:isLayerConfigured(routeKey, "npcs") ~= false,
-        features = context:isLayerConfigured(routeKey, "features") ~= false,
+        npcs = false,
+        features = false,
     }
 end
 

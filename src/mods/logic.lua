@@ -5,8 +5,6 @@ local catalog = deps.catalog
 local routePlan = deps.routePlan
 local roomRouting = deps.roomRouting
 local rewardRouting = deps.rewardRouting
-local npcRouting = deps.npcRouting
-local featureRouting = deps.featureRouting
 local liveGameValidator = deps.liveGameValidator
 local rewards = deps.rewards
 
@@ -33,8 +31,6 @@ function logic.registerHooks(moduleRef)
     routePlan.registerHooks(moduleRef, catalog)
     roomRouting.registerHooks(moduleRef, catalog)
     rewardRouting.registerHooks(moduleRef, catalog)
-    npcRouting.registerHooks(moduleRef, catalog)
-    featureRouting.registerHooks(moduleRef, catalog)
 end
 
 function logic.attach(moduleRef)

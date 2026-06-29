@@ -13,6 +13,7 @@ local loadRoutePlan = harness.loadRoutePlan
 local plannedBiomeSnapshot = harness.plannedBiomeSnapshot
 local invalidBiomeSnapshot = harness.invalidBiomeSnapshot
 local biomeControl = harness.biomeControl
+local routeGlobalControl = harness.routeGlobalControl
 local runtimeWithControls = harness.runtimeWithControls
 local runtimeForCatalog = harness.runtimeForCatalog
 
@@ -507,11 +508,16 @@ function TestRunPlannerLogicRoutePlan.testRoutePlanDefersDreamDive()
     lu.assertNil(plan.snapshot)
 end
 
-function TestRunPlannerLogicRoutePlan.testRoutePlanInvalidatesBadRouteSnapshot()
+function TestRunPlannerLogicRoutePlan.testRoutePlanInvalidatesMissingRouteControl()
     local catalog = loadCatalog()
     local routePlan = loadRoutePlan()
-    local runtime = runtimeForCatalog(routePlan, catalog, {
-        F = invalidBiomeSnapshot("F"),
+    local controls = {
+        RouteGlobalUnderworld = routeGlobalControl(),
+    }
+    local runtime = runtimeWithControls(routePlan, {
+        get = function(controlName)
+            return controls[controlName]
+        end,
     })
 
     local plan = routePlan.refresh(catalog, runtime, {
@@ -527,7 +533,7 @@ function TestRunPlannerLogicRoutePlan.testRoutePlanInvalidatesBadRouteSnapshot()
     lu.assertEquals(plan.reason, routePlan.REASON_INVALID_SNAPSHOT)
     lu.assertEquals(plan.routeKey, "Underworld")
     lu.assertEquals(plan.invalidRows[1].biomeKey, "F")
-    lu.assertEquals(plan.invalidRows[1].code, "test_invalid")
+    lu.assertEquals(plan.invalidRows[1].code, "missing_control")
 end
 
 function TestRunPlannerLogicRoutePlan.testRoutePlanRegistersCacheAndStartNewRunHook()
@@ -597,8 +603,6 @@ function TestRunPlannerLogicRoutePlan.testLogicAttachDefinesCacheAndHooks()
     local hookedSelectFieldsDoorCageCount = false
     local hookedChooseAvailableNHubDoors = false
     local hookedCheckNSubRoomDoorUnavailable = false
-    local hookedChooseEncounter = false
-    local hookedHandleSecretSpawns = false
     local registeredOnActivate = false
     logic.attach({
         cache = {
@@ -622,10 +626,6 @@ function TestRunPlannerLogicRoutePlan.testLogicAttachDefinesCacheAndHooks()
                     hookedChooseAvailableNHubDoors = true
                 elseif name == "CheckN_SubRoomDoorUnavailable" then
                     hookedCheckNSubRoomDoorUnavailable = true
-                elseif name == "ChooseEncounter" then
-                    hookedChooseEncounter = true
-                elseif name == "HandleSecretSpawns" then
-                    hookedHandleSecretSpawns = true
                 end
             end,
         },
@@ -642,7 +642,5 @@ function TestRunPlannerLogicRoutePlan.testLogicAttachDefinesCacheAndHooks()
     lu.assertTrue(hookedSelectFieldsDoorCageCount)
     lu.assertTrue(hookedChooseAvailableNHubDoors)
     lu.assertTrue(hookedCheckNSubRoomDoorUnavailable)
-    lu.assertTrue(hookedChooseEncounter)
-    lu.assertTrue(hookedHandleSecretSpawns)
     lu.assertTrue(registeredOnActivate)
 end

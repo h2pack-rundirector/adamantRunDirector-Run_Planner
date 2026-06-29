@@ -10,25 +10,14 @@ local GODS_PER_ROW = 3
 local GOD_COLUMN_WIDTH = 170
 local VANILLA_VALUE = ""
 local CONFIGURE_REWARDS_KEY = "ConfigureRewards"
-local CONFIGURE_NPCS_KEY = "ConfigureNpcs"
-local CONFIGURE_FEATURES_KEY = "ConfigureFeatures"
-local CONFIGURE_FEATURE_PREFIX = "ConfigureFeature"
 local CONFIGURED_BIOME_COUNT_KEY = "ConfiguredBiomeCount"
 local DISABLED_TEXT_COLOR = { 0.55, 0.55, 0.55, 1 }
-local REWARDS_DISABLED_NOTE = "Disabling rewards invalidates Trial rewards and disables NPC encounter planning."
+local REWARDS_DISABLED_NOTE = "Disabling rewards invalidates Trial rewards."
 
 local CONFIG_TOGGLES = {
     {
         key = CONFIGURE_REWARDS_KEY,
         label = "Configure Rewards",
-    },
-    {
-        key = CONFIGURE_NPCS_KEY,
-        label = "Configure NPC Encounters",
-    },
-    {
-        key = CONFIGURE_FEATURES_KEY,
-        label = "Configure Features",
     },
 }
 
@@ -36,27 +25,6 @@ local function clearList(list)
     for index = #list, 1, -1 do
         list[index] = nil
     end
-end
-
-local function featureConfigKey(featureKey)
-    return CONFIGURE_FEATURE_PREFIX .. tostring(featureKey or "")
-end
-
-local function routeBiomeLookup(route)
-    local lookup = {}
-    for _, biomeKey in ipairs(route and route.biomes or {}) do
-        lookup[biomeKey] = true
-    end
-    return lookup
-end
-
-local function routeHasFeature(routeLookup, feature)
-    for biomeKey in pairs(feature and feature.biomes or {}) do
-        if routeLookup[biomeKey] then
-            return true
-        end
-    end
-    return false
 end
 
 local function routeBiomeCount(route)
@@ -177,28 +145,6 @@ local function buildConfiguredBiomeOptions(instance)
     }
 end
 
-local function buildFeatureConfigToggles(instance)
-    local routeLookup = routeBiomeLookup(instance.route)
-    instance.featureConfigToggles = {}
-    instance.featureConfigKeyByKey = {}
-    instance.featureConfigKeyByFeatureKey = {}
-
-    for _, featureKey in ipairs(instance.features and instance.features.ordered or {}) do
-        local feature = instance.features.byKey and instance.features.byKey[featureKey] or nil
-        if feature ~= nil and routeHasFeature(routeLookup, feature) then
-            local key = featureConfigKey(feature.key)
-            instance.featureConfigToggles[#instance.featureConfigToggles + 1] = {
-                key = key,
-                label = feature.configLabel or ("Configure " .. tostring(feature.label or feature.key)),
-                featureKey = feature.key,
-                runtimeFeatureKey = feature.featureKey,
-            }
-            instance.featureConfigKeyByKey[feature.key] = key
-            instance.featureConfigKeyByFeatureKey[feature.featureKey] = key
-        end
-    end
-end
-
 local function buildDrawLabels(instance)
     local controlName = tostring(instance.name)
     instance.configDrawLabels = {}
@@ -211,15 +157,6 @@ local function buildDrawLabels(instance)
             unchecked = "[ ] " .. visibleLabel,
         }
     end
-    for _, toggle in ipairs(instance.featureConfigToggles or {}) do
-        local visibleLabel = tostring(toggle.label)
-        instance.configDrawLabels[toggle.key] = visibleLabel .. "##" .. controlName .. ":" .. tostring(toggle.key)
-        instance.configDisabledLabels[toggle.key] = {
-            checked = "[x] " .. visibleLabel,
-            unchecked = "[ ] " .. visibleLabel,
-        }
-    end
-
     for _, god in ipairs(instance.gods or {}) do
         god.drawLabel = tostring(god.label or god.key) .. "##" .. controlName .. ":" .. tostring(god.key)
     end
@@ -232,7 +169,6 @@ function RouteGlobal.prepare(instance)
     instance.biomeLookup = instance.biomeLookup or {}
     instance.gods = copyGods(instance.gods or (godData and godData.olympian()) or {})
     buildConfiguredBiomeOptions(instance)
-    buildFeatureConfigToggles(instance)
     instance.godBits = buildBits(instance.gods)
     buildGodSourceOptions(instance)
     buildDrawLabels(instance)
@@ -246,24 +182,7 @@ function RouteGlobal.storage(instance)
             type = "bool",
             default = true,
         },
-        {
-            key = CONFIGURE_NPCS_KEY,
-            type = "bool",
-            default = true,
-        },
-        {
-            key = CONFIGURE_FEATURES_KEY,
-            type = "bool",
-            default = true,
-        },
     }
-    for _, toggle in ipairs(instance.featureConfigToggles or {}) do
-        storage[#storage + 1] = {
-            key = toggle.key,
-            type = "bool",
-            default = true,
-        }
-    end
     storage[#storage + 1] = {
         key = CONFIGURED_BIOME_COUNT_KEY,
         type = "string",
@@ -277,11 +196,6 @@ function RouteGlobal.storage(instance)
         bits = instance.godBits,
     }
     return storage
-end
-
-local function featureConfigFieldKey(instance, featureKey)
-    return (instance.featureConfigKeyByKey and instance.featureConfigKeyByKey[featureKey])
-        or (instance.featureConfigKeyByFeatureKey and instance.featureConfigKeyByFeatureKey[featureKey])
 end
 
 function RouteGlobal.createRuntime(fields, instance)
@@ -362,25 +276,9 @@ function RouteGlobal.createRuntime(fields, instance)
         self:invalidateConfiguration()
     end
 
-    function control:isFeatureConfigured(featureKey)
-        if not self:isLayerConfigured("features") then
-            return false
-        end
-        local key = featureConfigFieldKey(instance, featureKey)
-        if key == nil then
-            return true
-        end
-        return self:isConfigEnabled(key)
-    end
-
     function control:isLayerConfigured(layer)
         if layer == "rewards" then
             return self:isConfigEnabled(CONFIGURE_REWARDS_KEY)
-        elseif layer == "npcs" then
-            return self:isConfigEnabled(CONFIGURE_REWARDS_KEY)
-                and self:isConfigEnabled(CONFIGURE_NPCS_KEY)
-        elseif layer == "features" then
-            return self:isConfigEnabled(CONFIGURE_FEATURES_KEY)
         end
         return true
     end
@@ -463,7 +361,7 @@ function RouteGlobal.createUi(fields, instance)
     end
 
     function control:featureConfigToggles()
-        return instance.featureConfigToggles
+        return nil
     end
 
     function control:configField(key)
@@ -563,22 +461,15 @@ end
 local function drawConfiguration(draw, control)
     draw.widgets.text("Configuration", { alignToFramePadding = true })
     local rewardsEnabled = control:isConfigEnabled(CONFIGURE_REWARDS_KEY)
-    local featuresEnabled = control:isConfigEnabled(CONFIGURE_FEATURES_KEY)
 
     if draw.widgets.dropdown(control:configuredBiomeCountField(), control:configuredBiomeCountOpts()) then
         control:writeConfiguredBiomeCount(control:configuredBiomeCountField():read())
     end
 
     for _, toggle in ipairs(control:configToggles()) do
-        drawConfigCheckbox(draw, control, toggle, toggle.key == CONFIGURE_NPCS_KEY and not rewardsEnabled)
+        drawConfigCheckbox(draw, control, toggle, false)
         if toggle.key == CONFIGURE_REWARDS_KEY and not rewardsEnabled then
             drawPolicyNote(draw, REWARDS_DISABLED_NOTE)
-        elseif toggle.key == CONFIGURE_FEATURES_KEY then
-            draw.imgui.Indent()
-            for _, featureToggle in ipairs(control:featureConfigToggles() or {}) do
-                drawConfigCheckbox(draw, control, featureToggle, not featuresEnabled)
-            end
-            draw.imgui.Unindent()
         end
     end
 end

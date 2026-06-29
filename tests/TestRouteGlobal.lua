@@ -32,31 +32,16 @@ function TestRunPlannerRouteGlobal.testRouteGlobalTemplateStoresConfigurationAnd
         default = true,
     })
     lu.assertEquals(storage[2], {
-        key = "ConfigureNpcs",
-        type = "bool",
-        default = true,
-    })
-    lu.assertEquals(storage[3], {
-        key = "ConfigureFeatures",
-        type = "bool",
-        default = true,
-    })
-    lu.assertEquals(storage[4], {
-        key = "ConfigureFeatureStygianWell",
-        type = "bool",
-        default = true,
-    })
-    lu.assertEquals(storage[5], {
         key = "ConfiguredBiomeCount",
         type = "string",
         default = "4",
         maxLen = 2,
     })
-    lu.assertEquals(storage[6].key, "GodPool")
-    lu.assertEquals(storage[6].type, "packedInt")
-    lu.assertEquals(storage[6].width, 9)
-    lu.assertEquals(#storage[6].bits, 9)
-    lu.assertEquals(storage[6].bits[1], {
+    lu.assertEquals(storage[3].key, "GodPool")
+    lu.assertEquals(storage[3].type, "packedInt")
+    lu.assertEquals(storage[3].width, 9)
+    lu.assertEquals(#storage[3].bits, 9)
+    lu.assertEquals(storage[3].bits[1], {
         key = "AphroditeUpgrade",
         label = "Aphrodite",
         type = "bool",
@@ -82,7 +67,7 @@ function TestRunPlannerRouteGlobal.testRouteGlobalTemplateStoresConfigurationAnd
     })
 end
 
-function TestRunPlannerRouteGlobal.testRouteGlobalConfigurationPreservesNpcDependencyOnRewards()
+function TestRunPlannerRouteGlobal.testRouteGlobalConfigurationScopesActiveSystems()
     local catalog = loadCatalog()
     local template = loadRouteGlobalTemplate()
     local instance = template.prepare({
@@ -95,34 +80,13 @@ function TestRunPlannerRouteGlobal.testRouteGlobalConfigurationPreservesNpcDepen
     local control = template.createRuntime(fields, instance)
 
     lu.assertTrue(control:isLayerConfigured("rewards"))
-    lu.assertTrue(control:isLayerConfigured("npcs"))
-    lu.assertTrue(control:isLayerConfigured("features"))
-    lu.assertTrue(control:isFeatureConfigured("StygianWell"))
-    lu.assertTrue(control:isFeatureConfigured("wellShop"))
 
     fields.ConfigureRewards:write(false)
 
     lu.assertFalse(control:isLayerConfigured("rewards"))
-    lu.assertFalse(control:isLayerConfigured("npcs"))
-    lu.assertTrue(control:isLayerConfigured("features"))
-
-    fields.ConfigureRewards:write(true)
-    fields.ConfigureNpcs:write(false)
-    fields.ConfigureFeatureStygianWell:write(false)
-
-    lu.assertTrue(control:isLayerConfigured("rewards"))
-    lu.assertFalse(control:isLayerConfigured("npcs"))
-    lu.assertTrue(control:isLayerConfigured("features"))
-    lu.assertFalse(control:isFeatureConfigured("StygianWell"))
-    lu.assertFalse(control:isFeatureConfigured("wellShop"))
-
-    fields.ConfigureFeatures:write(false)
-
-    lu.assertFalse(control:isLayerConfigured("features"))
-    lu.assertFalse(control:isFeatureConfigured("StygianWell"))
 end
 
-function TestRunPlannerRouteGlobal.testRouteGlobalDrawDisablesNpcToggleWhenRewardsAreDisabled()
+function TestRunPlannerRouteGlobal.testRouteGlobalDrawShowsRewardsDisabledNote()
     local catalog = loadCatalog()
     local template = loadRouteGlobalTemplate()
     local instance = template.prepare({
@@ -132,39 +96,19 @@ function TestRunPlannerRouteGlobal.testRouteGlobalDrawDisablesNpcToggleWhenRewar
     })
     local fields = routeUiFields(template.storage(instance))
     fields.ConfigureRewards:write(false)
-    fields.ConfigureNpcs:write(true)
     local control = template.createUi(fields, instance)
 
     local draw = noOpDraw()
-    local disabledDepth = 0
-    local npcCheckboxWasDisabled = false
     local noteWasRendered = false
-    draw.imgui.BeginDisabled = function(disabled)
-        if disabled then
-            disabledDepth = disabledDepth + 1
-        end
-    end
-    draw.imgui.EndDisabled = function()
-        disabledDepth = disabledDepth - 1
-    end
     draw.imgui.TextWrapped = function(text)
-        if text == "Disabling rewards invalidates Trial rewards and disables NPC encounter planning." then
+        if text == "Disabling rewards invalidates Trial rewards." then
             noteWasRendered = true
         end
-    end
-    draw.imgui.Checkbox = function(label, current)
-        if label:find("Configure NPC Encounters", 1, true) then
-            npcCheckboxWasDisabled = disabledDepth > 0
-            return false, true
-        end
-        return current, false
     end
 
     template.views.planner(draw, control, instance)
 
     lu.assertTrue(noteWasRendered)
-    lu.assertTrue(npcCheckboxWasDisabled)
-    lu.assertTrue(fields.ConfigureNpcs:read())
 end
 
 function TestRunPlannerRouteGlobal.testRouteGlobalProvidesStableGodSourceDropdownOptions()
