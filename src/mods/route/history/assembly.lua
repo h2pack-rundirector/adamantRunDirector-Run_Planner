@@ -24,6 +24,12 @@ function historyAssembly.create()
         loot = loot,
         adapters = adapters,
     })
+    local biomeStructureValidator = import("mods/route/history/validator/biome_structure.lua", nil, {
+        history = history,
+    })
+    local validator = import("mods/route/history/validator.lua", nil, {
+        biomeStructure = biomeStructureValidator,
+    })
 
     return {
         adapters = adapters,
@@ -32,6 +38,7 @@ function historyAssembly.create()
         loot = loot,
         query = query,
         builder = builder,
+        validator = validator,
     }
 end
 

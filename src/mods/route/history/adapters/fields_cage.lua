@@ -320,6 +320,19 @@ local function costValue(slotLayout, role, option, field, fallback)
     return fallback
 end
 
+local function biomeDepthCacheCost(slotLayout, slot, role, option)
+    if option ~= nil and option.biomeDepthCacheCost ~= nil then
+        return numericCost(option.biomeDepthCacheCost, 0)
+    end
+    if role ~= nil and role.biomeDepthCacheCost ~= nil then
+        return numericCost(role.biomeDepthCacheCost, 0)
+    end
+    if slot ~= nil and slot.kind == "biomeRow" then
+        return numericCost(slotLayout and slotLayout.routeBiomeDepthCacheCost, 1)
+    end
+    return numericCost(slotLayout and slotLayout.defaultFixedBiomeDepthCacheCost, 0)
+end
+
 local function resolveRow(context, selectedRow, slot)
     local role = roleForRow(context.biome, slot, selectedRow)
     local option = optionForRow(role, selectedRow, slot)
@@ -337,7 +350,7 @@ local function resolveRow(context, selectedRow, slot)
         roomKey = roomKeyFor(role, option),
         eventKey = eventKeyFor(selectedRow, role, option),
         rewardContext = rewardContext(role, option),
-        biomeDepthCacheCost = costValue(slotLayout, role, option, "biomeDepthCacheCost", 0),
+        biomeDepthCacheCost = biomeDepthCacheCost(slotLayout, slot, role, option),
         biomeEncounterDepthCost = costValue(slotLayout, role, option, "biomeEncounterDepthCost", 0),
         roomHistoryCost = costValue(slotLayout, role, option, "roomHistoryCost", 1),
     }
@@ -400,6 +413,7 @@ local function selectedTopology(selectedRow, resolved)
     elseif selectedRow.roleKey == "Bridge" then
         return {
             structure = "Bridge",
+            roomKey = resolved.roomKey,
             offerCount = 0,
         }
     end

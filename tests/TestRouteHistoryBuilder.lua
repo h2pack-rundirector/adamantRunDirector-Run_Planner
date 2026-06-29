@@ -694,6 +694,7 @@ function TestRunPlannerRouteHistoryBuilder.testFieldsCageEntriesCarryTopologyAnd
     lu.assertEquals(rooms[2].reward.picks[3].rewardType, "StackUpgrade")
 
     lu.assertEquals(rooms[4].topology.selected.structure, "Bridge")
+    lu.assertEquals(rooms[4].topology.selected.roomKey, "H_Bridge01")
     lu.assertEquals(rooms[4].topology.sibling.structure, "Miniboss")
     lu.assertEquals(rooms[4].topology.sibling.roomKey, "H_MiniBoss02")
     lu.assertEquals(rooms[4].topology.sibling.eligibleRewardTypes[1], "Boon")
