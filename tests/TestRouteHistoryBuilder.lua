@@ -721,6 +721,7 @@ function TestRunPlannerRouteHistoryBuilder.testFieldsCageEntriesCarryTopologyAnd
     lu.assertEquals(routeHistory.lootEntries(history, "WeaponUpgrade")[1].parentRoomKey, "H_Combat09")
     lu.assertEquals(routeHistory.lootEntries(history, "RandomLoot")[1].sourceKind, "prebossShop")
     lu.assertTrue(routeHistory.lootEntries(history, "RandomLoot")[1].bought)
+    lu.assertNil(routeHistory.pendingLootEntries(history, "RandomLoot")[1])
 end
 
 function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedBuildsThessalySpine()

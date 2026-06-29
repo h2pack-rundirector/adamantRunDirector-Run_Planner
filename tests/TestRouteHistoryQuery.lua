@@ -6,6 +6,7 @@ local historySystem = h.withTestImport(function()
 end)
 local routeHistory = historySystem.history
 local routeQuery = historySystem.query
+local routeLoot = historySystem.loot
 local historyBuilder = historySystem.builder
 
 -- luacheck: globals TestRunPlannerRouteHistoryQuery
@@ -146,12 +147,119 @@ function TestRunPlannerRouteHistoryQuery.testRequiredNotInStoreReadsPriorPending
         eventKey = "WeaponUpgrade",
         lootType = "WeaponUpgrade",
         timing = "pendingOffer",
+        pendingUntilRoomHistoryOrdinal = 10,
     })
 
     local valid, blocker = routeQuery.requiredNotInStore(history, current, "WeaponUpgrade")
     lu.assertFalse(valid)
     lu.assertIs(blocker, pending)
     lu.assertTrue((routeQuery.requiredNotInStore(history, current, "HermesUpgrade")))
+end
+
+function TestRunPlannerRouteHistoryQuery.testRequiredNotInStoreIgnoresExpiredPendingLoot()
+    local history = routeHistory.create()
+    routeHistory.emitAt(history, {
+        roomHistoryOrdinal = 8,
+    }, {
+        kind = "loot",
+        eventKey = "WeaponUpgrade",
+        lootType = "WeaponUpgrade",
+        timing = "pendingOffer",
+        pendingUntilRoomHistoryOrdinal = 9,
+    })
+    local current = routeHistory.emitAt(history, {
+        roomHistoryOrdinal = 10,
+    }, {
+        kind = "room",
+        eventKey = "CurrentRoom",
+    })
+
+    lu.assertTrue((routeQuery.requiredNotInStore(history, current, "WeaponUpgrade")))
+end
+
+function TestRunPlannerRouteHistoryQuery.testRequiredNotInStoreIgnoresPendingLootWithoutExpiry()
+    local history = routeHistory.create()
+    routeHistory.emitAt(history, {
+        roomHistoryOrdinal = 8,
+    }, {
+        kind = "loot",
+        eventKey = "WeaponUpgrade",
+        lootType = "WeaponUpgrade",
+        timing = "pendingOffer",
+    })
+    local current = routeHistory.emitAt(history, {
+        roomHistoryOrdinal = 10,
+    }, {
+        kind = "room",
+        eventKey = "CurrentRoom",
+    })
+
+    lu.assertTrue((routeQuery.requiredNotInStore(history, current, "WeaponUpgrade")))
+end
+
+function TestRunPlannerRouteHistoryQuery.testShopOffersEmitExpiringPendingFactsSeparateFromAcquiredLoot()
+    local history = routeHistory.create()
+    local shopRoom = routeHistory.emitAt(history, {
+        roomHistoryOrdinal = 8,
+    }, {
+        kind = "room",
+        eventKey = "ShopRoom",
+        reward = {
+            kind = "preboss",
+            branch = "Shop",
+            shop = {
+                shopProfile = "WorldShop",
+            },
+            offers = {
+                {
+                    rewardType = "WeaponUpgradeDrop",
+                    state = "Skipped",
+                },
+                {
+                    rewardType = "RandomLoot",
+                    boonSource = "ZeusUpgrade",
+                    state = "Bought",
+                    bought = true,
+                },
+            },
+        },
+    })
+    local nextRoom = routeHistory.emitAt(history, {
+        roomHistoryOrdinal = 9,
+    }, {
+        kind = "room",
+        eventKey = "NextRoom",
+    })
+
+    routeLoot.emitForRoomEntry(history, shopRoom, nextRoom)
+
+    local pendingHammer = routeHistory.pendingLootEntries(history, "WeaponUpgradeDrop")[1]
+    lu.assertNotNil(pendingHammer)
+    lu.assertEquals(pendingHammer.pendingUntilRoomHistoryOrdinal, 9)
+    lu.assertEquals(#routeHistory.lootEntries(history, "WeaponUpgradeDrop"), 0)
+
+    local pendingBoon = routeHistory.pendingLootEntries(history, "RandomLoot")[1]
+    local acquiredBoon = routeHistory.lootEntries(history, "RandomLoot")[1]
+    lu.assertNotNil(pendingBoon)
+    lu.assertNotNil(acquiredBoon)
+    lu.assertEquals(pendingBoon.timing, "pendingOffer")
+    lu.assertNil(acquiredBoon.timing)
+    lu.assertTrue(acquiredBoon.bought)
+    lu.assertEquals(acquiredBoon.acquiredAfterRoomHistoryOrdinal, 9)
+    lu.assertEquals(routeQuery.lootTypeHistoryCount(history, nextRoom, "RandomLoot"), 0)
+
+    local valid, blocker = routeQuery.requiredNotInStore(history, nextRoom, "WeaponUpgradeDrop")
+    lu.assertFalse(valid)
+    lu.assertIs(blocker, pendingHammer)
+
+    local laterRoom = routeHistory.emitAt(history, {
+        roomHistoryOrdinal = 10,
+    }, {
+        kind = "room",
+        eventKey = "LaterRoom",
+    })
+    lu.assertTrue((routeQuery.requiredNotInStore(history, laterRoom, "WeaponUpgradeDrop")))
+    lu.assertEquals(routeQuery.lootTypeHistoryCount(history, laterRoom, "RandomLoot"), 1)
 end
 
 function TestRunPlannerRouteHistoryQuery.testEventQueriesUsePriorEventsOnly()

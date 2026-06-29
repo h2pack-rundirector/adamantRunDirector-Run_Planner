@@ -19,6 +19,10 @@ local function nonEmpty(value)
     return value
 end
 
+local function effectiveRoomHistoryOrdinal(event)
+    return event and (event.acquiredAfterRoomHistoryOrdinal or event.roomHistoryOrdinal) or nil
+end
+
 local AXIS_FIELDS = {
     runDepthCache = "runDepthCache",
     roomHistory = "roomHistoryOrdinal",
@@ -35,7 +39,7 @@ end
 
 local function strictlyBefore(entry, candidate)
     local currentRoomHistory = entry and entry.roomHistoryOrdinal or nil
-    local candidateRoomHistory = candidate and candidate.roomHistoryOrdinal or nil
+    local candidateRoomHistory = effectiveRoomHistoryOrdinal(candidate)
     if currentRoomHistory ~= nil and candidateRoomHistory ~= nil then
         return candidateRoomHistory < currentRoomHistory
     end
@@ -59,7 +63,7 @@ local function latestByRoomHistory(currentLatest, candidate)
     if currentLatest == nil then
         return candidate
     end
-    return (candidate.roomHistoryOrdinal or 0) > (currentLatest.roomHistoryOrdinal or 0)
+    return (effectiveRoomHistoryOrdinal(candidate) or 0) > (effectiveRoomHistoryOrdinal(currentLatest) or 0)
         and candidate
         or currentLatest
 end
@@ -243,7 +247,13 @@ end
 
 function query.requiredNotInStore(history, entry, lootType)
     for _, loot in ipairs(routeHistory.pendingLootEntries(history, lootType)) do
-        if strictlyBefore(entry, loot) then
+        local untilRoomHistory = loot.pendingUntilRoomHistoryOrdinal
+        local entryRoomHistory = entry and entry.roomHistoryOrdinal or nil
+        if strictlyBefore(entry, loot)
+            and untilRoomHistory ~= nil
+            and entryRoomHistory ~= nil
+            and entryRoomHistory <= untilRoomHistory
+        then
             return false, loot
         end
     end

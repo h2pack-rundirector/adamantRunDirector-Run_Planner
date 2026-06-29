@@ -39,12 +39,13 @@ local function indexLoot(history, entry)
     end
 
     local loot = history.loot
-    appendIndexed(loot.byLootType, entry.lootType, entry)
-    appendNestedIndexed(loot.byBiomeLootType, entry.biomeKey, entry.lootType, entry)
-
     if entry.timing == "pendingOffer" then
         appendIndexed(loot.pendingByLootType, entry.lootType, entry)
+        return
     end
+
+    appendIndexed(loot.byLootType, entry.lootType, entry)
+    appendNestedIndexed(loot.byBiomeLootType, entry.biomeKey, entry.lootType, entry)
 
     for _, sourceValue in ipairs(entry.sourceValues or EMPTY_LIST) do
         appendIndexed(loot.bySourceValue, sourceValue, entry)

@@ -50,6 +50,38 @@ local function emitLoot(history, roomEntry, summary, opts)
         shopProfile = summary.shopProfile or opts.shopProfile,
         state = summary.state or opts.state,
         bought = summary.bought or opts.bought or nil,
+        timing = summary.timing or opts.timing,
+        pendingUntilRoomHistoryOrdinal = summary.pendingUntilRoomHistoryOrdinal
+            or opts.pendingUntilRoomHistoryOrdinal,
+        acquiredAfterRoomHistoryOrdinal = summary.acquiredAfterRoomHistoryOrdinal
+            or opts.acquiredAfterRoomHistoryOrdinal,
+    })
+end
+
+local function emitPendingShopOffer(history, roomEntry, offer, opts)
+    local rewardType = nonEmpty(offer and offer.rewardType)
+    if rewardType == nil then
+        return nil
+    end
+    opts = opts or {}
+    if opts.pendingUntilRoomHistoryOrdinal == nil then
+        return nil
+    end
+    return emitLoot(history, roomEntry, {
+        kind = "shop",
+        rewardType = rewardType,
+        boonSource = offer.boonSource,
+        shopProfile = opts.shopProfile,
+        state = offer.state,
+        bought = offer.bought,
+    }, {
+        address = opts.address,
+        sourceKind = opts.sourceKind,
+        shopProfile = opts.shopProfile,
+        state = offer.state,
+        bought = offer.bought,
+        timing = "pendingOffer",
+        pendingUntilRoomHistoryOrdinal = opts.pendingUntilRoomHistoryOrdinal,
     })
 end
 
@@ -76,7 +108,8 @@ local function emitMultiEncounterLoot(history, roomEntry, reward)
     end
 end
 
-local function emitPrebossLoot(history, roomEntry, reward)
+local function emitPrebossLoot(history, roomEntry, reward, nextRoomEntry)
+    local pendingUntil = nextRoomEntry and nextRoomEntry.roomHistoryOrdinal or nil
     if reward.branch == "FreeReward" then
         emitLoot(history, roomEntry, reward.reward or {}, {
             sourceKind = "prebossFreeReward",
@@ -84,6 +117,12 @@ local function emitPrebossLoot(history, roomEntry, reward)
     elseif reward.branch == "Shop" then
         local shop = reward.shop or {}
         for index, offer in ipairs(reward.offers or EMPTY_LIST) do
+            emitPendingShopOffer(history, roomEntry, offer, {
+                address = "shop:" .. tostring(index),
+                sourceKind = "prebossShop",
+                shopProfile = shop.shopProfile,
+                pendingUntilRoomHistoryOrdinal = pendingUntil,
+            })
             if offer.bought == true then
                 emitLoot(history, roomEntry, {
                     kind = "shop",
@@ -92,19 +131,21 @@ local function emitPrebossLoot(history, roomEntry, reward)
                     shopProfile = shop.shopProfile,
                     state = offer.state,
                     bought = offer.bought,
+                    acquiredAfterRoomHistoryOrdinal = pendingUntil,
                 }, {
                     address = "shop:" .. tostring(index),
                     sourceKind = "prebossShop",
                     shopProfile = shop.shopProfile,
                     state = offer.state or SHOP_BOUGHT_VALUE,
                     bought = true,
+                    acquiredAfterRoomHistoryOrdinal = pendingUntil,
                 })
             end
         end
     end
 end
 
-function routeLoot.emitForRoomEntry(history, roomEntry)
+function routeLoot.emitForRoomEntry(history, roomEntry, nextRoomEntry)
     local reward = roomEntry and roomEntry.reward or nil
     if reward == nil then
         return
@@ -113,7 +154,7 @@ function routeLoot.emitForRoomEntry(history, roomEntry)
     elseif reward.kind == "multiEncounter" then
         emitMultiEncounterLoot(history, roomEntry, reward)
     elseif reward.kind == "preboss" then
-        emitPrebossLoot(history, roomEntry, reward)
+        emitPrebossLoot(history, roomEntry, reward, nextRoomEntry)
     else
         emitLoot(history, roomEntry, reward, {
             address = reward.address or "row",
@@ -121,11 +162,21 @@ function routeLoot.emitForRoomEntry(history, roomEntry)
     end
 end
 
+local function nextRoomEntry(history, index, lastIndex)
+    for nextIndex = index + 1, lastIndex do
+        local entry = routeHistory.entries(history)[nextIndex]
+        if entry ~= nil and entry.kind == "room" then
+            return entry
+        end
+    end
+    return nil
+end
+
 function routeLoot.emitForRoomEntries(history, firstIndex, lastIndex)
     for index = firstIndex, lastIndex do
         local entry = routeHistory.entries(history)[index]
         if entry ~= nil and entry.kind == "room" then
-            routeLoot.emitForRoomEntry(history, entry)
+            routeLoot.emitForRoomEntry(history, entry, nextRoomEntry(history, index, lastIndex))
         end
     end
 end
