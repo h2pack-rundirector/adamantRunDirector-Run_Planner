@@ -1,7 +1,9 @@
 local deps = ... or {}
 
 local fixedLinear = {}
+local roomCandidates = deps.roomCandidates
 local rewardCandidates = deps.rewardCandidates
+local siblingCandidates = deps.siblingCandidates
 
 local EMPTY_LIST = {}
 local BIOME_ENCOUNTER_DEPTH_START = 1
@@ -381,6 +383,8 @@ local function appendRoom(history, routeHistory, context, selectedRow, resolved)
         variantKey = selectedRow.variantKey,
         source = selectedRow,
     })
+    entry.roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, resolved)
+    entry.siblingCandidates = siblingCandidates.forBiomeRow(context.biome, selectedRow)
     entry.reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards)
     entry.rewardCandidates = rewardCandidates.forContext(resolved.rewardContext)
     return entry

@@ -30,6 +30,15 @@ local function hasValue(values, expected)
     return false
 end
 
+local function findCandidate(candidates, field, expected)
+    for _, candidate in ipairs(candidates or {}) do
+        if candidate[field] == expected then
+            return candidate
+        end
+    end
+    return nil
+end
+
 local function fullFErebusRows()
     return {
         {
@@ -512,6 +521,11 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearRoomEntriesCarryNextCh
 
     local rooms = roomEvents(history)
     lu.assertEquals(rooms[1].topology.kind, "fixedLinearNextChoice")
+    lu.assertNotNil(findCandidate(rooms[2].roomCandidates, "roomKey", "F_Combat01"))
+    lu.assertNotNil(findCandidate(rooms[2].roomCandidates, "roomKey", "F_Story01"))
+    lu.assertNotNil(findCandidate(rooms[5].siblingCandidates, "structureKey", "F_Story01"))
+    lu.assertEquals(findCandidate(rooms[5].siblingCandidates, "structureKey", "F_Story01").structure, "Story")
+    lu.assertEquals(findCandidate(rooms[6].siblingCandidates, "structureKey", "Combat").rewardBranch, "majorMinor")
     lu.assertEquals(rooms[1].topology.exits[1].branch, "picked")
     lu.assertEquals(rooms[1].topology.exits[1].roomKey, "F_Combat01")
     lu.assertEquals(rooms[1].topology.exits[1].reward.kind, "majorMinor")
@@ -703,6 +717,9 @@ function TestRunPlannerRouteHistoryBuilder.testFieldsCageEntriesCarryTopologyAnd
     lu.assertEquals(rooms[2].topology.selected.offerCount, 3)
     lu.assertEquals(rooms[2].topology.sibling.structure, "CombatCage3")
     lu.assertEquals(rooms[2].topology.sibling.offerCount, 3)
+    lu.assertNotNil(findCandidate(rooms[2].roomCandidates, "roomKey", "H_Combat04"))
+    lu.assertNotNil(findCandidate(rooms[2].siblingCandidates, "structureKey", "CombatCage2"))
+    lu.assertNotNil(findCandidate(rooms[2].siblingCandidates, "structureKey", "CombatCage3"))
     lu.assertEquals(rooms[2].reward.kind, "fieldsCages")
     lu.assertEquals(rooms[2].reward.sourceCount, 3)
     lu.assertEquals(rooms[2].reward.picks[1].rewardType, "Boon")
@@ -864,6 +881,8 @@ function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedEntriesCarryEn
     lu.assertEquals(rooms[2].reward.encounters[1].key, "Encounter1")
     lu.assertEquals(rooms[2].reward.encounters[1].wheelOfferCount, 1)
     lu.assertEquals(rooms[2].reward.encounters[1].reward.rewardType, "MaxHealthDrop")
+    lu.assertNotNil(findCandidate(rooms[2].roomCandidates, "roomKey", "O_Combat01"))
+    lu.assertEquals(#rooms[2].siblingCandidates, 0)
     lu.assertEquals(rooms[3].reward.kind, "multiEncounter")
     lu.assertEquals(#rooms[3].reward.encounters, 2)
     lu.assertEquals(rooms[3].reward.encounters[1].reward.rewardType, "Boon")

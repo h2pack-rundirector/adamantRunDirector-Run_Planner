@@ -1,7 +1,9 @@
 local deps = ... or {}
 
 local hubPylon = {}
+local roomCandidates = deps.roomCandidates
 local rewardCandidates = deps.rewardCandidates
+local siblingCandidates = deps.siblingCandidates
 
 local EMPTY_LIST = {}
 local BIOME_ENCOUNTER_DEPTH_START = 1
@@ -228,6 +230,8 @@ local function emitPhysical(context, args)
         encounterClassKey = args.encounterClassKey,
         source = args.source,
     })
+    entry.roomCandidates = args.roomCandidates
+    entry.siblingCandidates = args.siblingCandidates
     entry.reward = args.reward
     entry.rewardCandidates = args.rewardCandidates
     entry.topology = args.topology
@@ -259,6 +263,11 @@ local function emitFixed(context, selectedRow, slot)
         optionKey = selectedRow.optionKey,
         variantKey = selectedRow.variantKey,
         source = selectedRow,
+        roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, {
+            role = role,
+            option = option,
+        }),
+        siblingCandidates = siblingCandidates.forBiomeRow(context.biome, selectedRow),
         reward = reward,
         rewardCandidates = rewardCandidates.forContext(rewardContext(role, option)),
         topology = topology,
@@ -340,6 +349,11 @@ local function emitPylon(context, selectedRow, slot)
         optionKey = selectedRow.optionKey,
         variantKey = selectedRow.variantKey,
         source = selectedRow,
+        roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, {
+            role = role,
+            option = option,
+        }),
+        siblingCandidates = siblingCandidates.forBiomeRow(context.biome, selectedRow),
         reward = selectedRewardSummary(rewardContextValue, selectedRow.rewards),
         rewardCandidates = rewardCandidates.forContext(rewardContextValue),
         topology = pylonTopologySummary(context, selectedRow, rewardContextValue),

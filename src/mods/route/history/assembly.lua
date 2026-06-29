@@ -16,21 +16,33 @@ function historyAssembly.create(opts)
     local rewardCandidates = import("mods/route/history/reward_candidates.lua", nil, {
         rewardDomain = opts.rewardDomain,
     })
+    local roomCandidates = import("mods/route/history/room_candidates.lua")
+    local siblingCandidates = import("mods/route/history/sibling_candidates.lua")
     local adapters = {
         clockworkGoal = import("mods/route/history/adapters/clockwork_goal.lua", nil, {
             rewardCandidates = rewardCandidates,
+            roomCandidates = roomCandidates,
+            siblingCandidates = siblingCandidates,
         }),
         fieldsCageRoute = import("mods/route/history/adapters/fields_cage.lua", nil, {
             rewardCandidates = rewardCandidates,
+            roomCandidates = roomCandidates,
+            siblingCandidates = siblingCandidates,
         }),
         fixedLinear = import("mods/route/history/adapters/fixed_linear.lua", nil, {
             rewardCandidates = rewardCandidates,
+            roomCandidates = roomCandidates,
+            siblingCandidates = siblingCandidates,
         }),
         hubPylon = import("mods/route/history/adapters/hub_pylon.lua", nil, {
             rewardCandidates = rewardCandidates,
+            roomCandidates = roomCandidates,
+            siblingCandidates = siblingCandidates,
         }),
         multiEncounterFixed = import("mods/route/history/adapters/multi_encounter_fixed.lua", nil, {
             rewardCandidates = rewardCandidates,
+            roomCandidates = roomCandidates,
+            siblingCandidates = siblingCandidates,
         }),
     }
     local builder = import("mods/route/history/builder.lua", nil, {
@@ -56,7 +68,9 @@ function historyAssembly.create(opts)
         events = events,
         history = history,
         loot = loot,
+        roomCandidates = roomCandidates,
         rewardCandidates = rewardCandidates,
+        siblingCandidates = siblingCandidates,
         query = query,
         builder = builder,
         validator = validator,
