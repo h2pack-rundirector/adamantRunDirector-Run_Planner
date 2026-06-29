@@ -262,6 +262,73 @@ function TestRunPlannerRouteHistoryQuery.testShopOffersEmitExpiringPendingFactsS
     lu.assertEquals(routeQuery.lootTypeHistoryCount(history, laterRoom, "RandomLoot"), 1)
 end
 
+function TestRunPlannerRouteHistoryQuery.testRequiredMinExitsReadsPreviousRoomTopologyForRoomEntry()
+    local history = routeHistory.create()
+    routeHistory.emitAt(history, {
+        roomHistoryOrdinal = 1,
+    }, {
+        kind = "room",
+        eventKey = "PreviousRoom",
+        topology = {
+            exits = {
+                { roomKey = "A" },
+                { roomKey = "B" },
+            },
+        },
+    })
+    local current = routeHistory.emitAt(history, {
+        roomHistoryOrdinal = 2,
+    }, {
+        kind = "room",
+        eventKey = "CurrentRoom",
+        topology = {
+            exits = {
+                { roomKey = "C" },
+            },
+        },
+    })
+
+    lu.assertEquals(routeQuery.previousGeneratedExitCount(history, current), 2)
+    lu.assertTrue(routeQuery.requiredMinExits(history, current, 2))
+    lu.assertFalse(routeQuery.requiredMinExits(history, current, 3))
+end
+
+function TestRunPlannerRouteHistoryQuery.testRequiredMinExitsUsesLootParentRoom()
+    local history = routeHistory.create()
+    local previous = routeHistory.emitAt(history, {
+        roomHistoryOrdinal = 1,
+    }, {
+        kind = "room",
+        eventKey = "PreviousRoom",
+        topology = {
+            selected = { roomKey = "CurrentRoom" },
+            sibling = { roomKey = "OtherRoom" },
+        },
+    })
+    local current = routeHistory.emitAt(history, {
+        roomHistoryOrdinal = 2,
+    }, {
+        kind = "room",
+        eventKey = "CurrentRoom",
+        topology = {
+            exits = {
+                { roomKey = "NextRoom" },
+            },
+        },
+    })
+    local loot = routeHistory.emitAt(history, current, {
+        kind = "loot",
+        eventKey = "Devotion",
+        lootType = "Devotion",
+        parentEntry = current,
+    })
+
+    lu.assertEquals(previous.eventKey, "PreviousRoom")
+    lu.assertEquals(routeQuery.previousGeneratedExitCount(history, loot), 2)
+    lu.assertTrue(routeQuery.requiredMinExits(history, loot, 2))
+    lu.assertFalse(routeQuery.requiredMinExits(history, loot, 3))
+end
+
 function TestRunPlannerRouteHistoryQuery.testEventQueriesUsePriorEventsOnly()
     local history = buildFErebusHistory(lootRows())
     local rooms = routeHistory.byKind(history, "room")

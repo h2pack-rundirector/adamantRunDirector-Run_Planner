@@ -64,6 +64,7 @@ function rewardSystem.create(opts)
         catalogSurfaces = parts.catalogSurfaces,
         legalityConditions = parts.conditions,
         rewardDomain = parts.rewardDomain,
+        selectedLegalityRules = parts.selectedLegalityRules,
 
         draw = ui.draw,
         hasControls = runtime.hasControls,

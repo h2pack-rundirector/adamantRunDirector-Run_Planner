@@ -69,6 +69,10 @@ local function loadConditions()
     return importHarness.loadRewardConditions()
 end
 
+local function loadSelectedLegalityRules()
+    return importHarness.loadSelectedLegalityRules()
+end
+
 local function countBagEntries(bag, rewardType)
     local count = 0
     for _, item in ipairs(bag or {}) do
@@ -89,6 +93,53 @@ end
 local function appendUnknownRewardReference(unknown, primitives, path, rewardType)
     if rewardType ~= nil and primitives[rewardType] == nil then
         unknown[#unknown + 1] = path .. ": " .. tostring(rewardType)
+    end
+end
+
+local function appendUnknownRewardReferencesFromRequirement(unknown, primitives, path, requirement)
+    appendUnknownRewardReference(unknown, primitives, path .. ".name", requirement.name)
+    for index, rewardType in ipairs(requirement.rewards or {}) do
+        appendUnknownRewardReference(
+            unknown,
+            primitives,
+            path .. ".rewards[" .. tostring(index) .. "]",
+            rewardType
+        )
+    end
+    for index, rewardType in ipairs(requirement.countedLootNames or {}) do
+        appendUnknownRewardReference(
+            unknown,
+            primitives,
+            path .. ".countedLootNames[" .. tostring(index) .. "]",
+            rewardType
+        )
+    end
+    for index, rewardType in ipairs(requirement.countOf or {}) do
+        appendUnknownRewardReference(
+            unknown,
+            primitives,
+            path .. ".countOf[" .. tostring(index) .. "]",
+            rewardType
+        )
+    end
+    for index, rewardType in ipairs(requirement.sourceValues or {}) do
+        appendUnknownRewardReference(
+            unknown,
+            primitives,
+            path .. ".sourceValues[" .. tostring(index) .. "]",
+            rewardType
+        )
+    end
+    if requirement.event ~= nil then
+        appendUnknownRewardReference(unknown, primitives, path .. ".event.lootType", requirement.event.lootType)
+    end
+    for index, child in ipairs(requirement.requirements or {}) do
+        appendUnknownRewardReferencesFromRequirement(
+            unknown,
+            primitives,
+            path .. ".requirements[" .. tostring(index) .. "]",
+            child
+        )
     end
 end
 
@@ -559,6 +610,13 @@ function TestRunPlannerRewards.testConditionsBlockRoomHammerAfterShopHammer()
     })
 end
 
+function TestRunPlannerRewards.testRewardSystemExposesSelectedLegalityRules()
+    local rewards = importHarness.loadRewards()
+    lu.assertNotNil(rewards.legalityConditions)
+    lu.assertNotNil(rewards.selectedLegalityRules)
+    lu.assertEquals(ruleByTarget(rewards.selectedLegalityRules, "SpellDrop").requirements[1].kind, "RequiredNotInStore")
+end
+
 function TestRunPlannerRewards.testRewardDomainSeparateRewardStoresSetsAndShopOptionSets()
     local rewardDomain = loadRewardDomain()
 
@@ -656,7 +714,59 @@ function TestRunPlannerRewards.testRewardDeclarationReferencesResolveToPrimitive
         end
     end
 
+    for ruleIndex, rule in ipairs(loadSelectedLegalityRules()) do
+        for index, rewardType in ipairs(rule.targets or {}) do
+            appendUnknownRewardReference(
+                unknown,
+                primitives,
+                "selectedLegalityRules[" .. tostring(ruleIndex) .. "].targets[" .. tostring(index) .. "]",
+                rewardType
+            )
+        end
+        for requirementIndex, requirement in ipairs(rule.requirements or {}) do
+            appendUnknownRewardReferencesFromRequirement(
+                unknown,
+                primitives,
+                "selectedLegalityRules[" .. tostring(ruleIndex) .. "].requirements["
+                    .. tostring(requirementIndex)
+                    .. "]",
+                requirement
+            )
+        end
+    end
+
     lu.assertEquals(unknown, {})
+end
+
+function TestRunPlannerRewards.testSelectedLegalityRulesUseGameLanguageRequirements()
+    local rules = loadSelectedLegalityRules()
+    local hammerRule = ruleByTarget(rules, "WeaponUpgrade")
+    local spellRule = ruleByTarget(rules, "SpellDrop")
+    local devotionRule = ruleByTarget(rules, "Devotion")
+
+    lu.assertNotNil(hammerRule)
+    lu.assertNotNil(spellRule)
+    lu.assertNotNil(devotionRule)
+    lu.assertEquals(spellRule.requirements[1].kind, "RequiredNotInStore")
+    lu.assertEquals(spellRule.requirements[2].kind, "LootTypeHistory")
+
+    local hammerPhase = ruleByRequirementCode(rules, "weapon_upgrade_late_requirement")
+    local foundHammerPhase = false
+    for _, requirement in ipairs(hammerPhase.requirements or {}) do
+        if requirement.code == "weapon_upgrade_late_requirement" then
+            lu.assertEquals(requirement.kind, "Any")
+            lu.assertEquals(requirement.requirements[2].kind, "All")
+            lu.assertEquals(requirement.requirements[2].requirements[2].kind, "EnteredBiomes")
+            foundHammerPhase = true
+        end
+    end
+    lu.assertTrue(foundHammerPhase)
+
+    local devotionSpacing = ruleByRequirementCode(rules, "devotion_spacing")
+    local devotionDepth = ruleByRequirementCode(rules, "devotion_run_encounter_depth")
+    lu.assertEquals(devotionDepth.requirements[4].kind, "RunEncounterDepth")
+    lu.assertEquals(devotionSpacing.requirements[5].kind, "RequiredMinRoomsSinceEvent")
+    lu.assertEquals(devotionSpacing.requirements[5].event.lootType, "Devotion")
 end
 
 function TestRunPlannerRewards.testCatalogNormalizesCuratedRunProgressSurface()

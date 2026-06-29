@@ -46,6 +46,14 @@ function importHarness.loadRewardConditions(godData)
     end)
 end
 
+function importHarness.loadSelectedLegalityRules(godData)
+    return importHarness.withTestImport(function()
+        return importHarness.testImport("mods/rewards/declarations/selected_legality.lua")({
+            godData = godData or importHarness.loadGodData(),
+        })
+    end)
+end
+
 function importHarness.loadRewards(godData, routeRules)
     local loadedGodData = godData or importHarness.loadGodData()
     local loadedRouteRules = routeRules or importHarness.loadRouteRules(loadedGodData)

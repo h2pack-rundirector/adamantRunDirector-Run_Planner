@@ -17,6 +17,12 @@ local function createConditions(godData)
     })
 end
 
+local function createSelectedLegalityRules(godData)
+    return import("mods/rewards/declarations/selected_legality.lua")({
+        godData = godData,
+    })
+end
+
 local function createCatalogSurfaces(routeRules, constraints)
     return import("mods/rewards/declarations/surfaces.lua")({
         routeRules = routeRules,
@@ -36,6 +42,10 @@ function assembly.create(opts)
     if conditions == nil and opts.godData ~= nil then
         conditions = createConditions(opts.godData)
     end
+    local selectedLegalityRules = opts.selectedLegalityRules
+    if selectedLegalityRules == nil and opts.godData ~= nil then
+        selectedLegalityRules = createSelectedLegalityRules(opts.godData)
+    end
 
     local catalogSurfaces = opts.catalogSurfaces
     if catalogSurfaces == nil and opts.routeRules ~= nil then
@@ -46,6 +56,7 @@ function assembly.create(opts)
         catalogSurfaces = catalogSurfaces,
         conditions = conditions,
         rewardDomain = rewardDomain,
+        selectedLegalityRules = selectedLegalityRules,
     }
 end
 

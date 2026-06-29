@@ -108,28 +108,63 @@ local function anyEventInWindow(history, entry, requirement, defaultAxis)
     return false, nil
 end
 
-local function exitCount(row)
-    if row == nil or row.valid == false then
+local function topologyExits(topology)
+    if topology == nil then
+        return nil
+    end
+    if topology.exits ~= nil then
+        return #topology.exits
+    end
+    local count = 0
+    if topology.selected ~= nil then
+        count = count + 1
+    end
+    if topology.sibling ~= nil then
+        count = count + 1
+    end
+    return count > 0 and count or nil
+end
+
+local function generatedExitCount(entry)
+    if entry == nil or entry.valid == false then
         return nil
     end
 
-    local topology = row.roomTopology
+    local topology = entry.topology or entry.roomTopology
     local value = numeric(topology and topology.exitCount)
     if value ~= nil then
         return value
     end
 
-    value = numeric(row.exitCount)
+    value = numeric(entry.exitCount)
     if value ~= nil then
         return value
     end
 
-    value = numeric(row.option and row.option.exitCount)
+    value = numeric(entry.option and entry.option.exitCount)
     if value ~= nil then
         return value
     end
 
-    return row.topology and row.topology.exits and #row.topology.exits or nil
+    return topologyExits(topology)
+end
+
+local function referenceRoomEntry(entry)
+    if entry == nil then
+        return nil
+    end
+    return entry.kind == "loot" and entry.parentEntry or entry
+end
+
+local function previousRoomEntry(history, entry)
+    local reference = referenceRoomEntry(entry)
+    local latest = nil
+    for _, candidate in ipairs(routeHistory.entries(history)) do
+        if candidate.kind == "room" and strictlyBefore(reference, candidate) then
+            latest = latestByRoomHistory(latest, candidate)
+        end
+    end
+    return latest
 end
 
 function query.runDepthCache(entry)
@@ -260,8 +295,12 @@ function query.requiredNotInStore(history, entry, lootType)
     return true, nil
 end
 
-function query.requiredMinExits(row, count)
-    local rowExitCount = exitCount(row)
+function query.previousGeneratedExitCount(history, entry)
+    return generatedExitCount(previousRoomEntry(history, entry))
+end
+
+function query.requiredMinExits(history, entry, count)
+    local rowExitCount = query.previousGeneratedExitCount(history, entry)
     return rowExitCount ~= nil and rowExitCount >= count
 end
 
