@@ -279,6 +279,57 @@ function runtime.create(fields, instance)
         return rewardItems.attach(row)
     end
 
+    function control:selectedRowSnapshot(rowIndex)
+        local slot = self:slot(rowIndex)
+        if slot == nil then
+            return nil
+        end
+
+        local roleKey = fields.Rooms:read(rowIndex, "RoleKey") or ""
+        local optionKey = fields.Rooms:read(rowIndex, "OptionKey") or ""
+        if slot.roleKey ~= nil then
+            roleKey = slot.roleKey
+            local _, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
+            optionKey = selectedRoomKey(slot, option) or optionKey
+        end
+
+        return {
+            rowIndex = rowIndex,
+            roleKey = roleKey,
+            optionKey = optionKey,
+            variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
+            topology = {
+                siblings = {
+                    [1] = {
+                        structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance)) or "",
+                    },
+                },
+            },
+            rewards = {
+                row = {
+                    values = rewardSystem.readRewards(fields.Rewards, rowIndex),
+                    loot = rewardSystem.readRewardLoot(fields.Rewards, rowIndex),
+                    states = rewardSystem.readRewardStates(fields.Rewards, rowIndex),
+                },
+            },
+        }
+    end
+
+    function control:buildSelectedRowsSnapshot()
+        local rows = {}
+        for rowIndex = 1, self:rowCount() do
+            rows[#rows + 1] = self:selectedRowSnapshot(rowIndex)
+        end
+        return {
+            schema = "selectedRows.v1",
+            routeKey = instance.routeKey,
+            controlName = instance.name,
+            biomeKey = instance.biomeKey,
+            adapter = instance.biome.adapter,
+            rows = rows,
+        }
+    end
+
     function control:buildSnapshot()
         local rows = {}
         local invalidRows = {}
@@ -315,6 +366,8 @@ function runtime.create(fields, instance)
     function control:read(path, ...)
         if path == "snapshot" then
             return self:buildSnapshot()
+        elseif path == "selectedRowsSnapshot" then
+            return self:buildSelectedRowsSnapshot()
         elseif path == "row" then
             return self:rowSnapshot(...)
         end
