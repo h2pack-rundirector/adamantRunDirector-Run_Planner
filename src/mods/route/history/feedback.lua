@@ -27,6 +27,9 @@ local function rewardControlAliasForFinding(finding)
 end
 
 local function controlAliasForFinding(finding)
+    if finding.controlAlias ~= nil then
+        return finding.controlAlias
+    end
     if finding.kind == "siblingCandidateInvalid" then
         local siblingIndex = math.floor(tonumber(finding.siblingIndex) or 1)
         if siblingIndex <= 1 then
@@ -45,6 +48,9 @@ local function controlAliasForFinding(finding)
 end
 
 local function valueForFinding(finding)
+    if finding.controlValue ~= nil then
+        return finding.controlValue
+    end
     if finding.kind == "siblingCandidateInvalid" then
         return finding.structureKey
     elseif finding.kind == "roomCandidateInvalid" then
@@ -83,6 +89,15 @@ local function ensureRow(feedbackState, finding)
     return row
 end
 
+local function setInactiveBoundary(feedbackState, finding)
+    local biome = ensureBiome(feedbackState, finding.biomeKey or "")
+    local current = biome.inactiveAfterRowIndex
+    local rowIndex = finding.rowIndex
+    if rowIndex ~= nil and (current == nil or rowIndex < current) then
+        biome.inactiveAfterRowIndex = rowIndex
+    end
+end
+
 local function setValueState(row, controlAlias, value, state)
     if controlAlias == nil or value == nil or value == "" then
         return
@@ -100,13 +115,17 @@ function feedback.fromFindings(findings)
         byBiome = {},
     }
     for _, finding in ipairs(findings or EMPTY_LIST) do
-        local row = ensureRow(feedbackState, finding)
-        setValueState(
-            row,
-            controlAliasForFinding(finding),
-            valueForFinding(finding),
-            stateForFinding(finding)
-        )
+        if finding.kind == "rowInactiveBoundary" then
+            setInactiveBoundary(feedbackState, finding)
+        else
+            local row = ensureRow(feedbackState, finding)
+            setValueState(
+                row,
+                controlAliasForFinding(finding),
+                valueForFinding(finding),
+                stateForFinding(finding)
+            )
+        end
     end
     return feedbackState
 end
@@ -118,6 +137,17 @@ function feedback.valueStatesForControl(feedbackState, biomeKey, rowIndex, contr
         and feedbackState.byBiome[biomeKey][rowIndex]
         or nil
     return row and row.valueStates and row.valueStates[controlAlias] or nil
+end
+
+function feedback.rowInactive(feedbackState, biomeKey, rowIndex)
+    local inactiveAfterRowIndex = feedbackState
+        and feedbackState.byBiome
+        and feedbackState.byBiome[biomeKey]
+        and feedbackState.byBiome[biomeKey].inactiveAfterRowIndex
+        or nil
+    return inactiveAfterRowIndex ~= nil
+        and rowIndex ~= nil
+        and rowIndex > inactiveAfterRowIndex
 end
 
 return feedback

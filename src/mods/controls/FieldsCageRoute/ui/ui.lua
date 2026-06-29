@@ -26,6 +26,7 @@ end
 local rooms = import("mods/controls/FieldsCageRoute/ui/rooms.lua", nil, {
     data = data,
     resetRowDetails = resetRowDetails,
+    valueStateHelpers = deps.valueStateHelpers,
     decorations = deps.decorations,
 })
 local rewards = import("mods/controls/FieldsCageRoute/ui/rewards.lua", nil, {

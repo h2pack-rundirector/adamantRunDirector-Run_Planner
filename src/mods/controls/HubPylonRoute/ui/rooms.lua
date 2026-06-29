@@ -4,6 +4,7 @@ local deps = ...
 local data = deps.data
 local resetRowDetails = deps.resetRowDetails
 local decorations = deps.decorations
+local valueStateHelpers = deps.valueStateHelpers
 
 local rooms = {}
 
@@ -37,7 +38,15 @@ local function getRoleOpts(control, instance, rowIndex)
     end
     local rows = control:routeRows()
     opts.values = data.roleValuesForRow(instance, rows, rowIndex)
-    return decorations.decorateDropdown(opts, opts, data.roleValueStatesForRow(instance, rows, rowIndex))
+    return decorations.decorateDropdown(
+        opts,
+        opts,
+        valueStateHelpers.merge(
+            opts,
+            data.roleValueStatesForRow(instance, rows, rowIndex),
+            valueStateHelpers.history(instance, rowIndex, "RoleKey")
+        )
+    )
 end
 
 local function optionOptsByRole(control, rowIndex)
@@ -87,7 +96,11 @@ local function getOptionOpts(control, instance, rowIndex, roleKey)
     return decorations.decorateDropdown(
         opts,
         opts,
-        data.optionValueStatesForRow(instance, rows, rowIndex, roleKey),
+        valueStateHelpers.merge(
+            opts,
+            data.optionValueStatesForRow(instance, rows, rowIndex, roleKey),
+            valueStateHelpers.history(instance, rowIndex, "OptionKey")
+        ),
         optionDecorateOpts(control, instance, rowIndex, roleKey)
     )
 end

@@ -104,11 +104,19 @@ local function loadRoutePlan()
     local rewardItems = testImport("mods/route/reward_planning/items.lua")
     local semantics = testImport("mods/route/reward_planning/semantics.lua")
     local runState = testImport("mods/logic/run_state.lua")
+    local rewards = importHarness.loadRewards()
+    local historySystem = withTestImport(function()
+        return testImport("mods/route/history/assembly.lua").create({
+            rewardDomain = rewards.rewardDomain,
+            selectedLegalityRules = rewards.selectedLegalityRules,
+        })
+    end)
     return testImport("mods/logic/route_plan.lua", nil, {
         executionPlan = testImport("mods/logic/execution_plan.lua"),
         runState = runState,
         routeContext = testImport("mods/route/run_context.lua", nil, {
             controls = testImport("mods/route/run_context/controls.lua"),
+            historySystem = historySystem,
             targets = loadRouteTargets(timeline, rewardItems, semantics),
             rewards = testImport("mods/route/run_context/rewards.lua", nil, {
                 rewardLegality = loadRewardLegality(),

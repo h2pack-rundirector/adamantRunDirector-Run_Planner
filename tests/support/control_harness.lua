@@ -293,8 +293,16 @@ local function loadRunContext()
     local timeline = testImport("mods/route/timeline.lua")
     local rewardItems = testImport("mods/route/reward_planning/items.lua")
     local semantics = testImport("mods/route/reward_planning/semantics.lua")
+    local rewards = importHarness.loadRewards()
+    local historySystem = withTestImport(function()
+        return testImport("mods/route/history/assembly.lua").create({
+            rewardDomain = rewards.rewardDomain,
+            selectedLegalityRules = rewards.selectedLegalityRules,
+        })
+    end)
     return testImport("mods/route/run_context.lua", nil, {
         controls = testImport("mods/route/run_context/controls.lua"),
+        historySystem = historySystem,
         position = testImport("mods/route/position.lua"),
         targets = loadRouteTargets(timeline, rewardItems, semantics),
         rewards = testImport("mods/route/run_context/rewards.lua", nil, {

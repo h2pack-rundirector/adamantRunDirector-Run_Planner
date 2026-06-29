@@ -56,6 +56,14 @@ return function(deps)
         },
         clockwork = {
             forcedFirstRouteRole = goalCombatRole,
+            progression = {
+                goalRole = goalCombatRole,
+                prebossStructure = "Preboss",
+                requiredGoals = 5,
+                exactlyOneGoalDoorBeforeComplete = true,
+                prebossRequiredAfterComplete = true,
+                singleDoorMustBeGoalBeforeComplete = true,
+            },
             routeCounters = {
                 clockworkGoal = {
                     maxCreationsThisRun = 5,

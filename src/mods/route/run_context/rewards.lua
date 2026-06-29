@@ -118,6 +118,17 @@ local function setControlState(states, value, state)
     return states
 end
 
+local function mergeControlStates(target, overlay)
+    if overlay == nil then
+        return target
+    end
+    target = target or {}
+    for value, state in pairs(overlay) do
+        routeValueStates.set(target, value, state)
+    end
+    return target
+end
+
 local function markerTargetMatches(target, rewardAddress, controlAlias)
     return target.address == rewardAddress and target.controlAlias == controlAlias
 end
@@ -329,6 +340,10 @@ function rewards.create(opts)
             )
         end
         states = applyInvalidMarkerStates(result, biomeKey, rowIndex, rewardAddress, controlAlias, states)
+        states = mergeControlStates(
+            states,
+            context:historyValueStates(routeKey, biomeKey, rowIndex, controlAlias)
+        )
         storeControlValueStates(result, biomeKey, rowIndex, rewardAddress, controlAlias, states)
         return states
     end

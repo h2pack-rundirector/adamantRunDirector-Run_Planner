@@ -301,6 +301,7 @@ local function siblingTopology(context, selectedRow)
         return nil
     end
     return {
+        key = option.key,
         structure = option.structure,
         roomKey = option.roomKey,
         rewardStore = option.rewardStore,

@@ -30,11 +30,13 @@ end
 local rooms = import("mods/controls/ClockworkGoalRoute/ui/rooms.lua", nil, {
     data = data,
     resetRowDetails = resetRowDetails,
+    valueStateHelpers = deps.valueStateHelpers,
     decorations = deps.decorations,
 })
 local rewards = import("mods/controls/ClockworkGoalRoute/ui/rewards.lua", nil, {
     data = data,
     rewards = deps.rewards,
+    valueStateHelpers = deps.valueStateHelpers,
     decorations = deps.decorations,
 })
 local planner = import("mods/controls/ClockworkGoalRoute/ui/planner.lua", nil, {

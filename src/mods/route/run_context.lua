@@ -3,6 +3,7 @@ local routeControls = deps.controls
 local routeTargets = deps.targets
 local routeRewards = deps.rewards
 local routePosition = deps.position
+local historySystem = deps.historySystem
 
 local runContext = {}
 local EMPTY_LIST = {}
@@ -92,6 +93,19 @@ local function routeFeatureTargetsState(context, routeKey)
     return state
 end
 
+local function routeHistoryFeedbackState(context, routeKey)
+    local state = context.historyFeedbackByRoute[routeKey]
+    if state == nil then
+        state = {
+            dirty = true,
+            feedback = nil,
+            result = nil,
+        }
+        context.historyFeedbackByRoute[routeKey] = state
+    end
+    return state
+end
+
 local function controlSnapshot(context, routeKey, biomeKey)
     local snapshots = routeSnapshotCache(context, routeKey)
     if snapshots[biomeKey] ~= nil then
@@ -102,6 +116,11 @@ local function controlSnapshot(context, routeKey, biomeKey)
     local snapshot = control ~= nil and control.read ~= nil and control:read("snapshot") or nil
     snapshots[biomeKey] = snapshot or false
     return snapshot
+end
+
+local function selectedRowsSnapshot(context, routeKey, biomeKey)
+    local control = context:controlForBiome(routeKey, biomeKey)
+    return control ~= nil and control.read ~= nil and control:read("selectedRowsSnapshot") or nil
 end
 
 local function missingControlInvalid(context, routeBiomeIndex, biomeKey)
@@ -294,6 +313,7 @@ function runContext.create(opts)
         npcTargetsByRoute = {},
         featureTargetsByRoute = {},
         rewardLegalityByRoute = {},
+        historyFeedbackByRoute = {},
         godSourceByRoute = {},
         generationByRoute = {},
     }
@@ -335,6 +355,7 @@ function runContext.create(opts)
         clearMap(self.npcTargetsByRoute)
         clearMap(self.featureTargetsByRoute)
         clearMap(self.rewardLegalityByRoute)
+        clearMap(self.historyFeedbackByRoute)
     end
 
     function context:markRoutesForBiome(biomeKey)
@@ -347,6 +368,7 @@ function runContext.create(opts)
                 self.npcTargetsByRoute[routeKey] = nil
                 self.featureTargetsByRoute[routeKey] = nil
                 self.rewardLegalityByRoute[routeKey] = nil
+                self.historyFeedbackByRoute[routeKey] = nil
                 marked = true
             end
         end
@@ -363,6 +385,7 @@ function runContext.create(opts)
             self.npcTargetsByRoute[routeKey] = nil
             self.featureTargetsByRoute[routeKey] = nil
             self.rewardLegalityByRoute[routeKey] = nil
+            self.historyFeedbackByRoute[routeKey] = nil
             return
         end
         if biomeKey ~= nil then
@@ -602,6 +625,55 @@ function runContext.create(opts)
             fields,
             rewardContext
         )
+    end
+
+    function context:historyFeedback(routeKey)
+        local state = routeHistoryFeedbackState(self, routeKey)
+        if state.dirty or state.feedback == nil then
+            local route = self.configuredRoute and self:configuredRoute(routeKey)
+                or self.routes.lookup and self.routes.lookup[routeKey]
+                or nil
+            local result = {
+                valid = true,
+                invalids = {},
+                findings = {},
+            }
+            local feedback
+            if route ~= nil then
+                local history = historySystem.builder.build({
+                    route = route,
+                    biomeLookup = self.biomeLookup,
+                    snapshotForBiome = function(_, biomeKey)
+                        return selectedRowsSnapshot(self, route.key, biomeKey)
+                    end,
+                })
+                result = historySystem.validator.validate({
+                    route = route,
+                    history = history,
+                    biomeLookup = self.biomeLookup,
+                })
+                feedback = historySystem.feedback.fromFindings(result.findings)
+            end
+            state.result = result
+            state.feedback = feedback
+            state.dirty = false
+        end
+        return state.feedback, state.result
+    end
+
+    function context:historyValueStates(routeKey, biomeKey, rowIndex, controlAlias)
+        local feedback = self:historyFeedback(routeKey)
+        return historySystem.feedback.valueStatesForControl(
+            feedback,
+            biomeKey,
+            rowIndex,
+            controlAlias
+        )
+    end
+
+    function context:historyRowInactive(routeKey, biomeKey, rowIndex)
+        local feedback = self:historyFeedback(routeKey)
+        return historySystem.feedback.rowInactive(feedback, biomeKey, rowIndex)
     end
 
     function context:snapshot(routeKey)

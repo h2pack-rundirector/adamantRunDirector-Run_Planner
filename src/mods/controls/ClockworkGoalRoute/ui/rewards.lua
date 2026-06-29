@@ -4,6 +4,7 @@ local deps = ...
 local data = deps.data
 local rewardSystem = deps.rewards
 local decorations = deps.decorations
+local valueStateHelpers = deps.valueStateHelpers
 
 local rewards = {}
 
@@ -85,7 +86,8 @@ local function drawRouteRowSeparator(imgui)
 end
 
 local function shouldRenderRow(control, instance, rows, rowIndex)
-    return not data.isInactiveRouteRow(instance, rows, rowIndex)
+    return not valueStateHelpers.rowInactive(instance, rowIndex)
+        and not data.isInactiveRouteRow(instance, rows, rowIndex)
 end
 
 function rewards.draw(draw, control, instance)

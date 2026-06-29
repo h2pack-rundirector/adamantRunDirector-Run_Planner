@@ -13,6 +13,9 @@ return {
     roomOptionChanges = import("mods/controls/biome_helpers/room_option_changes.lua"),
     roomStructure = roomStructure,
     roomTopology = roomTopology,
+    valueStates = import("mods/controls/biome_helpers/value_states.lua", nil, {
+        valueStates = route.valueStates,
+    }),
     roomTopologyAdapter = import("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
         common = route.common,
         readCache = route.readCache,

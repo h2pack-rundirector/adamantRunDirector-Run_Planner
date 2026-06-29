@@ -56,6 +56,7 @@ function historyAssembly.create(opts)
         adapters = adapters,
     })
     local biomeStructureValidator = import("mods/route/history/validator/biome_structure.lua", nil, {
+        findings = findings,
         history = history,
     })
     local rewardValidator = import("mods/route/history/validator/rewards.lua", nil, {

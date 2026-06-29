@@ -43,6 +43,7 @@ end
 local rooms = import("mods/controls/FixedLinearRoute/ui/rooms.lua", nil, {
     data = data,
     resetRowDetails = resetRowDetails,
+    valueStateHelpers = deps.valueStateHelpers,
     decorations = deps.decorations,
 })
 local rewards = import("mods/controls/FixedLinearRoute/ui/rewards.lua", nil, {

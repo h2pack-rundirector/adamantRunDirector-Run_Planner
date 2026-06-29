@@ -4,6 +4,7 @@ local deps = ...
 local data = deps.data
 local resetRowDetails = deps.resetRowDetails
 local decorations = deps.decorations
+local valueStateHelpers = deps.valueStateHelpers
 
 local rooms = {}
 
@@ -50,7 +51,15 @@ local function getRouteKindOpts(control, instance, rowIndex)
     end
     local rows = control:routeRows()
     opts.values = data.routeKindValuesForRow(instance, rows, rowIndex)
-    return decorations.decorateDropdown(opts, opts, data.routeKindValueStatesForRow(instance, rows, rowIndex))
+    return decorations.decorateDropdown(
+        opts,
+        opts,
+        valueStateHelpers.merge(
+            opts,
+            data.routeKindValueStatesForRow(instance, rows, rowIndex),
+            valueStateHelpers.history(instance, rowIndex, data.routeKindAlias())
+        )
+    )
 end
 
 local function getNonGoalKindOpts(control, instance, rowIndex)
@@ -65,7 +74,11 @@ local function getNonGoalKindOpts(control, instance, rowIndex)
     return decorations.decorateDropdown(
         opts,
         opts,
-        data.nonGoalKindValueStatesForRow(instance, control:routeRows(), rowIndex)
+        valueStateHelpers.merge(
+            opts,
+            data.nonGoalKindValueStatesForRow(instance, control:routeRows(), rowIndex),
+            valueStateHelpers.history(instance, rowIndex, data.nonGoalKindAlias())
+        )
     )
 end
 
@@ -90,7 +103,15 @@ local function getOptionOpts(control, instance, rowIndex, roleKey)
     end
     local rows = control:routeRows()
     opts.values = data.optionValuesForRow(instance, rows, rowIndex, roleKey)
-    return decorations.decorateDropdown(opts, opts, data.optionValueStatesForRow(instance, rows, rowIndex, roleKey))
+    return decorations.decorateDropdown(
+        opts,
+        opts,
+        valueStateHelpers.merge(
+            opts,
+            data.optionValueStatesForRow(instance, rows, rowIndex, roleKey),
+            valueStateHelpers.history(instance, rowIndex, data.optionAlias())
+        )
+    )
 end
 
 local function siblingStructureOpts(control, instance, rowIndex, siblingIndex)
@@ -112,7 +133,15 @@ local function siblingStructureOpts(control, instance, rowIndex, siblingIndex)
     return decorations.decorateDropdown(
         opts,
         opts,
-        data.siblingStructureValueStatesForRow(instance, control:routeRows(), rowIndex, siblingIndex)
+        valueStateHelpers.merge(
+            opts,
+            data.siblingStructureValueStatesForRow(instance, control:routeRows(), rowIndex, siblingIndex),
+            valueStateHelpers.history(
+                instance,
+                rowIndex,
+                data.siblingStructureAlias(instance, siblingIndex)
+            )
+        )
     )
 end
 
@@ -305,6 +334,7 @@ end
 
 local function shouldRenderRow(control, instance, rows, rowIndex)
     return isRoomTabRow(control, rowIndex)
+        and not valueStateHelpers.rowInactive(instance, rowIndex)
         and not data.isInactiveRouteRow(instance, rows, rowIndex)
 end
 

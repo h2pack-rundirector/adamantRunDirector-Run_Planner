@@ -49,4 +49,8 @@ function findings.rewardCandidateInvalid(entry, candidate, rewardType, reason, f
     }, fields))
 end
 
+function findings.rowInactiveBoundary(entry, reason, fields)
+    return base("rowInactiveBoundary", entry, reason, fields)
+end
+
 return findings

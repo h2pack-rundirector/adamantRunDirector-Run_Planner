@@ -50,6 +50,7 @@ end
 local rooms = import("mods/controls/HubPylonRoute/ui/rooms.lua", nil, {
     data = data,
     resetRowDetails = resetRowDetails,
+    valueStateHelpers = deps.valueStateHelpers,
     decorations = deps.decorations,
 })
 local rewards = import("mods/controls/HubPylonRoute/ui/rewards.lua", nil, {

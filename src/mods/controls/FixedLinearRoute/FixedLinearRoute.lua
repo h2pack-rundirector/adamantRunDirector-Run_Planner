@@ -24,6 +24,7 @@ local ui = import("mods/controls/FixedLinearRoute/ui/ui.lua", nil, {
     runtime = runtime,
     rewardRatio = biomeHelpers.rewardRatio,
     roomOptionChanges = biomeHelpers.roomOptionChanges,
+    valueStateHelpers = biomeHelpers.valueStates,
     decorations = deps.decorations,
 })
 

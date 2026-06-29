@@ -79,6 +79,10 @@ function routeFactory.create(opts)
         controlRequirements = controlRequirements,
         query = routeQuery,
     })
+    local historySystem = import("mods/route/history/assembly.lua").create({
+        rewardDomain = rewards.rewardDomain,
+        selectedLegalityRules = rewards.selectedLegalityRules,
+    })
     local targetMarkers = import("mods/route/target_markers.lua", nil, {
         markers = routeMarkers,
         valueStates = rows.valueStates,
@@ -104,9 +108,11 @@ function routeFactory.create(opts)
         rewardItems = planning.rewardItems,
         rewardSemantics = planning.rewardSemantics,
         rewardLegality = planning.rewardLegality,
+        historySystem = historySystem,
     }
     route.runContext = import("mods/route/run_context.lua", nil, {
         controls = import("mods/route/run_context/controls.lua"),
+        historySystem = historySystem,
         position = routePosition,
         targets = createRouteTargets(routeTimeline, planning),
         rewards = import("mods/route/run_context/rewards.lua", nil, {
