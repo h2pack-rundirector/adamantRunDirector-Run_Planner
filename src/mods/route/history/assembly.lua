@@ -15,8 +15,30 @@ function historyAssembly.create(opts)
     })
     local findings = import("mods/route/history/findings.lua")
     local valueStates = import("mods/route/value_states.lua")
-    local feedback = import("mods/route/history/feedback.lua", nil, {
+    local feedbackCommon = import("mods/route/history/feedback/common.lua", nil, {
         valueStates = valueStates,
+    })
+    local feedbackAdapters = {
+        clockworkGoal = import("mods/route/history/feedback/clockwork_goal.lua", nil, {
+            common = feedbackCommon,
+        }),
+        fieldsCageRoute = import("mods/route/history/feedback/fields_cage.lua", nil, {
+            common = feedbackCommon,
+        }),
+        fixedLinear = import("mods/route/history/feedback/fixed_linear.lua", nil, {
+            common = feedbackCommon,
+        }),
+        hubPylon = import("mods/route/history/feedback/hub_pylon.lua", nil, {
+            common = feedbackCommon,
+        }),
+        multiEncounterFixed = import("mods/route/history/feedback/multi_encounter_fixed.lua", nil, {
+            common = feedbackCommon,
+        }),
+    }
+    local routeFeedback = import("mods/route/history/feedback/route.lua")
+    local feedback = import("mods/route/history/feedback.lua", nil, {
+        adapters = feedbackAdapters,
+        routeFeedback = routeFeedback,
     })
     local rewardCandidates = import("mods/route/history/candidates/rewards.lua", nil, {
         rewardDomain = opts.rewardDomain,
@@ -80,6 +102,7 @@ function historyAssembly.create(opts)
         adapters = adapters,
         events = events,
         feedback = feedback,
+        feedbackAdapters = feedbackAdapters,
         findings = findings,
         history = history,
         loot = loot,

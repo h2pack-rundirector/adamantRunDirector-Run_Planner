@@ -36,6 +36,13 @@ local function invalidAt(entry, code, message, fields)
 end
 
 local function invalidWithFindings(entry, code, message, findingList, fields)
+    if findingList ~= nil
+        and findingList[1] ~= nil
+        and (fields == nil or fields.targetFinding == nil)
+    then
+        fields = fields or {}
+        fields.targetFinding = findingList[1]
+    end
     local invalid = invalidAt(entry, code, message, fields)
     return invalid, findingList
 end
@@ -313,8 +320,8 @@ local function routeKindFinding(entry, value, reason, message)
         optionKey = entry and entry.optionKey or nil,
         roomKey = entry and entry.roomKey or nil,
     }, reason, {
-        controlAlias = "RouteKindKey",
-        controlValue = value,
+        clockworkControl = "routeKind",
+        clockworkValue = value,
         message = message,
     })
 end
@@ -325,8 +332,8 @@ local function nonGoalKindFinding(entry, value, reason, message)
         optionKey = entry and entry.optionKey or nil,
         roomKey = entry and entry.roomKey or nil,
     }, reason, {
-        controlAlias = "NonGoalKindKey",
-        controlValue = value,
+        clockworkControl = "nonGoalKind",
+        clockworkValue = value,
         message = message,
     })
 end

@@ -44,6 +44,17 @@ local function loadRouteStatus()
 end
 
 local function fakeHistorySystem(result)
+    local function fakeRouteFeedback()
+        local primary = result and result.invalids and result.invalids[1] or nil
+        return {
+            route = {
+                valid = primary == nil,
+                primary = primary,
+                related = {},
+                markers = primary ~= nil and { primary } or {},
+            },
+        }
+    end
     return {
         builder = {
             build = function()
@@ -56,8 +67,11 @@ local function fakeHistorySystem(result)
             end,
         },
         feedback = {
+            fromResult = function()
+                return fakeRouteFeedback()
+            end,
             fromFindings = function()
-                return {}
+                return fakeRouteFeedback()
             end,
             valueStatesForControl = function()
                 return nil
@@ -173,7 +187,22 @@ local function validRouteSnapshot(controlName)
         controlName = controlName,
         valid = true,
         invalidRows = {},
+        routeFeedback = {
+            valid = true,
+            related = {},
+            markers = {},
+        },
         rows = {},
+    }
+end
+
+local function invalidRouteFeedback(markers, related)
+    markers = markers or {}
+    return {
+        valid = false,
+        primary = markers[1],
+        related = related or {},
+        markers = markers,
     }
 end
 
@@ -197,15 +226,16 @@ function TestRunPlannerRouteUi.testRouteStatusDrawsFirstInvalidMessage()
         },
     }
 
+    local invalid = {
+        locationLabel = "Oceanus Depth 5 Rewards",
+        message = "Trial requires 15 rooms since the previous Trial",
+    }
     routeStatus.drawRouteStatus(draw, {
         label = "Underworld",
         valid = false,
-        invalidRows = {
-            {
-                locationLabel = "Oceanus Depth 5 Rewards",
-                message = "Trial requires 15 rooms since the previous Trial",
-            },
-        },
+        routeFeedback = invalidRouteFeedback({
+            invalid,
+        }),
     })
 
     lu.assertEquals(rendered, {
@@ -236,21 +266,20 @@ function TestRunPlannerRouteUi.testRouteStatusDrawsRelatedConflictParticipants()
         },
     }
 
+    local primary = {
+        markerKind = "primary",
+        locationLabel = "Erebus Depth 8 Rewards",
+        message = "Hammer limit reached",
+    }
+    local related = {
+        markerKind = "related",
+        locationLabel = "Erebus Depth 2 Rewards",
+        message = "Hammer limit reached",
+    }
     routeStatus.drawRouteStatus(draw, {
         label = "Underworld",
         valid = false,
-        invalidRows = {
-            {
-                markerKind = "primary",
-                locationLabel = "Erebus Depth 8 Rewards",
-                message = "Hammer limit reached",
-            },
-            {
-                markerKind = "related",
-                locationLabel = "Erebus Depth 2 Rewards",
-                message = "Hammer limit reached",
-            },
-        },
+        routeFeedback = invalidRouteFeedback({ primary, related }, { related }),
     })
 
     lu.assertEquals(rendered, {
@@ -317,7 +346,7 @@ function TestRunPlannerRouteUi.testDecorationsNavInvalidScansAllRowsAndPrefersCo
     local decorations = loadDecorations()
     local snapshot = {
         valid = false,
-        invalidRows = {
+        routeFeedback = invalidRouteFeedback({
             {
                 controlName = "RouteGlobalUnderworld",
                 biomeKey = "F",
@@ -328,7 +357,7 @@ function TestRunPlannerRouteUi.testDecorationsNavInvalidScansAllRowsAndPrefersCo
                 biomeKey = "F",
                 message = "Biome conflict",
             },
-        },
+        }),
     }
 
     lu.assertTrue(decorations.navTabInvalid(snapshot, {
@@ -615,15 +644,14 @@ function TestRunPlannerRouteUi.testDecorationsGreyPlannerTabsAfterFirstInvalidTa
         biomeKey = "F",
         routeContext = {
             overview = function()
+                local invalid = {
+                    controlName = "RouteF",
+                    biomeKey = "F",
+                    rowIndex = 2,
+                    message = "Room invalid",
+                }
                 return {
-                    invalidRows = {
-                        {
-                            controlName = "RouteF",
-                            biomeKey = "F",
-                            rowIndex = 2,
-                            message = "Room invalid",
-                        },
-                    },
+                    routeFeedback = invalidRouteFeedback({ invalid }),
                 }
             end,
             blockingHorizon = function()
@@ -770,7 +798,7 @@ function TestRunPlannerRouteUi.testRouteUiColorsInvalidRouteAndRegionTabs()
             return {
                 routeKey = routeKey,
                 valid = false,
-                invalidRows = { firstInvalid, secondInvalid },
+                routeFeedback = invalidRouteFeedback({ firstInvalid, secondInvalid }),
             }
         end,
         isLayerConfigured = function()
@@ -862,22 +890,21 @@ function TestRunPlannerRouteUi.testDecorationsClassifyAllPlannerInvalids()
         biomeKey = "N",
         routeContext = {
             overview = function()
+                local firstInvalid = {
+                    controlName = "RouteN",
+                    biomeKey = "N",
+                    address = "row",
+                    rewardType = "TalentDrop",
+                }
+                local secondInvalid = {
+                    controlName = "RouteN",
+                    biomeKey = "N",
+                    address = "side:1",
+                    rewardType = "MinorTalentDrop",
+                }
                 return {
                     valid = false,
-                    invalidRows = {
-                        {
-                            controlName = "RouteN",
-                            biomeKey = "N",
-                            address = "row",
-                            rewardType = "TalentDrop",
-                        },
-                        {
-                            controlName = "RouteN",
-                            biomeKey = "N",
-                            address = "side:1",
-                            rewardType = "MinorTalentDrop",
-                        },
-                    },
+                    routeFeedback = invalidRouteFeedback({ firstInvalid, secondInvalid }),
                 }
             end,
         },

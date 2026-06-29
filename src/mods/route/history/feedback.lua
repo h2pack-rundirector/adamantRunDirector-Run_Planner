@@ -1,153 +1,98 @@
 local deps = ... or {}
 
-local valueStates = deps.valueStates
+local feedbackAdapters = deps.adapters or {}
+local routeFeedback = deps.routeFeedback
 
 local feedback = {}
 
 local EMPTY_LIST = {}
 
-local function rewardAliasForCageAddress(address)
-    local index = type(address) == "string" and string.match(address, "^cage:(%d+)$") or nil
-    if index == nil then
-        return nil
-    end
-    return "Reward" .. tostring(math.floor(tonumber(index) or 1)) .. "Key"
-end
-
-local function rewardControlAliasForFinding(finding)
-    local cageAlias = rewardAliasForCageAddress(finding.address)
-    if cageAlias ~= nil then
-        return cageAlias
-    elseif finding.rewardClass == "Major" then
-        return "Reward2Key"
-    elseif finding.rewardClass == "Minor" then
-        return "Reward4Key"
-    end
-    return "Reward1Key"
-end
-
-local function controlAliasForFinding(finding)
-    if finding.controlAlias ~= nil then
-        return finding.controlAlias
-    end
-    if finding.kind == "siblingCandidateInvalid" then
-        local siblingIndex = math.floor(tonumber(finding.siblingIndex) or 1)
-        if siblingIndex <= 1 then
-            return "SiblingStructureKey"
+local function recordsByBiome(args)
+    local findings = args.findings
+    local invalids = args.invalids
+    local grouped = {}
+    local function append(record)
+        local biomeKey = record and record.biomeKey or ""
+        local records = grouped[biomeKey]
+        if records == nil then
+            records = {}
+            grouped[biomeKey] = records
         end
-        return "SiblingStructure" .. tostring(siblingIndex) .. "Key"
-    elseif finding.kind == "roomCandidateInvalid" then
-        if finding.optionKey ~= nil and finding.optionKey ~= "" then
-            return "OptionKey"
+        records[#records + 1] = record
+    end
+    for _, record in ipairs(findings or EMPTY_LIST) do
+        append(record)
+    end
+    for _, record in ipairs(invalids or EMPTY_LIST) do
+        append(record)
+        for _, related in ipairs(record.relatedEvents or EMPTY_LIST) do
+            append(routeFeedback.marker(args, related, {
+                markerKind = "related",
+                message = related.message or record.message,
+                code = related.code or record.code,
+            }))
         end
-        return "RoleKey"
-    elseif finding.kind == "rewardCandidateInvalid" then
-        return rewardControlAliasForFinding(finding)
     end
-    return nil
+    return grouped
 end
 
-local function valueForFinding(finding)
-    if finding.controlValue ~= nil then
-        return finding.controlValue
-    end
-    if finding.kind == "siblingCandidateInvalid" then
-        return finding.structureKey
-    elseif finding.kind == "roomCandidateInvalid" then
-        return finding.optionKey ~= nil and finding.optionKey ~= ""
-            and finding.optionKey
-            or finding.roleKey
-    elseif finding.kind == "rewardCandidateInvalid" then
-        return finding.rewardType
-    end
-    return nil
+local function adapterFor(args, biomeKey)
+    local biome = args and args.biomeLookup and args.biomeLookup[biomeKey] or nil
+    return biome and feedbackAdapters[biome.adapter] or feedbackAdapters.fixedLinear
 end
 
-local function stateForFinding(finding)
-    return valueStates.forFailureCode(finding.reason)
-end
-
-local function ensureBiome(feedbackState, biomeKey)
-    local byBiome = feedbackState.byBiome
-    local biome = byBiome[biomeKey]
-    if biome == nil then
-        biome = {}
-        byBiome[biomeKey] = biome
-    end
-    return biome
-end
-
-local function ensureRow(feedbackState, finding)
-    local biome = ensureBiome(feedbackState, finding.biomeKey or "")
-    local row = biome[finding.rowIndex or 0]
-    if row == nil then
-        row = {
-            valueStates = {},
-        }
-        biome[finding.rowIndex or 0] = row
-    end
-    return row
-end
-
-local function setInactiveBoundary(feedbackState, finding)
-    local biome = ensureBiome(feedbackState, finding.biomeKey or "")
-    local current = biome.inactiveAfterRowIndex
-    local rowIndex = finding.rowIndex
-    if rowIndex ~= nil and (current == nil or rowIndex < current) then
-        biome.inactiveAfterRowIndex = rowIndex
+local function translate(args, feedbackState)
+    local grouped = recordsByBiome(args)
+    for biomeKey, records in pairs(grouped) do
+        local adapter = adapterFor(args, biomeKey)
+        if adapter ~= nil then
+            adapter.translate(feedbackState, records)
+        end
     end
 end
 
-local function setValueState(row, controlAlias, value, state)
-    if controlAlias == nil or value == nil or value == "" then
-        return
-    end
-    local control = row.valueStates[controlAlias]
-    if control == nil then
-        control = {}
-        row.valueStates[controlAlias] = control
-    end
-    valueStates.set(control, value, state)
-end
-
-function feedback.fromFindings(findings)
+function feedback.fromResult(args)
     local feedbackState = {
+        route = routeFeedback.fromResult(args or {}),
         byBiome = {},
     }
-    for _, finding in ipairs(findings or EMPTY_LIST) do
-        if finding.kind == "rowInactiveBoundary" then
-            setInactiveBoundary(feedbackState, finding)
-        else
-            local row = ensureRow(feedbackState, finding)
-            setValueState(
-                row,
-                controlAliasForFinding(finding),
-                valueForFinding(finding),
-                stateForFinding(finding)
-            )
-        end
-    end
+    translate(args or {}, feedbackState)
     return feedbackState
 end
 
-function feedback.valueStatesForControl(feedbackState, biomeKey, rowIndex, controlAlias)
-    local row = feedbackState
-        and feedbackState.byBiome
-        and feedbackState.byBiome[biomeKey]
-        and feedbackState.byBiome[biomeKey][rowIndex]
-        or nil
+function feedback.fromFindings(findings, invalids)
+    return feedback.fromResult({
+        findings = findings,
+        invalids = invalids,
+    })
+end
+
+function feedback.forBiome(feedbackState, biomeKey)
+    return feedbackState and feedbackState.byBiome and feedbackState.byBiome[biomeKey] or nil
+end
+
+function feedback.valueStatesForBiomeRow(biomeFeedback, rowIndex, controlAlias)
+    local row = biomeFeedback and biomeFeedback[rowIndex] or nil
     return row and row.valueStates and row.valueStates[controlAlias] or nil
 end
 
-function feedback.rowInactive(feedbackState, biomeKey, rowIndex)
-    local inactiveAfterRowIndex = feedbackState
-        and feedbackState.byBiome
-        and feedbackState.byBiome[biomeKey]
-        and feedbackState.byBiome[biomeKey].inactiveAfterRowIndex
-        or nil
-    return inactiveAfterRowIndex ~= nil
+function feedback.biomeRowInactive(biomeFeedback, rowIndex)
+    return biomeFeedback ~= nil
+        and biomeFeedback.inactiveAfterRowIndex ~= nil
         and rowIndex ~= nil
-        and rowIndex > inactiveAfterRowIndex
+        and rowIndex > biomeFeedback.inactiveAfterRowIndex
+end
+
+function feedback.valueStatesForControl(feedbackState, biomeKey, rowIndex, controlAlias)
+    return feedback.valueStatesForBiomeRow(
+        feedback.forBiome(feedbackState, biomeKey),
+        rowIndex,
+        controlAlias
+    )
+end
+
+function feedback.rowInactive(feedbackState, biomeKey, rowIndex)
+    return feedback.biomeRowInactive(feedback.forBiome(feedbackState, biomeKey), rowIndex)
 end
 
 return feedback

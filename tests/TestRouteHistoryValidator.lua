@@ -130,6 +130,10 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateConcre
     lu.assertEquals(result.invalids[1].code, "option_limit")
     lu.assertEquals(result.invalids[1].biomeKey, "F")
     lu.assertEquals(result.invalids[1].roomKey, "F_Combat02")
+
+    local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
+    local states = historyFeedback.valueStatesForControl(feedback, "F", 3, "OptionKey")
+    lu.assertEquals(states.F_Combat02, valueStates.INVALID)
 end
 
 function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRoomFindings()
@@ -341,6 +345,7 @@ function TestRunPlannerRouteHistoryValidator.testClockworkRejectsPrebossBeforeGo
 
     lu.assertFalse(result.valid)
     lu.assertEquals(result.invalids[1].code, "clockwork_preboss_too_early")
+    lu.assertEquals(result.invalids[1].targetFinding.structureKey, "Preboss")
 
     local finding = firstFinding(result, "siblingCandidateInvalid", "structureKey", "Preboss")
     lu.assertNotNil(finding)
@@ -377,6 +382,42 @@ function TestRunPlannerRouteHistoryValidator.testClockworkRejectsGeneratedDoorsW
     local finding = firstFinding(result, "siblingCandidateInvalid", "structureKey", "CombatReward")
     lu.assertNotNil(finding)
     lu.assertEquals(finding.reason, "clockwork_goal_door_count")
+end
+
+function TestRunPlannerRouteHistoryValidator.testClockworkFeedbackMapsNonGoalKindFinding()
+    local route = {
+        key = "Underworld",
+        biomes = { "I" },
+    }
+    local history, catalog = buildHistory(route, "I", h.loadClockworkGoalTemplate(), {
+        {},
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat02",
+        },
+        {
+            RouteKindKey = "NonGoal",
+            NonGoalKindKey = "Story",
+            OptionKey = "I_Story01",
+        },
+    })
+    local result = historyValidator.validate({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "clockwork_single_door_goal_required")
+
+    local feedback = historyFeedback.fromResult({
+        route = route,
+        biomeLookup = catalog.lookup,
+        findings = result.findings,
+        invalids = result.invalids,
+    })
+    local states = historyFeedback.valueStatesForControl(feedback, "I", 3, "NonGoalKindKey")
+    lu.assertEquals(states.Story, valueStates.INVALID)
 end
 
 function TestRunPlannerRouteHistoryValidator.testClockworkRequiresPrebossAfterGoalsComplete()
@@ -481,6 +522,10 @@ function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsTalentBef
     lu.assertEquals(result.invalids[1].code, "talent_requires_spell")
     lu.assertEquals(result.invalids[1].rewardType, "TalentDrop")
     lu.assertEquals(result.invalids[1].roomKey, "Room1")
+
+    local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
+    local states = historyFeedback.valueStatesForControl(feedback, "F", 1, "Reward1Key")
+    lu.assertEquals(states.TalentDrop, valueStates.INVALID)
 end
 
 function TestRunPlannerRouteHistoryValidator.testRewardValidatorTreatsFieldsCageAsSameBatch()
@@ -506,6 +551,10 @@ function TestRunPlannerRouteHistoryValidator.testRewardValidatorTreatsFieldsCage
     lu.assertEquals(result.invalids[1].code, "talent_requires_spell")
     lu.assertEquals(result.invalids[1].rewardType, "TalentBigDrop")
     lu.assertEquals(result.invalids[1].address, "cage:2")
+
+    local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
+    local states = historyFeedback.valueStatesForControl(feedback, "H", 1, "Reward2Key")
+    lu.assertEquals(states.TalentBigDrop, valueStates.INVALID)
 end
 
 function TestRunPlannerRouteHistoryValidator.testRewardValidatorAcceptsTalentAfterPriorSpell()
@@ -610,4 +659,19 @@ function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsDevotionS
     lu.assertFalse(result.valid)
     lu.assertEquals(result.invalids[1].code, "devotion_spacing")
     lu.assertEquals(result.invalids[1].relatedEvents[1].lootType, "Devotion")
+
+    local feedback = historyFeedback.fromResult({
+        route = {
+            key = "Underworld",
+            biomes = { "F", "G" },
+        },
+        findings = result.findings,
+        invalids = result.invalids,
+    })
+    lu.assertFalse(feedback.route.valid)
+    lu.assertEquals(feedback.route.primary.code, "devotion_spacing")
+    lu.assertEquals(feedback.route.primary.markerKind, "primary")
+    lu.assertEquals(feedback.route.related[1].lootType, "Devotion")
+    lu.assertEquals(feedback.route.related[1].markerKind, "related")
+    lu.assertEquals(#feedback.route.markers, 2)
 end

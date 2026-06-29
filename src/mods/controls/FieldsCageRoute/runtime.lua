@@ -106,6 +106,11 @@ function runtime.create(fields, instance)
         instance.routeKey = routeKey
     end
 
+    function control:applyRouteFeedback(feedback, generation)
+        instance.routeFeedback = feedback
+        instance.routeFeedbackGeneration = generation
+    end
+
     function control:godSource()
         if instance.routeContext ~= nil and instance.routeContext.godSourceForRoute ~= nil then
             return instance.routeContext:godSourceForRoute(instance.routeKey)

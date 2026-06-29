@@ -3,6 +3,7 @@ local deps = ... or {}
 local decorations = deps.decorations
 
 local ROUTE_MESSAGE_COLUMN_X = 165
+local EMPTY_LIST = {}
 
 local function invalidText(invalid)
     local message = invalid and (invalid.message or invalid.code) or nil
@@ -23,9 +24,8 @@ local function relatedInvalidText(invalid)
     return "Conflicts with " .. text
 end
 
-local function firstInvalid(routeSnapshot)
-    local invalidRows = routeSnapshot and routeSnapshot.invalidRows or nil
-    return invalidRows, invalidRows and invalidRows[1] or nil
+local function feedbackForRoute(routeSnapshot)
+    return routeSnapshot and routeSnapshot.routeFeedback or nil
 end
 
 local function drawMessageLine(imgui, color, message, firstLine)
@@ -40,9 +40,10 @@ function routeStatus.drawRouteStatus(draw, routeSnapshot)
     local label = tostring((routeSnapshot and routeSnapshot.label) or (routeSnapshot and routeSnapshot.routeKey) or "Route")
     local valid = routeSnapshot ~= nil and routeSnapshot.valid
     local incomplete = routeSnapshot ~= nil and routeSnapshot.incomplete == true
-    local invalidRows, primaryInvalid
+    local feedback, primaryInvalid
     if not valid and not incomplete then
-        invalidRows, primaryInvalid = firstInvalid(routeSnapshot)
+        feedback = feedbackForRoute(routeSnapshot)
+        primaryInvalid = feedback and feedback.primary or nil
     end
     local primaryMessage = incomplete and routeSnapshot.incompleteMessage or invalidText(primaryInvalid)
     local status = valid and "Valid" or (incomplete and "Incomplete" or "Invalid")
@@ -60,11 +61,7 @@ function routeStatus.drawRouteStatus(draw, routeSnapshot)
     if incomplete then
         return
     end
-    for index = 2, #invalidRows do
-        local related = invalidRows[index]
-        if related.markerKind ~= "related" then
-            break
-        end
+    for _, related in ipairs((feedback and feedback.related) or EMPTY_LIST) do
         local relatedMessage = relatedInvalidText(related)
         if relatedMessage ~= nil then
             drawMessageLine(imgui, invalidColor, relatedMessage, false)

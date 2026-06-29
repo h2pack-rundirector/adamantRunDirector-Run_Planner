@@ -26,8 +26,13 @@ local function popTextColor(imgui)
     imgui.PopStyleColor()
 end
 
-local function invalidRows(routeSnapshot)
-    return routeSnapshot and routeSnapshot.invalidRows or EMPTY_LIST
+local function routeFeedback(routeSnapshot)
+    return routeSnapshot and routeSnapshot.routeFeedback or nil
+end
+
+local function routeMarkers(routeSnapshot)
+    local feedback = routeFeedback(routeSnapshot)
+    return feedback and feedback.markers or EMPTY_LIST
 end
 
 local function invalidMatchesControl(invalid, controlName, biomeKey)
@@ -273,7 +278,7 @@ function decorations.plannerTabInvalid(control, tabKey, instance)
     local routeSnapshot = instance.routeContext:overview(instance.routeKey)
     local controlName = control:name()
     local biomeKey = instance.biomeKey
-    for _, invalid in ipairs(invalidRows(routeSnapshot)) do
+    for _, invalid in ipairs(routeMarkers(routeSnapshot)) do
         if invalidMatchesPlannerTab(invalid, controlName, biomeKey, tabKey) then
             return true
         end
@@ -305,11 +310,12 @@ function decorations.plannerTabInactive(control, tabKey, instance)
 end
 
 function decorations.routeTabInvalid(routeSnapshot)
-    return invalidRows(routeSnapshot)[1] ~= nil
+    local feedback = routeFeedback(routeSnapshot)
+    return feedback ~= nil and feedback.primary ~= nil
 end
 
 function decorations.navTabInvalid(routeSnapshot, tab)
-    for _, invalid in ipairs(invalidRows(routeSnapshot)) do
+    for _, invalid in ipairs(routeMarkers(routeSnapshot)) do
         if invalidMatchesNavTab(invalid, tab) then
             return true
         end

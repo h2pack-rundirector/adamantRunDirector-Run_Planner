@@ -3,7 +3,24 @@ local routeValueStates = deps.valueStates
 
 local valueStateHelpers = {}
 
+local function appliedFeedback(instance)
+    local routeContext = instance.routeContext
+    if routeContext == nil or routeContext.routeGeneration == nil then
+        return nil
+    end
+    if instance.routeFeedbackGeneration ~= routeContext:routeGeneration(instance.routeKey) then
+        return nil
+    end
+    return instance.routeFeedback
+end
+
 function valueStateHelpers.history(instance, rowIndex, controlAlias)
+    local feedback = appliedFeedback(instance)
+    if feedback ~= nil then
+        local row = feedback[rowIndex]
+        return row and row.valueStates and row.valueStates[controlAlias] or nil
+    end
+
     local routeContext = instance.routeContext
     if routeContext == nil or routeContext.historyValueStates == nil then
         return nil
@@ -17,6 +34,13 @@ function valueStateHelpers.history(instance, rowIndex, controlAlias)
 end
 
 function valueStateHelpers.rowInactive(instance, rowIndex)
+    local feedback = appliedFeedback(instance)
+    if feedback ~= nil then
+        return feedback.inactiveAfterRowIndex ~= nil
+            and rowIndex ~= nil
+            and rowIndex > feedback.inactiveAfterRowIndex
+    end
+
     local routeContext = instance.routeContext
     if routeContext == nil or routeContext.historyRowInactive == nil then
         return false

@@ -27,12 +27,6 @@ local function copyInvalidRow(invalidRow, extras)
     return copied
 end
 
-local function appendInvalidRow(invalidRows, invalidRow, extras)
-    local copied = copyInvalidRow(invalidRow, extras)
-    invalidRows[#invalidRows + 1] = copied
-    return copied
-end
-
 local function routeSnapshotCache(context, routeKey)
     local snapshots = context.snapshotByRoute[routeKey]
     if snapshots == nil then
@@ -69,6 +63,22 @@ local function routeHistoryFeedbackState(context, routeKey)
         context.historyFeedbackByRoute[routeKey] = state
     end
     return state
+end
+
+local function applyRouteFeedback(context, route, feedback)
+    local generation = context:routeGeneration(route.key)
+    for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
+        if routeBiomeIndex > context:configuredBiomeCount(route.key) then
+            break
+        end
+        local control = context:controlForBiome(route.key, biomeKey)
+        if control ~= nil and control.applyRouteFeedback ~= nil then
+            control:applyRouteFeedback(
+                historySystem.feedback.forBiome(feedback, biomeKey),
+                generation
+            )
+        end
+    end
 end
 
 local function controlSnapshot(context, routeKey, biomeKey)
@@ -118,38 +128,6 @@ local function firstCompletionInvalid(routeBiomeIndex, biomeKey, snapshot)
         routeBiomeIndex = routeBiomeIndex,
         controlName = snapshot.controlName or routeControlName(biomeKey),
     })
-end
-
-local function invalidLocationLabel(context, invalid)
-    if invalid == nil then
-        return nil
-    end
-    local label = biomeLabel(context, invalid.biomeKey)
-    if invalid.rowIndex ~= nil then
-        return label .. " Row " .. tostring(invalid.rowIndex)
-    end
-    return label
-end
-
-local function appendHistoryInvalidRows(context, invalidRows, invalids)
-    for index, invalid in ipairs(invalids or EMPTY_LIST) do
-        appendInvalidRow(invalidRows, invalid, {
-            layer = "route",
-            markerKind = index == 1 and "primary" or invalid.markerKind,
-            locationLabel = invalid.locationLabel or invalidLocationLabel(context, invalid),
-        })
-        if index == 1 then
-            for _, related in ipairs(invalid.relatedEvents or EMPTY_LIST) do
-                appendInvalidRow(invalidRows, related, {
-                    layer = "route",
-                    markerKind = "related",
-                    locationLabel = related.locationLabel or invalidLocationLabel(context, related),
-                    message = related.message or invalid.message,
-                    code = related.code or invalid.code,
-                })
-            end
-        end
-    end
 end
 
 local function routeBiomeCount(route)
@@ -476,7 +454,13 @@ function runContext.create(opts)
                     history = history,
                     biomeLookup = self.biomeLookup,
                 })
-                feedback = historySystem.feedback.fromFindings(result.findings)
+                feedback = historySystem.feedback.fromResult({
+                    route = route,
+                    biomeLookup = self.biomeLookup,
+                    findings = result.findings,
+                    invalids = result.invalids,
+                })
+                applyRouteFeedback(self, route, feedback)
             end
             state.result = result
             state.feedback = feedback
@@ -514,11 +498,18 @@ function runContext.create(opts)
         }
         if route == nil then
             local invalid = { code = "unknown_route", message = "Unknown route: " .. tostring(routeKey) }
+            local routeFeedback = {
+                valid = false,
+                primary = invalid,
+                related = {},
+                markers = { invalid },
+            }
             return {
                 routeKey = routeKey,
                 valid = false,
                 disabled = true,
                 invalidRows = { invalid },
+                routeFeedback = routeFeedback,
                 blockingHorizon = {
                     layer = "route",
                     routeKey = routeKey,
@@ -549,16 +540,38 @@ function runContext.create(opts)
         end
         self.snapshotBuilding = previousSnapshotBuilding
 
+        local routeFeedback
         if missingInvalid ~= nil then
-            invalidRows[1] = missingInvalid
+            routeFeedback = {
+                valid = false,
+                primary = missingInvalid,
+                related = {},
+                markers = { missingInvalid },
+            }
         elseif completionInvalid == nil then
-            local _, historyResult = self:historyFeedback(route.key)
-            if historyResult ~= nil and historyResult.valid == false then
-                appendHistoryInvalidRows(self, invalidRows, historyResult.invalids)
-            end
+            local historyFeedback = self:historyFeedback(route.key)
+            routeFeedback = historyFeedback and historyFeedback.route or nil
+        else
+            routeFeedback = {
+                valid = false,
+                primary = completionInvalid,
+                related = {},
+                markers = { completionInvalid },
+            }
         end
 
-        local routeValid = invalidRows[1] == nil and completionInvalid == nil
+        routeFeedback = routeFeedback or {
+            valid = true,
+            primary = nil,
+            related = {},
+            markers = {},
+        }
+
+        for _, marker in ipairs(routeFeedback.markers or EMPTY_LIST) do
+            invalidRows[#invalidRows + 1] = marker
+        end
+
+        local routeValid = routeFeedback.valid == true
         layerStatus.route.evaluated = true
         layerStatus.route.valid = routeValid
 
@@ -575,7 +588,8 @@ function runContext.create(opts)
                     and ("Data entry incomplete: finish " .. biomeLabel(self, completionInvalid.biomeKey))
                 or nil,
             invalidRows = invalidRows,
-            blockingHorizon = blockingHorizon(self, route, invalidRows[1]),
+            routeFeedback = routeFeedback,
+            blockingHorizon = blockingHorizon(self, route, routeFeedback.primary),
             layerStatus = layerStatus,
             biomes = snapshots,
         }
