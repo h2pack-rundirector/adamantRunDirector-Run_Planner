@@ -33,21 +33,21 @@ local function lastValue(values)
     return values and values[#values] or nil
 end
 
-local function indexReward(history, entry)
-    if entry.kind ~= "reward" then
+local function indexLoot(history, entry)
+    if entry.kind ~= "loot" then
         return
     end
 
-    local reward = history.reward
-    appendIndexed(reward.byRewardType, entry.rewardType, entry)
-    appendNestedIndexed(reward.byBiomeRewardType, entry.biomeKey, entry.rewardType, entry)
+    local loot = history.loot
+    appendIndexed(loot.byLootType, entry.lootType, entry)
+    appendNestedIndexed(loot.byBiomeLootType, entry.biomeKey, entry.lootType, entry)
 
     if entry.timing == "pendingOffer" then
-        appendIndexed(reward.pendingByRewardType, entry.rewardType, entry)
+        appendIndexed(loot.pendingByLootType, entry.lootType, entry)
     end
 
     for _, sourceValue in ipairs(entry.sourceValues or EMPTY_LIST) do
-        appendIndexed(reward.bySourceValue, sourceValue, entry)
+        appendIndexed(loot.bySourceValue, sourceValue, entry)
     end
 end
 
@@ -57,10 +57,10 @@ function routeHistory.create()
         byKind = {},
         byEventKey = {},
         byGroupKey = {},
-        reward = {
-            byRewardType = {},
-            byBiomeRewardType = {},
-            pendingByRewardType = {},
+        loot = {
+            byLootType = {},
+            byBiomeLootType = {},
+            pendingByLootType = {},
             bySourceValue = {},
         },
     }
@@ -74,7 +74,7 @@ function routeHistory.append(history, entry)
     appendIndexed(history.byKind, entry.kind, entry)
     appendIndexed(history.byEventKey, entry.eventKey, entry)
     appendIndexed(history.byGroupKey, entry.groupKey, entry)
-    indexReward(history, entry)
+    indexLoot(history, entry)
     return entry
 end
 
@@ -110,32 +110,32 @@ function routeHistory.lastInGroup(history, groupKey)
     return lastValue(routeHistory.byGroupKey(history, groupKey))
 end
 
-function routeHistory.rewardEntries(history, rewardType)
-    return history and history.reward and history.reward.byRewardType[rewardType] or EMPTY_LIST
+function routeHistory.lootEntries(history, lootType)
+    return history and history.loot and history.loot.byLootType[lootType] or EMPTY_LIST
 end
 
-function routeHistory.biomeRewardEntries(history, biomeKey, rewardType)
-    local byBiome = history and history.reward and history.reward.byBiomeRewardType[biomeKey] or nil
-    return byBiome and byBiome[rewardType] or EMPTY_LIST
+function routeHistory.biomeLootEntries(history, biomeKey, lootType)
+    local byBiome = history and history.loot and history.loot.byBiomeLootType[biomeKey] or nil
+    return byBiome and byBiome[lootType] or EMPTY_LIST
 end
 
-function routeHistory.pendingRewardEntries(history, rewardType)
-    return history and history.reward and history.reward.pendingByRewardType[rewardType] or EMPTY_LIST
+function routeHistory.pendingLootEntries(history, lootType)
+    return history and history.loot and history.loot.pendingByLootType[lootType] or EMPTY_LIST
 end
 
 function routeHistory.sourceEntries(history, sourceValue)
-    return history and history.reward and history.reward.bySourceValue[sourceValue] or EMPTY_LIST
+    return history and history.loot and history.loot.bySourceValue[sourceValue] or EMPTY_LIST
 end
 
 function routeHistory.count(history, spec)
     if spec == nil then
         return #(history and history.entries or EMPTY_LIST)
     end
-    if spec.kind == "reward" and spec.rewardType ~= nil then
+    if spec.kind == "loot" and spec.lootType ~= nil then
         if spec.biomeKey ~= nil then
-            return #routeHistory.biomeRewardEntries(history, spec.biomeKey, spec.rewardType)
+            return #routeHistory.biomeLootEntries(history, spec.biomeKey, spec.lootType)
         end
-        return #routeHistory.rewardEntries(history, spec.rewardType)
+        return #routeHistory.lootEntries(history, spec.lootType)
     end
     if spec.kind ~= nil then
         return #routeHistory.byKind(history, spec.kind)
@@ -149,8 +149,8 @@ function routeHistory.count(history, spec)
     return #(history and history.entries or EMPTY_LIST)
 end
 
-function routeHistory.hasPendingReward(history, rewardType)
-    return routeHistory.pendingRewardEntries(history, rewardType)[1] ~= nil
+function routeHistory.hasPendingLoot(history, lootType)
+    return routeHistory.pendingLootEntries(history, lootType)[1] ~= nil
 end
 
 return routeHistory

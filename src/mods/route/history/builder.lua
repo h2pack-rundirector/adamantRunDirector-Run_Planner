@@ -1,6 +1,7 @@
 local deps = ... or {}
 
 local routeHistory = deps.history
+local routeLoot = deps.loot
 local adapters = deps.adapters or {}
 
 local historyBuilder = {}
@@ -61,6 +62,7 @@ function historyBuilder.build(args)
         local adapter = snapshot and biome and adapters[biome.adapter] or nil
         local builtBiome = false
         if adapter ~= nil then
+            local firstEntryIndex = #routeHistory.entries(history) + 1
             adapter.build({
                 history = history,
                 routeHistory = routeHistory,
@@ -70,6 +72,7 @@ function historyBuilder.build(args)
                 snapshot = snapshot,
                 biome = biome,
             })
+            routeLoot.emitForRoomEntries(history, firstEntryIndex, #routeHistory.entries(history))
             builtBiome = true
         end
 

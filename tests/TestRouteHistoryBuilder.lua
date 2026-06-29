@@ -14,6 +14,10 @@ local function roomEvents(history)
     return routeHistory.byKind(history, "room")
 end
 
+local function lootEvents(history)
+    return routeHistory.byKind(history, "loot")
+end
+
 local function fullFErebusRows()
     return {
         {
@@ -562,6 +566,14 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearPrebossBranchesGenerat
     lu.assertEquals(preboss.reward.reward.rewardStore, "RunProgress")
     lu.assertEquals(preboss.reward.reward.rewardType, "Boon")
     lu.assertEquals(preboss.reward.reward.boonSource, "ZeusUpgrade")
+
+    local boonLoot = routeHistory.lootEntries(history, "Boon")
+    lu.assertEquals(#boonLoot, 2)
+    lu.assertEquals(boonLoot[1].parentRoomKey, "F_Combat05")
+    lu.assertEquals(boonLoot[1].lootName, "ZeusUpgrade")
+    lu.assertEquals(boonLoot[2].parentRoomKey, "Preboss")
+    lu.assertEquals(boonLoot[2].sourceKind, "prebossFreeReward")
+    lu.assertEquals(routeHistory.sourceEntries(history, "ZeusUpgrade")[2], boonLoot[2])
 end
 
 function TestRunPlannerRouteHistoryBuilder.testFixedLinearPrebossShopOnlyDoesNotGenerateBranches()
@@ -697,6 +709,17 @@ function TestRunPlannerRouteHistoryBuilder.testFieldsCageEntriesCarryTopologyAnd
     lu.assertEquals(rooms[6].reward.offers[1].rewardType, "RandomLoot")
     lu.assertEquals(rooms[6].reward.offers[1].boonSource, "ApolloUpgrade")
     lu.assertTrue(rooms[6].reward.offers[1].bought)
+
+    local loot = lootEvents(history)
+    lu.assertEquals(loot[1].sourceKind, "fieldsCage")
+    lu.assertEquals(loot[1].address, "cage:1")
+    lu.assertEquals(loot[1].lootType, "Boon")
+    lu.assertEquals(loot[1].lootName, "PoseidonUpgrade")
+    lu.assertEquals(loot[2].lootType, "HermesUpgrade")
+    lu.assertEquals(loot[3].lootType, "StackUpgrade")
+    lu.assertEquals(routeHistory.lootEntries(history, "WeaponUpgrade")[1].parentRoomKey, "H_Combat09")
+    lu.assertEquals(routeHistory.lootEntries(history, "RandomLoot")[1].sourceKind, "prebossShop")
+    lu.assertTrue(routeHistory.lootEntries(history, "RandomLoot")[1].bought)
 end
 
 function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedBuildsThessalySpine()
@@ -828,6 +851,18 @@ function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedEntriesCarryEn
     lu.assertEquals(rooms[3].reward.encounters[2].biomeEncounterDepth, 3)
     lu.assertEquals(rooms[3].topology.kind, "shipCombat")
     lu.assertEquals(rooms[3].topology.encounters[2].wheelOfferCount, 2)
+
+    local loot = lootEvents(history)
+    lu.assertEquals(loot[1].parentRoomKey, "O_Combat01")
+    lu.assertEquals(loot[1].sourceKind, "multiEncounter")
+    lu.assertEquals(loot[1].address, "encounter:1")
+    lu.assertEquals(loot[1].lootType, "MaxHealthDrop")
+    lu.assertEquals(loot[2].parentRoomKey, "O_Combat02")
+    lu.assertEquals(loot[2].lootType, "Boon")
+    lu.assertEquals(loot[2].lootName, "ApolloUpgrade")
+    lu.assertEquals(loot[3].address, "encounter:2")
+    lu.assertEquals(loot[3].lootType, "RoomMoneyDrop")
+    lu.assertEquals(#routeHistory.biomeLootEntries(history, "O", "RoomMoneyDrop"), 2)
 end
 
 function TestRunPlannerRouteHistoryBuilder.testClockworkGoalBuildsTartarusSpine()

@@ -9,6 +9,9 @@ function historyAssembly.create()
         events = events,
         history = history,
     })
+    local loot = import("mods/route/history/loot.lua", nil, {
+        history = history,
+    })
     local adapters = {
         clockworkGoal = import("mods/route/history/adapters/clockwork_goal.lua"),
         fieldsCageRoute = import("mods/route/history/adapters/fields_cage.lua"),
@@ -18,6 +21,7 @@ function historyAssembly.create()
     }
     local builder = import("mods/route/history/builder.lua", nil, {
         history = history,
+        loot = loot,
         adapters = adapters,
     })
 
@@ -25,6 +29,7 @@ function historyAssembly.create()
         adapters = adapters,
         events = events,
         history = history,
+        loot = loot,
         query = query,
         builder = builder,
     }

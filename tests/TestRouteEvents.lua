@@ -25,26 +25,26 @@ local function rowContext()
     }
 end
 
-function TestRunPlannerRouteEvents.testRewardEventNormalizesPositionAndRewardPayload()
-    local rewardEvent = {
-        rewardType = "Devotion",
+function TestRunPlannerRouteEvents.testLootEventNormalizesPositionAndLootPayload()
+    local lootEvent = {
+        lootType = "Devotion",
         address = "row",
         devotionSourceA = "ZeusUpgrade",
         devotionSourceB = "PoseidonUpgrade",
     }
     local event = routeEvents.createAt(rowContext(), {
-        kind = "reward",
-        eventKey = rewardEvent.rewardType,
-        source = rewardEvent,
-        address = rewardEvent.address,
-        rewardType = rewardEvent.rewardType,
-        devotionSourceA = rewardEvent.devotionSourceA,
-        devotionSourceB = rewardEvent.devotionSourceB,
+        kind = "loot",
+        eventKey = lootEvent.lootType,
+        source = lootEvent,
+        address = lootEvent.address,
+        lootType = lootEvent.lootType,
+        devotionSourceA = lootEvent.devotionSourceA,
+        devotionSourceB = lootEvent.devotionSourceB,
     })
 
-    lu.assertEquals(event.kind, "reward")
+    lu.assertEquals(event.kind, "loot")
     lu.assertEquals(event.eventKey, "Devotion")
-    lu.assertEquals(event.rewardType, "Devotion")
+    lu.assertEquals(event.lootType, "Devotion")
     lu.assertEquals(event.biomeKey, "F")
     lu.assertEquals(event.rowIndex, 7)
     lu.assertEquals(event.runDepthCache, 11)
@@ -109,10 +109,10 @@ end
 
 function TestRunPlannerRouteEvents.testHistoryIndexesEventsByEventAndGroup()
     local history = routeHistory.create()
-    local reward = routeHistory.emitAt(history, rowContext(), {
-        kind = "reward",
+    local loot = routeHistory.emitAt(history, rowContext(), {
+        kind = "loot",
         eventKey = "Devotion",
-        rewardType = "Devotion",
+        lootType = "Devotion",
         address = "row",
     })
     local npc = routeHistory.emit(history, {
@@ -128,19 +128,19 @@ function TestRunPlannerRouteEvents.testHistoryIndexesEventsByEventAndGroup()
         },
     })
 
-    lu.assertIs(routeHistory.lastEvent(history, "Devotion"), reward)
+    lu.assertIs(routeHistory.lastEvent(history, "Devotion"), loot)
     lu.assertIs(routeHistory.lastEvent(history, "ArtemisCombatG"), npc)
     lu.assertIs(routeHistory.lastInGroup(history, "FieldNpc"), npc)
-    lu.assertEquals(routeHistory.count(history, { kind = "reward" }), 1)
+    lu.assertEquals(routeHistory.count(history, { kind = "loot" }), 1)
     lu.assertEquals(routeHistory.count(history, { kind = "npc" }), 1)
 end
 
-function TestRunPlannerRouteEvents.testHistoryIndexesRewardFacts()
+function TestRunPlannerRouteEvents.testHistoryIndexesLootFacts()
     local history = routeHistory.create()
     local selected = routeHistory.emitAt(history, rowContext(), {
-        kind = "reward",
+        kind = "loot",
         eventKey = "Loot",
-        rewardType = "Boon",
+        lootType = "Boon",
         biomeKey = "F",
         sourceValues = { "DemeterUpgrade", "ZeusUpgrade" },
     })
@@ -148,22 +148,22 @@ function TestRunPlannerRouteEvents.testHistoryIndexesRewardFacts()
         biomeKey = "G",
         rowIndex = 3,
     }, {
-        kind = "reward",
+        kind = "loot",
         eventKey = "Loot",
-        rewardType = "WeaponUpgradeDrop",
+        lootType = "WeaponUpgradeDrop",
         timing = "pendingOffer",
         sourceValues = { "Hammer" },
     })
 
-    lu.assertIs(routeHistory.rewardEntries(history, "Boon")[1], selected)
-    lu.assertIs(routeHistory.biomeRewardEntries(history, "F", "Boon")[1], selected)
+    lu.assertIs(routeHistory.lootEntries(history, "Boon")[1], selected)
+    lu.assertIs(routeHistory.biomeLootEntries(history, "F", "Boon")[1], selected)
     lu.assertEquals(routeHistory.count(history, {
-        kind = "reward",
-        rewardType = "Boon",
+        kind = "loot",
+        lootType = "Boon",
         biomeKey = "F",
     }), 1)
-    lu.assertIs(routeHistory.pendingRewardEntries(history, "WeaponUpgradeDrop")[1], pending)
-    lu.assertTrue(routeHistory.hasPendingReward(history, "WeaponUpgradeDrop"))
+    lu.assertIs(routeHistory.pendingLootEntries(history, "WeaponUpgradeDrop")[1], pending)
+    lu.assertTrue(routeHistory.hasPendingLoot(history, "WeaponUpgradeDrop"))
     lu.assertIs(routeHistory.sourceEntries(history, "DemeterUpgrade")[1], selected)
 end
 
@@ -172,9 +172,9 @@ function TestRunPlannerRouteEvents.testMinRoomsSinceEventUsesRunDepthCache()
     routeHistory.emitAt(history, {
         runDepthCache = 10,
     }, {
-        kind = "reward",
+        kind = "loot",
         eventKey = "Devotion",
-        rewardType = "Devotion",
+        lootType = "Devotion",
     })
     lu.assertTrue((routeQuery.requiredMinRoomsSinceEvent(history, {
         runDepthCache = 25,
