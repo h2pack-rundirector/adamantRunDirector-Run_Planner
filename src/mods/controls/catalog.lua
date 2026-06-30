@@ -18,6 +18,10 @@ local function routeGlobalControlName(routeKey)
     return "RouteGlobal" .. tostring(routeKey or "")
 end
 
+local function routeNpcsControlName(routeKey)
+    return "RouteNpcs" .. tostring(routeKey or "")
+end
+
 local function routeTabForBiome(catalog, biomeKey)
     local biome = catalog.lookup and catalog.lookup[biomeKey] or nil
     local template = biome and TEMPLATE_BY_ADAPTER[biome.adapter] or nil
@@ -39,11 +43,16 @@ function controls.routeGlobalControlName(routeKey)
     return routeGlobalControlName(routeKey)
 end
 
+function controls.routeNpcsControlName(routeKey)
+    return routeNpcsControlName(routeKey)
+end
+
 function controls.routeControlNames(catalog)
     local names = {}
     if catalog ~= nil and catalog.routes ~= nil and catalog.routes.ordered ~= nil then
         for _, route in ipairs(catalog.routes.ordered) do
             names[#names + 1] = routeGlobalControlName(route.key)
+            names[#names + 1] = routeNpcsControlName(route.key)
             for _, biomeKey in ipairs(route.biomes or {}) do
                 local biome = catalog.lookup and catalog.lookup[biomeKey] or nil
                 if biome ~= nil and TEMPLATE_BY_ADAPTER[biome.adapter] ~= nil then
@@ -70,6 +79,12 @@ function controls.routeControlTabs(catalog)
                     key = GLOBAL_TAB_KEY,
                     label = "Global",
                     controlName = routeGlobalControlName(route.key),
+                },
+                {
+                    key = "NPCs",
+                    label = "NPCs",
+                    layer = "npcs",
+                    controlName = routeNpcsControlName(route.key),
                 },
             }
             for _, biomeKey in ipairs(route.biomes or {}) do
@@ -112,6 +127,13 @@ function controls.build(catalog)
                 route = route,
                 gods = catalog.gods,
                 features = catalog.features,
+                biomeLookup = catalog.lookup,
+            }
+            instances[routeNpcsControlName(route.key)] = {
+                template = "RouteNpcs",
+                label = "NPCs",
+                route = route,
+                npcs = catalog.npcs,
                 biomeLookup = catalog.lookup,
             }
         end

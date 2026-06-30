@@ -149,6 +149,18 @@ local function emitLoot(history, room, lootType, fields)
     })
 end
 
+local function buildNpcTargets(history, catalog)
+    return historySystem.npcCandidates.build({
+        route = {
+            key = "Underworld",
+            biomes = { "F" },
+        },
+        history = history,
+        npcs = catalog.npcs,
+        biomeLookup = catalog.lookup,
+    })
+end
+
 local function firstFinding(result, kind, field, expected)
     for _, finding in ipairs(result and result.findings or {}) do
         if finding.kind == kind and (field == nil or finding[field] == expected) then
@@ -156,6 +168,66 @@ local function firstFinding(result, kind, field, expected)
         end
     end
     return nil
+end
+
+function TestRunPlannerRouteHistoryValidator.testNpcTargetsComeFromRouteHistoryRooms()
+    local catalog = h.loadCatalog()
+    local history = routeHistory.create()
+    emitRoom(history, 4, {
+        biomeKey = "F",
+        rowIndex = 4,
+        roomKey = "F_Combat04",
+        roleKey = "Combat",
+        biomeDepthCache = 4,
+    })
+    local npcTargets = buildNpcTargets(history, catalog)
+
+    lu.assertNotNil(npcTargets.byNpc.Artemis.lookup["F:4:ArtemisCombatF"])
+
+    local result = historyValidator.validate({
+        route = {
+            key = "Underworld",
+            biomes = { "F" },
+        },
+        history = history,
+        biomeLookup = catalog.lookup,
+        npcSnapshot = {
+            controlName = "RouteNpcsUnderworld",
+            routeKey = "Underworld",
+            rows = {
+                {
+                    rowIndex = 1,
+                    npcKey = "Artemis",
+                    groupKey = "FieldNpc",
+                    mode = "Target",
+                    biomeKey = "F",
+                    targetRowIndex = "4",
+                    variantKey = "ArtemisCombatF",
+                },
+            },
+        },
+        npcTargets = npcTargets,
+        npcs = catalog.npcs,
+    })
+
+    lu.assertTrue(result.valid)
+end
+
+function TestRunPlannerRouteHistoryValidator.testNpcTargetsRejectBannedRoomLoot()
+    local catalog = h.loadCatalog()
+    local history = routeHistory.create()
+    local room = emitRoom(history, 4, {
+        biomeKey = "F",
+        rowIndex = 4,
+        roomKey = "F_Combat04",
+        roleKey = "Combat",
+        biomeDepthCache = 4,
+    })
+    emitLoot(history, room, "Boon")
+
+    local npcTargets = buildNpcTargets(history, catalog)
+
+    lu.assertNil(npcTargets.byNpc.Artemis)
 end
 
 function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateConcreteRoom()

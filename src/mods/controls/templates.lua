@@ -50,4 +50,7 @@ return {
         gods = godData,
         decorations = decorations,
     }),
+    RouteNpcs = import("mods/controls/RouteNpcs/RouteNpcs.lua", nil, {
+        decorations = decorations,
+    }),
 }

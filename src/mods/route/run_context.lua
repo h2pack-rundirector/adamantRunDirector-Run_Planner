@@ -23,6 +23,7 @@ function runContext.create(opts)
     local routeInfoByRoute, routeInfoByBiome = routeControls.buildRouteInfo(opts.routes)
     local context = {
         routes = opts.routes or {},
+        npcs = opts.npcs or {},
         routeInfoByRoute = routeInfoByRoute,
         routeInfoByBiome = routeInfoByBiome,
         biomeLookup = opts.biomes or {},
@@ -45,6 +46,7 @@ function runContext.create(opts)
     feedback.install(context, {
         EMPTY_LIST = EMPTY_LIST,
         historySystem = historySystem,
+        routeNpcsControlName = routeControls.routeNpcsControlName,
         state = state,
     })
     overview.install(context, {

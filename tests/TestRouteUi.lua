@@ -314,11 +314,13 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
 
     lu.assertEquals(routeControlNames, {
         "RouteGlobalUnderworld",
+        "RouteNpcsUnderworld",
         "RouteF",
         "RouteG",
         "RouteH",
         "RouteI",
         "RouteGlobalSurface",
+        "RouteNpcsSurface",
         "RouteN",
         "RouteO",
         "RouteP",
@@ -326,6 +328,7 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
     })
     lu.assertEquals(routeControlTabs.Underworld, {
         { key = "Global", label = "Global", controlName = "RouteGlobalUnderworld" },
+        { key = "NPCs", label = "NPCs", layer = "npcs", controlName = "RouteNpcsUnderworld" },
         { key = "F", label = "Erebus", controlName = "RouteF" },
         { key = "G", label = "Oceanus", controlName = "RouteG" },
         { key = "H", label = "Fields", controlName = "RouteH" },
@@ -333,17 +336,20 @@ function TestRunPlannerRouteUi.testCatalogBuildsControlsForSupportedAdapters()
     })
     lu.assertEquals(routeControlTabs.Surface, {
         { key = "Global", label = "Global", controlName = "RouteGlobalSurface" },
+        { key = "NPCs", label = "NPCs", layer = "npcs", controlName = "RouteNpcsSurface" },
         { key = "N", label = "Ephyra", controlName = "RouteN" },
         { key = "O", label = "Thessaly", controlName = "RouteO" },
         { key = "P", label = "Olympus", controlName = "RouteP" },
         { key = "Q", label = "Summit", controlName = "RouteQ" },
     })
     lu.assertEquals(controls.RouteGlobalUnderworld.template, "RouteGlobal")
+    lu.assertEquals(controls.RouteNpcsUnderworld.template, "RouteNpcs")
     lu.assertEquals(controls.RouteF.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteG.template, "FixedLinearRoute")
     lu.assertEquals(controls.RouteH.template, "FieldsCageRoute")
     lu.assertEquals(controls.RouteI.template, "ClockworkGoalRoute")
     lu.assertEquals(controls.RouteGlobalSurface.template, "RouteGlobal")
+    lu.assertEquals(controls.RouteNpcsSurface.template, "RouteNpcs")
     lu.assertEquals(controls.RouteN.template, "HubPylonRoute")
     lu.assertEquals(controls.RouteO.template, "MultiEncounterFixedRoute")
     lu.assertEquals(controls.RouteP.template, "FixedLinearRoute")

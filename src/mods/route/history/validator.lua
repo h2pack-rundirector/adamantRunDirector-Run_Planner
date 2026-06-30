@@ -2,6 +2,7 @@ local deps = ... or {}
 
 local biomeStructure = deps.biomeStructure
 local candidateValidator = deps.candidates
+local npcValidator = deps.npcs
 local rewardValidator = deps.rewards
 local selectedLegalityRules = deps.selectedLegalityRules
 
@@ -28,6 +29,15 @@ function validator.validate(args)
     })
     if not rewardResult.valid then
         return mergeFindings(rewardResult, candidateResult.findings)
+    end
+
+    local npcResult = npcValidator.validate({
+        npcSnapshot = args and args.npcSnapshot or nil,
+        npcTargets = args and args.npcTargets or nil,
+        npcs = args and args.npcs or nil,
+    })
+    if not npcResult.valid then
+        return mergeFindings(npcResult, candidateResult.findings)
     end
 
     return mergeFindings(biomeResult, candidateResult.findings)

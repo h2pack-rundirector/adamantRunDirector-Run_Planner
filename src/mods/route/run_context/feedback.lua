@@ -12,6 +12,15 @@ local function selectedRowsSnapshot(context, routeKey, biomeKey)
     return nil
 end
 
+local function selectedNpcSnapshot(context, routeKey)
+    local controlName = context.routeNpcsControlName and context:routeNpcsControlName(routeKey) or nil
+    local control = controlName ~= nil and context:controlByName(controlName, routeKey) or nil
+    if control == nil or control.read == nil then
+        return nil
+    end
+    return control:read("selectedNpcSnapshot")
+end
+
 local function applyRouteFeedback(context, historySystem, route, routeFeedback, EMPTY_LIST)
     local generation = context:routeGeneration(route.key)
     for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
@@ -25,6 +34,14 @@ local function applyRouteFeedback(context, historySystem, route, routeFeedback, 
                 generation
             )
         end
+    end
+end
+
+local function applyNpcFeedback(context, routeKey, npcFeedback, generation)
+    local controlName = context.routeNpcsControlName and context:routeNpcsControlName(routeKey) or nil
+    local control = controlName ~= nil and context:controlByName(controlName, routeKey) or nil
+    if control ~= nil and control.applyRouteFeedback ~= nil then
+        control:applyRouteFeedback(npcFeedback, generation)
     end
 end
 
@@ -65,10 +82,22 @@ function feedback.install(context, deps)
                         return selectedRowsSnapshot(self, route.key, biomeKey)
                     end,
                 })
+                local npcTargets = historySystem.npcCandidates.build({
+                    route = route,
+                    history = history,
+                    npcs = self.npcs,
+                    biomeLookup = self.biomeLookup,
+                })
+                local npcSnapshot = self:isLayerConfigured(route.key, "npcs")
+                    and selectedNpcSnapshot(self, route.key)
+                    or nil
                 result = historySystem.validator.validate({
                     route = route,
                     history = history,
                     biomeLookup = self.biomeLookup,
+                    npcSnapshot = npcSnapshot,
+                    npcTargets = npcTargets,
+                    npcs = self.npcs,
                 })
                 routeFeedback = historySystem.feedback.fromResult({
                     route = route,
@@ -77,13 +106,37 @@ function feedback.install(context, deps)
                     findings = result.findings,
                     invalids = result.invalids,
                 })
+                feedbackState.npcTargets = npcTargets
+                feedbackState.npcFeedback = historySystem.npcFeedback.fromResult({
+                    findings = result.findings,
+                    invalids = result.invalids,
+                })
+                local generation = self:routeGeneration(route.key)
                 applyRouteFeedback(self, historySystem, route, routeFeedback, EMPTY_LIST)
+                applyNpcFeedback(self, route.key, feedbackState.npcFeedback, generation)
             end
             feedbackState.result = result
             feedbackState.feedback = routeFeedback
             feedbackState.dirty = false
         end
         return feedbackState.feedback, feedbackState.result
+    end
+
+    function context.routeNpcsControlName(_, routeKey)
+        return deps.routeNpcsControlName(routeKey)
+    end
+
+    function context:npcTargetsForSlot(routeKey, npcKey, fixedBiomeKey)
+        self:historyFeedback(routeKey)
+        local feedbackState = state.routeHistoryFeedbackState(self, routeKey)
+        local targets = feedbackState.npcTargets or {}
+        if fixedBiomeKey ~= nil then
+            return targets.byNpcBiome
+                and targets.byNpcBiome[npcKey]
+                and targets.byNpcBiome[npcKey][fixedBiomeKey]
+                or nil
+        end
+        return targets.byNpc and targets.byNpc[npcKey] or nil
     end
 
     function context:historyValueStates(routeKey, biomeKey, rowIndex, controlAlias, rewardAddress)

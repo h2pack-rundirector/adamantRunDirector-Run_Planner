@@ -10,6 +10,10 @@ function controls.routeGlobalControlName(routeKey)
     return "RouteGlobal" .. tostring(routeKey or "")
 end
 
+function controls.routeNpcsControlName(routeKey)
+    return "RouteNpcs" .. tostring(routeKey or "")
+end
+
 function controls.buildRouteInfo(routes)
     local routeInfoByRoute = {}
     local routeInfoByBiome = {}

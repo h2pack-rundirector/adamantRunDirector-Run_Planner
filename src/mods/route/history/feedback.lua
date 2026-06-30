@@ -104,16 +104,20 @@ local function recordsByBiome(args)
         records[#records + 1] = record
     end
     for _, record in ipairs(findings or EMPTY_LIST) do
-        append(record)
+        if record.layer ~= "npcs" then
+            append(record)
+        end
     end
     for _, record in ipairs(invalids or EMPTY_LIST) do
-        append(record)
-        for _, related in ipairs(record.relatedEvents or EMPTY_LIST) do
-            append(routeFeedback.marker(args, related, {
-                markerKind = "related",
-                message = related.message or record.message,
-                code = related.code or record.code,
-            }))
+        if record.layer ~= "npcs" then
+            append(record)
+            for _, related in ipairs(record.relatedEvents or EMPTY_LIST) do
+                append(routeFeedback.marker(args, related, {
+                    markerKind = "related",
+                    message = related.message or record.message,
+                    code = related.code or record.code,
+                }))
+            end
         end
     end
     return grouped

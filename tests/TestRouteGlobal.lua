@@ -32,16 +32,21 @@ function TestRunPlannerRouteGlobal.testRouteGlobalTemplateStoresConfigurationAnd
         default = true,
     })
     lu.assertEquals(storage[2], {
+        key = "ConfigureNpcs",
+        type = "bool",
+        default = false,
+    })
+    lu.assertEquals(storage[3], {
         key = "ConfiguredBiomeCount",
         type = "string",
         default = "4",
         maxLen = 2,
     })
-    lu.assertEquals(storage[3].key, "GodPool")
-    lu.assertEquals(storage[3].type, "packedInt")
-    lu.assertEquals(storage[3].width, 9)
-    lu.assertEquals(#storage[3].bits, 9)
-    lu.assertEquals(storage[3].bits[1], {
+    lu.assertEquals(storage[4].key, "GodPool")
+    lu.assertEquals(storage[4].type, "packedInt")
+    lu.assertEquals(storage[4].width, 9)
+    lu.assertEquals(#storage[4].bits, 9)
+    lu.assertEquals(storage[4].bits[1], {
         key = "AphroditeUpgrade",
         label = "Aphrodite",
         type = "bool",
@@ -80,10 +85,13 @@ function TestRunPlannerRouteGlobal.testRouteGlobalConfigurationScopesActiveSyste
     local control = template.createRuntime(fields, instance)
 
     lu.assertTrue(control:isLayerConfigured("rewards"))
+    lu.assertFalse(control:isLayerConfigured("npcs"))
 
     fields.ConfigureRewards:write(false)
+    fields.ConfigureNpcs:write(true)
 
     lu.assertFalse(control:isLayerConfigured("rewards"))
+    lu.assertTrue(control:isLayerConfigured("npcs"))
 end
 
 function TestRunPlannerRouteGlobal.testRouteGlobalDrawShowsRewardsDisabledNote()

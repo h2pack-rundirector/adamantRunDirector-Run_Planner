@@ -10,6 +10,7 @@ local GODS_PER_ROW = 3
 local GOD_COLUMN_WIDTH = 170
 local VANILLA_VALUE = ""
 local CONFIGURE_REWARDS_KEY = "ConfigureRewards"
+local CONFIGURE_NPCS_KEY = "ConfigureNpcs"
 local CONFIGURED_BIOME_COUNT_KEY = "ConfiguredBiomeCount"
 local DISABLED_TEXT_COLOR = { 0.55, 0.55, 0.55, 1 }
 local REWARDS_DISABLED_NOTE = "Disabling rewards invalidates Trial rewards."
@@ -18,6 +19,10 @@ local CONFIG_TOGGLES = {
     {
         key = CONFIGURE_REWARDS_KEY,
         label = "Configure Rewards",
+    },
+    {
+        key = CONFIGURE_NPCS_KEY,
+        label = "Configure NPCs",
     },
 }
 
@@ -182,6 +187,11 @@ function RouteGlobal.storage(instance)
             type = "bool",
             default = true,
         },
+        {
+            key = CONFIGURE_NPCS_KEY,
+            type = "bool",
+            default = false,
+        },
     }
     storage[#storage + 1] = {
         key = CONFIGURED_BIOME_COUNT_KEY,
@@ -279,6 +289,8 @@ function RouteGlobal.createRuntime(fields, instance)
     function control:isLayerConfigured(layer)
         if layer == "rewards" then
             return self:isConfigEnabled(CONFIGURE_REWARDS_KEY)
+        elseif layer == "npcs" then
+            return self:isConfigEnabled(CONFIGURE_NPCS_KEY)
         end
         return true
     end

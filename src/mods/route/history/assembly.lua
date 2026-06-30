@@ -18,6 +18,9 @@ function historyAssembly.create(opts)
     local feedbackCommon = import("mods/route/history/feedback/common.lua", nil, {
         valueStates = valueStates,
     })
+    local npcFeedback = import("mods/route/history/feedback/npcs.lua", nil, {
+        valueStates = valueStates,
+    })
     local feedbackAdapters = {
         clockworkGoal = import("mods/route/history/feedback/clockwork_goal.lua", nil, {
             common = feedbackCommon,
@@ -46,6 +49,9 @@ function historyAssembly.create(opts)
     })
     local roomCandidates = import("mods/route/history/candidates/rooms.lua")
     local siblingCandidates = import("mods/route/history/candidates/siblings.lua")
+    local npcCandidates = import("mods/route/history/candidates/npcs.lua", nil, {
+        history = history,
+    })
     local adapters = {
         clockworkGoal = import("mods/route/history/adapters/clockwork_goal.lua", nil, {
             rewardCandidates = rewardCandidates,
@@ -87,6 +93,7 @@ function historyAssembly.create(opts)
         history = history,
         query = query,
     })
+    local npcValidator = import("mods/route/history/validator/npcs.lua")
     local candidateValidator = import("mods/route/history/validator/candidates.lua", nil, {
         history = history,
         findings = findings,
@@ -97,6 +104,7 @@ function historyAssembly.create(opts)
     local validator = import("mods/route/history/validator.lua", nil, {
         biomeStructure = biomeStructureValidator,
         candidates = candidateValidator,
+        npcs = npcValidator,
         rewards = rewardValidator,
         selectedLegalityRules = opts.selectedLegalityRules,
     })
@@ -109,6 +117,8 @@ function historyAssembly.create(opts)
         findings = findings,
         history = history,
         loot = loot,
+        npcCandidates = npcCandidates,
+        npcFeedback = npcFeedback,
         roomCandidates = roomCandidates,
         rewardCandidates = rewardCandidates,
         siblingCandidates = siblingCandidates,

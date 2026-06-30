@@ -31,7 +31,7 @@ end
 
 function routeFeedback.marker(args, record, extras)
     return copyRecord(record, {
-        layer = "route",
+        layer = record and record.layer or "route",
         routeKey = args and args.route and args.route.key or record and record.routeKey or nil,
         locationLabel = record and record.locationLabel or locationLabel(args, record),
         message = extras and extras.message or record and record.message or nil,
