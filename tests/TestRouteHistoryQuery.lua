@@ -83,7 +83,7 @@ function TestRunPlannerRouteHistoryQuery.testScalarQueriesReadHistoryEntry()
 
     lu.assertEquals(entry.eventKey, "F_Combat02")
     lu.assertEquals(routeQuery.runDepthCache(entry), 3)
-    lu.assertEquals(routeQuery.biomeDepthCache(entry), 0)
+    lu.assertEquals(routeQuery.biomeDepthCache(entry), 1)
     lu.assertEquals(routeQuery.enteredBiomes(entry), 1)
     lu.assertEquals(routeQuery.runEncounterDepth(entry), 2)
     lu.assertEquals(routeQuery.biomeEncounterDepth(entry), 2)

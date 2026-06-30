@@ -154,21 +154,21 @@ function common.numericCost(value, fallback)
     return cost
 end
 
-function common.fixedBiomeDepthCacheCost(slotLayout, source)
+function common.fixedBiomeDepthCacheCost(_, source)
     if source ~= nil and source.biomeDepthCacheCost ~= nil then
         return source.biomeDepthCacheCost
-    end
-    if slotLayout ~= nil and slotLayout.defaultFixedBiomeDepthCacheCost ~= nil then
-        return slotLayout.defaultFixedBiomeDepthCacheCost
     end
     return 0
 end
 
-function common.routeBiomeDepthCacheCost(slotLayout)
-    if slotLayout ~= nil and slotLayout.routeBiomeDepthCacheCost ~= nil then
-        return slotLayout.routeBiomeDepthCacheCost
+function common.routeRowBiomeDepthCacheCost(slotLayout)
+    if slotLayout ~= nil
+        and slotLayout.routeRow ~= nil
+        and slotLayout.routeRow.biomeDepthCacheCost ~= nil
+    then
+        return slotLayout.routeRow.biomeDepthCacheCost
     end
-    return 1
+    return 0
 end
 
 function common.routeStartOrdinal(slotLayout, fallback)
@@ -198,6 +198,7 @@ function common.applySlotDepthContext(slot, source)
     slot.biomeDepthCache = source.biomeDepthCache
     slot.biomeDepthCacheCost = source.biomeDepthCacheCost
     slot.biomeEncounterDepthCost = source.biomeEncounterDepthCost
+    slot.roomHistoryCost = source.roomHistoryCost
     return slot
 end
 

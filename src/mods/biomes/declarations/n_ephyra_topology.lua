@@ -12,33 +12,41 @@ return function(deps)
             effectTiming = "afterGroup",
             traversal = {
                 opening = {
+                    roomHistoryCost = 1,
                     biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 1,
                 },
                 preHub = {
+                    roomHistoryCost = 1,
                     biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 0,
                 },
                 hubVisit = {
+                    roomHistoryCost = 1,
                     biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 0,
                 },
                 pylonEntry = {
+                    roomHistoryCost = 1,
                     biomeDepthCacheCost = 1,
                 },
                 sideRoom = {
+                    roomHistoryCost = 1,
                     biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 0,
                 },
                 pylonRestore = {
+                    roomHistoryCost = 1,
                     biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 0,
                 },
                 hubReturn = {
+                    roomHistoryCost = 1,
                     biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 0,
                 },
                 preboss = {
+                    roomHistoryCost = 1,
                     biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 0,
                 },

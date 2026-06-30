@@ -1,12 +1,10 @@
 local slots = {}
 
-local DEFAULT_ROOM_HISTORY_COST = 1
-
 local function numericCost(value, fallback)
     if value == nil then
         return fallback
     end
-    local cost = math.floor(tonumber(value) or fallback or DEFAULT_ROOM_HISTORY_COST)
+    local cost = math.floor(tonumber(value) or fallback or 0)
     if cost < 0 then
         return 0
     end
@@ -26,22 +24,17 @@ local function slotIdentity(slot)
     return nil
 end
 
-local function configuredSlotCost(instance, slot)
-    local config = instance.biome and instance.biome.timeline or {}
-    local kindCosts = config.roomHistoryCostBySlotKind or {}
+local function configuredSlotCost(slot)
     if slot ~= nil and slot.roomHistoryCost ~= nil then
-        return numericCost(slot.roomHistoryCost, DEFAULT_ROOM_HISTORY_COST)
+        return numericCost(slot.roomHistoryCost, 0)
     end
-    if slot ~= nil and kindCosts[slot.kind] ~= nil then
-        return numericCost(kindCosts[slot.kind], DEFAULT_ROOM_HISTORY_COST)
-    end
-    return numericCost(config.defaultRoomHistoryCost, DEFAULT_ROOM_HISTORY_COST)
+    return 0
 end
 
 function slots.applyRouteSlots(instance)
     local seenIdentity = {}
     for _, slot in ipairs(instance.routeSlots or {}) do
-        local cost = configuredSlotCost(instance, slot)
+        local cost = configuredSlotCost(slot)
         local identity = slotIdentity(slot)
         if identity ~= nil then
             if seenIdentity[identity] then

@@ -1,12 +1,11 @@
 local deps = ... or {}
 
 local multiEncounterFixed = {}
-local roomCandidates = deps.roomCandidates
 local rewardCandidates = deps.rewardCandidates
-local siblingCandidates = deps.siblingCandidates
+local routeStep = deps.step
 
 local EMPTY_LIST = {}
-local BIOME_ENCOUNTER_DEPTH_START = 1
+local BIOME_ENCOUNTER_DEPTH_START = 0
 local MAJOR_REWARD_STORE = "RunProgress"
 local MINOR_REWARD_STORE = "MetaProgress"
 
@@ -207,18 +206,12 @@ local function selectedRouteOrdinal(slotLayout, selectedRow)
         - 1
 end
 
-local function costValue(slotLayout, role, option, field, fallback)
+local function costValue(_, role, option, field, fallback)
     if option ~= nil and option[field] ~= nil then
         return numericCost(option[field], fallback)
     end
     if role ~= nil and role[field] ~= nil then
         return numericCost(role[field], fallback)
-    end
-    if field == "biomeDepthCacheCost" then
-        if role ~= nil and role.kind ~= "biomeRow" then
-            return numericCost(slotLayout and slotLayout.defaultFixedBiomeDepthCacheCost, fallback)
-        end
-        return numericCost(slotLayout and slotLayout.routeBiomeDepthCacheCost, fallback)
     end
     return fallback
 end
@@ -396,7 +389,7 @@ local function resolveRow(context, selectedRow)
         and role ~= nil
         and role.kind == nil
     then
-        biomeDepthCacheCost = numericCost(slotLayout.routeBiomeDepthCacheCost, 1)
+        biomeDepthCacheCost = numericCost(slotLayout.routeRow and slotLayout.routeRow.biomeDepthCacheCost, 0)
     end
 
     return {
@@ -410,65 +403,16 @@ local function resolveRow(context, selectedRow)
         rewardContext = rewardContext(role, option),
         biomeDepthCacheCost = biomeDepthCacheCost,
         biomeEncounterDepthCost = biomeEncounterDepthCost,
-        roomHistoryCost = costValue(slotLayout, role, option, "roomHistoryCost", 1),
+        roomHistoryCost = costValue(slotLayout, role, option, "roomHistoryCost", 0),
     }
-end
-
-local function appendRoom(history, routeHistory, context, selectedRow, resolved)
-    local eventKey = resolved.eventKey
-    if eventKey == nil or eventKey == "" then
-        return nil
-    end
-
-    local entry = routeHistory.emitAt(history, {
-        routeKey = context.routeKey,
-        controlName = context.snapshot.controlName,
-        biomeKey = context.biome.key,
-        routeBiomeIndex = context.routeBiomeIndex,
-        rowIndex = selectedRow.rowIndex,
-        routeOrdinal = resolved.routeOrdinal,
-        roomHistoryOrdinal = context.routeState.roomHistoryOrdinal,
-        runDepthCache = 1 + context.routeState.roomHistoryOrdinal,
-        runEncounterDepth = context.routeState.runEncounterDepth,
-        biomeDepthCache = context.biomeState.biomeDepthCache,
-        biomeEncounterDepth = context.biomeState.biomeEncounterDepth,
-    }, {
-        kind = "room",
-        eventKey = eventKey,
-        groupKey = selectedRow.roleKey,
-        eventSourceKind = "row",
-        roomKey = resolved.roomKey,
-        roleKey = selectedRow.roleKey,
-        optionKey = selectedRow.optionKey,
-        variantKey = selectedRow.variantKey,
-        variantLabel = resolved.variant and resolved.variant.label or nil,
-        variantAvailability = resolved.variant and resolved.variant.availableAtBiomeEncounterDepth or nil,
-        variantCandidates = variantCandidates(resolved.policy),
-        nextRoomTags = resolved.option and resolved.option.nextRoomTags or nil,
-        tags = resolved.option and resolved.option.tags or nil,
-        source = selectedRow,
-    })
-    entry.roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, resolved)
-    entry.siblingCandidates = siblingCandidates.forBiomeRow(context.biome, selectedRow)
-    entry.reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards)
-    attachShipCombat(context, entry, selectedRow, resolved)
-    return entry
-end
-
-local function advanceRoomHistoryBeforeEmit(context, resolved)
-    context.routeState.roomHistoryOrdinal = context.routeState.roomHistoryOrdinal + resolved.roomHistoryCost
-end
-
-local function advanceNextRoomCountersAfterEmit(context, resolved)
-    context.routeState.runEncounterDepth = context.routeState.runEncounterDepth + resolved.biomeEncounterDepthCost
-    context.biomeState.biomeDepthCache = context.biomeState.biomeDepthCache + resolved.biomeDepthCacheCost
-    context.biomeState.biomeEncounterDepth = context.biomeState.biomeEncounterDepth + resolved.biomeEncounterDepthCost
 end
 
 function multiEncounterFixed.build(args)
     local context = {
         routeKey = args.route and args.route.key or args.snapshot.routeKey,
         routeBiomeIndex = args.routeBiomeIndex,
+        history = args.history,
+        routeHistory = args.routeHistory,
         snapshot = args.snapshot,
         biome = args.biome,
         routeState = args.routeState,
@@ -488,9 +432,19 @@ function multiEncounterFixed.build(args)
 
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
         local resolved = resolvedRows[index]
-        advanceRoomHistoryBeforeEmit(context, resolved)
-        appendRoom(args.history, args.routeHistory, context, selectedRow, resolved)
-        advanceNextRoomCountersAfterEmit(context, resolved)
+        routeStep.stepRoom(context, selectedRow, resolved, {
+            reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards),
+            fields = {
+                variantLabel = resolved.variant and resolved.variant.label or nil,
+                variantAvailability = resolved.variant and resolved.variant.availableAtBiomeEncounterDepth or nil,
+                variantCandidates = variantCandidates(resolved.policy),
+            },
+            attachReward = false,
+            attachTopology = function(roomEntry)
+                roomEntry.reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards)
+                attachShipCombat(context, roomEntry, selectedRow, resolved)
+            end,
+        })
     end
 end
 

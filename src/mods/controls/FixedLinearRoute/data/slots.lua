@@ -7,7 +7,7 @@ local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
 local buildOptionChoices = common.buildOptionChoices
 local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
-local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
+local routeRowBiomeDepthCacheCost = common.routeRowBiomeDepthCacheCost
 local routeStartOrdinal = common.routeStartOrdinal
 local routeEndOrdinal = common.routeEndOrdinal
 local routeRowLabel = common.routeRowLabel
@@ -63,6 +63,7 @@ local function buildFixedRoleSlot(instance, ordinal, special)
         exitCount = role.exitCount,
         rewardBearingExitCount = role.rewardBearingExitCount,
         roomOfferCount = special.roomOfferCount or common.rewardOfferCount(special.reward),
+        roomHistoryCost = special.roomHistoryCost,
         roleKey = role.key,
         role = role,
         features = features,
@@ -70,6 +71,7 @@ local function buildFixedRoleSlot(instance, ordinal, special)
         biomeDepthCache = special.biomeDepthCache,
         biomeDepthCacheCost = fixedBiomeDepthCacheCost(instance.biome.slotLayout, special),
         biomeEncounterDepthCost = special.biomeEncounterDepthCost,
+        roomHistoryCost = special.roomHistoryCost,
     })
 end
 
@@ -92,6 +94,7 @@ local function buildEntrySlot(instance, entry)
         isBiomeEntry = entry.isBiomeEntry == true,
         biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
+        roomHistoryCost = entry.roomHistoryCost,
         locked = entry.locked,
     })
 end
@@ -123,7 +126,8 @@ function slots.buildRouteSlots(instance)
             kind = "biomeRow",
             label = routeRowLabel(slotLayout, ordinal, "Depth"),
         }, {
-            biomeDepthCacheCost = routeBiomeDepthCacheCost(slotLayout),
+            biomeDepthCacheCost = routeRowBiomeDepthCacheCost(slotLayout),
+            roomHistoryCost = slotLayout.routeRow and slotLayout.routeRow.roomHistoryCost,
         })
     end
 

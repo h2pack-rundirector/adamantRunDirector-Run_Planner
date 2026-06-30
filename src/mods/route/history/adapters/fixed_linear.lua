@@ -1,12 +1,10 @@
 local deps = ... or {}
 
 local fixedLinear = {}
-local roomCandidates = deps.roomCandidates
-local rewardCandidates = deps.rewardCandidates
-local siblingCandidates = deps.siblingCandidates
+local routeStep = deps.step
 
 local EMPTY_LIST = {}
-local BIOME_ENCOUNTER_DEPTH_START = 1
+local BIOME_ENCOUNTER_DEPTH_START = 0
 local MAJOR_REWARD_STORE = "RunProgress"
 local MINOR_REWARD_STORE = "MetaProgress"
 local PREBOSS_SHOP_BRANCH = "Shop"
@@ -323,23 +321,24 @@ local function selectedRewardSummary(context, rewards)
     }
 end
 
-local function costValue(slotLayout, role, option, field, fallback)
+local function costValue(_, role, option, field, fallback)
     if option ~= nil and option[field] ~= nil then
         return numericCost(option[field], fallback)
     end
     if role ~= nil and role[field] ~= nil then
         return numericCost(role[field], fallback)
     end
-    if field == "biomeDepthCacheCost" then
-        if role ~= nil and role.kind ~= "biomeRow" then
-            return numericCost(
-                slotLayout and slotLayout.defaultFixedBiomeDepthCacheCost,
-                fallback
-            )
-        end
-        return numericCost(slotLayout and slotLayout.routeBiomeDepthCacheCost, fallback)
-    end
     return fallback
+end
+
+local function explicitCostValue(role, option, field)
+    if option ~= nil and option[field] ~= nil then
+        return numericCost(option[field], 0)
+    end
+    if role ~= nil and role[field] ~= nil then
+        return numericCost(role[field], 0)
+    end
+    return nil
 end
 
 local function selectedRouteOrdinal(slotLayout, selectedRow)
@@ -359,45 +358,6 @@ local function selectedRouteOrdinal(slotLayout, selectedRow)
         - 1
 end
 
-local function appendRoom(history, routeHistory, context, selectedRow, resolved)
-    local roomKey = roomKeyFor(resolved.role, resolved.option)
-    local eventKey = eventKeyFor(selectedRow, resolved.role, resolved.option)
-    if eventKey == nil or eventKey == "" then
-        return
-    end
-
-    local entry = routeHistory.emitAt(history, {
-        routeKey = context.routeKey,
-        controlName = context.snapshot.controlName,
-        biomeKey = context.biome.key,
-        routeBiomeIndex = context.routeBiomeIndex,
-        rowIndex = selectedRow.rowIndex,
-        routeOrdinal = resolved.routeOrdinal,
-        roomHistoryOrdinal = context.routeState.roomHistoryOrdinal,
-        runDepthCache = 1 + context.routeState.roomHistoryOrdinal,
-        runEncounterDepth = context.routeState.runEncounterDepth,
-        biomeDepthCache = context.biomeState.biomeDepthCache,
-        biomeEncounterDepth = context.biomeState.biomeEncounterDepth,
-    }, {
-        kind = "room",
-        eventKey = eventKey,
-        groupKey = selectedRow.roleKey,
-        eventSourceKind = "row",
-        roomKey = roomKey,
-        roleKey = selectedRow.roleKey,
-        optionKey = selectedRow.optionKey,
-        variantKey = selectedRow.variantKey,
-        nextRoomTags = resolved.option and resolved.option.nextRoomTags or nil,
-        tags = resolved.option and resolved.option.tags or nil,
-        source = selectedRow,
-    })
-    entry.roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, resolved)
-    entry.siblingCandidates = siblingCandidates.forBiomeRow(context.biome, selectedRow)
-    entry.reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards)
-    entry.rewardCandidates = rewardCandidates.forContext(resolved.rewardContext)
-    return entry
-end
-
 local function resolveRow(context, selectedRow)
     local role = roleForRow(context.biome, selectedRow)
     local option = optionForRow(role, selectedRow)
@@ -405,7 +365,7 @@ local function resolveRow(context, selectedRow)
     local routeOrdinal = selectedRouteOrdinal(slotLayout, selectedRow)
     local biomeDepthCacheCost = costValue(slotLayout, role, option, "biomeDepthCacheCost", 0)
     local biomeEncounterDepthCost = costValue(slotLayout, role, option, "biomeEncounterDepthCost", 0)
-    local roomHistoryCost = costValue(slotLayout, role, option, "roomHistoryCost", 1)
+    local roomHistoryCost = costValue(slotLayout, role, option, "roomHistoryCost", 0)
 
     if selectedRow.roleKey ~= "Opening"
         and selectedRow.roleKey ~= "Intro"
@@ -413,7 +373,8 @@ local function resolveRow(context, selectedRow)
         and role ~= nil
         and role.kind == nil
     then
-        biomeDepthCacheCost = costValue(slotLayout, role, option, "biomeDepthCacheCost", 1)
+        biomeDepthCacheCost = explicitCostValue(role, option, "biomeDepthCacheCost")
+            or numericCost(slotLayout.routeRow and slotLayout.routeRow.biomeDepthCacheCost, 0)
     end
 
     return {
@@ -613,22 +574,14 @@ local function attachNextChoiceTopology(context, roomEntry, selectedRow, nextRow
     }
 end
 
-local function advanceRoomHistoryBeforeEmit(context, resolved)
-    context.routeState.roomHistoryOrdinal = context.routeState.roomHistoryOrdinal + resolved.roomHistoryCost
-end
-
-local function advanceNextRoomCountersAfterEmit(context, resolved)
-    context.routeState.runEncounterDepth = context.routeState.runEncounterDepth + resolved.biomeEncounterDepthCost
-    context.biomeState.biomeDepthCache = context.biomeState.biomeDepthCache + resolved.biomeDepthCacheCost
-    context.biomeState.biomeEncounterDepth = context.biomeState.biomeEncounterDepth + resolved.biomeEncounterDepthCost
-end
-
 function fixedLinear.build(args)
     local history = args.history
     local routeHistory = args.routeHistory
     local context = {
         routeKey = args.route and args.route.key or args.snapshot.routeKey,
         routeBiomeIndex = args.routeBiomeIndex,
+        history = history,
+        routeHistory = routeHistory,
         snapshot = args.snapshot,
         biome = args.biome,
         routeState = args.routeState,
@@ -648,10 +601,20 @@ function fixedLinear.build(args)
 
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
         local resolved = resolvedRows[index]
-        advanceRoomHistoryBeforeEmit(context, resolved)
-        local roomEntry = appendRoom(history, routeHistory, context, selectedRow, resolved)
-        attachNextChoiceTopology(context, roomEntry, selectedRow, args.snapshot.rows[index + 1], resolvedRows[index + 1])
-        advanceNextRoomCountersAfterEmit(context, resolved)
+        routeStep.stepRoom(context, selectedRow, resolved, {
+            nextRow = args.snapshot.rows[index + 1],
+            nextResolved = resolvedRows[index + 1],
+            reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards),
+            attachTopology = function(roomEntry)
+                attachNextChoiceTopology(
+                    context,
+                    roomEntry,
+                    selectedRow,
+                    args.snapshot.rows[index + 1],
+                    resolvedRows[index + 1]
+                )
+            end,
+        })
     end
 end
 

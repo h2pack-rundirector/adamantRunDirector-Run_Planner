@@ -263,7 +263,6 @@ end
 function TestRunPlannerData.testBiomeDefinitionsDeclareRoomHistoryTimeline()
     local biomes = loadBiomes()
 
-    lu.assertEquals(biomes.lookup.F.timeline.defaultRoomHistoryCost, 1)
     lu.assertEquals(biomes.lookup.F.timeline.afterBiome[1].key, "Boss")
     lu.assertEquals(biomes.lookup.F.timeline.afterBiome[1].roomOptions[1].key, "F_Boss01")
     lu.assertEquals(biomes.lookup.F.timeline.afterBiome[1].roomOptions[2].key, "F_Boss02")
@@ -568,6 +567,14 @@ local function assertEncounterDepthCost(value, context)
     lu.assertEquals(type(value), "number", context .. " missing encounter-depth cost")
 end
 
+local function assertBiomeDepthCacheCost(value, context)
+    lu.assertEquals(type(value), "number", context .. " missing biome-depth-cache cost")
+end
+
+local function assertRoomHistoryCost(value, context)
+    lu.assertEquals(type(value), "number", context .. " missing room-history cost")
+end
+
 local function roleOptions(role)
     return role.roomOptions or role.mapOptions or {}
 end
@@ -582,6 +589,44 @@ end
 local function assertSlotListEncounterDepthCosts(slots, context)
     for index, slot in ipairs(slots or {}) do
         assertSlotEncounterDepthCost(slot, context .. "[" .. tostring(index) .. "]")
+    end
+end
+
+local function assertSlotBiomeDepthCacheCost(slot, context)
+    if slot == nil then
+        return
+    end
+    assertBiomeDepthCacheCost(slot.biomeDepthCacheCost, context)
+end
+
+local function assertSlotListBiomeDepthCacheCosts(slots, context)
+    for index, slot in ipairs(slots or {}) do
+        assertSlotBiomeDepthCacheCost(slot, context .. "[" .. tostring(index) .. "]")
+    end
+end
+
+local function assertSpecialSlotBiomeDepthCacheCosts(slots, context)
+    for ordinal, slot in pairs(slots or {}) do
+        assertSlotBiomeDepthCacheCost(slot, context .. "[" .. tostring(ordinal) .. "]")
+    end
+end
+
+local function assertSlotRoomHistoryCost(slot, context)
+    if slot == nil then
+        return
+    end
+    assertRoomHistoryCost(slot.roomHistoryCost, context)
+end
+
+local function assertSlotListRoomHistoryCosts(slots, context)
+    for index, slot in ipairs(slots or {}) do
+        assertSlotRoomHistoryCost(slot, context .. "[" .. tostring(index) .. "]")
+    end
+end
+
+local function assertSpecialSlotRoomHistoryCosts(slots, context)
+    for ordinal, slot in pairs(slots or {}) do
+        assertSlotRoomHistoryCost(slot, context .. "[" .. tostring(ordinal) .. "]")
     end
 end
 
@@ -689,6 +734,63 @@ function TestRunPlannerData.testBiomeDefinitionsResolveRouteEncounterDepthCosts(
             assertEncounterDepthCost(
                 option.biomeEncounterDepthCost,
                 biome.key .. ".roomTopology.combatEncounterPolicy." .. tostring(option.key)
+            )
+        end
+    end
+end
+
+function TestRunPlannerData.testBiomeDefinitionsResolveBiomeDepthCacheCosts()
+    local biomes = loadBiomes()
+
+    for _, biome in ipairs(biomes.ordered) do
+        local slotLayout = biome.slotLayout or {}
+        lu.assertNil(slotLayout.defaultFixedBiomeDepthCacheCost)
+        lu.assertNil(slotLayout.routeBiomeDepthCacheCost)
+        assertBiomeDepthCacheCost(slotLayout.routeRow and slotLayout.routeRow.biomeDepthCacheCost, biome.key .. ".routeRow")
+        assertSlotBiomeDepthCacheCost(slotLayout.entry, biome.key .. ".entry")
+        assertSlotListBiomeDepthCacheCosts(slotLayout.fixedBeforeRoute, biome.key .. ".fixedBeforeRoute")
+        assertSlotListBiomeDepthCacheCosts(slotLayout.fixedAfterRoute, biome.key .. ".fixedAfterRoute")
+        assertSlotListBiomeDepthCacheCosts(slotLayout.fixedBeforeHub, biome.key .. ".fixedBeforeHub")
+        assertSlotListBiomeDepthCacheCosts(slotLayout.fixedAfterHub, biome.key .. ".fixedAfterHub")
+        assertSlotListBiomeDepthCacheCosts(slotLayout.fixedAfterGoals, biome.key .. ".fixedAfterGoals")
+        assertSpecialSlotBiomeDepthCacheCosts(slotLayout.special, biome.key .. ".special")
+
+        for _, role in ipairs(biome.roles or {}) do
+            assertBiomeDepthCacheCost(
+                role.biomeDepthCacheCost,
+                biome.key .. "." .. tostring(role.key)
+            )
+        end
+    end
+end
+
+function TestRunPlannerData.testBiomeDefinitionsResolveRoomHistoryCosts()
+    local biomes = loadBiomes()
+
+    for _, biome in ipairs(biomes.ordered) do
+        local slotLayout = biome.slotLayout or {}
+        lu.assertNil(biome.timeline and biome.timeline.defaultRoomHistoryCost)
+        lu.assertNil(biome.timeline and biome.timeline.roomHistoryCostBySlotKind)
+        assertRoomHistoryCost(slotLayout.routeRow and slotLayout.routeRow.roomHistoryCost, biome.key .. ".routeRow")
+        assertSlotRoomHistoryCost(slotLayout.entry, biome.key .. ".entry")
+        assertSlotListRoomHistoryCosts(slotLayout.fixedBeforeRoute, biome.key .. ".fixedBeforeRoute")
+        assertSlotListRoomHistoryCosts(slotLayout.fixedAfterRoute, biome.key .. ".fixedAfterRoute")
+        assertSlotListRoomHistoryCosts(slotLayout.fixedBeforeHub, biome.key .. ".fixedBeforeHub")
+        assertSlotListRoomHistoryCosts(slotLayout.fixedAfterHub, biome.key .. ".fixedAfterHub")
+        assertSlotListRoomHistoryCosts(slotLayout.fixedAfterGoals, biome.key .. ".fixedAfterGoals")
+        assertSpecialSlotRoomHistoryCosts(slotLayout.special, biome.key .. ".special")
+
+        for _, role in ipairs(biome.roles or {}) do
+            assertRoomHistoryCost(
+                role.roomHistoryCost,
+                biome.key .. "." .. tostring(role.key)
+            )
+        end
+
+        for _, entry in ipairs(biome.timeline and biome.timeline.afterBiome or {}) do
+            assertRoomHistoryCost(
+                entry.roomHistoryCost,
+                biome.key .. ".afterBiome." .. tostring(entry.key)
             )
         end
     end
@@ -1181,33 +1283,41 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
         opening = {
             biomeDepthCacheCost = 1,
             biomeEncounterDepthCost = 1,
+            roomHistoryCost = 1,
         },
         preHub = {
             biomeDepthCacheCost = 1,
             biomeEncounterDepthCost = 0,
+            roomHistoryCost = 1,
         },
         hubVisit = {
             biomeDepthCacheCost = 1,
             biomeEncounterDepthCost = 0,
+            roomHistoryCost = 1,
         },
         pylonEntry = {
             biomeDepthCacheCost = 1,
+            roomHistoryCost = 1,
         },
         sideRoom = {
             biomeDepthCacheCost = 1,
             biomeEncounterDepthCost = 0,
+            roomHistoryCost = 1,
         },
         pylonRestore = {
             biomeDepthCacheCost = 1,
             biomeEncounterDepthCost = 0,
+            roomHistoryCost = 1,
         },
         hubReturn = {
             biomeDepthCacheCost = 1,
             biomeEncounterDepthCost = 0,
+            roomHistoryCost = 1,
         },
         preboss = {
             biomeDepthCacheCost = 1,
             biomeEncounterDepthCost = 0,
+            roomHistoryCost = 1,
         },
     })
     lu.assertEquals(#ephyra.roomTopology.hub.doorRooms, 26)

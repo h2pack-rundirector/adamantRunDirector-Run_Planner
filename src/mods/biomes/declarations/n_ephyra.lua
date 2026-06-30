@@ -14,6 +14,8 @@ return {
         adapter = "hubPylon",
         roomTopology = topology,
         timeline = parser.standardTimeline("N", {
+            bossRoomHistoryCost = 1,
+            postBossRoomHistoryCost = 1,
             postBossFeatures = { surfaceShop = true },
         }),
         featurePolicies = {
@@ -24,8 +26,10 @@ return {
         slotLayout = {
             routeRowLabelPrefix = "Pylon",
             biomeDepthCacheStart = 1,
-            defaultFixedBiomeDepthCacheCost = 0,
-            routeBiomeDepthCacheCost = 1,
+            routeRow = {
+                biomeDepthCacheCost = 1,
+                roomHistoryCost = 1,
+            },
             routeStartOrdinal = 1,
             routeEndOrdinal = 6,
             fixedBeforeHub = {
@@ -42,7 +46,9 @@ return {
                             "MaxManaDrop",
                         },
                     }),
+                    biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 1,
+                    roomHistoryCost = 1,
                     locked = true,
                 },
                 {
@@ -57,7 +63,9 @@ return {
                             "MaxManaDrop",
                         },
                     }),
+                    biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 0,
+                    roomHistoryCost = 1,
                     locked = true,
                 },
                 {
@@ -66,6 +74,7 @@ return {
                     room = layout.hubRoom,
                     reward = rewards.none(),
                     roomHistoryCost = 0,
+                    biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 0,
                     locked = true,
                 },
@@ -76,7 +85,9 @@ return {
                     key = "Preboss",
                     label = "Preboss Shop",
                     reward = rewards.shop("WorldShop"),
+                    biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 0,
+                    roomHistoryCost = 1,
                 },
             },
         },
@@ -112,7 +123,9 @@ return {
                 label = "Combat",
                 mapOptions = layout.combatRooms,
                 reward = rewards.roomStore("HubRewards"),
+                biomeDepthCacheCost = 1,
                 biomeEncounterDepthCost = 1,
+                roomHistoryCost = 1,
                 requiresConcreteOption = true,
                 sideRooms = {
                     identity = "parentCombatRoomAndDoorId",
@@ -123,7 +136,9 @@ return {
                 label = "Story",
                 roomOptions = layout.storyRooms,
                 reward = rewards.none(),
+                biomeDepthCacheCost = 1,
                 biomeEncounterDepthCost = 0,
+                roomHistoryCost = 1,
                 routeRules = routeRules.role("Story"),
                 reserve = true,
             },
@@ -133,6 +148,8 @@ return {
                 roomOptions = layout.minibossRooms,
                 reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
                 requiresConcreteOption = true,
+                biomeDepthCacheCost = 1,
+                roomHistoryCost = 1,
                 routeRules = routeRules.role("Miniboss"),
                 reserve = true,
             },

@@ -31,7 +31,7 @@ local function siblingSlotCount(selectedRow)
     return #(selectedRow and selectedRow.topology and selectedRow.topology.siblings or EMPTY_LIST)
 end
 
-local function appendCandidate(candidates, siblingIndex, option)
+local function appendCandidate(candidates, siblingIndex, option, opts)
     candidates[#candidates + 1] = {
         siblingIndex = siblingIndex,
         structureKey = option.key,
@@ -50,10 +50,11 @@ local function appendCandidate(candidates, siblingIndex, option)
         ineligibleRewardTypes = copyValue(option.ineligibleRewardTypes),
         isClockworkGoal = option.isClockworkGoal == true,
         isPreboss = option.isPreboss == true,
+        availabilityContext = copyValue(opts and opts.availabilityContext),
     }
 end
 
-function siblingCandidates.forBiomeRow(biome, selectedRow)
+function siblingCandidates.forBiomeRow(biome, selectedRow, opts)
     local topology = topologyForBiome(biome)
     local options = topology
         and topology.siblingStructureControl
@@ -63,7 +64,7 @@ function siblingCandidates.forBiomeRow(biome, selectedRow)
     local candidates = {}
     for siblingIndex = 1, slotCount do
         for _, option in ipairs(options) do
-            appendCandidate(candidates, siblingIndex, option)
+            appendCandidate(candidates, siblingIndex, option, opts)
         end
     end
     return candidates

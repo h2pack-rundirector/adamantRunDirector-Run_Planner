@@ -21,7 +21,7 @@ local function timelineEventKey(entry)
 end
 
 local function appendAfterBiomeEntry(history, route, routeState, routeBiomeIndex, biomeKey, entry)
-    routeState.roomHistoryOrdinal = routeState.roomHistoryOrdinal + numericCost(entry and entry.roomHistoryCost, 1)
+    routeState.roomHistoryOrdinal = routeState.roomHistoryOrdinal + numericCost(entry and entry.roomHistoryCost, 0)
 
     local eventKey = timelineEventKey(entry)
     if eventKey == nil or eventKey == "" then
@@ -53,7 +53,7 @@ function historyBuilder.build(args)
     local route = args.route
     local routeState = {
         roomHistoryOrdinal = 0,
-        runEncounterDepth = 1,
+        runEncounterDepth = 0,
     }
 
     for routeBiomeIndex, biomeKey in ipairs(route and route.biomes or EMPTY_LIST) do

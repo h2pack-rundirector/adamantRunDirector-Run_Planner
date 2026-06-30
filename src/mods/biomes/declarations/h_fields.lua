@@ -13,6 +13,8 @@ return {
         region = "Underworld",
         adapter = "fieldsCageRoute",
         timeline = parser.standardTimeline("H", {
+            bossRoomHistoryCost = 1,
+            postBossRoomHistoryCost = 1,
             postBossFeatures = { wellShop = true },
         }),
         featurePolicies = {
@@ -23,8 +25,10 @@ return {
         slotLayout = {
             routeRowLabelPrefix = "Pick",
             biomeDepthCacheStart = 1,
-            defaultFixedBiomeDepthCacheCost = 0,
-            routeBiomeDepthCacheCost = 1,
+            routeRow = {
+                biomeDepthCacheCost = 1,
+                roomHistoryCost = 1,
+            },
             routeStartOrdinal = 1,
             routeEndOrdinal = 4,
             fixedBeforeRoute = {
@@ -34,7 +38,9 @@ return {
                     isBiomeEntry = true,
                     room = layout.introRoom,
                     reward = rewards.none(),
+                    biomeDepthCacheCost = 0,
                     biomeEncounterDepthCost = 0,
+                    roomHistoryCost = 1,
                     locked = true,
                 },
             },
@@ -46,7 +52,9 @@ return {
                     reward = rewards.preboss("WorldShop", "RunProgress", {
                         ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
                     }),
+                    biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 0,
+                    roomHistoryCost = 1,
                 },
             },
         },
@@ -74,7 +82,9 @@ return {
                 }),
                 cageRewardPolicy = "H_FieldsCageRewards",
                 requiresConcreteOption = true,
+                biomeDepthCacheCost = 1,
                 biomeEncounterDepthCost = 1,
+                roomHistoryCost = 1,
             },
             {
                 key = "Miniboss",
@@ -82,6 +92,8 @@ return {
                 roomOptions = layout.minibossRooms,
                 reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
                 requiresConcreteOption = true,
+                biomeDepthCacheCost = 1,
+                roomHistoryCost = 1,
                 routeRules = routeRules.role("Miniboss"),
                 reserve = true,
             },
@@ -90,7 +102,9 @@ return {
                 label = "Echo",
                 roomOptions = { layout.bridgeRoom },
                 reward = rewards.none(),
+                biomeDepthCacheCost = 1,
                 biomeEncounterDepthCost = 0,
+                roomHistoryCost = 1,
                 reserve = true,
             },
         },

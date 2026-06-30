@@ -32,7 +32,7 @@ local function capFor(value)
     ) or nil
 end
 
-local function appendCandidate(candidates, role, option)
+local function appendCandidate(candidates, role, option, opts)
     candidates[#candidates + 1] = {
         roleKey = role and role.key or nil,
         roleLabel = role and role.label or nil,
@@ -59,21 +59,23 @@ local function appendCandidate(candidates, role, option)
         requiredLayer = role and role.requiredLayer or nil,
         nextRoomTags = copyValue(option and option.nextRoomTags),
         tags = copyValue(option and option.tags),
+        availabilityContext = copyValue(opts and opts.availabilityContext),
+        targetRowIndex = opts and opts.targetRowIndex or nil,
     }
 end
 
-local function appendRoleCandidates(candidates, role)
+local function appendRoleCandidates(candidates, role, opts)
     local options = optionList(role)
     if options[1] == nil then
-        appendCandidate(candidates, role)
+        appendCandidate(candidates, role, nil, opts)
         return
     end
     for _, option in ipairs(options) do
-        appendCandidate(candidates, role, option)
+        appendCandidate(candidates, role, option, opts)
     end
 end
 
-function roomCandidates.forBiomeRow(biome, selectedRow, resolved)
+function roomCandidates.forBiomeRow(biome, selectedRow, resolved, opts)
     local candidates = {}
     local selectedRole = resolved and resolved.role or nil
     local roleKey = selectedRow and selectedRow.roleKey or nil
@@ -84,12 +86,12 @@ function roomCandidates.forBiomeRow(biome, selectedRow, resolved)
             or biome.rolesByKey[roleKey] == nil
         )
     then
-        appendCandidate(candidates, selectedRole, resolved and resolved.option or nil)
+        appendCandidate(candidates, selectedRole, resolved and resolved.option or nil, opts)
         return candidates
     end
 
     for _, role in ipairs(biome and biome.roles or EMPTY_LIST) do
-        appendRoleCandidates(candidates, role)
+        appendRoleCandidates(candidates, role, opts)
     end
     return candidates
 end

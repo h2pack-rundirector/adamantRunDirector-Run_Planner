@@ -45,12 +45,16 @@ function common.availabilityFailure(availability, entry)
     return nil
 end
 
-function common.appendAvailabilityFinding(target, createFinding, entry, candidate, availability)
-    local failure, axis, expected, actual = common.availabilityFailure(availability, entry)
+function common.appendAvailabilityFinding(target, createFinding, entry, candidate, availability, availabilityEntry)
+    local failure, axis, expected, actual = common.availabilityFailure(
+        availability,
+        availabilityEntry or candidate and candidate.availabilityContext or entry
+    )
     if failure == nil then
         return
     end
     target[#target + 1] = createFinding(entry, candidate, failure, {
+        rowIndex = candidate and candidate.targetRowIndex or nil,
         axis = axis,
         expected = expected,
         actual = actual,

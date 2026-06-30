@@ -14,6 +14,8 @@ return {
         adapter = "fixedLinear",
         roomTopology = topology,
         timeline = parser.standardTimeline("Q", {
+            bossRoomHistoryCost = 1,
+            postBossRoomHistoryCost = 1,
             postBossFeatures = { surfaceShop = true },
         }),
         featurePolicies = {
@@ -24,8 +26,10 @@ return {
         slotLayout = {
             routeRowLabelPrefix = "Depth",
             biomeDepthCacheStart = 1,
-            defaultFixedBiomeDepthCacheCost = 0,
-            routeBiomeDepthCacheCost = 1,
+            routeRow = {
+                biomeDepthCacheCost = 1,
+                roomHistoryCost = 1,
+            },
             depthRange = { min = 1, max = 7 },
             routeStartOrdinal = 1,
             routeEndOrdinal = 6,
@@ -33,7 +37,9 @@ return {
                 kind = "intro",
                 isBiomeEntry = true,
                 room = layout.introRoom,
+                biomeDepthCacheCost = 0,
                 biomeEncounterDepthCost = 0,
+                roomHistoryCost = 1,
                 locked = true,
             },
             special = {
@@ -41,7 +47,9 @@ return {
                     kind = "preboss",
                     key = "Preboss",
                     label = "Preboss Shop",
+                    biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 0,
+                    roomHistoryCost = 1,
                     reward = rewards.shop("Q_WorldShop"),
                 },
             },
@@ -52,7 +60,9 @@ return {
                 label = "Combat",
                 mapOptions = layout.combatRooms,
                 reward = rewards.none(),
+                biomeDepthCacheCost = 1,
                 biomeEncounterDepthCost = 1,
+                roomHistoryCost = 1,
                 requiresConcreteOption = true,
             },
             {
@@ -60,6 +70,8 @@ return {
                 label = "Miniboss",
                 roomOptions = layout.minibossRooms,
                 reward = rewards.roomStore("TyphonBossRewards"),
+                biomeDepthCacheCost = 1,
+                roomHistoryCost = 1,
                 requiresConcreteOption = true,
                 routeRules = routeRules.role("Miniboss", { maxSelectionsPerBiome = 2 }),
                 reserve = true,

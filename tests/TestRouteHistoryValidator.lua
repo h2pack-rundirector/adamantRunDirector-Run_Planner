@@ -1316,7 +1316,7 @@ function TestRunPlannerRouteHistoryValidator.testErebusTopologyControlsAreActive
         invalids = {},
     })
 
-    lu.assertEquals(routeHistory.byKind(history, "room")[2].biomeDepthCache, 0)
+    lu.assertEquals(routeHistory.byKind(history, "room")[2].biomeDepthCache, 1)
     lu.assertTrue(feedback.byBiome.F[2].topology.active)
     lu.assertTrue(feedback.byBiome.F[2].topology.controlsActive)
 end

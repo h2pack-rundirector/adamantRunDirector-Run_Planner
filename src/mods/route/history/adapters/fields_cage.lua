@@ -1,12 +1,10 @@
 local deps = ... or {}
 
 local fieldsCage = {}
-local roomCandidates = deps.roomCandidates
-local rewardCandidates = deps.rewardCandidates
-local siblingCandidates = deps.siblingCandidates
+local routeStep = deps.step
 
 local EMPTY_LIST = {}
-local BIOME_ENCOUNTER_DEPTH_START = 1
+local BIOME_ENCOUNTER_DEPTH_START = 0
 local PREBOSS_SHOP_BRANCH = "Shop"
 local PREBOSS_FREE_REWARD_BRANCH = "FreeReward"
 local SHOP_BOUGHT_VALUE = "Bought"
@@ -314,18 +312,12 @@ local function cageCountOption(biome, role, selectedRow)
     return nil
 end
 
-local function costValue(slotLayout, role, option, field, fallback)
+local function costValue(_, role, option, field, fallback)
     if option ~= nil and option[field] ~= nil then
         return numericCost(option[field], fallback)
     end
     if role ~= nil and role[field] ~= nil then
         return numericCost(role[field], fallback)
-    end
-    if field == "biomeDepthCacheCost" then
-        if role ~= nil and role.kind ~= "biomeRow" then
-            return numericCost(slotLayout and slotLayout.defaultFixedBiomeDepthCacheCost, fallback)
-        end
-        return numericCost(slotLayout and slotLayout.routeBiomeDepthCacheCost, fallback)
     end
     return fallback
 end
@@ -338,9 +330,9 @@ local function biomeDepthCacheCost(slotLayout, slot, role, option)
         return numericCost(role.biomeDepthCacheCost, 0)
     end
     if slot ~= nil and slot.kind == "biomeRow" then
-        return numericCost(slotLayout and slotLayout.routeBiomeDepthCacheCost, 1)
+        return numericCost(slotLayout and slotLayout.routeRow and slotLayout.routeRow.biomeDepthCacheCost, 0)
     end
-    return numericCost(slotLayout and slotLayout.defaultFixedBiomeDepthCacheCost, 0)
+    return 0
 end
 
 local function resolveRow(context, selectedRow, slot)
@@ -362,48 +354,8 @@ local function resolveRow(context, selectedRow, slot)
         rewardContext = rewardContext(role, option),
         biomeDepthCacheCost = biomeDepthCacheCost(slotLayout, slot, role, option),
         biomeEncounterDepthCost = costValue(slotLayout, role, option, "biomeEncounterDepthCost", 0),
-        roomHistoryCost = costValue(slotLayout, role, option, "roomHistoryCost", 1),
+        roomHistoryCost = costValue(slotLayout, role, option, "roomHistoryCost", 0),
     }
-end
-
-local function appendRoom(history, routeHistory, context, selectedRow, resolved)
-    local eventKey = resolved.eventKey
-    if eventKey == nil or eventKey == "" then
-        return nil
-    end
-
-    local entry = routeHistory.emitAt(history, {
-        routeKey = context.routeKey,
-        controlName = context.snapshot.controlName,
-        biomeKey = context.biome.key,
-        routeBiomeIndex = context.routeBiomeIndex,
-        rowIndex = selectedRow.rowIndex,
-        routeOrdinal = resolved.routeOrdinal,
-        roomHistoryOrdinal = context.routeState.roomHistoryOrdinal,
-        runDepthCache = 1 + context.routeState.roomHistoryOrdinal,
-        runEncounterDepth = context.routeState.runEncounterDepth,
-        biomeDepthCache = context.biomeState.biomeDepthCache,
-        biomeEncounterDepth = context.biomeState.biomeEncounterDepth,
-    }, {
-        kind = "room",
-        eventKey = eventKey,
-        groupKey = selectedRow.roleKey,
-        eventSourceKind = "row",
-        roomKey = resolved.roomKey,
-        roleKey = selectedRow.roleKey,
-        optionKey = selectedRow.optionKey,
-        variantKey = selectedRow.variantKey,
-        nextRoomTags = resolved.option and resolved.option.nextRoomTags or nil,
-        tags = resolved.option and resolved.option.tags or nil,
-        source = selectedRow,
-    })
-    entry.roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, resolved)
-    entry.siblingCandidates = siblingCandidates.forBiomeRow(context.biome, selectedRow)
-    entry.reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards, resolved.sameExitRewardCount)
-    entry.rewardCandidates = rewardCandidates.forContext(resolved.rewardContext, {
-        sameExitRewardCount = resolved.sameExitRewardCount,
-    })
-    return entry
 end
 
 local function selectedTopology(selectedRow, resolved)
@@ -500,20 +452,12 @@ local function attachFieldsTopology(context, roomEntry, selectedRow, resolved)
     }
 end
 
-local function advanceRoomHistoryBeforeEmit(context, resolved)
-    context.routeState.roomHistoryOrdinal = context.routeState.roomHistoryOrdinal + resolved.roomHistoryCost
-end
-
-local function advanceNextRoomCountersAfterEmit(context, resolved)
-    context.routeState.runEncounterDepth = context.routeState.runEncounterDepth + resolved.biomeEncounterDepthCost
-    context.biomeState.biomeDepthCache = context.biomeState.biomeDepthCache + resolved.biomeDepthCacheCost
-    context.biomeState.biomeEncounterDepth = context.biomeState.biomeEncounterDepth + resolved.biomeEncounterDepthCost
-end
-
 function fieldsCage.build(args)
     local context = {
         routeKey = args.route and args.route.key or args.snapshot.routeKey,
         routeBiomeIndex = args.routeBiomeIndex,
+        history = args.history,
+        routeHistory = args.routeHistory,
         snapshot = args.snapshot,
         biome = args.biome,
         routeState = args.routeState,
@@ -534,10 +478,19 @@ function fieldsCage.build(args)
 
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
         local resolved = resolvedRows[index]
-        advanceRoomHistoryBeforeEmit(context, resolved)
-        local roomEntry = appendRoom(args.history, args.routeHistory, context, selectedRow, resolved)
-        attachFieldsTopology(context, roomEntry, selectedRow, resolved)
-        advanceNextRoomCountersAfterEmit(context, resolved)
+        routeStep.stepRoom(context, selectedRow, resolved, {
+            reward = selectedRewardSummary(
+                resolved.rewardContext,
+                selectedRow.rewards,
+                resolved.sameExitRewardCount
+            ),
+            rewardCandidateOpts = {
+                sameExitRewardCount = resolved.sameExitRewardCount,
+            },
+            attachTopology = function(roomEntry)
+                attachFieldsTopology(context, roomEntry, selectedRow, resolved)
+            end,
+        })
     end
 end
 

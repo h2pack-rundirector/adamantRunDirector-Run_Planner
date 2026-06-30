@@ -13,7 +13,7 @@ local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
 local buildOptionChoices = common.buildOptionChoices
 local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
-local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
+local routeRowBiomeDepthCacheCost = common.routeRowBiomeDepthCacheCost
 local routeStartOrdinal = common.routeStartOrdinal
 local routeEndOrdinal = common.routeEndOrdinal
 local routeRowLabel = common.routeRowLabel
@@ -83,7 +83,8 @@ local function buildPylonSlot(instance, ordinal)
         kind = "biomeRow",
         label = routeRowLabel(slotLayout, ordinal, "Pylon"),
     }, {
-        biomeDepthCacheCost = routeBiomeDepthCacheCost(slotLayout),
+        biomeDepthCacheCost = routeRowBiomeDepthCacheCost(slotLayout),
+        roomHistoryCost = slotLayout.routeRow and slotLayout.routeRow.roomHistoryCost,
     })
 end
 

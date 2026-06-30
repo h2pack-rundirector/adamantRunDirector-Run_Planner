@@ -22,6 +22,8 @@ return {
             bossRooms = {
                 { key = "I_Boss01", label = "Boss" },
             },
+            bossRoomHistoryCost = 1,
+            postBossRoomHistoryCost = 1,
             postBossFeatures = { wellShop = true },
         }),
         featurePolicies = {
@@ -32,8 +34,10 @@ return {
         slotLayout = {
             routeRowLabelPrefix = "Step",
             biomeDepthCacheStart = 1,
-            defaultFixedBiomeDepthCacheCost = 0,
-            routeBiomeDepthCacheCost = 1,
+            routeRow = {
+                biomeDepthCacheCost = 1,
+                roomHistoryCost = 1,
+            },
             routeStartOrdinal = 1,
             routeEndOrdinal = 12,
             fixedBeforeRoute = {
@@ -43,7 +47,9 @@ return {
                     isBiomeEntry = true,
                     room = layout.introRoom,
                     reward = rewards.none(),
+                    biomeDepthCacheCost = 0,
                     biomeEncounterDepthCost = 0,
+                    roomHistoryCost = 1,
                     locked = true,
                 },
             },
@@ -78,7 +84,9 @@ return {
                 requiresConcreteOption = true,
                 npcRoleKeys = { "Combat" },
                 targetKinds = { combatSlot = true },
+                biomeDepthCacheCost = 1,
                 biomeEncounterDepthCost = 1,
+                roomHistoryCost = 1,
             },
             {
                 key = rewardCombatRole,
@@ -90,7 +98,9 @@ return {
                 requiresConcreteOption = true,
                 npcRoleKeys = { "Combat" },
                 targetKinds = { combatSlot = true },
+                biomeDepthCacheCost = 1,
                 biomeEncounterDepthCost = 1,
+                roomHistoryCost = 1,
             },
             {
                 key = "Story",
@@ -100,7 +110,9 @@ return {
                 increments = { clockworkStory = 1 },
                 maxCreationsThisRun = 1,
                 requiresPrevious = { supportsExtensionChoice = true },
+                biomeDepthCacheCost = 1,
                 biomeEncounterDepthCost = 0,
+                roomHistoryCost = 1,
                 reserve = true,
             },
             {
@@ -111,7 +123,9 @@ return {
                 increments = { clockworkNonGoalReward = 1 },
                 maxCreationsThisRun = 1,
                 requiresPrevious = { supportsExtensionChoice = true },
+                biomeDepthCacheCost = 1,
                 biomeEncounterDepthCost = 0,
+                roomHistoryCost = 1,
                 reserve = true,
             },
             {
@@ -123,13 +137,17 @@ return {
                 increments = { clockworkNonGoalReward = 1 },
                 maxCreationsThisRun = 1,
                 requiresPrevious = { supportsExtensionChoice = true },
+                biomeDepthCacheCost = 1,
+                roomHistoryCost = 1,
                 reserve = true,
             },
             {
                 key = prebossRole,
                 label = "Preboss Shop",
                 reward = rewards.shop("I_WorldShop"),
+                biomeDepthCacheCost = 1,
                 biomeEncounterDepthCost = 0,
+                roomHistoryCost = 1,
             },
         },
 }

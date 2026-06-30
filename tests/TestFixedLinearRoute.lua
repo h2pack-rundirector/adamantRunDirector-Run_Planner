@@ -1,5 +1,6 @@
 local lu = require("luaunit")
 local h = require("tests.support.control_harness")
+local importHarness = require("tests.support.import_harness")
 local loadCatalog = h.loadCatalog
 local loadFixedLinearTemplate = h.loadFixedLinearTemplate
 local loadFixedLinearData = h.loadFixedLinearData
@@ -10,6 +11,12 @@ local routeUiFields = h.routeUiFields
 local noOpDraw = h.noOpDraw
 local loadRouteDeps = h.loadRouteDeps
 local valueStates = dofile("src/mods/ui/value_states.lua")
+
+local historySystem = h.withTestImport(function()
+    return h.testImport("mods/route/history/assembly.lua").create({
+        selectedLegalityRules = importHarness.loadSelectedLegalityRules(),
+    })
+end)
 
 -- luacheck: globals TestRunPlannerFixedLinearRoute
 TestRunPlannerFixedLinearRoute = {}
@@ -69,7 +76,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(instance.routeSlots[11].kind, "biomeRow")
     lu.assertEquals(instance.routeSlots[11].biomeDepthCacheCost, 1)
     lu.assertEquals(instance.routeSlots[12].routeOrdinal, 11)
-    lu.assertEquals(instance.routeSlots[12].biomeDepthCacheCost, 0)
+    lu.assertEquals(instance.routeSlots[12].biomeDepthCacheCost, 1)
     lu.assertEquals(instance.routeSlots[12].kind, "preboss")
     lu.assertEquals(instance.routeSlots[12].label, "Preboss")
     lu.assertEquals(instance.routeSlots[12].roleKey, "Preboss")
@@ -294,6 +301,170 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRoomsViewShowsMinibossOpt
         "F_MiniBoss02",
         "F_MiniBoss03",
     })
+end
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearRoomsViewHidesDepthCacheInvalidPickedOptions()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(1, "OptionKey"):write("F_Opening01")
+    fields.Rooms:get(2, "RoleKey"):write("Combat")
+    fields.Rooms:get(2, "OptionKey"):write("F_Combat01")
+    fields.Rewards:get(1, "Reward1Key"):write("SpellDrop")
+    fields.Rewards:get(2, "Reward1Key"):write("Major")
+    fields.Rewards:get(2, "Reward2Key"):write("MaxHealthDrop")
+
+    local control = template.createUi(fields, instance)
+    local route = {
+        key = "Underworld",
+        biomes = { "F" },
+    }
+    local history = historySystem.builder.build({
+        route = route,
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function()
+            return control:read("selectedRowsSnapshot")
+        end,
+    })
+    local result = historySystem.validator.validate({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+    local feedback = historySystem.feedback.fromResult({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+        findings = result.findings,
+        invalids = result.invalids,
+    })
+    control:applyRouteFeedback(historySystem.feedback.forBiome(feedback, "F"), 1)
+    control:setRouteContext({
+        routeGeneration = function()
+            return 1
+        end,
+        blockingHorizon = function()
+            return nil
+        end,
+    }, "Underworld")
+
+    local row2RoleField = fields.Rooms:get(2, "RoleKey")
+    local row2OptionField = fields.Rooms:get(2, "OptionKey")
+    local row2RoleVisibleValues
+    local row2VisibleValues
+    local draw = noOpDraw()
+    draw.widgets.dropdown = function(field, opts)
+        if field == row2RoleField then
+            row2RoleVisibleValues = opts.visibleValues
+        elseif field == row2OptionField then
+            row2VisibleValues = opts.visibleValues
+        end
+        return false
+    end
+
+    template.views.rooms(draw, control, instance)
+
+    lu.assertNotNil(row2RoleVisibleValues)
+    lu.assertEquals(row2RoleVisibleValues.Story, false)
+    lu.assertNotNil(row2VisibleValues)
+    lu.assertEquals(row2VisibleValues.F_Story01, false)
+end
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearNextChoicesUseSourceRoomDepth()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(1, "OptionKey"):write("F_Opening01")
+    fields.Rooms:get(2, "RoleKey"):write("Combat")
+    fields.Rooms:get(2, "OptionKey"):write("F_Combat02")
+    fields.Rooms:get(3, "RoleKey"):write("Combat")
+    fields.Rooms:get(3, "OptionKey"):write("F_Combat03")
+    fields.Rooms:get(4, "RoleKey"):write("Combat")
+    fields.Rooms:get(4, "OptionKey"):write("F_Combat04")
+    fields.Rooms:get(5, "RoleKey"):write("Combat")
+    fields.Rooms:get(5, "OptionKey"):write("F_Combat06")
+    fields.Rewards:get(1, "Reward1Key"):write("SpellDrop")
+    fields.Rewards:get(2, "Reward1Key"):write("Major")
+    fields.Rewards:get(2, "Reward2Key"):write("MaxHealthDrop")
+    fields.Rewards:get(3, "Reward1Key"):write("Major")
+    fields.Rewards:get(3, "Reward2Key"):write("MaxManaDrop")
+    fields.Rewards:get(4, "Reward1Key"):write("Major")
+    fields.Rewards:get(4, "Reward2Key"):write("RoomMoneyDrop")
+    fields.Rewards:get(5, "Reward1Key"):write("Major")
+    fields.Rewards:get(5, "Reward2Key"):write("StackUpgrade")
+
+    local control = template.createUi(fields, instance)
+    local route = {
+        key = "Underworld",
+        biomes = { "F" },
+    }
+    local history = historySystem.builder.build({
+        route = route,
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function()
+            return control:read("selectedRowsSnapshot")
+        end,
+    })
+    local result = historySystem.validator.validate({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+    local feedback = historySystem.feedback.fromResult({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+        findings = result.findings,
+        invalids = result.invalids,
+    })
+    control:applyRouteFeedback(historySystem.feedback.forBiome(feedback, "F"), 1)
+    control:setRouteContext({
+        routeGeneration = function()
+            return 1
+        end,
+        blockingHorizon = function()
+            return nil
+        end,
+    }, "Underworld")
+
+    local row4RoleField = fields.Rooms:get(4, "RoleKey")
+    local row4SiblingField = fields.Rooms:get(4, "SiblingStructureKey")
+    local row5RoleField = fields.Rooms:get(5, "RoleKey")
+    local row5SiblingField = fields.Rooms:get(5, "SiblingStructureKey")
+    local row4RoleVisibleValues
+    local row4SiblingVisibleValues
+    local row5RoleVisibleValues
+    local row5SiblingVisibleValues
+    local draw = noOpDraw()
+    draw.widgets.dropdown = function(field, opts)
+        if field == row4RoleField then
+            row4RoleVisibleValues = opts.visibleValues
+        elseif field == row4SiblingField then
+            row4SiblingVisibleValues = opts.visibleValues
+        elseif field == row5RoleField then
+            row5RoleVisibleValues = opts.visibleValues
+        elseif field == row5SiblingField then
+            row5SiblingVisibleValues = opts.visibleValues
+        end
+        return false
+    end
+
+    template.views.rooms(draw, control, instance)
+
+    lu.assertNotNil(row4RoleVisibleValues)
+    lu.assertEquals(row4RoleVisibleValues.Story, false)
+    lu.assertNotNil(row4SiblingVisibleValues)
+    lu.assertEquals(row4SiblingVisibleValues.F_Story01, false)
+    lu.assertNil(row5RoleVisibleValues)
+    lu.assertNil(row5SiblingVisibleValues)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRewardRatioSummaryCountsMajorMinorChoices()

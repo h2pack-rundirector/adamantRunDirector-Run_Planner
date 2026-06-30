@@ -137,8 +137,69 @@ local function appendCapFindings(target, history, entry, candidate)
     end
 end
 
+local function roleAvailabilitySummaries(candidates, entry)
+    local summaries = {}
+    for _, candidate in ipairs(candidates or EMPTY_LIST) do
+        local roleKey = candidate.roleKey
+        if roleKey ~= nil and roleKey ~= "" and candidate.optionKey ~= nil and candidate.optionKey ~= "" then
+            local summary = summaries[roleKey]
+            if summary == nil then
+                summary = {
+                    roleKey = roleKey,
+                    total = 0,
+                    invalid = 0,
+                    targetRowIndex = candidate.targetRowIndex,
+                }
+                summaries[roleKey] = summary
+            end
+            summary.total = summary.total + 1
+
+            local failure, axis, expected, actual = common.availabilityFailure(
+                candidate.optionAvailability or candidate.roleAvailability,
+                candidate.availabilityContext or entry
+            )
+            if failure == nil then
+                summary.hasAvailable = true
+            else
+                summary.invalid = summary.invalid + 1
+                if summary.failure == nil then
+                    summary.failure = failure
+                    summary.axis = axis
+                    summary.expected = expected
+                    summary.actual = actual
+                end
+            end
+        end
+    end
+    return summaries
+end
+
+local function appendRoleAvailabilityFindings(target, entry, candidates)
+    for _, summary in pairs(roleAvailabilitySummaries(candidates, entry)) do
+        if summary.total > 0
+            and summary.invalid == summary.total
+            and not summary.hasAvailable
+        then
+            target[#target + 1] = findings.roomCandidateInvalid(
+                entry,
+                { roleKey = summary.roleKey },
+                summary.failure,
+                {
+                    controlAlias = "RoleKey",
+                    controlValue = summary.roleKey,
+                    rowIndex = summary.targetRowIndex,
+                    axis = summary.axis,
+                    expected = summary.expected,
+                    actual = summary.actual,
+                }
+            )
+        end
+    end
+end
+
 function rooms.appendFindings(target, history, entry)
-    for _, candidate in ipairs(entry.roomCandidates or EMPTY_LIST) do
+    local candidates = entry.roomCandidates or EMPTY_LIST
+    for _, candidate in ipairs(candidates) do
         common.appendAvailabilityFinding(
             target,
             findings.roomCandidateInvalid,
@@ -149,6 +210,7 @@ function rooms.appendFindings(target, history, entry)
         appendCapFindings(target, history, entry, candidate)
         appendNextRoomTagsFinding(target, history, entry, candidate)
     end
+    appendRoleAvailabilityFindings(target, entry, candidates)
 end
 
 return rooms

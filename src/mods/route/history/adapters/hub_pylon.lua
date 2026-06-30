@@ -3,10 +3,10 @@ local deps = ... or {}
 local hubPylon = {}
 local roomCandidates = deps.roomCandidates
 local rewardCandidates = deps.rewardCandidates
-local siblingCandidates = deps.siblingCandidates
+local routeStep = deps.step
 
 local EMPTY_LIST = {}
-local BIOME_ENCOUNTER_DEPTH_START = 1
+local BIOME_ENCOUNTER_DEPTH_START = 0
 
 local function numericCost(value, fallback)
     local cost = math.floor(tonumber(value) or fallback or 0)
@@ -198,32 +198,24 @@ local function pylonTopologySummary(context, selectedRow, rewardContextValue)
 end
 
 local function emitPhysical(context, args)
-    local roomHistoryCost = numericCost(args.roomHistoryCost, args.biomeDepthCacheCost or 1)
-    local biomeDepthCacheCost = numericCost(args.biomeDepthCacheCost, roomHistoryCost)
-    local biomeEncounterDepthCost = numericCost(args.biomeEncounterDepthCost, 0)
-    context.routeState.roomHistoryOrdinal = context.routeState.roomHistoryOrdinal + roomHistoryCost
-
-    local entry = context.routeHistory.emitAt(context.history, {
-        routeKey = context.routeKey,
-        controlName = context.snapshot.controlName,
-        biomeKey = context.biome.key,
-        routeBiomeIndex = context.routeBiomeIndex,
+    local selectedRow = {
         rowIndex = args.rowIndex,
-        routeOrdinal = args.routeOrdinal,
-        roomHistoryOrdinal = context.routeState.roomHistoryOrdinal,
-        runDepthCache = 1 + context.routeState.roomHistoryOrdinal,
-        runEncounterDepth = context.routeState.runEncounterDepth,
-        biomeDepthCache = context.biomeState.biomeDepthCache,
-        biomeEncounterDepth = context.biomeState.biomeEncounterDepth,
-    }, {
-        kind = "room",
-        eventKey = args.eventKey,
-        groupKey = args.groupKey,
-        eventSourceKind = args.eventSourceKind,
-        roomKey = args.roomKey,
         roleKey = args.roleKey,
         optionKey = args.optionKey,
         variantKey = args.variantKey,
+    }
+    local resolved = {
+        routeOrdinal = args.routeOrdinal,
+        eventKey = args.eventKey,
+        roomKey = args.roomKey,
+        biomeDepthCacheCost = numericCost(args.biomeDepthCacheCost, 0),
+        biomeEncounterDepthCost = numericCost(args.biomeEncounterDepthCost, 0),
+        roomHistoryCost = numericCost(args.roomHistoryCost, 0),
+    }
+    routeStep.enterRoom(context, resolved)
+    local entry = routeStep.emitRoom(context, selectedRow, resolved, {
+        groupKey = args.groupKey,
+        eventSourceKind = args.eventSourceKind,
         nextRoomTags = args.nextRoomTags,
         tags = args.tags,
         entryKey = args.entryKey,
@@ -239,9 +231,7 @@ local function emitPhysical(context, args)
     entry.rewardCandidates = args.rewardCandidates
     entry.topology = args.topology
 
-    context.routeState.runEncounterDepth = context.routeState.runEncounterDepth + biomeEncounterDepthCost
-    context.biomeState.biomeDepthCache = context.biomeState.biomeDepthCache + biomeDepthCacheCost
-    context.biomeState.biomeEncounterDepth = context.biomeState.biomeEncounterDepth + biomeEncounterDepthCost
+    routeStep.advanceAfterRoom(context, resolved)
     return entry
 end
 
@@ -270,12 +260,13 @@ local function emitFixed(context, selectedRow, slot)
             role = role,
             option = option,
         }),
-        siblingCandidates = siblingCandidates.forBiomeRow(context.biome, selectedRow),
+        siblingCandidates = {},
         reward = reward,
         rewardCandidates = rewardCandidates.forContext(rewardContext(role, option)),
         topology = topology,
         biomeDepthCacheCost = traversalCost(context, key, "biomeDepthCacheCost", 1),
         biomeEncounterDepthCost = traversalCost(context, key, "biomeEncounterDepthCost", 0),
+        roomHistoryCost = traversalCost(context, key, "roomHistoryCost", 0),
     })
 end
 
@@ -293,6 +284,7 @@ local function emitPylonRestore(context, selectedRow, sideRoom)
         source = sideRoom,
         biomeDepthCacheCost = traversalCost(context, "pylonRestore", "biomeDepthCacheCost", 1),
         biomeEncounterDepthCost = traversalCost(context, "pylonRestore", "biomeEncounterDepthCost", 0),
+        roomHistoryCost = traversalCost(context, "pylonRestore", "roomHistoryCost", 0),
     })
 end
 
@@ -317,6 +309,7 @@ local function emitSideRoom(context, selectedRow, sideRoom)
         }),
         biomeDepthCacheCost = traversalCost(context, "sideRoom", "biomeDepthCacheCost", 1),
         biomeEncounterDepthCost = traversalCost(context, "sideRoom", "biomeEncounterDepthCost", 0),
+        roomHistoryCost = traversalCost(context, "sideRoom", "roomHistoryCost", 0),
     })
     emitPylonRestore(context, selectedRow, sideRoom)
 end
@@ -334,6 +327,7 @@ local function emitHubReturn(context, selectedRow)
         topology = hubTopologySummary(context.hub),
         biomeDepthCacheCost = traversalCost(context, "hubReturn", "biomeDepthCacheCost", 1),
         biomeEncounterDepthCost = traversalCost(context, "hubReturn", "biomeEncounterDepthCost", 0),
+        roomHistoryCost = traversalCost(context, "hubReturn", "roomHistoryCost", 0),
     })
 end
 
@@ -356,11 +350,12 @@ local function emitPylon(context, selectedRow, slot)
             role = role,
             option = option,
         }),
-        siblingCandidates = siblingCandidates.forBiomeRow(context.biome, selectedRow),
+        siblingCandidates = {},
         reward = selectedRewardSummary(rewardContextValue, selectedRow.rewards),
         rewardCandidates = rewardCandidates.forContext(rewardContextValue),
         topology = pylonTopologySummary(context, selectedRow, rewardContextValue),
         biomeDepthCacheCost = traversalCost(context, "pylonEntry", "biomeDepthCacheCost", 1),
+        roomHistoryCost = traversalCost(context, "pylonEntry", "roomHistoryCost", 0),
         biomeEncounterDepthCost = numericCost(
             option and option.biomeEncounterDepthCost,
             numericCost(role and role.biomeEncounterDepthCost, 0)
