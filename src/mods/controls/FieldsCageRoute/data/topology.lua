@@ -6,10 +6,7 @@ local slots = deps.slots
 
 local topology = {}
 
-local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
-
-local EMPTY_VALUES = {}
 
 local function rewardAddresses(count)
     local addresses = {}
@@ -62,16 +59,11 @@ local function siblingRoomTopology(option)
     }
 end
 
-local function isCombatCageStructure(structure)
-    return string.match(tostring(structure or ""), "^CombatCage%d+$") ~= nil
-end
-
 local function hasSelectableSiblingStructure(roleKey)
     return roleKey == "Combat" or roleKey == "Miniboss" or roleKey == "Bridge"
 end
 
 function topology.create(data)
-    local topologyRulesStatus
     local shared = roomTopologyAdapter.create(data, {
         namespace = "fields",
         slots = slots,
@@ -82,9 +74,6 @@ function topology.create(data)
         end,
         hasSelectableSiblingStructure = function(_, _, _, roleKey)
             return hasSelectableSiblingStructure(roleKey)
-        end,
-        extraRuleStatus = function(instance, rows, rowIndex, _, sibling)
-            return topologyRulesStatus(instance, rows, rowIndex, sibling)
         end,
     })
 
@@ -128,44 +117,6 @@ function topology.create(data)
     local function hasImplicitFirstPickSiblingStructure(instance, rows, rowIndex)
         return data.resolveRole(instance, rows, rowIndex) == "Combat"
             and isFirstFieldsPick(instance, rows, rowIndex)
-    end
-
-    local function matchingCombatCageRewardCountStatus(instance, rows, rowIndex, sibling)
-        if not isCombatCageStructure(sibling and sibling.structure) then
-            return validStatus()
-        end
-
-        local selectedCount = selectedCombatCageRewardCount(instance, rows, rowIndex)
-        if selectedCount == nil then
-            return validStatus()
-        end
-
-        local siblingCount = math.floor(tonumber(sibling.offerCount) or 0)
-        if siblingCount == selectedCount then
-            return validStatus()
-        end
-        return invalidStatus(
-            "fields_sibling_combat_cage_count_mismatch",
-            "Sibling combat reward count must match selected combat reward count"
-        )
-    end
-
-    local function topologyRuleStatus(instance, rows, rowIndex, sibling, rule)
-        if rule.key == "matchingCombatCageRewardCount" then
-            return matchingCombatCageRewardCountStatus(instance, rows, rowIndex, sibling)
-        end
-        return validStatus()
-    end
-
-    topologyRulesStatus = function(instance, rows, rowIndex, sibling)
-        local policy = instance.siblingStructurePolicy
-        for _, rule in ipairs(policy and policy.rules or EMPTY_VALUES) do
-            local status = topologyRuleStatus(instance, rows, rowIndex, sibling, rule)
-            if not status.valid then
-                return status
-            end
-        end
-        return validStatus()
     end
 
     local api = {}

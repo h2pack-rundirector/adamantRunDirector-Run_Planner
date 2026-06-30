@@ -740,6 +740,43 @@ function TestRunPlannerRouteHistoryValidator.testValidatorAcceptsGeneratedFields
     lu.assertTrue(result.valid)
 end
 
+function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMismatchedFieldsCombatCageCounts()
+    local route = {
+        key = "Underworld",
+        biomes = { "H" },
+    }
+    local result = validate(route, "H", h.loadFieldsCageTemplate(), {
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "H_Combat04",
+            VariantKey = "TwoRewards",
+            Reward1Key = "Boon",
+            Reward1LootKey = "PoseidonUpgrade",
+            Reward2Key = "StackUpgrade",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "H_Combat09",
+            VariantKey = "ThreeRewards",
+            SiblingStructureKey = "CombatCage2",
+            Reward1Key = "Boon",
+            Reward1LootKey = "HestiaUpgrade",
+            Reward2Key = "WeaponUpgrade",
+            Reward3Key = "MaxHealthDrop",
+        },
+    })
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "fields_sibling_combat_cage_count_mismatch")
+    lu.assertEquals(result.invalids[1].targetFinding.structureKey, "CombatCage2")
+
+    local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
+    local states = historyFeedback.valueStatesForControl(feedback, "H", 3, "SiblingStructureKey")
+    lu.assertEquals(states.CombatCage2, valueStates.INVALID)
+    lu.assertNil(states.CombatCage3)
+end
+
 function TestRunPlannerRouteHistoryValidator.testClockworkRejectsPrebossBeforeGoalsComplete()
     local route = {
         key = "Underworld",

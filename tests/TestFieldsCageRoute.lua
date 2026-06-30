@@ -380,7 +380,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesUseTopolo
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).Bridge)
 end
 
-function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkMismatchedCombatCageCount()
+function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesDoNotOwnCombatCageCountMatching()
     local catalog = loadCatalog()
     local data = loadFieldsCageData()
     local instance = data.prepare({
@@ -406,10 +406,10 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkMisma
         },
     })
 
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, threeRewardRows, 3).CombatCage2, valueStates.INVALID)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, threeRewardRows, 3).CombatCage2)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, threeRewardRows, 3).CombatCage3)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, twoRewardRows, 3).CombatCage2)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, twoRewardRows, 3).CombatCage3, valueStates.INVALID)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, twoRewardRows, 3).CombatCage3)
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkUnresolvedForcedTopology()

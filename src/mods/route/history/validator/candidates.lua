@@ -221,6 +221,21 @@ local function appendSiblingCandidateFindings(target, entry)
             candidate,
             candidate.availability
         )
+        local selected = entry and entry.topology and entry.topology.selected or nil
+        if string.match(tostring(selected and selected.structure or ""), "^CombatCage%d+$") ~= nil
+            and string.match(tostring(candidate and candidate.structure or ""), "^CombatCage%d+$") ~= nil
+            and math.floor(tonumber(selected.offerCount) or 0)
+                ~= math.floor(tonumber(candidate.offerCount) or 0)
+        then
+            target[#target + 1] = findings.siblingCandidateInvalid(
+                entry,
+                candidate,
+                "fields_sibling_combat_cage_count_mismatch",
+                {
+                    message = "Sibling combat reward count must match selected combat reward count",
+                }
+            )
+        end
     end
 end
 

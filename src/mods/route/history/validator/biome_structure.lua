@@ -305,6 +305,43 @@ local function generatedExitCount(entry)
     return #topologyExits(entry)
 end
 
+local function isCombatCageStructure(structure)
+    return string.match(tostring(structure or ""), "^CombatCage%d+$") ~= nil
+end
+
+local function validateMatchingCombatCageRewardCount(entry)
+    local topology = entry and entry.topology or nil
+    local selected = topology and topology.selected or nil
+    local sibling = topology and topology.sibling or nil
+    if not isCombatCageStructure(selected and selected.structure)
+        or not isCombatCageStructure(sibling and sibling.structure)
+    then
+        return nil
+    end
+
+    local selectedCount = math.floor(tonumber(selected.offerCount) or 0)
+    local siblingCount = math.floor(tonumber(sibling.offerCount) or 0)
+    if selectedCount == siblingCount then
+        return nil
+    end
+
+    local message = "Sibling combat reward count must match selected combat reward count"
+    return invalidWithFindings(
+        entry,
+        "fields_sibling_combat_cage_count_mismatch",
+        message,
+        {
+            findings.siblingCandidateInvalid(entry, {
+                siblingIndex = 1,
+                structureKey = sibling.key or sibling.structure,
+                structure = sibling.structure,
+            }, "fields_sibling_combat_cage_count_mismatch", {
+                message = message,
+            }),
+        }
+    )
+end
+
 local function isClockworkGoalExit(exit, progression)
     return exit ~= nil
         and (
@@ -792,6 +829,25 @@ local function validateForcePressure(history, biome)
     return nil
 end
 
+local function validateTopologyRules(history, biome)
+    local topology = routeStructureForBiome(biome)
+    if topology == nil then
+        return nil
+    end
+
+    for _, entry in ipairs(biomeRoomEntries(history, biome.key)) do
+        for _, rule in ipairs(topology.rules or EMPTY_LIST) do
+            if rule.key == "matchingCombatCageRewardCount" then
+                local invalid, invalidFindings = validateMatchingCombatCageRewardCount(entry)
+                if invalid ~= nil then
+                    return invalid, invalidFindings
+                end
+            end
+        end
+    end
+    return nil
+end
+
 local function generatedRoomKeyThrough(entries, entryIndex, roomKeys)
     for index = 1, entryIndex do
         if candidateInList(roomKeys, entries[index].roomKey or entries[index].eventKey) then
@@ -856,6 +912,9 @@ function biomeStructure.validate(args)
             end
             if invalid == nil then
                 invalid, findingsForInvalid = validateForcePressure(history, biome)
+            end
+            if invalid == nil then
+                invalid, findingsForInvalid = validateTopologyRules(history, biome)
             end
             if invalid == nil then
                 invalid = validateDeadlineRequirements(history, biome)
