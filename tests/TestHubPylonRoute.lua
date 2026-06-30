@@ -1,12 +1,8 @@
 local lu = require("luaunit")
 local h = require("tests.support.control_harness")
-local primaryRewardItem = h.primaryRewardItem
-local rewardItemBySource = h.rewardItemBySource
 local loadCatalog = h.loadCatalog
 local loadHubPylonTemplate = h.loadHubPylonTemplate
 local loadHubPylonData = h.loadHubPylonData
-local loadRunContext = h.loadRunContext
-local routeDefinitions = h.routeDefinitions
 local fakeRows = h.fakeRows
 local routeFields = h.routeFields
 local routeUiFields = h.routeUiFields
@@ -15,23 +11,6 @@ local noOpDraw = h.noOpDraw
 -- luacheck: globals TestRunPlannerHubPylonRoute
 TestRunPlannerHubPylonRoute = {}
 
-local function surfaceRouteContext(control)
-    return loadRunContext().create({
-        routes = routeDefinitions({
-            {
-                key = "Surface",
-                label = "Surface",
-                biomes = { "N" },
-            },
-        }),
-        controlResolver = function(controlName)
-            if controlName == "RouteN" then
-                return control
-            end
-            return nil
-        end,
-    })
-end
 
 function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
     local catalog = loadCatalog()
@@ -167,176 +146,6 @@ function TestRunPlannerHubPylonRoute.testHubPylonFixedRowsUseImplicitRooms()
     lu.assertTrue(data.validateRow(instance, rows, 1).valid)
 end
 
-function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot()
-    local catalog = loadCatalog()
-    local template = loadHubPylonTemplate()
-    local instance = template.prepare({
-        name = "RouteN",
-        biome = catalog.lookup.N,
-    })
-    local control = template.createRuntime(routeFields({
-            { Reward1Key = "SpellDrop" },
-            { Reward1Key = "WeaponUpgrade" },
-            {},
-            {
-                RoleKey = "Combat",
-                OptionKey = "N_Combat12",
-                Reward1Key = "Boon",
-                Reward2Key = "ZeusUpgrade",
-            },
-            {
-                RoleKey = "Story",
-                OptionKey = "",
-            },
-            {
-                RoleKey = "Miniboss",
-                OptionKey = "N_MiniBoss02",
-                Reward1Key = "AphroditeUpgrade",
-            },
-            {
-                RoleKey = "Story",
-                OptionKey = "N_Story01",
-            },
-            {
-                RoleKey = "Combat",
-                OptionKey = "N_Combat05",
-                Reward1Key = "MaxHealthDrop",
-            },
-            {
-                RoleKey = "Combat",
-                OptionKey = "N_Combat06",
-                Reward1Key = "WeaponUpgrade",
-            },
-            {},
-        }, {
-            { ModeKey = "Enabled", Entered = true },
-            { ModeKey = "Enabled", Entered = false },
-            {},
-        }, {
-            { Reward1Key = "MaxHealthDrop" },
-            {},
-            {},
-        }), instance)
-    local snapshot = h.buildRuntimeRowsSnapshot(control)
-
-    lu.assertEquals(snapshot.biomeKey, "N")
-    lu.assertEquals(snapshot.adapter, "hubPylon")
-    lu.assertTrue(snapshot.valid)
-    lu.assertFalse(snapshot.disabled)
-    lu.assertNil(snapshot.invalidRows)
-
-    lu.assertEquals(snapshot.rows[1].slotKind, "fixedBeforeHub")
-    lu.assertEquals(snapshot.rows[1].slotLabel, "Opening")
-    lu.assertEquals(snapshot.rows[1].roomKey, "N_Opening01")
-    lu.assertEquals(snapshot.rows[1].roleKey, "Opening")
-    lu.assertEquals(snapshot.rows[1].exitCount, 1)
-    lu.assertEquals(snapshot.rows[1].rewardExitCount, 0)
-    lu.assertTrue(snapshot.rows[1].valid)
-    lu.assertEquals(primaryRewardItem(snapshot.rows[1]).rewardKind, "roomStore")
-    lu.assertEquals(snapshot.rows[3].slotLabel, "Hub")
-    lu.assertEquals(snapshot.rows[3].roomHistoryCost, 0)
-
-    lu.assertEquals(snapshot.rows[4].slotKind, "biomeRow")
-    lu.assertEquals(snapshot.rows[4].routeOrdinal, 1)
-    lu.assertEquals(snapshot.rows[4].roleKey, "Combat")
-    lu.assertEquals(snapshot.rows[4].optionKey, "N_Combat12")
-    lu.assertEquals(snapshot.rows[4].roomKey, "N_Combat12")
-    lu.assertEquals(snapshot.rows[4].exitCount, 1)
-    lu.assertEquals(snapshot.rows[4].rewardExitCount, 0)
-    lu.assertEquals(snapshot.rows[4].roomHistoryCost, 2)
-    lu.assertEquals(snapshot.rows[4].hubDoorId, 561389)
-    lu.assertEquals(#snapshot.rows[4].sideDoors, 3)
-    lu.assertEquals(#snapshot.rows[4].sideRooms, 3)
-    lu.assertEquals(snapshot.rows[4].roomTopology, {
-        kind = "hubDoorBatchPick",
-        selected = {
-            structure = "Combat",
-            roomKey = "N_Combat12",
-            hubDoorId = 561389,
-            rewardStore = "HubRewards",
-            ineligibleRewardTypes = {
-                "WeaponUpgrade",
-                "HermesUpgrade",
-            },
-            offerCount = 1,
-            rewardAddresses = { "row" },
-        },
-        hub = {
-            roomKey = "N_Hub",
-            availableDoorCount = { min = 9, max = 10 },
-            generatedDoorCount = 10,
-            generatedRewardExitCount = 10,
-            selectedDoorCount = 6,
-            effectTiming = "afterGroup",
-        },
-        sideRooms = snapshot.rows[4].sideRooms,
-    })
-    lu.assertTrue(snapshot.rows[4].valid)
-    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardKind, "roomStore")
-    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardPicks[1].value, "Boon")
-    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardPicks[2].value, "ZeusUpgrade")
-    lu.assertEquals(snapshot.rows[4].sideRooms[1].roomKey, "N_Sub09")
-    lu.assertEquals(snapshot.rows[4].sideRooms[1].doorId, 558352)
-    lu.assertEquals(snapshot.rows[4].sideRooms[1].modeKey, "Enabled")
-    lu.assertEquals(snapshot.rows[4].sideRooms[1].storedModeKey, "Enabled")
-    lu.assertTrue(snapshot.rows[4].sideRooms[1].entered)
-    lu.assertTrue(snapshot.rows[4].sideRooms[1].enabled)
-    lu.assertEquals(snapshot.rows[4].sideRooms[1].encounterClassKey, "Hard")
-    lu.assertEquals(snapshot.rows[4].sideRooms[1].storedEncounterClassKey, "")
-    lu.assertEquals(snapshot.rows[4].sideRooms[1].rewardStore, "SubRoomRewardsHard")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 1).rewardKind, "roomStore")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 1).rewardPicks[1], {
-        key = "rewardType",
-        kind = "rewardType",
-        alias = "Reward1Key",
-        storageAlias = "Reward1Key",
-        value = "MaxHealthDrop",
-    })
-    lu.assertEquals(snapshot.rows[4].sideRooms[2].roomKey, "N_Sub10")
-    lu.assertEquals(snapshot.rows[4].sideRooms[2].modeKey, "Enabled")
-    lu.assertEquals(snapshot.rows[4].sideRooms[2].storedModeKey, "Enabled")
-    lu.assertFalse(snapshot.rows[4].sideRooms[2].entered)
-    lu.assertTrue(snapshot.rows[4].sideRooms[2].enabled)
-    lu.assertNil(snapshot.rows[4].sideRooms[2].encounterClassKey)
-    lu.assertEquals(snapshot.rows[4].sideRooms[2].storedEncounterClassKey, "")
-    lu.assertEquals(snapshot.rows[4].sideRooms[2].rewardStore, "SubRoomRewardsHard")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 2).rewardKind, "none")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 2).rewardPicks, {})
-    lu.assertEquals(snapshot.rows[4].sideRooms[3].roomKey, "N_Sub07")
-    lu.assertEquals(snapshot.rows[4].sideRooms[3].modeKey, "Disabled")
-    lu.assertEquals(snapshot.rows[4].sideRooms[3].storedModeKey, "")
-    lu.assertFalse(snapshot.rows[4].sideRooms[3].entered)
-    lu.assertFalse(snapshot.rows[4].sideRooms[3].enabled)
-    lu.assertNil(snapshot.rows[4].sideRooms[3].encounterClassKey)
-    lu.assertEquals(snapshot.rows[4].sideRooms[3].storedEncounterClassKey, "")
-    lu.assertEquals(snapshot.rows[4].sideRooms[3].rewardStore, "SubRoomRewards")
-    lu.assertEquals(rewardItemBySource(snapshot.rows[4], "side", 3).rewardPicks, {})
-
-    lu.assertEquals(snapshot.rows[5].roleKey, "Story")
-    lu.assertEquals(snapshot.rows[5].optionKey, "N_Story01")
-    lu.assertEquals(snapshot.rows[5].roomKey, "N_Story01")
-    lu.assertEquals(snapshot.rows[5].hubDoorId, 560848)
-    lu.assertTrue(snapshot.rows[5].valid)
-
-    lu.assertEquals(snapshot.rows[6].roleKey, "Miniboss")
-    lu.assertEquals(snapshot.rows[6].optionKey, "N_MiniBoss02")
-    lu.assertEquals(snapshot.rows[6].roomKey, "N_MiniBoss02")
-    lu.assertEquals(primaryRewardItem(snapshot.rows[6]).rewardKind, "boonSource")
-    lu.assertEquals(primaryRewardItem(snapshot.rows[6]).rewardPicks[1].value, "AphroditeUpgrade")
-    lu.assertTrue(snapshot.rows[6].valid)
-
-    lu.assertEquals(snapshot.rows[7].roleKey, "Story")
-    lu.assertTrue(snapshot.rows[7].valid)
-    lu.assertNil(snapshot.rows[7].invalidCode)
-
-    lu.assertEquals(snapshot.rows[10].slotKind, "preboss")
-    lu.assertEquals(snapshot.rows[10].slotLabel, "Preboss Shop")
-    lu.assertNil(snapshot.rows[10].roomKey)
-    lu.assertEquals(snapshot.rows[10].roleKey, "Preboss")
-    lu.assertEquals(snapshot.rows[10].roomHistoryCost, 1)
-    lu.assertTrue(snapshot.rows[10].valid)
-    lu.assertEquals(primaryRewardItem(snapshot.rows[10]).rewardKind, "shop")
-end
 
 function TestRunPlannerHubPylonRoute.testHubPylonEmitsDumbSelectedRowsSnapshot()
     local catalog = loadCatalog()
@@ -443,7 +252,7 @@ function TestRunPlannerHubPylonRoute.testHubPylonReadSelectedRowsSnapshot()
         {},
     }), instance)
 
-    local snapshot = control:read("selectedRowsSnapshot")
+    local snapshot = control:buildSelectedRowsSnapshot()
 
     lu.assertEquals(snapshot.schema, "selectedRows.v1")
     lu.assertEquals(snapshot.rows[4].roleKey, "Combat")
@@ -487,42 +296,6 @@ function TestRunPlannerHubPylonRoute.testHubPylonSideRoomProbabilitySummary()
     lu.assertStrContains(summary.text, "expected ~3.0 open")
 end
 
-function TestRunPlannerHubPylonRoute.testHubPylonPolicyAllowsDuplicateBoonSources()
-    local catalog = loadCatalog()
-    local template = loadHubPylonTemplate()
-    local instance = template.prepare({
-        name = "RouteN",
-        biome = catalog.lookup.N,
-    })
-    local control = template.createRuntime(routeFields({
-            { Reward1Key = "SpellDrop" },
-            { Reward1Key = "WeaponUpgrade" },
-            {},
-            {
-                RoleKey = "Combat",
-                OptionKey = "N_Combat12",
-                Reward1Key = "Boon",
-                Reward2Key = "ZeusUpgrade",
-            },
-            {
-                RoleKey = "Combat",
-                OptionKey = "N_Combat13",
-                Reward1Key = "Boon",
-                Reward2Key = "ZeusUpgrade",
-            },
-        }), instance)
-    local routeContext = surfaceRouteContext(control)
-    control:setRouteContext(routeContext, "Surface")
-    local overview = routeContext:overview("Surface")
-    local snapshot = h.buildRuntimeRowsSnapshot(control)
-
-    lu.assertTrue(overview.valid)
-    lu.assertTrue(snapshot.valid)
-    lu.assertFalse(snapshot.disabled)
-    lu.assertNil(snapshot.invalidRows)
-    lu.assertEquals(primaryRewardItem(snapshot.rows[4]).rewardPicks[2].value, "ZeusUpgrade")
-    lu.assertEquals(primaryRewardItem(snapshot.rows[5]).rewardPicks[2].value, "ZeusUpgrade")
-end
 
 local function renderHubPylonRoomDropdowns(control, instance, template)
     local draw = noOpDraw()

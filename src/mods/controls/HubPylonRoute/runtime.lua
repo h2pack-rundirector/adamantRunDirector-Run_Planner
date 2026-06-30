@@ -4,7 +4,6 @@ local deps = ...
 local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
-local roomStructure = deps.roomStructure
 local sideRoomProbability = deps.sideRoomProbability
 local invalidLocations = deps.invalidLocations
 local controlRequirements = deps.controlRequirements
@@ -54,38 +53,6 @@ end
 
 local function hubTopology(instance)
     return instance.biome.roomTopology.hub
-end
-
-local function pylonRoomTopology(instance, slot, row)
-    if slot == nil or slot.kind ~= "biomeRow" then
-        return nil
-    end
-
-    local topology = hubTopology(instance)
-    local context = rewardContext(row.role, row.option)
-    local offerCount = context ~= nil and 1 or 0
-    return {
-        kind = "hubDoorBatchPick",
-        selected = {
-            structure = row.roleKey,
-            roomKey = row.roomKey,
-            hubDoorId = row.hubDoorId,
-            rewardStore = context and context.rewardStore or nil,
-            eligibleRewardTypes = context and context.eligibleRewardTypes or nil,
-            ineligibleRewardTypes = context and context.ineligibleRewardTypes or nil,
-            offerCount = offerCount,
-            rewardAddresses = offerCount > 0 and { "row" } or nil,
-        },
-        hub = {
-            roomKey = topology.roomKey,
-            availableDoorCount = topology.availableDoorCount,
-            generatedDoorCount = topology.generatedDoorCount,
-            generatedRewardExitCount = topology.generatedRewardExitCount,
-            selectedDoorCount = topology.selectedDoorCount,
-            effectTiming = topology.effectTiming,
-        },
-        sideRooms = row.sideRooms,
-    }
 end
 
 local function prewarmRewardSurface(role, option)
@@ -341,63 +308,6 @@ function runtime.create(fields, instance)
         data.endReadPass(instance)
     end
 
-    function control:rowSnapshot(rowIndex)
-        local slot = self:slot(rowIndex)
-        if slot == nil then
-            return nil
-        end
-
-        local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
-        local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
-        local validation = self:rowValidation(rowIndex)
-        local rewardsConfigured = self:rewardsConfigured()
-        local surface = rewardsConfigured and rewardSurface(role, option) or nil
-        local context = data.rowContext(instance, routeRows, rowIndex)
-        local rewardPicks = EMPTY_LIST
-        local selectionRequirements = EMPTY_LIST
-        if rewardsConfigured and rewardSystem ~= nil then
-            rewardPicks, selectionRequirements =
-                rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex))
-        end
-        local row = {
-            rowIndex = rowIndex,
-            routeOrdinal = slot.routeOrdinal,
-            biomeDepthCache = context.biomeDepthCache,
-            biomeDepthCacheCost = context.biomeDepthCacheCost,
-            biomeEncounterDepth = context.biomeEncounterDepth,
-            biomeEncounterDepthCost = context.biomeEncounterDepthCost,
-            slotKind = slot.kind or "biomeRow",
-            isBiomeEntry = slot.isBiomeEntry == true,
-            slotLabel = slot.label,
-            roomHistoryCost = context.roomHistoryCost,
-            roomHistoryIdentity = slot.roomHistoryIdentity,
-            roleKey = roleKey,
-            role = role,
-            optionKey = optionKey,
-            option = option,
-            features = data.rowFeatures(slot, role, option),
-            roomKey = selectedRoomKey(slot, option),
-            exitCount = roomStructure.exitCount(slot, role, option),
-            rewardExitCount = roomStructure.rewardExitCount(slot, role, option),
-            hubDoorId = option and option.hubDoorId or slot.hubDoorId,
-            sideDoors = option and option.sideDoors or slot.sideDoors,
-            sideRooms = sideRoomSnapshots(instance, fields, routeRows, rowIndex, rewardsConfigured),
-            valid = validation.valid,
-            invalidCode = validation.code,
-            invalidReason = validation.message,
-            invalidCompletion = validation.completion == true,
-            variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
-            rewards = rewardsConfigured and rewardSystem.readRewards(fields.Rewards, rowIndex) or EMPTY_LIST,
-            rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST,
-            rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
-            rewardConstraints = surface and surface.rewardConstraints or nil,
-            rewardPicks = rewardPicks,
-            selectionRequirements = selectionRequirements,
-        }
-        row.roomTopology = pylonRoomTopology(instance, slot, row)
-        return row
-    end
-
     function control:selectedRowSnapshot(rowIndex)
         local slot = self:slot(rowIndex)
         if slot == nil then
@@ -496,8 +406,6 @@ function runtime.create(fields, instance)
             return buildCompletionReport(self)
         elseif path == "selectedRowsSnapshot" then
             return self:buildSelectedRowsSnapshot()
-        elseif path == "row" then
-            return self:rowSnapshot(...)
         end
         return nil
     end

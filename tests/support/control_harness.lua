@@ -662,32 +662,6 @@ local function firstValidDevotionRows()
     }
 end
 
-local function buildRuntimeRowsSnapshot(control)
-    local rows = {}
-    local invalidRows = {}
-    for rowIndex = 1, control:rowCount() do
-        local row = control:rowSnapshot(rowIndex)
-        rows[#rows + 1] = row
-        if row and row.valid == false then
-            invalidRows[#invalidRows + 1] = {
-                rowIndex = row.rowIndex,
-                routeOrdinal = row.routeOrdinal,
-                code = row.invalidCode,
-                message = row.invalidReason,
-                tabKey = row.invalidTabKey,
-                controlTargets = row.invalidControlTargets,
-                valueTargets = row.invalidValueTargets,
-            }
-        end
-    end
-    local snapshot = control:read("completion")
-    snapshot.rows = rows
-    snapshot.invalidRows = invalidRows[1] ~= nil and invalidRows or nil
-    snapshot.valid = invalidRows[1] == nil
-    snapshot.disabled = invalidRows[1] ~= nil
-    return snapshot
-end
-
 return {
     testImport = testImport,
     withTestImport = withTestImport,
@@ -732,5 +706,4 @@ return {
     devotionRewardRow = devotionRewardRow,
     boonRewardRow = boonRewardRow,
     firstValidDevotionRows = firstValidDevotionRows,
-    buildRuntimeRowsSnapshot = buildRuntimeRowsSnapshot,
 }

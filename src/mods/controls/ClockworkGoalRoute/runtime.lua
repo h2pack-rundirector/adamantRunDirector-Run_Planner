@@ -4,12 +4,10 @@ local deps = ...
 local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
-local roomStructure = deps.roomStructure
 local invalidLocations = deps.invalidLocations
 local controlRequirements = deps.controlRequirements
 
 local runtime = {}
-local EMPTY_LIST = {}
 
 local function createRouteRows(fields)
     return {
@@ -48,24 +46,6 @@ local function prewarmRewardSurfaces(instance)
     for _, slot in ipairs(instance.routeSlots or {}) do
         prewarmRewardSurface(instance, routeRows, slot.rowIndex or 1, slot.role)
     end
-end
-
-local function rowRoomKey(slot, option)
-    if option ~= nil and option.key ~= nil and option.key ~= "" then
-        return option.key
-    end
-    return slot and slot.roomKey or nil
-end
-
-local function roomOptions(slot)
-    local options = {}
-    for index, option in ipairs(slot and slot.roomOptions or {}) do
-        options[index] = {
-            key = option.key,
-            label = option.label,
-        }
-    end
-    return options
 end
 
 local function selectedRoomKey(slot, option)
@@ -183,68 +163,6 @@ function runtime.create(fields, instance)
 
     function control:endReadPass()
         data.endReadPass(instance)
-    end
-
-    function control:rowSnapshot(rowIndex)
-        local slot = self:slot(rowIndex)
-        if slot == nil then
-            return nil
-        end
-
-        local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
-        local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
-        local validation = self:rowValidation(rowIndex)
-        local rewardsConfigured = self:rewardsConfigured()
-        local surface = rewardsConfigured and rewardSurface(instance, routeRows, rowIndex, role, option) or nil
-        local context = data.rowContext(instance, routeRows, rowIndex)
-        local rewards = rewardsConfigured and rewardSystem.readRewards(fields.Rewards, rowIndex) or EMPTY_LIST
-        local rewardLoot = rewardsConfigured and rewardSystem.readRewardLoot(fields.Rewards, rowIndex) or EMPTY_LIST
-        local rewardPicks = EMPTY_LIST
-        local selectionRequirements = EMPTY_LIST
-        if rewardsConfigured and rewardSystem ~= nil then
-            rewardPicks, selectionRequirements =
-                rewardSystem.snapshot(surface, rewardSystem.fields(fields.Rewards, rowIndex))
-        end
-        local row = {
-            rowIndex = rowIndex,
-            routeOrdinal = slot.routeOrdinal,
-            biomeDepthCache = context.biomeDepthCache,
-            biomeDepthCacheCost = context.biomeDepthCacheCost,
-            biomeEncounterDepth = context.biomeEncounterDepth,
-            biomeEncounterDepthCost = context.biomeEncounterDepthCost,
-            slotKind = slot.kind or "biomeRow",
-            isBiomeEntry = slot.isBiomeEntry == true,
-            roomKey = rowRoomKey(slot, option),
-            exitCount = roomStructure.exitCount(slot, role, option),
-            rewardExitCount = roomStructure.rewardExitCount(slot, role, option),
-            roomOptions = roomOptions(slot),
-            slotLabel = slot.label,
-            roomHistoryCost = context.roomHistoryCost,
-            roomHistoryIdentity = slot.roomHistoryIdentity,
-            roleKey = roleKey,
-            role = role,
-            optionKey = optionKey,
-            option = option,
-            features = data.rowFeatures(slot, role, option),
-            countsGoal = data.rowCountsGoal(instance, routeRows, rowIndex, role, option),
-            countsNonGoalReward = data.rowCountsNonGoalReward(instance, routeRows, rowIndex, role, option),
-            valid = validation.valid,
-            invalidCode = validation.code,
-            invalidReason = validation.message,
-            invalidTabKey = validation.tabKey,
-            invalidControlTargets = validation.controlTargets,
-            invalidValueTargets = validation.valueTargets,
-            invalidCompletion = validation.completion == true,
-            variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
-            rewards = rewards,
-            rewardLoot = rewardLoot,
-            rewardKind = rewardsConfigured and (surface and surface.kind or "none") or "vanilla",
-            rewardConstraints = surface and surface.rewardConstraints or nil,
-            roomTopology = data.roomTopology(instance, routeRows, rowIndex),
-            rewardPicks = rewardPicks,
-            selectionRequirements = selectionRequirements,
-        }
-        return row
     end
 
     function control:selectedRowSnapshot(rowIndex)
@@ -377,8 +295,6 @@ function runtime.create(fields, instance)
             return buildCompletionReport(self)
         elseif path == "selectedRowsSnapshot" then
             return self:buildSelectedRowsSnapshot()
-        elseif path == "row" then
-            return self:rowSnapshot(...)
         end
         return nil
     end
