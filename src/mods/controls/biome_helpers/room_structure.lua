@@ -13,8 +13,8 @@ function roomStructure.exitCount(slot, role, option)
     return structuralValue("exitCount", slot, role, option)
 end
 
-function roomStructure.rewardExitCount(slot, role, option)
-    return structuralValue("rewardExitCount", slot, role, option)
+function roomStructure.rewardBearingExitCount(slot, role, option)
+    return structuralValue("rewardBearingExitCount", slot, role, option)
         or roomStructure.exitCount(slot, role, option)
 end
 

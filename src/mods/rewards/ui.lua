@@ -13,15 +13,15 @@ local function conditionMatches(condition, fields)
     return fields:read(condition.alias) == condition.value
 end
 
-local function sourceActive(sourceIndex, opts)
-    if sourceIndex == nil then
+local function sourceActive(sameExitRewardIndex, opts)
+    if sameExitRewardIndex == nil then
         return true
     end
-    local sourceCount = opts and opts.sourceCount or nil
-    if sourceCount == nil then
+    local sameExitRewardCount = opts and opts.sameExitRewardCount or nil
+    if sameExitRewardCount == nil then
         return true
     end
-    return sourceIndex <= sourceCount
+    return sameExitRewardIndex <= sameExitRewardCount
 end
 
 local function conditionActive(condition, fields)
@@ -48,7 +48,7 @@ local function conditionActive(condition, fields)
 end
 
 local function isControlVisible(control, fields, opts)
-    return sourceActive(control and control.sourceIndex or nil, opts)
+    return sourceActive(control and control.sameExitRewardIndex or nil, opts)
         and conditionActive(control and control.visibleWhen or nil, fields)
 end
 

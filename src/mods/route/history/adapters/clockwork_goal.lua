@@ -220,7 +220,7 @@ local function selectedTopology(selectedRow, resolved)
             structure = "GoalCombat",
             roomKey = resolved.roomKey,
             isClockworkGoal = true,
-            offerCount = 0,
+            sameExitRewardCount = 0,
         }
     elseif selectedRow.roleKey == "RewardCombat" then
         return {
@@ -228,14 +228,14 @@ local function selectedTopology(selectedRow, resolved)
             roomKey = resolved.roomKey,
             rewardStore = "TartarusRewards",
             ineligibleRewardTypes = { "Boon" },
-            offerCount = 1,
+            sameExitRewardCount = 1,
             rewardAddresses = { "row" },
         }
     elseif selectedRow.roleKey == "Story" then
         return {
             structure = "Story",
             roomKey = resolved.roomKey,
-            offerCount = 0,
+            sameExitRewardCount = 0,
         }
     elseif selectedRow.roleKey == "Fountain" then
         return {
@@ -243,7 +243,7 @@ local function selectedTopology(selectedRow, resolved)
             roomKey = resolved.roomKey,
             rewardStore = "TartarusRewards",
             ineligibleRewardTypes = { "Devotion" },
-            offerCount = 1,
+            sameExitRewardCount = 1,
             rewardAddresses = { "row" },
         }
     elseif selectedRow.roleKey == "Miniboss" then
@@ -252,13 +252,13 @@ local function selectedTopology(selectedRow, resolved)
             roomKey = resolved.roomKey,
             rewardStore = "RunProgress",
             eligibleRewardTypes = { "Boon" },
-            offerCount = 1,
+            sameExitRewardCount = 1,
             rewardAddresses = { "row" },
         }
     elseif selectedRow.roleKey == "Preboss" then
         return {
             structure = "Preboss",
-            offerCount = 0,
+            sameExitRewardCount = 0,
         }
     end
     return nil
@@ -309,7 +309,7 @@ local function siblingTopology(context, selectedRow)
         isPreboss = option.isPreboss,
         eligibleRewardTypes = copyList(option.eligibleRewardTypes),
         ineligibleRewardTypes = copyList(option.ineligibleRewardTypes),
-        offerCount = option.offerCount,
+        sameExitRewardCount = option.sameExitRewardCount,
     }
 end
 
@@ -359,7 +359,7 @@ local function appendRoom(history, routeHistory, context, selectedRow, resolved)
         kind = "room",
         eventKey = eventKey,
         groupKey = selectedRow.roleKey,
-        sourceKind = "row",
+        eventSourceKind = "row",
         roomKey = resolved.roomKey,
         roleKey = selectedRow.roleKey,
         optionKey = selectedRow.optionKey,

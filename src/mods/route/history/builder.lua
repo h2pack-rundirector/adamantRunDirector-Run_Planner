@@ -39,7 +39,7 @@ local function appendAfterBiomeEntry(history, route, routeState, routeBiomeIndex
         kind = "room",
         eventKey = eventKey,
         groupKey = entry.key,
-        sourceKind = "afterBiome",
+        eventSourceKind = "afterBiome",
         roomKey = entry.roomKey,
         entryKey = entry.key,
         entryLabel = entry.label,

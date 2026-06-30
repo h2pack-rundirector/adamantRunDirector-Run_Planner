@@ -128,7 +128,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureRendersInRo
     end
     template.views.rewards(draw, control, instance)
 
-    lu.assertEquals(roomSiblingDropdownCount, 1)
+    lu.assertEquals(roomSiblingDropdownCount, 2)
     lu.assertEquals(rewardSiblingDropdownCount, 0)
 end
 
@@ -207,7 +207,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRoomsViewShowsMinibossOptio
     })
 end
 
-function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureIsImplicitAtFirstPick()
+function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureUsesCurrentRoomExits()
     local catalog = loadCatalog()
     local template = loadFieldsCageTemplate()
     local instance = template.prepare({
@@ -230,7 +230,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureIsImplicitA
     end
     template.views.rooms(draw, control, instance)
 
-    lu.assertEquals(siblingDropdownCount, 0)
+    lu.assertEquals(siblingDropdownCount, 1)
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingCountUsesPhysicalExits()

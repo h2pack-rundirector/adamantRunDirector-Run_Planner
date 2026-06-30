@@ -1149,7 +1149,7 @@ function TestRunPlannerRouteHistoryValidator.testRewardValidatorTreatsFieldsCage
         reward = {
             kind = "fieldsCages",
             rewardStore = "RunProgress",
-            sourceCount = 2,
+            sameExitRewardCount = 2,
             picks = {
                 { rewardType = "SpellDrop" },
                 { rewardType = "TalentBigDrop" },

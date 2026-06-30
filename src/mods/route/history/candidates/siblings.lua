@@ -42,7 +42,7 @@ local function appendCandidate(candidates, siblingIndex, option)
         roomKey = roomKeyFor(option),
         availability = copyValue(option.availability),
         force = copyValue(option.force),
-        offerCount = option.offerCount,
+        sameExitRewardCount = option.sameExitRewardCount,
         rewardStore = option.rewardStore,
         rewardClass = option.rewardClass,
         rewardBranch = option.rewardBranch,

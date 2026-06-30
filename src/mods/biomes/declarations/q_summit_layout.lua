@@ -20,15 +20,15 @@ local SURFACE_SHOP_COMBAT_ROOMS = {
 
 local function option(key, label, opts)
     opts = opts or {}
-    local rewardExitCount = opts.rewardExitCount
-    if rewardExitCount == nil then
-        rewardExitCount = opts.exitCount
+    local rewardBearingExitCount = opts.rewardBearingExitCount
+    if rewardBearingExitCount == nil then
+        rewardBearingExitCount = opts.exitCount
     end
     return {
         key = key,
         label = label,
         exitCount = opts.exitCount,
-        rewardExitCount = rewardExitCount,
+        rewardBearingExitCount = rewardBearingExitCount,
         features = opts.features,
         availability = opts.availability,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
@@ -56,55 +56,55 @@ end
 layout.surfaceShopFeatures = SURFACE_SHOP_FEATURES
 
 layout.introRoom = option("Q_Intro", "Intro", {
-    exitCount = 2,
+    exitCount = 1,
     availability = { biomeDepthCache = { exact = 1 } },
 })
 
 layout.combatRooms = {
-    combat("Q_Combat01", { availability = { biomeDepthCache = { exact = 4 } } }),
-    combat("Q_Combat02", { availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat01", { exitCount = 1, availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat02", { exitCount = 1, availability = { biomeDepthCache = { exact = 4 } } }),
     combat("Q_Combat03", { availability = { biomeDepthCache = { exact = 2 } } }),
-    combat("Q_Combat04", { availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat04", { exitCount = 1, availability = { biomeDepthCache = { exact = 4 } } }),
     combat("Q_Combat05", { availability = { biomeDepthCache = { exact = 2 } } }),
-    combat("Q_Combat06", { availability = { biomeDepthCache = { exact = 4 } } }),
-    combat("Q_Combat07", { availability = { biomeDepthCache = { exact = 4 } } }),
-    combat("Q_Combat08", { availability = { biomeDepthCache = { exact = 4 } } }),
-    combat("Q_Combat09", { availability = { biomeDepthCache = { exact = 4 } } }),
-    combat("Q_Combat10", { availability = { biomeDepthCache = { exact = 1 } } }),
-    combat("Q_Combat11", { availability = { biomeDepthCache = { exact = 1 } } }),
+    combat("Q_Combat06", { exitCount = 1, availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat07", { exitCount = 1, availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat08", { exitCount = 1, availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat09", { exitCount = 1, availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat10", { exitCount = 1, availability = { biomeDepthCache = { exact = 1 } } }),
+    combat("Q_Combat11", { exitCount = 1, availability = { biomeDepthCache = { exact = 1 } } }),
     combat("Q_Combat12", { availability = { biomeDepthCache = { exact = 5 } } }),
     combat("Q_Combat13", { availability = { biomeDepthCache = { exact = 5 } } }),
     combat("Q_Combat14", { availability = { biomeDepthCache = { exact = 5 } } }),
     combat("Q_Combat15", { availability = { biomeDepthCache = { exact = 2 } } }),
-    combat("Q_Combat16", { availability = { biomeDepthCache = { exact = 4 } } }),
+    combat("Q_Combat16", { exitCount = 1, availability = { biomeDepthCache = { exact = 4 } } }),
 }
 
 layout.combatRoomsByKey = indexByKey(layout.combatRooms)
 
 layout.minibossRooms = {
     option("Q_MiniBoss02", "Brute", {
-        exitCount = 2,
+        exitCount = 1,
         biomeEncounterDepthCost = 1,
         availability = {
             biomeDepthCache = { exact = 3 },
         },
     }),
     option("Q_MiniBoss03", "Typhon Tail", {
-        exitCount = 2,
+        exitCount = 1,
         biomeEncounterDepthCost = 1,
         availability = {
             biomeDepthCache = { exact = 6 },
         },
     }),
     option("Q_MiniBoss04", "Typhon Eye", {
-        exitCount = 2,
+        exitCount = 1,
         biomeEncounterDepthCost = 0,
         availability = {
             biomeDepthCache = { exact = 6 },
         },
     }),
     option("Q_MiniBoss05", "Stalker", {
-        exitCount = 2,
+        exitCount = 1,
         biomeEncounterDepthCost = 1,
         availability = {
             biomeDepthCache = { exact = 3 },

@@ -120,7 +120,7 @@ function rewardCandidates.forContext(context, opts)
     elseif context.kind == "roomStore" then
         appendStoreCandidate(candidates, context)
     elseif context.kind == "fieldsCages" then
-        for index = 1, math.floor(tonumber(opts.sourceCount) or 0) do
+        for index = 1, math.floor(tonumber(opts.sameExitRewardCount) or 0) do
             appendStoreCandidate(candidates, {
                 address = "cage:" .. tostring(index),
                 rewardStore = context.rewardStore,

@@ -20,7 +20,7 @@ return function(deps)
             isClockworkGoal = opts.isClockworkGoal,
             eligibleRewardTypes = opts.eligibleRewardTypes,
             ineligibleRewardTypes = opts.ineligibleRewardTypes,
-            offerCount = opts.offerCount or 0,
+            sameExitRewardCount = opts.sameExitRewardCount or 0,
         }
     end
 
@@ -47,7 +47,7 @@ return function(deps)
             structure = goalCombatRole,
             roleKey = goalCombatRole,
             isClockworkGoal = true,
-            offerCount = 0,
+            sameExitRewardCount = 0,
         },
         {
             key = "CombatReward",
@@ -56,7 +56,7 @@ return function(deps)
             roleKey = rewardCombatRole,
             rewardStore = "TartarusRewards",
             ineligibleRewardTypes = { "Boon" },
-            offerCount = 1,
+            sameExitRewardCount = 1,
         },
         {
             key = prebossRole,
@@ -64,7 +64,7 @@ return function(deps)
             structure = prebossRole,
             roleKey = prebossRole,
             isPreboss = true,
-            offerCount = 0,
+            sameExitRewardCount = 0,
         },
         roomSibling(story, "Story", {
             roleKey = "Story",
@@ -73,7 +73,7 @@ return function(deps)
             roleKey = "Fountain",
             rewardStore = "TartarusRewards",
             ineligibleRewardTypes = { "Devotion" },
-            offerCount = 1,
+            sameExitRewardCount = 1,
         }),
     }
 
@@ -82,7 +82,7 @@ return function(deps)
             roleKey = "Miniboss",
             rewardStore = "RunProgress",
             eligibleRewardTypes = { "Boon" },
-            offerCount = 1,
+            sameExitRewardCount = 1,
         })
     end
 

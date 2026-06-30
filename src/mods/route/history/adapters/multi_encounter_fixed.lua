@@ -436,7 +436,7 @@ local function appendRoom(history, routeHistory, context, selectedRow, resolved)
         kind = "room",
         eventKey = eventKey,
         groupKey = selectedRow.roleKey,
-        sourceKind = "row",
+        eventSourceKind = "row",
         roomKey = resolved.roomKey,
         roleKey = selectedRow.roleKey,
         optionKey = selectedRow.optionKey,

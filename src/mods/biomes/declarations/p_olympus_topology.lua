@@ -8,7 +8,7 @@ return function(deps)
             structure = "Combat",
             roleKey = "Combat",
             rewardBranch = "majorMinor",
-            offerCount = 1,
+            sameExitRewardCount = 1,
         }
     end
 
@@ -28,7 +28,7 @@ return function(deps)
             rewardClass = opts.rewardClass,
             rewardBranch = opts.rewardBranch,
             eligibleRewardTypes = opts.eligibleRewardTypes,
-            offerCount = opts.offerCount or 0,
+            sameExitRewardCount = opts.sameExitRewardCount or 0,
         }
     end
 
@@ -55,7 +55,7 @@ return function(deps)
         roomSibling(layout.fountainRooms[1], "Fountain", {
             roleKey = "Fountain",
             rewardBranch = "majorMinor",
-            offerCount = 1,
+            sameExitRewardCount = 1,
         }),
     }
     for _, miniboss in ipairs(layout.minibossRooms) do
@@ -63,7 +63,7 @@ return function(deps)
             roleKey = "Miniboss",
             rewardStore = "RunProgress",
             eligibleRewardTypes = { "Boon" },
-            offerCount = 1,
+            sameExitRewardCount = 1,
         })
     end
 

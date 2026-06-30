@@ -27,15 +27,15 @@ local SURFACE_SHOP_COMBAT_ROOMS = {
 
 local function option(key, label, opts)
     opts = opts or {}
-    local rewardExitCount = opts.rewardExitCount
-    if rewardExitCount == nil then
-        rewardExitCount = opts.exitCount
+    local rewardBearingExitCount = opts.rewardBearingExitCount
+    if rewardBearingExitCount == nil then
+        rewardBearingExitCount = opts.exitCount
     end
     return {
         key = key,
         label = label,
         exitCount = opts.exitCount,
-        rewardExitCount = rewardExitCount,
+        rewardBearingExitCount = rewardBearingExitCount,
         tags = opts.tags,
         nextRoomTags = opts.nextRoomTags,
         features = opts.features,
@@ -78,7 +78,7 @@ layout.chaosFeatures = CHAOS_FEATURES
 layout.surfaceShopFeatures = CHAOS_SURFACE_FEATURES
 
 layout.introRoom = option("P_Intro", "Intro", {
-    exitCount = 1,
+    exitCount = 2,
     tags = OUTDOOR_TAGS,
     features = CHAOS_FEATURES,
     availability = { biomeDepthCache = { exact = 1 } },

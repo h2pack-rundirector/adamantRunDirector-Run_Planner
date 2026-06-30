@@ -155,11 +155,11 @@ local function selectedRoomStoreReward(context, rewards)
     }
 end
 
-local function selectedFieldsCageRewards(context, rewards, sourceCount)
+local function selectedFieldsCageRewards(context, rewards, sameExitRewardCount)
     local values = rewards and rewards.row and rewards.row.values or EMPTY_LIST
     local loot = rewards and rewards.row and rewards.row.loot or EMPTY_LIST
     local picks = {}
-    for index = 1, sourceCount do
+    for index = 1, sameExitRewardCount do
         picks[index] = {
             rewardType = values[index] ~= "" and values[index] or nil,
             boonSource = values[index] == "Boon" and loot[index] or nil,
@@ -169,7 +169,7 @@ local function selectedFieldsCageRewards(context, rewards, sourceCount)
     return {
         kind = "fieldsCages",
         rewardStore = context.rewardStore,
-        sourceCount = sourceCount,
+        sameExitRewardCount = sameExitRewardCount,
         picks = picks,
     }
 end
@@ -200,7 +200,7 @@ local function roomStoreOfferSummary(offer, rewardType, boonSource)
         kind = "roomStore",
         address = offer.address,
         rewardStore = offer.rewardStore,
-        offerCount = offer.offerCount,
+        sameExitRewardCount = offer.sameExitRewardCount,
         controlAlias = "Reward" .. tostring(rewardAliasStart) .. "Key",
         rewardType = rewardType ~= "" and rewardType or nil,
         boonSource = rewardType == "Boon" and boonSource or nil,
@@ -269,11 +269,11 @@ local function selectedPrebossReward(context, rewards)
     }
 end
 
-local function selectedRewardSummary(context, rewards, sourceCount)
+local function selectedRewardSummary(context, rewards, sameExitRewardCount)
     if context == nil or context.kind == nil or context.kind == "none" then
         return nil
     elseif context.kind == "fieldsCages" then
-        return selectedFieldsCageRewards(context, rewards, sourceCount or 0)
+        return selectedFieldsCageRewards(context, rewards, sameExitRewardCount or 0)
     elseif context.kind == "roomStore" then
         return selectedRoomStoreReward(context, rewards)
     elseif context.kind == "preboss" then
@@ -348,14 +348,14 @@ local function resolveRow(context, selectedRow, slot)
     local option = optionForRow(role, selectedRow, slot)
     local slotLayout = context.biome.slotLayout or {}
     local cageCount = cageCountOption(context.biome, role, selectedRow)
-    local sourceCount = math.floor(tonumber(cageCount and cageCount.cageRewardCount) or 0)
+    local sameExitRewardCount = math.floor(tonumber(cageCount and cageCount.cageRewardCount) or 0)
 
     return {
         slot = slot,
         role = role,
         option = option,
         cageCount = cageCount,
-        sourceCount = sourceCount,
+        sameExitRewardCount = sameExitRewardCount,
         routeOrdinal = slot and slot.routeOrdinal or nil,
         roomKey = roomKeyFor(role, option),
         eventKey = eventKeyFor(selectedRow, role, option),
@@ -388,7 +388,7 @@ local function appendRoom(history, routeHistory, context, selectedRow, resolved)
         kind = "room",
         eventKey = eventKey,
         groupKey = selectedRow.roleKey,
-        sourceKind = "row",
+        eventSourceKind = "row",
         roomKey = resolved.roomKey,
         roleKey = selectedRow.roleKey,
         optionKey = selectedRow.optionKey,
@@ -399,23 +399,23 @@ local function appendRoom(history, routeHistory, context, selectedRow, resolved)
     })
     entry.roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, resolved)
     entry.siblingCandidates = siblingCandidates.forBiomeRow(context.biome, selectedRow)
-    entry.reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards, resolved.sourceCount)
+    entry.reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards, resolved.sameExitRewardCount)
     entry.rewardCandidates = rewardCandidates.forContext(resolved.rewardContext, {
-        sourceCount = resolved.sourceCount,
+        sameExitRewardCount = resolved.sameExitRewardCount,
     })
     return entry
 end
 
 local function selectedTopology(selectedRow, resolved)
     if selectedRow.roleKey == "Combat" then
-        local count = resolved.sourceCount
+        local count = resolved.sameExitRewardCount
         if count <= 0 then
             return nil
         end
         return {
             structure = "CombatCage" .. tostring(count),
             rewardStore = "RunProgress",
-            offerCount = count,
+            sameExitRewardCount = count,
             rewardAddresses = rewardAddresses(count),
         }
     elseif selectedRow.roleKey == "Miniboss" then
@@ -424,14 +424,14 @@ local function selectedTopology(selectedRow, resolved)
             roomKey = resolved.roomKey,
             rewardStore = "RunProgress",
             eligibleRewardTypes = { "Boon" },
-            offerCount = 1,
+            sameExitRewardCount = 1,
             rewardAddresses = { "row" },
         }
     elseif selectedRow.roleKey == "Bridge" then
         return {
             structure = "Bridge",
             roomKey = resolved.roomKey,
-            offerCount = 0,
+            sameExitRewardCount = 0,
         }
     end
     return nil
@@ -461,23 +461,7 @@ local function siblingOption(biome, structureKey)
     return nil
 end
 
-local function implicitFirstPickSibling(selectedRow, resolved, biomeDepthCache)
-    if biomeDepthCache ~= 1 or selectedRow.roleKey ~= "Combat" or resolved.sourceCount <= 0 then
-        return nil
-    end
-    return {
-        structure = "CombatCage" .. tostring(resolved.sourceCount),
-        rewardStore = "RunProgress",
-        offerCount = resolved.sourceCount,
-    }
-end
-
-local function siblingTopology(context, selectedRow, resolved)
-    local implicit = implicitFirstPickSibling(selectedRow, resolved, context.biomeState.biomeDepthCache)
-    if implicit ~= nil then
-        return implicit
-    end
-
+local function siblingTopology(context, selectedRow)
     local structureKey = selectedRow
         and selectedRow.topology
         and selectedRow.topology.siblings
@@ -496,7 +480,7 @@ local function siblingTopology(context, selectedRow, resolved)
         roomKey = option.roomKey,
         rewardStore = option.rewardStore,
         eligibleRewardTypes = copyList(option.eligibleRewardTypes),
-        offerCount = option.offerCount,
+        sameExitRewardCount = option.sameExitRewardCount,
     }
 end
 
@@ -505,7 +489,7 @@ local function attachFieldsTopology(context, roomEntry, selectedRow, resolved)
         return
     end
     local selected = selectedTopology(selectedRow, resolved)
-    local sibling = siblingTopology(context, selectedRow, resolved)
+    local sibling = siblingTopology(context, selectedRow)
     if selected == nil or sibling == nil then
         return
     end

@@ -11,7 +11,7 @@ local function selectedRoomTopology(roleKey, option)
             structure = roleKey,
             roomKey = option and option.key or nil,
             isClockworkGoal = true,
-            offerCount = 0,
+            sameExitRewardCount = 0,
         }
     elseif roleKey == "RewardCombat" then
         return {
@@ -19,14 +19,14 @@ local function selectedRoomTopology(roleKey, option)
             roomKey = option and option.key or nil,
             rewardStore = "TartarusRewards",
             ineligibleRewardTypes = { "Boon" },
-            offerCount = 1,
+            sameExitRewardCount = 1,
             rewardAddresses = { "row" },
         }
     elseif roleKey == "Story" then
         return {
             structure = "Story",
             roomKey = option and option.key or nil,
-            offerCount = 0,
+            sameExitRewardCount = 0,
         }
     elseif roleKey == "Fountain" then
         return {
@@ -34,7 +34,7 @@ local function selectedRoomTopology(roleKey, option)
             roomKey = option and option.key or nil,
             rewardStore = "TartarusRewards",
             ineligibleRewardTypes = { "Devotion" },
-            offerCount = 1,
+            sameExitRewardCount = 1,
             rewardAddresses = { "row" },
         }
     elseif roleKey == "Miniboss" then
@@ -46,14 +46,14 @@ local function selectedRoomTopology(roleKey, option)
             roomKey = option.key,
             rewardStore = "RunProgress",
             eligibleRewardTypes = { "Boon" },
-            offerCount = 1,
+            sameExitRewardCount = 1,
             rewardAddresses = { "row" },
         }
     elseif roleKey == "Preboss" then
         return {
             structure = "Preboss",
             isPreboss = true,
-            offerCount = 0,
+            sameExitRewardCount = 0,
         }
     end
     return nil
@@ -71,7 +71,7 @@ local function siblingRoomTopology(option)
         isPreboss = option.isPreboss,
         eligibleRewardTypes = option.eligibleRewardTypes,
         ineligibleRewardTypes = option.ineligibleRewardTypes,
-        offerCount = option.offerCount,
+        sameExitRewardCount = option.sameExitRewardCount,
     }
 end
 

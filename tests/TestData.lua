@@ -155,7 +155,7 @@ local function prebossReward(shopProfile)
                 rewardAliasStart = 4,
                 rewardAliasCount = 2,
                 generated = true,
-                offerCount = 1,
+                sameExitRewardCount = 1,
                 requiredBranchValue = "FreeReward",
             },
         },
@@ -1065,21 +1065,21 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
         structure = "Preboss",
         roleKey = "Preboss",
         isPreboss = true,
-        offerCount = 0,
+        sameExitRewardCount = 0,
     })
 
     lu.assertEquals(#tartarus.rolesByKey.GoalCombat.mapOptions, 24)
     lu.assertEquals(tartarus.rolesByKey.GoalCombat.mapOptions[1].exitCount, 2)
-    lu.assertEquals(tartarus.rolesByKey.GoalCombat.mapOptions[1].rewardExitCount, 1)
+    lu.assertEquals(tartarus.rolesByKey.GoalCombat.mapOptions[1].rewardBearingExitCount, 1)
     lu.assertTrue(tartarus.rolesByKey.GoalCombat.mapOptions[1].supportsExtensionChoice)
     lu.assertEquals(tartarus.rolesByKey.GoalCombat.mapOptions[2].exitCount, 1)
-    lu.assertEquals(tartarus.rolesByKey.GoalCombat.mapOptions[2].rewardExitCount, 0)
+    lu.assertEquals(tartarus.rolesByKey.GoalCombat.mapOptions[2].rewardBearingExitCount, 0)
     lu.assertFalse(tartarus.rolesByKey.GoalCombat.mapOptions[2].supportsExtensionChoice)
     lu.assertEquals(tartarus.rolesByKey.GoalCombat.mapOptions[12].exitCount, 2)
-    lu.assertEquals(tartarus.rolesByKey.GoalCombat.mapOptions[12].rewardExitCount, 1)
+    lu.assertEquals(tartarus.rolesByKey.GoalCombat.mapOptions[12].rewardBearingExitCount, 1)
     lu.assertTrue(tartarus.rolesByKey.GoalCombat.mapOptions[12].supportsExtensionChoice)
     lu.assertEquals(tartarus.rolesByKey.GoalCombat.mapOptions[24].exitCount, 1)
-    lu.assertEquals(tartarus.rolesByKey.GoalCombat.mapOptions[24].rewardExitCount, 0)
+    lu.assertEquals(tartarus.rolesByKey.GoalCombat.mapOptions[24].rewardBearingExitCount, 0)
     lu.assertFalse(tartarus.rolesByKey.GoalCombat.mapOptions[24].supportsExtensionChoice)
     lu.assertEquals(tartarus.rolesByKey.GoalCombat.reward, noneReward())
     lu.assertEquals(tartarus.rolesByKey.GoalCombat.increments, { clockworkGoal = 1 })
@@ -1096,7 +1096,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].key, "I_Story01")
     lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].reward, noneReward())
     lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].exitCount, 1)
-    lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].rewardExitCount, 0)
+    lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].rewardBearingExitCount, 0)
     lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].availability.biomeDepthCache, { min = 2 })
     lu.assertEquals(tartarus.rolesByKey.Story.roomOptions[1].force.biomeDepthCache, { min = 2, max = 4 })
     lu.assertEquals(tartarus.rolesByKey.Fountain.roomOptions[1].key, "I_Reprieve01")
@@ -1105,7 +1105,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
         roomStoreReward("TartarusRewards", { ineligibleRewardTypes = { "Devotion" } })
     )
     lu.assertEquals(tartarus.rolesByKey.Fountain.roomOptions[1].exitCount, 2)
-    lu.assertEquals(tartarus.rolesByKey.Fountain.roomOptions[1].rewardExitCount, 1)
+    lu.assertEquals(tartarus.rolesByKey.Fountain.roomOptions[1].rewardBearingExitCount, 1)
     lu.assertEquals(tartarus.rolesByKey.Story.increments, { clockworkStory = 1 })
     lu.assertEquals(tartarus.rolesByKey.Story.maxCreationsThisRun, 1)
     lu.assertEquals(tartarus.rolesByKey.Fountain.increments, { clockworkNonGoalReward = 1 })
@@ -1116,7 +1116,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
     lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[1].availability.biomeDepthCache, { min = 3 })
     lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[1].force.biomeDepthCache, { min = 3, max = 7 })
     lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[2].exitCount, 2)
-    lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[2].rewardExitCount, 1)
+    lu.assertEquals(tartarus.rolesByKey.Miniboss.roomOptions[2].rewardBearingExitCount, 1)
     lu.assertTrue(tartarus.rolesByKey.Miniboss.roomOptions[2].supportsExtensionChoice)
 
     local storyForceGroup = tartarus.roomTopology.forcedGroups[1]
@@ -1143,7 +1143,7 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
         },
     }))
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].room.exitCount, 1)
-    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].room.rewardExitCount, 0)
+    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[1].room.rewardBearingExitCount, 0)
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].room.key, "N_PreHub01")
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].reward, roomStoreReward("RunProgress", {
         ineligibleRewardTypes = {
@@ -1154,7 +1154,7 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
         },
     }))
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].room.exitCount, 1)
-    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].room.rewardExitCount, 0)
+    lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[2].room.rewardBearingExitCount, 0)
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].room.key, "N_Hub")
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].reward, noneReward())
     lu.assertEquals(ephyra.slotLayout.fixedBeforeHub[3].roomHistoryCost, 0)
@@ -1320,9 +1320,9 @@ function TestRunPlannerData.testThessalyCombatPolicyModelsShipEncounters()
     local policy = thessaly.roomTopology.combatEncounterPolicy
 
     lu.assertEquals(combat.exitCount, 1)
-    lu.assertEquals(combat.rewardExitCount, 0)
+    lu.assertEquals(combat.rewardBearingExitCount, 0)
     lu.assertEquals(fountain.exitCount, 1)
-    lu.assertEquals(fountain.rewardExitCount, 0)
+    lu.assertEquals(fountain.rewardBearingExitCount, 0)
 
     lu.assertEquals(thessaly.roomTopology.kind, "shipCombat")
     lu.assertEquals(policy.key, "O_CombatData")

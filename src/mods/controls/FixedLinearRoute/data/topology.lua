@@ -31,7 +31,7 @@ local function selectedRoomTopology(roleKey, option, rows, rowIndex)
             rewardBranchAddress = "row",
             rewardBranchControlAlias = "Reward1Key",
             rewardBranchLabel = "Rewards",
-            offerCount = 1,
+            sameExitRewardCount = 1,
             rewardAddresses = { "row" },
         }
     elseif roleKey == "Miniboss" then
@@ -43,20 +43,20 @@ local function selectedRoomTopology(roleKey, option, rows, rowIndex)
             roomKey = option.key,
             rewardStore = "RunProgress",
             eligibleRewardTypes = { "Boon" },
-            offerCount = 1,
+            sameExitRewardCount = 1,
             rewardAddresses = { "row" },
         }
     elseif roleKey == "Story" then
         return {
             structure = "Story",
             roomKey = option and option.key or nil,
-            offerCount = 0,
+            sameExitRewardCount = 0,
         }
     elseif roleKey == "Midshop" then
         return {
             structure = "Midshop",
             roomKey = option and option.key or nil,
-            offerCount = 0,
+            sameExitRewardCount = 0,
         }
     end
     return nil
@@ -84,7 +84,7 @@ local function deterministicTopologyNode(node, selected)
         rewardBranchLabel = node.rewardBranchLabel,
         eligibleRewardTypes = node.eligibleRewardTypes,
         ineligibleRewardTypes = node.ineligibleRewardTypes,
-        offerCount = node.offerCount,
+        sameExitRewardCount = node.sameExitRewardCount,
     }
     if selected then
         snapshot.rewardAddresses = node.rewardAddresses or { "row" }
@@ -139,7 +139,7 @@ local function siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex,
             and siblingRewardBranchLabel(activeSiblingCount, siblingIndex)
             or nil,
         eligibleRewardTypes = option.eligibleRewardTypes,
-        offerCount = option.offerCount,
+        sameExitRewardCount = option.sameExitRewardCount,
     }
 end
 

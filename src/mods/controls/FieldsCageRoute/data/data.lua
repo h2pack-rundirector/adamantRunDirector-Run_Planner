@@ -71,7 +71,7 @@ local function prepareCagePolicy(policy)
         end
     end
 
-    prepared.rewardContext.sourceCount = prepared.maxCageRewardCount
+    prepared.rewardContext.sameExitRewardCount = prepared.maxCageRewardCount
 
     return prepared
 end
@@ -121,7 +121,7 @@ local function prepareCageRewardContexts(instance)
         local policy = cagePolicyForRole(instance, role)
         if policy ~= nil and role.reward ~= nil then
             role.reward = shallowCopyMap(role.reward)
-            role.reward.sourceCount = policy.maxCageRewardCount
+            role.reward.sameExitRewardCount = policy.maxCageRewardCount
         end
     end
 end

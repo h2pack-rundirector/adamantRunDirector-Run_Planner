@@ -27,7 +27,7 @@ local function rewardFields(control, rowIndex)
             rewardContext = {
                 rowIndex = rowIndex,
                 address = "row",
-                sourceKind = "row",
+                eventSourceKind = "row",
             },
             get = function(_, alias)
                 return control:rewardField(rowIndex, alias)

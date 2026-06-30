@@ -10,8 +10,8 @@ local storage = common.storage
 local fieldsCages = {}
 
 function fieldsCages.create(rewardDomain, context)
-    local sourceCount = math.floor(tonumber(context.sourceCount) or 0)
-    if sourceCount <= 1 then
+    local sameExitRewardCount = math.floor(tonumber(context.sameExitRewardCount) or 0)
+    if sameExitRewardCount <= 1 then
         return roomStore.create(rewardDomain, context)
     end
 
@@ -25,33 +25,33 @@ function fieldsCages.create(rewardDomain, context)
     local godValues, godLabels = common.godSourceOptions(rewardDomain)
     local controls = {}
 
-    for sourceIndex = 1, sourceCount do
+    for sameExitRewardIndex = 1, sameExitRewardCount do
         controls[#controls + 1] = common.dropdown(
-            storage.rewardAlias(sourceIndex),
-            "Cage" .. tostring(sourceIndex),
-            "Cage " .. tostring(sourceIndex),
+            storage.rewardAlias(sameExitRewardIndex),
+            "Cage" .. tostring(sameExitRewardIndex),
+            "Cage " .. tostring(sameExitRewardIndex),
             rewardValues,
             rewardLabels,
             {
                 kind = "rewardType",
                 controlWidth = 170,
-                rowIndex = sourceIndex,
-                sourceIndex = sourceIndex,
+                rowIndex = sameExitRewardIndex,
+                sameExitRewardIndex = sameExitRewardIndex,
             }
         )
         controls[#controls + 1] = common.dropdown(
-            storage.lootAlias(sourceIndex),
-            "Cage" .. tostring(sourceIndex) .. "Loot",
+            storage.lootAlias(sameExitRewardIndex),
+            "Cage" .. tostring(sameExitRewardIndex) .. "Loot",
             "God",
             godValues,
             godLabels,
             {
                 kind = "boonSource",
                 controlWidth = 170,
-                rowIndex = sourceIndex,
-                sourceIndex = sourceIndex,
+                rowIndex = sameExitRewardIndex,
+                sameExitRewardIndex = sameExitRewardIndex,
                 visibleWhen = {
-                    alias = storage.rewardAlias(sourceIndex),
+                    alias = storage.rewardAlias(sameExitRewardIndex),
                     value = "Boon",
                 },
             }
@@ -62,8 +62,8 @@ function fieldsCages.create(rewardDomain, context)
         kind = "fieldsCages",
         context = context,
         rewardStore = rewardStore,
-        sourceCount = sourceCount,
-        rewardConstraints = constraints.fieldsCages(sourceCount),
+        sameExitRewardCount = sameExitRewardCount,
+        rewardConstraints = constraints.fieldsCages(sameExitRewardCount),
         controls = controls,
     }
 end

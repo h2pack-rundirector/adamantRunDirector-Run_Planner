@@ -21,8 +21,8 @@ local function validateMatchingCombatCageRewardCount(entry)
         return nil
     end
 
-    local selectedCount = math.floor(tonumber(selected.offerCount) or 0)
-    local siblingCount = math.floor(tonumber(sibling.offerCount) or 0)
+    local selectedCount = math.floor(tonumber(selected.sameExitRewardCount) or 0)
+    local siblingCount = math.floor(tonumber(sibling.sameExitRewardCount) or 0)
     if selectedCount == siblingCount then
         return nil
     end
@@ -53,8 +53,8 @@ function fields.appendCandidateFindings(target, _history, entry)
 
     for _, candidate in ipairs(entry.siblingCandidates or EMPTY_LIST) do
         if isCombatCageStructure(candidate and candidate.structure)
-            and math.floor(tonumber(selected.offerCount) or 0)
-                ~= math.floor(tonumber(candidate.offerCount) or 0)
+            and math.floor(tonumber(selected.sameExitRewardCount) or 0)
+                ~= math.floor(tonumber(candidate.sameExitRewardCount) or 0)
         then
             target[#target + 1] = findings.siblingCandidateInvalid(
                 entry,

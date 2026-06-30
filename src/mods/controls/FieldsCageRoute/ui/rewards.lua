@@ -12,21 +12,21 @@ local REWARD_DRAW_OPTS = {
 }
 
 local function rewardDrawOpts(control, rowIndex)
-    local sourceCount = control:rewardSourceCount(rowIndex)
+    local sameExitRewardCount = control:sameExitRewardCount(rowIndex)
     if control.rewardDrawOpts ~= nil then
         local opts = control:rewardDrawOpts(REWARD_DRAW_OPTS)
-        opts.sourceCount = sourceCount
+        opts.sameExitRewardCount = sameExitRewardCount
         return opts
     end
-    if sourceCount ~= nil then
-        control._rewardDrawOptsBySourceCount = control._rewardDrawOptsBySourceCount or {}
-        local opts = control._rewardDrawOptsBySourceCount[sourceCount]
+    if sameExitRewardCount ~= nil then
+        control._rewardDrawOptsBySameExitRewardCount = control._rewardDrawOptsBySameExitRewardCount or {}
+        local opts = control._rewardDrawOptsBySameExitRewardCount[sameExitRewardCount]
         if opts == nil then
             opts = {
                 hideGenericRewardLabel = true,
-                sourceCount = sourceCount,
+                sameExitRewardCount = sameExitRewardCount,
             }
-            control._rewardDrawOptsBySourceCount[sourceCount] = opts
+            control._rewardDrawOptsBySameExitRewardCount[sameExitRewardCount] = opts
         end
         return opts
     end
@@ -41,7 +41,7 @@ local function rewardFields(control, rowIndex)
             rewardContext = {
                 rowIndex = rowIndex,
                 address = "row",
-                sourceKind = "row",
+                eventSourceKind = "row",
             },
             get = function(_, alias)
                 return control:rewardField(rowIndex, alias)
@@ -88,7 +88,7 @@ local function drawRewardRow(draw, control, instance, rowIndex)
     if rewardSystem ~= nil
         and rewardSystem ~= nil
         and rewardSystem.hasDisplay(surface)
-        and (control:rewardSourceCount(rowIndex) or 1) > 0
+        and (control:sameExitRewardCount(rowIndex) or 1) > 0
     then
         imgui.SameLine()
         imgui.SetCursorPosX(REWARD_COLUMN_X)

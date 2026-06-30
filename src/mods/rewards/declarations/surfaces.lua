@@ -122,7 +122,7 @@ function rewards.preboss(shopProfile, rewardStore, opts)
         rewardAliasStart = 4,
         rewardAliasCount = 2,
         generated = true,
-        offerCount = 1,
+        sameExitRewardCount = 1,
         requiredBranchValue = "FreeReward",
     }
     copyRewardFilters(roomOffer, opts, "", "")

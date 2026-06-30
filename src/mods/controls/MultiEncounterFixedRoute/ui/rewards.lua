@@ -41,7 +41,7 @@ local function rewardFields(control, rowIndex)
             rewardContext = {
                 rowIndex = rowIndex,
                 address = "row",
-                sourceKind = "row",
+                eventSourceKind = "row",
             },
             get = function(_, alias)
                 return control:rewardField(rowIndex, alias)
@@ -98,8 +98,8 @@ local function encounterRewardFields(control, encounterRewardRowIndex, rowIndex,
             rewardContext = {
                 rowIndex = rowIndex,
                 address = "encounter:" .. tostring(legIndex),
-                sourceKind = "encounter",
-                sourceIndex = legIndex,
+                eventSourceKind = "encounter",
+                sameExitRewardIndex = legIndex,
                 storageRowIndex = encounterRewardRowIndex,
             },
             get = function(_, alias)

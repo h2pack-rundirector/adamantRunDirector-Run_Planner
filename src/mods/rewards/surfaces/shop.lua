@@ -15,9 +15,9 @@ local function resolveRewardConstraints(context, sourceIndexBySlotKey)
     for _, group in ipairs(rewardConstraints.shopProfile(context.shopProfile)) do
         local sourceIndices = {}
         for _, slotKey in ipairs(group.slots or {}) do
-            local sourceIndex = sourceIndexBySlotKey[slotKey]
-            if sourceIndex ~= nil then
-                sourceIndices[#sourceIndices + 1] = sourceIndex
+            local sameExitRewardIndex = sourceIndexBySlotKey[slotKey]
+            if sameExitRewardIndex ~= nil then
+                sourceIndices[#sourceIndices + 1] = sameExitRewardIndex
             end
         end
         if sourceIndices[2] ~= nil then

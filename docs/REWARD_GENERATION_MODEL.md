@@ -26,11 +26,20 @@ Recommended route-row shape:
 
 ```lua
 row.roomTopology = {
-    offerCount = previousResolvedRoom.exitCount,
+    exitCount = previousResolvedRoom.exitCount,
+    rewardBearingExitCount = previousResolvedRoom.rewardBearingExitCount,
     sourceRowIndex = previousRow.rowIndex,
     sourceRoomKey = previousRow.roomKey,
 }
 ```
+
+Use the count names for their specific layer:
+
+- `exitCount`: physical generated doors from the current room.
+- `rewardBearingExitCount`: generated doors that carry any reward-bearing
+  surface.
+- `sameExitRewardCount`: simultaneous reward choices on one reward-bearing
+  exit, such as Fields cage choices or Thessaly wheel choices.
 
 Reward items can be checked against that generated context later, but the biome
 declaration should keep structural topology as topology: exits, cage counts,
@@ -94,7 +103,7 @@ pass that through to reward planning.
 Generated-offer topology is inherent row/room structure. It should always be
 representable in biome declarations and exported as `row.roomTopology` when the
 selected route row needs extra generated structure beyond `exitCount` /
-`rewardExitCount`.
+`rewardBearingExitCount`.
 
 Rationale:
 
@@ -357,7 +366,7 @@ row.roomTopology = {
         roomKey = "H_MiniBoss02",
         rewardStore = "RunProgress",
         eligibleRewardTypes = { "Boon" },
-        offerCount = 1,
+        sameExitRewardCount = 1,
     },
 }
 ```

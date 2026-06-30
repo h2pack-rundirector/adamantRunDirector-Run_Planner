@@ -107,7 +107,7 @@ function runtime.create(fields, instance)
             end
         end
         instance.rewardDrawOpts.hideGenericRewardLabel = baseOpts and baseOpts.hideGenericRewardLabel
-        instance.rewardDrawOpts.sourceCount = baseOpts and baseOpts.sourceCount
+        instance.rewardDrawOpts.sameExitRewardCount = baseOpts and baseOpts.sameExitRewardCount
         instance.rewardDrawOpts.godSource = self:godSource()
         instance.rewardDrawOpts.valueStatesForControl = rewardSystem.historyValueStatesForControl(instance)
         instance.rewardDrawOpts.onControlChanged = instance.rewardDrawChanged
@@ -141,7 +141,7 @@ function runtime.create(fields, instance)
         return option
     end
 
-    function control:rewardSourceCount(rowIndex)
+    function control:sameExitRewardCount(rowIndex)
         local _, role = data.resolveRole(instance, routeRows, rowIndex)
         if role == nil or role.cageRewardPolicy == nil then
             return nil
@@ -151,7 +151,7 @@ function runtime.create(fields, instance)
 
     function control:rewardSurface(rowIndex)
         local role = self:role(rowIndex)
-        if role ~= nil and role.cageRewardPolicy ~= nil and (self:rewardSourceCount(rowIndex) or 0) <= 0 then
+        if role ~= nil and role.cageRewardPolicy ~= nil and (self:sameExitRewardCount(rowIndex) or 0) <= 0 then
             return nil
         end
         return rewardSurface(role, self:option(rowIndex))

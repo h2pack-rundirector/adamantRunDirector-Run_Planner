@@ -117,7 +117,7 @@ local function combatRoom(roomKey, hubDoorId, sideDoors, opts)
         hubDoorId = hubDoorId,
         sideDoors = sideDoors or {},
         exitCount = 1,
-        rewardExitCount = 0,
+        rewardBearingExitCount = 0,
     }
     if opts.reward ~= nil then
         room.reward = opts.reward
@@ -142,14 +142,14 @@ layout.openingRoom = {
     label = "Opening",
     features = CHAOS_FEATURES,
     exitCount = 1,
-    rewardExitCount = 0,
+    rewardBearingExitCount = 0,
 }
 
 layout.preHubRoom = {
     key = "N_PreHub01",
     label = "Pre-Hub",
     exitCount = 1,
-    rewardExitCount = 0,
+    rewardBearingExitCount = 0,
 }
 
 layout.hubRoom = {
@@ -279,7 +279,7 @@ layout.minibossRooms = {
         hubDoorId = 617043,
         encounter = "MiniBossSatyrCrossbow",
         exitCount = 1,
-        rewardExitCount = 0,
+        rewardBearingExitCount = 0,
         biomeEncounterDepthCost = 1,
     },
     {
@@ -288,7 +288,7 @@ layout.minibossRooms = {
         hubDoorId = 560889,
         encounter = "MiniBossBoar",
         exitCount = 1,
-        rewardExitCount = 0,
+        rewardBearingExitCount = 0,
         biomeEncounterDepthCost = 1,
     },
 }
@@ -299,7 +299,7 @@ layout.storyRooms = {
         label = "Medea",
         hubDoorId = 560848,
         exitCount = 1,
-        rewardExitCount = 0,
+        rewardBearingExitCount = 0,
     },
 }
 

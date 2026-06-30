@@ -15,15 +15,15 @@ end
 
 local function combatRoom(roomKey, exitCount, opts)
     opts = opts or {}
-    local rewardExitCount = opts.rewardExitCount
-    if rewardExitCount == nil then
-        rewardExitCount = clockworkRewardExitCount(exitCount)
+    local rewardBearingExitCount = opts.rewardBearingExitCount
+    if rewardBearingExitCount == nil then
+        rewardBearingExitCount = clockworkRewardExitCount(exitCount)
     end
     return {
         key = roomKey,
         label = combatLabel(roomKey, exitCount),
         exitCount = exitCount,
-        rewardExitCount = rewardExitCount,
+        rewardBearingExitCount = rewardBearingExitCount,
         supportsExtensionChoice = exitCount > 1,
         features = opts.features or WELL_SHOP_FEATURES,
         reward = opts.reward,
@@ -36,9 +36,9 @@ end
 
 local function roomOption(roomKey, label, opts)
     opts = opts or {}
-    local rewardExitCount = opts.rewardExitCount
-    if rewardExitCount == nil then
-        rewardExitCount = clockworkRewardExitCount(opts.exitCount)
+    local rewardBearingExitCount = opts.rewardBearingExitCount
+    if rewardBearingExitCount == nil then
+        rewardBearingExitCount = clockworkRewardExitCount(opts.exitCount)
     end
     return {
         key = roomKey,
@@ -49,7 +49,7 @@ local function roomOption(roomKey, label, opts)
         force = opts.force,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
         exitCount = opts.exitCount,
-        rewardExitCount = rewardExitCount,
+        rewardBearingExitCount = rewardBearingExitCount,
         supportsExtensionChoice = opts.exitCount ~= nil and opts.exitCount > 1,
     }
 end

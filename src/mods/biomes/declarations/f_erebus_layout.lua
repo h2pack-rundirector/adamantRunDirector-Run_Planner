@@ -5,15 +5,15 @@ local CHAOS_WELL_FEATURES = { chaos = true, wellShop = true }
 
 local function option(key, label, opts)
     opts = opts or {}
-    local rewardExitCount = opts.rewardExitCount
-    if rewardExitCount == nil then
-        rewardExitCount = opts.exitCount
+    local rewardBearingExitCount = opts.rewardBearingExitCount
+    if rewardBearingExitCount == nil then
+        rewardBearingExitCount = opts.exitCount
     end
     return {
         key = key,
         label = label,
         exitCount = opts.exitCount,
-        rewardExitCount = rewardExitCount,
+        rewardBearingExitCount = rewardBearingExitCount,
         features = opts.features,
         availability = opts.availability,
         force = opts.force,

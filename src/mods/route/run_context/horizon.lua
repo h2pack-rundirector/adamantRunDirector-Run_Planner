@@ -20,7 +20,7 @@ local function isSideInvalid(invalid)
     return invalid ~= nil
         and (
             invalid.tabKey == "sideRooms"
-            or invalid.sourceKind == "side"
+            or invalid.eventSourceKind == "side"
             or (type(address) == "string" and string.sub(address, 1, 5) == "side:")
         )
 end

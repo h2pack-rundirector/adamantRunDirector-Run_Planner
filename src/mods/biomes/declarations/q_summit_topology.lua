@@ -17,7 +17,7 @@ return function(deps)
             roomKey = roomKey,
             label = room and room.label or roomKey,
             rewardStore = "TyphonBossRewards",
-            offerCount = 1,
+            sameExitRewardCount = 1,
         }
     end
 

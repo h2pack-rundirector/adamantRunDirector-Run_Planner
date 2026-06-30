@@ -38,14 +38,14 @@ return function(deps)
                     label = "Combat 2",
                     structure = "CombatCage2",
                     rewardStore = "RunProgress",
-                    offerCount = 2,
+                    sameExitRewardCount = 2,
                 },
                 {
                     key = "CombatCage3",
                     label = "Combat 3",
                     structure = "CombatCage3",
                     rewardStore = "RunProgress",
-                    offerCount = 3,
+                    sameExitRewardCount = 3,
                 },
                 {
                     key = miniboss01.key,
@@ -56,7 +56,7 @@ return function(deps)
                     force = miniboss01.force,
                     rewardStore = "RunProgress",
                     eligibleRewardTypes = { "Boon" },
-                    offerCount = 1,
+                    sameExitRewardCount = 1,
                 },
                 {
                     key = miniboss02.key,
@@ -67,7 +67,7 @@ return function(deps)
                     force = miniboss02.force,
                     rewardStore = "RunProgress",
                     eligibleRewardTypes = { "Boon" },
-                    offerCount = 1,
+                    sameExitRewardCount = 1,
                 },
                 {
                     key = "Bridge",
@@ -76,7 +76,7 @@ return function(deps)
                     roomKey = bridge.key,
                     availability = bridge.availability,
                     force = bridge.force,
-                    offerCount = 0,
+                    sameExitRewardCount = 0,
                 },
             },
         },

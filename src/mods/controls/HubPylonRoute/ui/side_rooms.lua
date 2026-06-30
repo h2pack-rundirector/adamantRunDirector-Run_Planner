@@ -102,8 +102,8 @@ local function sideRewardFields(control, sideRowIndex, rowIndex, sideIndex)
             rewardContext = {
                 rowIndex = rowIndex,
                 address = "side:" .. tostring(sideIndex),
-                sourceKind = "side",
-                sourceIndex = sideIndex,
+                eventSourceKind = "side",
+                sameExitRewardIndex = sideIndex,
                 storageRowIndex = sideRowIndex,
             },
             get = function(_, alias)

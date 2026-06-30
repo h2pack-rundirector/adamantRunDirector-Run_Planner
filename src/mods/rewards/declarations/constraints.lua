@@ -90,10 +90,10 @@ function constraints.devotionPair()
     return copyConstraints(DEVOTION_PAIR)
 end
 
-function constraints.fieldsCages(sourceCount)
+function constraints.fieldsCages(sameExitRewardCount)
     local sourceIndices = {}
-    for sourceIndex = 1, math.floor(tonumber(sourceCount) or 0) do
-        sourceIndices[#sourceIndices + 1] = sourceIndex
+    for sameExitRewardIndex = 1, math.floor(tonumber(sameExitRewardCount) or 0) do
+        sourceIndices[#sourceIndices + 1] = sameExitRewardIndex
     end
 
     local copied = copyConstraints(FIELDS_CAGE_CONSTRAINTS)

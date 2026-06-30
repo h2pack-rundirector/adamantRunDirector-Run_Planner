@@ -27,9 +27,13 @@ local SIBLING_STRUCTURE_OPTS = {
     controlWidth = 170,
 }
 local DOOR_LABEL_COLUMN_X = 80
-local DOOR_CONTROL_COLUMN_X = 190
-local OPTION_COLUMN_X = 340
-local CAGE_COUNT_COLUMN_X = 540
+local DOOR_CONTROL_COLUMN_X = 220
+local OPTION_COLUMN_X = 380
+local CAGE_COUNT_COLUMN_X = 580
+local NEXT_CHOICE_LABEL_COLUMN_X = DOOR_CONTROL_COLUMN_X
+local NEXT_CHOICE_CONTROL_COLUMN_X = OPTION_COLUMN_X
+local NEXT_CHOICE_OPTION_COLUMN_X = 540
+local NEXT_CHOICE_CAGE_COUNT_COLUMN_X = 700
 local PICKED_DOOR_LABEL = "Picked Door"
 local ENTRY_ROOM_LABEL = "Entry Room"
 local CURRENT_ROOM_LABEL = "Current Room"
@@ -198,14 +202,14 @@ local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey, co
     return changed, storedOptionKey
 end
 
-local function drawCageCountDropdown(draw, control, instance, rowIndex, roleKey)
+local function drawCageCountDropdown(draw, control, instance, rowIndex, roleKey, columnX)
     local cageCountOpts = getCageCountOpts(control, instance, rowIndex, roleKey)
     if cageCountOpts.values[1] == nil then
         return false
     end
 
     draw.imgui.SameLine()
-    draw.imgui.SetCursorPosX(CAGE_COUNT_COLUMN_X)
+    draw.imgui.SetCursorPosX(columnX or CAGE_COUNT_COLUMN_X)
     return draw.widgets.dropdown(
         control:roomField(rowIndex, "VariantKey"),
         cageCountOpts
@@ -216,7 +220,7 @@ local function siblingStructureLabel(instance)
     return instance.siblingStructurePolicy and instance.siblingStructurePolicy.label or "Other Door"
 end
 
-local function drawSiblingStructureDropdown(draw, control, instance, rowIndex)
+local function drawSiblingStructureDropdown(draw, control, instance, rowIndex, labelColumnX, controlColumnX)
     if not data.shouldDrawSiblingStructure(instance, control:routeRows(), rowIndex) then
         return false
     end
@@ -226,11 +230,11 @@ local function drawSiblingStructureDropdown(draw, control, instance, rowIndex)
         return false
     end
 
-    draw.imgui.SetCursorPosX(DOOR_LABEL_COLUMN_X)
+    draw.imgui.SetCursorPosX(labelColumnX or DOOR_LABEL_COLUMN_X)
     draw.imgui.AlignTextToFramePadding()
     draw.imgui.Text(siblingStructureLabel(instance))
     draw.imgui.SameLine()
-    draw.imgui.SetCursorPosX(DOOR_CONTROL_COLUMN_X)
+    draw.imgui.SetCursorPosX(controlColumnX or DOOR_CONTROL_COLUMN_X)
     return draw.widgets.dropdown(control:roomField(rowIndex, data.siblingStructureAlias(instance)), opts)
 end
 
@@ -239,11 +243,11 @@ local function drawRouteRowHeader(imgui, slot)
     imgui.Text(slot.label)
 end
 
-local function drawDoorLabel(imgui, label, inline)
+local function drawDoorLabel(imgui, label, inline, columnX)
     if inline then
         imgui.SameLine()
     end
-    imgui.SetCursorPosX(DOOR_LABEL_COLUMN_X)
+    imgui.SetCursorPosX(columnX or DOOR_LABEL_COLUMN_X)
     imgui.AlignTextToFramePadding()
     imgui.Text(label)
 end
@@ -255,42 +259,43 @@ local function drawStaticDoorValue(imgui, value)
     imgui.Text(tostring(value or ""))
 end
 
-local function drawNextChoicesHeader(imgui)
-    imgui.SetCursorPosX(DOOR_LABEL_COLUMN_X)
-    imgui.AlignTextToFramePadding()
-    imgui.Text(NEXT_CHOICES_LABEL)
-end
-
 local function drawCurrentRoomLabel(draw, control, instance, rowIndex, inline)
     drawDoorLabel(draw.imgui, CURRENT_ROOM_LABEL, inline)
     drawStaticDoorValue(draw.imgui, roomDisplayLabel(control, instance, rowIndex))
 end
 
-local function drawRoleAndOptionDropdowns(draw, control, instance, rowIndex)
+local function drawRoleAndOptionDropdowns(draw, control, instance, rowIndex, roleColumnX, optionColumnX, cageColumnX)
     local currentRoleKey = data.readRoleKey(instance, control:routeRows(), rowIndex)
     local roleField = control:roomField(rowIndex, "RoleKey")
     draw.imgui.SameLine()
-    draw.imgui.SetCursorPosX(DOOR_CONTROL_COLUMN_X)
+    draw.imgui.SetCursorPosX(roleColumnX or DOOR_CONTROL_COLUMN_X)
     if draw.widgets.dropdown(roleField, getRoleOpts(control, instance, rowIndex)) then
         resetRowDetails(control:fields(), instance, rowIndex)
         control:invalidateReadPass()
         currentRoleKey = data.readRoleKey(instance, control:routeRows(), rowIndex)
     end
-    local changed, previousOptionKey = drawOptionDropdown(draw, control, instance, rowIndex, currentRoleKey)
+    local changed, previousOptionKey = drawOptionDropdown(
+        draw,
+        control,
+        instance,
+        rowIndex,
+        currentRoleKey,
+        optionColumnX
+    )
     if changed then
         control:invalidateReadPass()
         control:onRoomOptionChanged(rowIndex, previousOptionKey)
     end
-    if drawCageCountDropdown(draw, control, instance, rowIndex, currentRoleKey) then
+    if drawCageCountDropdown(draw, control, instance, rowIndex, currentRoleKey, cageColumnX) then
         control:invalidateReadPass()
     end
 end
 
-local function drawFixedIdentityDoor(draw, control, instance, rowIndex, inline)
+local function drawFixedIdentityDoor(draw, control, instance, rowIndex, inline, columnX)
     if inline then
         draw.imgui.SameLine()
     end
-    draw.imgui.SetCursorPosX(DOOR_CONTROL_COLUMN_X)
+    draw.imgui.SetCursorPosX(columnX or DOOR_CONTROL_COLUMN_X)
 
     local currentRoleKey = data.readRoleKey(instance, control:routeRows(), rowIndex)
     local changed, previousOptionKey = drawOptionDropdown(
@@ -299,7 +304,7 @@ local function drawFixedIdentityDoor(draw, control, instance, rowIndex, inline)
         instance,
         rowIndex,
         currentRoleKey,
-        DOOR_CONTROL_COLUMN_X
+        columnX or DOOR_CONTROL_COLUMN_X
     )
     if changed then
         control:invalidateReadPass()
@@ -315,13 +320,31 @@ local function drawEntryRoom(draw, control, instance, rowIndex)
     drawFixedIdentityDoor(draw, control, instance, rowIndex, true)
 end
 
-local function drawPickedDoor(draw, control, instance, targetRowIndex)
-    drawDoorLabel(draw.imgui, PICKED_DOOR_LABEL, false)
+local function drawNextRoomPreboss(draw)
+    drawDoorLabel(draw.imgui, "Next Room", false)
+    drawStaticDoorValue(draw.imgui, "Preboss")
+end
+
+local function drawPickedDoor(
+    draw,
+    control,
+    instance,
+    targetRowIndex,
+    labelColumnX,
+    controlColumnX,
+    optionColumnX,
+    cageColumnX
+)
+    drawDoorLabel(draw.imgui, PICKED_DOOR_LABEL, true, labelColumnX)
     if data.isFixedIdentityRow(instance, targetRowIndex) then
-        drawFixedIdentityDoor(draw, control, instance, targetRowIndex, false)
+        drawFixedIdentityDoor(draw, control, instance, targetRowIndex, true, controlColumnX)
     else
-        drawRoleAndOptionDropdowns(draw, control, instance, targetRowIndex)
+        drawRoleAndOptionDropdowns(draw, control, instance, targetRowIndex, controlColumnX, optionColumnX, cageColumnX)
     end
+end
+
+local function drawNextChoicesLabel(imgui)
+    drawDoorLabel(imgui, NEXT_CHOICES_LABEL, false)
 end
 
 local function drawRoomRow(draw, control, instance, rowIndex, terminalRowIndex)
@@ -350,11 +373,29 @@ local function drawRoomRow(draw, control, instance, rowIndex, terminalRowIndex)
     end
 
     if nextChoices.active then
-        drawNextChoicesHeader(imgui)
-        drawPickedDoor(draw, control, instance, pickedDoor.targetRowIndex)
-        if drawSiblingStructureDropdown(draw, control, instance, otherDoors.sourceRowIndex) then
+        drawNextChoicesLabel(imgui)
+        drawPickedDoor(
+            draw,
+            control,
+            instance,
+            pickedDoor.targetRowIndex,
+            NEXT_CHOICE_LABEL_COLUMN_X,
+            NEXT_CHOICE_CONTROL_COLUMN_X,
+            NEXT_CHOICE_OPTION_COLUMN_X,
+            NEXT_CHOICE_CAGE_COUNT_COLUMN_X
+        )
+        if drawSiblingStructureDropdown(
+            draw,
+            control,
+            instance,
+            otherDoors.sourceRowIndex,
+            NEXT_CHOICE_LABEL_COLUMN_X,
+            NEXT_CHOICE_CONTROL_COLUMN_X
+        ) then
             control:invalidateReadPass()
         end
+    elseif currentRoom.isTerminal then
+        drawNextRoomPreboss(draw)
     end
 end
 

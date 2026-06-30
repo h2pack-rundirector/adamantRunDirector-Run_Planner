@@ -37,7 +37,7 @@ local function emitLoot(history, roomEntry, summary, opts)
         kind = "loot",
         eventKey = lootType,
         groupKey = roomEntry.groupKey,
-        sourceKind = opts.sourceKind or summary.kind,
+        eventSourceKind = opts.eventSourceKind or summary.kind,
         parentEntry = roomEntry,
         parentRoomKey = roomEntry.roomKey or roomEntry.eventKey,
         address = opts.address or summary.address,
@@ -79,7 +79,7 @@ local function emitPendingShopOffer(history, roomEntry, offer, opts)
     }, {
         address = opts.address,
         controlAlias = offer.controlAlias,
-        sourceKind = opts.sourceKind,
+        eventSourceKind = opts.eventSourceKind,
         shopProfile = opts.shopProfile,
         state = offer.state,
         bought = offer.bought,
@@ -99,7 +99,7 @@ local function emitFieldCageLoot(history, roomEntry, reward)
         }, {
             address = "cage:" .. tostring(index),
             controlAlias = pick.controlAlias,
-            sourceKind = "fieldsCage",
+            eventSourceKind = "fieldsCage",
         })
     end
 end
@@ -108,7 +108,7 @@ local function emitMultiEncounterLoot(history, roomEntry, reward)
     for _, encounter in ipairs(reward.encounters or EMPTY_LIST) do
         emitLoot(history, roomEntry, encounter.reward or {}, {
             address = "encounter:" .. tostring(encounter.legIndex),
-            sourceKind = "multiEncounter",
+            eventSourceKind = "multiEncounter",
         })
     end
 end
@@ -117,14 +117,14 @@ local function emitPrebossLoot(history, roomEntry, reward, nextRoomEntry)
     local pendingUntil = nextRoomEntry and nextRoomEntry.roomHistoryOrdinal or nil
     if reward.branch == "FreeReward" then
         emitLoot(history, roomEntry, reward.reward or {}, {
-            sourceKind = "prebossFreeReward",
+            eventSourceKind = "prebossFreeReward",
         })
     elseif reward.branch == "Shop" then
         local shop = reward.shop or {}
         for index, offer in ipairs(reward.offers or EMPTY_LIST) do
             emitPendingShopOffer(history, roomEntry, offer, {
                 address = "shop:" .. tostring(index),
-                sourceKind = "prebossShop",
+                eventSourceKind = "prebossShop",
                 shopProfile = shop.shopProfile,
                 pendingUntilRoomHistoryOrdinal = pendingUntil,
             })
@@ -141,7 +141,7 @@ local function emitPrebossLoot(history, roomEntry, reward, nextRoomEntry)
                 }, {
                     address = "shop:" .. tostring(index),
                     controlAlias = offer.controlAlias,
-                    sourceKind = "prebossShop",
+                    eventSourceKind = "prebossShop",
                     shopProfile = shop.shopProfile,
                     state = offer.state or SHOP_BOUGHT_VALUE,
                     bought = true,

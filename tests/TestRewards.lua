@@ -171,7 +171,7 @@ local function prebossContext()
                 rewardAliasStart = 4,
                 rewardAliasCount = 2,
                 generated = true,
-                offerCount = 1,
+                sameExitRewardCount = 1,
                 requiredBranchValue = "FreeReward",
             },
         },
@@ -633,7 +633,7 @@ function TestRunPlannerRewards.testCatalogBuildsCompositePrebossRewardSurface()
     lu.assertEquals(surface.offers[1].address, "prebossShop")
     lu.assertEquals(surface.offers[2].address, "prebossReward")
     lu.assertTrue(surface.offers[2].generated)
-    lu.assertEquals(surface.offers[2].offerCount, 1)
+    lu.assertEquals(surface.offers[2].sameExitRewardCount, 1)
     lu.assertEquals(surface.offers[2].rewardStore, "RunProgress")
     lu.assertEquals(surface.offers[2].ineligibleRewardTypes, { "Devotion", "RoomMoneyDrop" })
     lu.assertEquals(#surface.controls, 10)
@@ -696,14 +696,14 @@ function TestRunPlannerRewards.testCatalogNormalizesFieldsCageSurface()
     local composite = catalog:surfaceFor({
         kind = "fieldsCages",
         rewardStore = "RunProgress",
-        sourceCount = 3,
+        sameExitRewardCount = 3,
     })
     lu.assertEquals(composite.kind, "fieldsCages")
-    lu.assertEquals(composite.sourceCount, 3)
+    lu.assertEquals(composite.sameExitRewardCount, 3)
     lu.assertEquals(#composite.controls, 6)
     lu.assertEquals(composite.controls[1].key, "Cage1")
     lu.assertEquals(composite.controls[1].alias, "Reward1Key")
-    lu.assertEquals(composite.controls[1].sourceIndex, 1)
+    lu.assertEquals(composite.controls[1].sameExitRewardIndex, 1)
     lu.assertEquals(composite.controls[2].key, "Cage1Loot")
     lu.assertEquals(composite.controls[2].alias, "Reward1LootKey")
     lu.assertEquals(composite.controls[3].key, "Cage2")
@@ -1015,7 +1015,7 @@ function TestRunPlannerRewards.testRuntimeSnapshotsShopBoonSourcePicks()
             kind = "purchaseState",
             alias = "Reward1StateKey",
             value = "Bought",
-            sourceIndex = 1,
+            sameExitRewardIndex = 1,
         },
         {
             key = "Boon",
@@ -1034,14 +1034,14 @@ function TestRunPlannerRewards.testRuntimeSnapshotsShopBoonSourcePicks()
             kind = "purchaseState",
             alias = "Reward2StateKey",
             value = "Skipped",
-            sourceIndex = 2,
+            sameExitRewardIndex = 2,
         },
         {
             key = "purchaseState:3",
             kind = "purchaseState",
             alias = "Reward3StateKey",
             value = "Skipped",
-            sourceIndex = 3,
+            sameExitRewardIndex = 3,
         },
     })
 
@@ -1055,7 +1055,7 @@ function TestRunPlannerRewards.testRuntimeSnapshotsShopBoonSourcePicks()
             kind = "purchaseState",
             alias = "Reward1StateKey",
             value = "Skipped",
-            sourceIndex = 1,
+            sameExitRewardIndex = 1,
         },
         {
             key = "Boon",
@@ -1068,14 +1068,14 @@ function TestRunPlannerRewards.testRuntimeSnapshotsShopBoonSourcePicks()
             kind = "purchaseState",
             alias = "Reward2StateKey",
             value = "Skipped",
-            sourceIndex = 2,
+            sameExitRewardIndex = 2,
         },
         {
             key = "purchaseState:3",
             kind = "purchaseState",
             alias = "Reward3StateKey",
             value = "Skipped",
-            sourceIndex = 3,
+            sameExitRewardIndex = 3,
         },
     })
 end

@@ -24,13 +24,13 @@ local function primaryRewardItem(row)
     return row
 end
 
-local function rewardItemBySource(row, sourceKind, sourceIndex)
-    if sourceKind == "row" then
+local function rewardItemByEventSource(row, eventSourceKind, sameExitRewardIndex)
+    if eventSourceKind == "row" then
         return row
-    elseif sourceKind == "side" then
-        return row and row.sideRooms and row.sideRooms[sourceIndex] or nil
-    elseif sourceKind == "encounter" then
-        return row and row.encounterRewardLegs and row.encounterRewardLegs[sourceIndex] or nil
+    elseif eventSourceKind == "side" then
+        return row and row.sideRooms and row.sideRooms[sameExitRewardIndex] or nil
+    elseif eventSourceKind == "encounter" then
+        return row and row.encounterRewardLegs and row.encounterRewardLegs[sameExitRewardIndex] or nil
     end
     return nil
 end
@@ -525,7 +525,7 @@ local function routeRewardRow(rowIndex, rewardType, opts)
         rewardLoot = opts.rewardLoot or {},
         rewardPicks = opts.rewardPicks or {},
         selectionRequirements = opts.selectionRequirements or {},
-        rewardSourceCount = opts.rewardSourceCount,
+        sameExitRewardCount = opts.sameExitRewardCount,
         invalidCode = opts.invalidCode,
         invalidReason = opts.invalidReason,
         invalidCompletion = opts.invalidCompletion,
@@ -663,7 +663,7 @@ return {
     withTestImport = withTestImport,
     normalizeRewardRows = normalizeRewardRows,
     primaryRewardItem = primaryRewardItem,
-    rewardItemBySource = rewardItemBySource,
+    rewardItemByEventSource = rewardItemByEventSource,
     loadCatalog = loadCatalog,
     loadRouteDeps = loadRouteDeps,
     loadControlTemplates = loadControlTemplates,

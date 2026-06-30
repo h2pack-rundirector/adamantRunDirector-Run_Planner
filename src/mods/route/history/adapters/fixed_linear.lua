@@ -209,7 +209,7 @@ local function roomStoreOfferSummary(offer, rewardType, boonSource)
         kind = "roomStore",
         address = offer.address,
         rewardStore = offer.rewardStore,
-        offerCount = offer.offerCount,
+        sameExitRewardCount = offer.sameExitRewardCount,
         controlAlias = "Reward" .. tostring(rewardAliasStart) .. "Key",
         rewardType = rewardType ~= "" and rewardType or nil,
         boonSource = rewardType == "Boon" and boonSource or nil,
@@ -238,7 +238,7 @@ local function prebossOfferSummaries(context)
             kind = offer.kind,
             shopProfile = offer.shopProfile,
             rewardStore = offer.rewardStore,
-            offerCount = offer.offerCount,
+            sameExitRewardCount = offer.sameExitRewardCount,
             requiredBranchValue = offer.requiredBranchValue,
             eligibleRewardTypes = copyList(offer.eligibleRewardTypes),
             ineligibleRewardTypes = copyList(offer.ineligibleRewardTypes),
@@ -382,7 +382,7 @@ local function appendRoom(history, routeHistory, context, selectedRow, resolved)
         kind = "room",
         eventKey = eventKey,
         groupKey = selectedRow.roleKey,
-        sourceKind = "row",
+        eventSourceKind = "row",
         roomKey = roomKey,
         roleKey = selectedRow.roleKey,
         optionKey = selectedRow.optionKey,
@@ -439,7 +439,7 @@ local function selectedStructure(selectedRow, resolved)
         structure = roleKey,
         roomKey = resolved.roomKey,
         eventKey = resolved.eventKey,
-        offerCount = option and option.offerCount or nil,
+        sameExitRewardCount = option and option.sameExitRewardCount or nil,
     }
 end
 
@@ -466,7 +466,7 @@ local function siblingPolicyOption(biome, structureKey)
 end
 
 local function siblingRewardSummary(selectedRow, siblingIndex, option)
-    if option == nil or option.offerCount == nil or option.offerCount <= 0 then
+    if option == nil or option.sameExitRewardCount == nil or option.sameExitRewardCount <= 0 then
         return nil
     end
     local rewardClass = selectedRow
@@ -507,7 +507,7 @@ local function siblingExit(context, selectedRow, siblingIndex, sibling)
         roleKey = option.roleKey,
         optionKey = option.roomKey,
         roomKey = option.roomKey,
-        offerCount = option.offerCount,
+        sameExitRewardCount = option.sameExitRewardCount,
         reward = siblingRewardSummary(selectedRow, siblingIndex, option),
     }
 end

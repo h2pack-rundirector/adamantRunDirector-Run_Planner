@@ -249,8 +249,8 @@ Additional fields should use game-domain names where possible:
 - `roomKey`
 - `roleKey`
 - `optionKey`
-- `sourceKind`
-- `sourceIndex`
+- `eventSourceKind`
+- `sameExitRewardIndex`
 - `rewardType`
 - `rewardStore`
 - `timing`

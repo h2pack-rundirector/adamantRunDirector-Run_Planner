@@ -45,7 +45,7 @@ local function buildFixedSlot(instance, entry, kind, defaultKey)
         optionsByKey = buildLookup(roomOptions),
         reward = entry.reward,
         exitCount = fixedRoomField(entry, "exitCount"),
-        rewardExitCount = fixedRoomField(entry, "rewardExitCount"),
+        rewardBearingExitCount = fixedRoomField(entry, "rewardBearingExitCount"),
         biomeDepthCacheCost = entry.biomeDepthCacheCost,
         biomeEncounterDepthCost = entry.biomeEncounterDepthCost,
     }
@@ -66,7 +66,7 @@ local function buildFixedSlot(instance, entry, kind, defaultKey)
         roomKey = roomKey,
         roomOptions = roomOptions,
         exitCount = role.exitCount,
-        rewardExitCount = role.rewardExitCount,
+        rewardBearingExitCount = role.rewardBearingExitCount,
         roleKey = role.key,
         role = role,
         locked = entry.locked,

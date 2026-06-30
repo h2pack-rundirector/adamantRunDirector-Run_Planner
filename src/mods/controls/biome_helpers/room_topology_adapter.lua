@@ -33,8 +33,8 @@ local function structuralCountForRow(data, slots, instance, rows, rowIndex, fiel
     if field == "exitCount" then
         return math.floor(tonumber(roomStructure.exitCount(slot, role, option)) or 0)
     end
-    if field == "rewardExitCount" then
-        return math.floor(tonumber(roomStructure.rewardExitCount(slot, role, option)) or 0)
+    if field == "rewardBearingExitCount" then
+        return math.floor(tonumber(roomStructure.rewardBearingExitCount(slot, role, option)) or 0)
     end
     return 0
 end
