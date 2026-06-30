@@ -383,8 +383,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalCombatRoomsCannotRepe
         { RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat", OptionKey = "I_Combat01" },
     })
 
-    lu.assertTrue(data.validateRow(instance, rows, 2).valid)
-    local validation = data.validateRow(instance, rows, 3)
+    lu.assertTrue(data.validateFormRow(instance, rows, 2).valid)
+    local validation = data.validateFormRow(instance, rows, 3)
     lu.assertTrue(validation.valid)
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "RewardCombat").I_Combat01)
 end
@@ -496,7 +496,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
         { RouteKindKey = "Goal", OptionKey = "I_Combat02" },
         { RouteKindKey = "NonGoal", NonGoalKindKey = "Story", OptionKey = "I_Story01", SiblingStructureKey = "CombatGoal" },
     })
-    local validation = data.validateRow(instance, storyAfterOneExit, 3)
+    local validation = data.validateFormRow(instance, storyAfterOneExit, 3)
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "clockwork_previous_extension_choice")
     lu.assertTrue(hasValue(data.roleValuesForRow(instance, storyAfterOneExit, 3), "Story"))
@@ -511,7 +511,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
         { RouteKindKey = "Goal", OptionKey = "I_Combat02" },
         { RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat", OptionKey = "I_Combat03", Reward1Key = "MaxHealthDrop" },
     })
-    validation = data.validateRow(instance, extensionAfterOneExit, 3)
+    validation = data.validateFormRow(instance, extensionAfterOneExit, 3)
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "clockwork_previous_extension_choice")
 
@@ -535,7 +535,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
         { RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat", OptionKey = "I_Combat12", Reward1Key = "MaxHealthDrop" },
         { RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat", OptionKey = "I_Combat18", Reward1Key = "MaxHealthDrop" },
     })
-    validation = data.validateRow(instance, seventhExtension, 9)
+    validation = data.validateFormRow(instance, seventhExtension, 9)
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "clockwork_previous_extension_choice")
 
@@ -549,7 +549,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
         { RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat", OptionKey = "I_Combat11", Reward1Key = "MaxHealthDrop" },
         { RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat", OptionKey = "I_Combat12", Reward1Key = "MaxHealthDrop" },
     })
-    validation = data.validateRow(instance, finalExtensionTwoExit, 8)
+    validation = data.validateFormRow(instance, finalExtensionTwoExit, 8)
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "option_unavailable")
     local finalExtensionOptions = data.optionValuesForRow(instance, finalExtensionTwoExit, 8, "RewardCombat")
@@ -568,7 +568,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
         { RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat", OptionKey = "I_Combat11", Reward1Key = "MaxHealthDrop" },
         { RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat", OptionKey = "I_Combat13", Reward1Key = "MaxHealthDrop" },
     })
-    validation = data.validateRow(instance, finalExtensionOneExit, 8)
+    validation = data.validateFormRow(instance, finalExtensionOneExit, 8)
     lu.assertTrue(validation.valid)
 
     local sixthGoal = fakeRows({
@@ -580,7 +580,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
         { RouteKindKey = "Goal", OptionKey = "I_Combat10", SiblingStructureKey = "CombatReward" },
         { RouteKindKey = "Goal", OptionKey = "I_Combat11" },
     })
-    validation = data.validateRow(instance, sixthGoal, 7)
+    validation = data.validateFormRow(instance, sixthGoal, 7)
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "clockwork_goal_limit")
     lu.assertEquals(data.readRoleKey(instance, sixthGoal, 7), "GoalCombat")
@@ -598,7 +598,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
         { RouteKindKey = "Goal", OptionKey = "I_Combat09" },
         {},
     })
-    validation = data.validateRow(instance, missingGoal, 14)
+    validation = data.validateFormRow(instance, missingGoal, 14)
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "clockwork_goal_count")
 end
@@ -627,7 +627,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalActiveInactiveRowsAre
         {},
     })
 
-    local validation = data.validateRow(instance, rows, 12)
+    local validation = data.validateFormRow(instance, rows, 12)
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "role_required")
 end
@@ -653,11 +653,11 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTerminatesAfterOneExi
 
     lu.assertEquals(data.readRoleKey(instance, rows, 7), "Inactive")
     lu.assertEquals(data.roleValuesForRow(instance, rows, 7), { "Inactive" })
-    lu.assertTrue(data.validateRow(instance, rows, 7).valid)
+    lu.assertTrue(data.validateFormRow(instance, rows, 7).valid)
     lu.assertTrue(data.isInactiveRouteRow(instance, rows, 7))
     lu.assertEquals(data.countGoals(instance, rows), 5)
     lu.assertEquals(data.countStories(instance, rows), 0)
-    lu.assertTrue(data.validateRow(instance, rows, 14).valid)
+    lu.assertTrue(data.validateFormRow(instance, rows, 14).valid)
 end
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalRoomViewHidesInactiveRows()

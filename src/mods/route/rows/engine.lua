@@ -588,7 +588,7 @@ function rowEngine.create(adapter)
         return rowRoomKeyUncached(instance, rows, rowIndex)
     end
 
-    local function validateBaseRowUncached(instance, rows, rowIndex)
+    local function validateFormRowUncached(instance, rows, rowIndex)
         local slot = slotForRow(instance, rowIndex)
         local roleKey, role = data.resolveRole(instance, rows, rowIndex)
         if roleKey == nil or roleKey == "" then
@@ -645,18 +645,10 @@ function rowEngine.create(adapter)
         return validStatus()
     end
 
-    function data.validateBaseRow(instance, rows, rowIndex)
-        return validateBaseRowUncached(instance, rows, rowIndex)
-    end
-
-    local function validateRowUncached(instance, rows, rowIndex)
-        return validateBaseRowUncached(instance, rows, rowIndex)
-    end
-
-    function data.validateRow(instance, rows, rowIndex)
+    function data.validateFormRow(instance, rows, rowIndex)
         local cache = activeReadCache(instance)
         if cache == nil then
-            return validateRowUncached(instance, rows, rowIndex)
+            return validateFormRowUncached(instance, rows, rowIndex)
         end
 
         local record = rowRecord(cache.validations, rowIndex)
@@ -664,7 +656,7 @@ function rowEngine.create(adapter)
             return record.value
         end
 
-        local value = validateRowUncached(instance, rows, rowIndex)
+        local value = validateFormRowUncached(instance, rows, rowIndex)
         record.pass = cache.pass
         record.value = value
         return value

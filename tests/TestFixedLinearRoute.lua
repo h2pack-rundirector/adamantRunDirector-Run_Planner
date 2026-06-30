@@ -303,7 +303,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearOpeningRowUsesFixedRoomCh
     lu.assertEquals(role.label, "Opening")
     lu.assertEquals(optionKey, "F_Opening02")
     lu.assertEquals(option.label, "Opening 2")
-    lu.assertTrue(data.validateRow(instance, rows, 1).valid)
+    lu.assertTrue(data.validateFormRow(instance, rows, 1).valid)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearPrebossRowUsesFixedRoomChoice()
@@ -327,7 +327,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearPrebossRowUsesFixedRoomCh
     local roleKey, role = data.resolveRole(instance, rows, 12)
     lu.assertEquals(roleKey, "Preboss")
     lu.assertEquals(role.label, "Preboss")
-    lu.assertTrue(data.validateRow(instance, rows, 12).valid)
+    lu.assertTrue(data.validateFormRow(instance, rows, 12).valid)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearPreservesRewardsWhenRoomOptionKeepsSurface()
@@ -515,7 +515,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearMegaDraconOnlyLeadsToOutd
     })
     local values = {}
 
-    lu.assertTrue(data.validateRow(instance, rows, 5).valid)
+    lu.assertTrue(data.validateFormRow(instance, rows, 5).valid)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeDepthCache, 5)
     data.fillOptionValues(instance, rows, 6, "Combat", values)
     lu.assertTrue(hasValue(values, "P_Combat02"))
@@ -526,7 +526,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearMegaDraconOnlyLeadsToOutd
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 6).Fountain)
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 6).Midshop)
 
-    local validation = data.validateRow(instance, rows, 6)
+    local validation = data.validateFormRow(instance, rows, 6)
     lu.assertTrue(validation.valid)
 end
 
@@ -818,7 +818,7 @@ function TestRunPlannerFixedLinearRoute.testMinibossRequiresConcreteOption()
     data.fillOptionValues(instance, rows, 6, "Miniboss", values)
     lu.assertEquals(values[1], "F_MiniBoss01")
 
-    local validation = data.validateRow(instance, rows, 6)
+    local validation = data.validateFormRow(instance, rows, 6)
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "option_required")
     lu.assertEquals(validation.controlTargets, {
@@ -860,7 +860,7 @@ function TestRunPlannerFixedLinearRoute.testConcreteMinibossOptionUsesLeafDepthC
         },
     })
 
-    lu.assertTrue(data.validateRow(instance, rows, 5).valid)
+    lu.assertTrue(data.validateFormRow(instance, rows, 5).valid)
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCost, 0)
 end
 

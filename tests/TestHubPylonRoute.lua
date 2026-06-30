@@ -143,7 +143,7 @@ function TestRunPlannerHubPylonRoute.testHubPylonFixedRowsUseImplicitRooms()
     lu.assertEquals(role.roomKey, "N_Opening01")
     lu.assertEquals(optionKey, "")
     lu.assertNil(option)
-    lu.assertTrue(data.validateRow(instance, rows, 1).valid)
+    lu.assertTrue(data.validateFormRow(instance, rows, 1).valid)
 end
 
 

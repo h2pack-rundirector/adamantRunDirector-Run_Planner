@@ -241,7 +241,7 @@ function runtime.create(fields, instance)
     end
 
     function control:rowValidation(rowIndex)
-        local validation = data.validateRow(instance, routeRows, rowIndex)
+        local validation = data.validateFormRow(instance, routeRows, rowIndex)
         if not validation.valid then
             return validation
         end
