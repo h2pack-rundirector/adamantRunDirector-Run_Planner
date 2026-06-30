@@ -224,6 +224,8 @@ local function emitPhysical(context, args)
         roleKey = args.roleKey,
         optionKey = args.optionKey,
         variantKey = args.variantKey,
+        nextRoomTags = args.nextRoomTags,
+        tags = args.tags,
         entryKey = args.entryKey,
         entryLabel = args.entryLabel,
         sideIndex = args.sideIndex,

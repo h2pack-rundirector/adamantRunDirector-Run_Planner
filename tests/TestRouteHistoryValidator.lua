@@ -108,6 +108,8 @@ local function emitRoom(history, roomHistoryOrdinal, fields)
         roomCandidates = fields and fields.roomCandidates or nil,
         siblingCandidates = fields and fields.siblingCandidates or nil,
         rewardCandidates = fields and fields.rewardCandidates or nil,
+        nextRoomTags = fields and fields.nextRoomTags or nil,
+        tags = fields and fields.tags or nil,
     })
 end
 
@@ -274,6 +276,44 @@ function TestRunPlannerRouteHistoryValidator.testValidatorAcceptsMidshopAfterTwo
     lu.assertTrue(result.valid)
 end
 
+function TestRunPlannerRouteHistoryValidator.testValidatorRejectsRoomWithoutPreviousNextRoomTag()
+    local history = routeHistory.create()
+    emitRoom(history, 4, {
+        biomeKey = "P",
+        rowIndex = 5,
+        roomKey = "P_MiniBoss02",
+        roleKey = "Miniboss",
+        optionKey = "P_MiniBoss02",
+        biomeDepthCache = 4,
+    })
+    emitRoom(history, 5, {
+        biomeKey = "P",
+        rowIndex = 6,
+        roomKey = "P_Combat02",
+        roleKey = "Combat",
+        optionKey = "P_Combat02",
+        biomeDepthCache = 5,
+    })
+    local catalog = h.loadCatalog()
+
+    local result = historyValidator.validate({
+        route = {
+            key = "Surface",
+            biomes = { "P" },
+        },
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "previous_room_next_tags")
+    lu.assertEquals(result.invalids[1].rowIndex, 6)
+
+    local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
+    local states = historyFeedback.valueStatesForControl(feedback, "P", 6, "OptionKey")
+    lu.assertEquals(states.P_Combat02, valueStates.INVALID)
+end
+
 function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRoomFindings()
     local route = {
         key = "Underworld",
@@ -433,6 +473,43 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsOptionCa
     local feedback = historyFeedback.fromFindings(result.findings)
     local states = historyFeedback.valueStatesForControl(feedback, "F", 2, "OptionKey")
     lu.assertEquals(states.F_Combat02, valueStates.INVALID)
+end
+
+function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsNextRoomTagFindings()
+    local route = {
+        key = "Surface",
+        biomes = { "P" },
+    }
+    local history, catalog = buildHistory(route, "P", h.loadFixedLinearTemplate(), {
+        {},
+        { RoleKey = "Combat", OptionKey = "P_Combat05" },
+        { RoleKey = "Combat", OptionKey = "P_Combat06" },
+        { RoleKey = "Combat", OptionKey = "P_Combat11" },
+        { RoleKey = "Miniboss", OptionKey = "P_MiniBoss02" },
+        { RoleKey = "Combat", OptionKey = "P_Combat13" },
+    })
+    local result = historyValidator.validate({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+
+    local finding = nil
+    for _, candidateFinding in ipairs(result.findings) do
+        if candidateFinding.kind == "roomCandidateInvalid"
+            and candidateFinding.roomKey == "P_Combat02"
+            and candidateFinding.reason == "previous_room_next_tags"
+        then
+            finding = candidateFinding
+            break
+        end
+    end
+    lu.assertNotNil(finding)
+
+    local feedback = historyFeedback.fromFindings(result.findings)
+    local states = historyFeedback.valueStatesForControl(feedback, "P", 6, "OptionKey")
+    lu.assertEquals(states.P_Combat02, valueStates.INVALID)
+    lu.assertNil(states.P_Combat13)
 end
 
 function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsSiblingFindings()

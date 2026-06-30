@@ -90,6 +90,32 @@ local function availabilityFailure(option, entry)
     return nil
 end
 
+local function hasTag(tags, expected)
+    for _, tag in ipairs(tags or EMPTY_LIST) do
+        if tag == expected then
+            return true
+        end
+    end
+    return false
+end
+
+local function nextRoomTagsFailure(requiredTags, tags)
+    if requiredTags == nil then
+        return nil
+    end
+    for _, requiredTag in ipairs(requiredTags) do
+        if hasTag(tags, requiredTag) then
+            return nil
+        end
+    end
+    return "previous_room_next_tags"
+end
+
+local function nextRoomTagsMessage(requiredTags)
+    local requiredTag = requiredTags and requiredTags[1] or "required"
+    return "Previous planned room only leads to " .. tostring(requiredTag) .. " rooms"
+end
+
 local function optionList(role)
     return role and (role.roomOptions or role.mapOptions) or EMPTY_LIST
 end
@@ -618,8 +644,16 @@ end
 local function validatePickedEntries(history, biome)
     local roleCounts = {}
     local optionCounts = {}
+    local previousOption = nil
     for _, entry in ipairs(biomeRoomEntries(history, biome.key)) do
         local role, option = declarationForEntry(biome, entry)
+        if previousOption ~= nil then
+            local requiredTags = previousOption.nextRoomTags
+            local failure = nextRoomTagsFailure(requiredTags, option and option.tags)
+            if failure ~= nil then
+                return invalidAt(entry, failure, nextRoomTagsMessage(requiredTags))
+            end
+        end
         if option ~= nil then
             local failure = availabilityFailure(option, entry)
             if failure ~= nil then
@@ -640,6 +674,7 @@ local function validatePickedEntries(history, biome)
                 tostring(option.label or option.key) .. " is already generated"
             )
         end
+        previousOption = option
     end
     return nil
 end

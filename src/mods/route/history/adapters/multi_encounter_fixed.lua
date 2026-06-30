@@ -428,6 +428,8 @@ local function appendRoom(history, routeHistory, context, selectedRow, resolved)
         roleKey = selectedRow.roleKey,
         optionKey = selectedRow.optionKey,
         variantKey = selectedRow.variantKey,
+        nextRoomTags = resolved.option and resolved.option.nextRoomTags or nil,
+        tags = resolved.option and resolved.option.tags or nil,
         source = selectedRow,
     })
     entry.roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, resolved)

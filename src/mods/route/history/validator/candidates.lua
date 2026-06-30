@@ -57,6 +57,27 @@ local function availabilityFailure(availability, entry)
     return nil
 end
 
+local function hasTag(tags, expected)
+    for _, tag in ipairs(tags or EMPTY_LIST) do
+        if tag == expected then
+            return true
+        end
+    end
+    return false
+end
+
+local function nextRoomTagsFailure(requiredTags, tags)
+    if requiredTags == nil then
+        return nil
+    end
+    for _, requiredTag in ipairs(requiredTags) do
+        if hasTag(tags, requiredTag) then
+            return nil
+        end
+    end
+    return "previous_room_next_tags"
+end
+
 local function appendAvailabilityFinding(target, createFinding, entry, candidate, availability)
     local failure, axis, expected, actual = availabilityFailure(availability, entry)
     if failure == nil then
@@ -130,6 +151,31 @@ local function priorOptionCount(history, entry, optionKey)
     return count
 end
 
+local function previousRoomEntry(history, entry)
+    local previous = nil
+    for _, room in ipairs(routeHistory.byKind(history, "room")) do
+        if room.biomeKey == entry.biomeKey and roomEntryBefore(entry, room) then
+            if previous == nil or roomEntryBefore(room, previous) then
+                previous = room
+            end
+        end
+    end
+    return previous
+end
+
+local function appendNextRoomTagsFinding(target, history, entry, candidate)
+    local previous = previousRoomEntry(history, entry)
+    local requiredTags = previous and previous.nextRoomTags or nil
+    if nextRoomTagsFailure(requiredTags, candidate and candidate.tags) == nil then
+        return
+    end
+    target[#target + 1] = findings.roomCandidateInvalid(entry, candidate, "previous_room_next_tags", {
+        controlAlias = "OptionKey",
+        controlValue = candidate and candidate.optionKey or nil,
+        requiredTags = requiredTags,
+    })
+end
+
 local function appendCapFindings(target, history, entry, candidate)
     local roleLimit = roleCap(candidate)
     if roleLimit ~= nil
@@ -162,6 +208,7 @@ local function appendRoomCandidateFindings(target, history, entry)
             candidate.optionAvailability or candidate.roleAvailability
         )
         appendCapFindings(target, history, entry, candidate)
+        appendNextRoomTagsFinding(target, history, entry, candidate)
     end
 end
 

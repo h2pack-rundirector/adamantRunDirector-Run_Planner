@@ -58,6 +58,7 @@ local function appendCandidate(candidates, role, option)
             or nil,
         requiredLayer = role and role.requiredLayer or nil,
         nextRoomTags = copyValue(option and option.nextRoomTags),
+        tags = copyValue(option and option.tags),
     }
 end
 

@@ -1346,15 +1346,14 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearMegaDraconOnlyLeadsToOutd
     data.fillOptionValues(instance, rows, 6, "Combat", values)
     lu.assertTrue(hasValue(values, "P_Combat02"))
     lu.assertTrue(hasValue(values, "P_Combat13"))
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 6, "Combat").P_Combat02, valueStates.INVALID)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").P_Combat02)
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").P_Combat13)
-    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 6).Story, valueStates.INVALID)
-    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 6).Fountain, valueStates.INVALID)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 6).Story)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 6).Fountain)
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 6).Midshop)
 
     local validation = data.validateRow(instance, rows, 6)
-    lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "previous_room_next_tags")
+    lu.assertTrue(validation.valid)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesScriptedExactDepthOptions()
@@ -1559,40 +1558,6 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearAvailabilityConsumesPrior
     data.fillRoleValues(instance, rows, 7, values)
     lu.assertTrue(hasValue(values, "Story"))
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 7).Story)
-end
-
-function TestRunPlannerFixedLinearRoute.testFixedLinearReadPassInvalidationRefreshesCachedValues()
-    local catalog = loadCatalog()
-    local data = loadFixedLinearData()
-    local instance = data.prepare({
-        name = "RouteP",
-        biome = catalog.lookup.P,
-    })
-    local rowState = {
-        { RoleKey = "" },
-        { RoleKey = "Combat", OptionKey = "P_Combat05" },
-        { RoleKey = "Combat", OptionKey = "P_Combat06" },
-        { RoleKey = "Combat", OptionKey = "P_Combat11" },
-        { RoleKey = "Miniboss", OptionKey = "P_MiniBoss02" },
-        { RoleKey = "Combat", OptionKey = "P_Combat02" },
-    }
-    local rows = fakeRows(rowState)
-
-    data.beginReadPass(instance)
-    lu.assertEquals(
-        data.optionValueStatesForRow(instance, rows, 6, "Combat").P_Combat02,
-        valueStates.INVALID
-    )
-
-    rowState[5].OptionKey = "P_MiniBoss01"
-    lu.assertEquals(
-        data.optionValueStatesForRow(instance, rows, 6, "Combat").P_Combat02,
-        valueStates.INVALID
-    )
-
-    data.invalidateReadPass(instance)
-    lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").P_Combat02)
-    data.endReadPass(instance)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRowContextUsesSelectionDepthCosts()
