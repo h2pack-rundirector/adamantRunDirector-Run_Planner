@@ -86,6 +86,31 @@ function TestRunPlannerRouteHistoryValidator.testThessalyRequiresStoryOrShopByDe
     lu.assertEquals(result.invalids[1].routeOrdinal, 5)
 end
 
+function TestRunPlannerRouteHistoryValidator.testThessalyThreeCombatVariantUsesHistoryFeedback()
+    local route = {
+        key = "Surface",
+        biomes = { "O" },
+    }
+    local result = validate(route, "O", h.loadMultiEncounterTemplate(), {
+        {},
+        thessalyCombat("O_Combat01", "ThreeCombats"),
+    })
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "encounter_depth_unavailable")
+    lu.assertEquals(result.invalids[1].targetFinding.kind, "variantCandidateInvalid")
+    lu.assertEquals(result.invalids[1].targetFinding.variantKey, "ThreeCombats")
+
+    local feedback = historyFeedback.fromResult({
+        route = route,
+        biomeLookup = h.loadCatalog().lookup,
+        findings = result.findings,
+        invalids = result.invalids,
+    })
+    local states = historyFeedback.valueStatesForControl(feedback, "O", 2, "VariantKey")
+    lu.assertEquals(states.ThreeCombats, valueStates.INVALID)
+end
+
 local function emitRoom(history, roomHistoryOrdinal, fields)
     return routeHistory.emitAt(history, {
         routeKey = "Underworld",

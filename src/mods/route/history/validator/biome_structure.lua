@@ -90,6 +90,33 @@ local function availabilityFailure(option, entry)
     return nil
 end
 
+local function variantFailure(entry)
+    if entry == nil
+        or entry.variantKey == nil
+        or entry.variantKey == ""
+        or entry.variantAvailability == nil
+    then
+        return nil
+    end
+    if rangeContains(entry.variantAvailability, entry.biomeEncounterDepth) then
+        return nil
+    end
+    return "encounter_depth_unavailable"
+end
+
+local function variantFinding(entry, reason, message)
+    return findings.variantCandidateInvalid(entry, {
+        key = entry and entry.variantKey or nil,
+        label = entry and entry.variantLabel or nil,
+        availableAtBiomeEncounterDepth = entry and entry.variantAvailability or nil,
+        controlAlias = "VariantKey",
+    }, reason, {
+        message = message,
+        expected = entry and entry.variantAvailability or nil,
+        actual = entry and entry.biomeEncounterDepth or nil,
+    })
+end
+
 local function hasTag(tags, expected)
     for _, tag in ipairs(tags or EMPTY_LIST) do
         if tag == expected then
@@ -659,6 +686,18 @@ local function validatePickedEntries(history, biome)
             if failure ~= nil then
                 return invalidAt(entry, failure, "Room is not valid at this generated depth")
             end
+        end
+        local variantInvalid = variantFailure(entry)
+        if variantInvalid ~= nil then
+            local message = tostring(entry.variantLabel or entry.variantKey) .. " is not valid at this encounter depth"
+            return invalidWithFindings(
+                entry,
+                variantInvalid,
+                message,
+                {
+                    variantFinding(entry, variantInvalid, message),
+                }
+            )
         end
 
         local roleCap = capFor(role)

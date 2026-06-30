@@ -139,6 +139,12 @@ function common.targetFor(record)
             controlAlias = siblingControlAlias(record),
             value = record.structureKey,
         }
+    elseif record.kind == "variantCandidateInvalid" then
+        return {
+            tabKey = "rooms",
+            controlAlias = record.controlAlias or "VariantKey",
+            value = record.variantKey,
+        }
     elseif record.kind == "roomCandidateInvalid" then
         return {
             tabKey = "rooms",

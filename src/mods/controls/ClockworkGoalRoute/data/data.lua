@@ -18,8 +18,6 @@ local topologyFactory = import("mods/controls/ClockworkGoalRoute/data/topology.l
 })
 
 local INACTIVE_ROLE_KEY = state.INACTIVE_ROLE_KEY
-local validStatus = common.validStatus
-local invalidStatus = common.invalidStatus
 
 local ROUTE_KIND_ALIAS = "RouteKindKey"
 local NON_GOAL_KIND_ALIAS = "NonGoalKindKey"
@@ -203,28 +201,6 @@ local adapter = {
         return tostring(role.label or role.key) .. " is not valid at this step"
     end,
 
-    validateSlot = function(instance, rows, rowIndex, roleKey, role, slot)
-        if slots.isPrebossSlot(slot) then
-            local goalCount = data.countGoals(instance, rows)
-            if goalCount ~= state.requiredGoals(instance) then
-                return invalidStatus(
-                    "clockwork_goal_count",
-                    "Preboss requires exactly " .. tostring(state.requiredGoals(instance)) .. " Clockwork Goal rows"
-                )
-            end
-            return validStatus()
-        end
-        if not slots.isRouteSlot(slot) or roleKey == INACTIVE_ROLE_KEY then
-            return nil
-        end
-        if state.routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
-            return validStatus()
-        end
-        if not state.roleIsAllowed(instance, rows, rowIndex, roleKey, role) then
-            return state.roleDisallowedStatus(instance, rows, rowIndex, roleKey, role)
-        end
-        return nil
-    end,
 }
 
 data = rowEngine.create(adapter)

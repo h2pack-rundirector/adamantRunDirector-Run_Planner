@@ -160,6 +160,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterStorageMatchesThess
 
     lu.assertEquals(routeData.variantValuesForRow(instance, rows, 2, "Combat"), {
         "TwoCombats",
+        "ThreeCombats",
     })
     lu.assertEquals(routeData.variantValuesForRow(instance, rows, 3, "Combat"), {
         "TwoCombats",
@@ -171,9 +172,11 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterStorageMatchesThess
     })
     lu.assertEquals(routeData.variantValuesForRow(instance, rows, 6, "Combat"), {
         "TwoCombats",
+        "ThreeCombats",
     })
     lu.assertEquals(routeData.variantValuesForRow(instance, rows, 7, "Combat"), {
         "TwoCombats",
+        "ThreeCombats",
     })
     lu.assertEquals(routeData.variantValuesForRow(instance, rows, 3, "Story"), {})
     lu.assertEquals(routeData.rowContext(instance, rows, 2).biomeEncounterDepth, 1)

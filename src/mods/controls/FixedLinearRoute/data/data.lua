@@ -12,8 +12,6 @@ local topologyFactory = import("mods/controls/FixedLinearRoute/data/topology.lua
     slots = slots,
 })
 
-local validStatus = common.validStatus
-
 local data
 local topology
 local REWARD_CLASS_VALUES = { "Major", "Minor" }
@@ -60,13 +58,6 @@ local adapter = {
 
     skipOptionsForSlot = function(_, _, _, slot)
         return slots.isPrebossSlot(slot)
-    end,
-
-    validateSlot = function(_, _, _, _, _, slot)
-        if slots.isPrebossSlot(slot) then
-            return validStatus()
-        end
-        return nil
     end,
 
     optionUnavailableMessage = function(_, _, _, _, role)

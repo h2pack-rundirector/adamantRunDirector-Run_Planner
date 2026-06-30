@@ -224,6 +224,23 @@ local function appendSiblingCandidateFindings(target, entry)
     end
 end
 
+local function appendVariantCandidateFindings(target, entry)
+    for _, candidate in ipairs(entry.variantCandidates or EMPTY_LIST) do
+        if not rangeContains(candidate.availableAtBiomeEncounterDepth, entry and entry.biomeEncounterDepth) then
+            target[#target + 1] = findings.variantCandidateInvalid(
+                entry,
+                candidate,
+                "encounter_depth_unavailable",
+                {
+                    controlAlias = candidate.controlAlias or "VariantKey",
+                    expected = candidate.availableAtBiomeEncounterDepth,
+                    actual = entry and entry.biomeEncounterDepth or nil,
+                }
+            )
+        end
+    end
+end
+
 local function lootCandidateEntry(entry, candidate, rewardType)
     local loot = {}
     for key, value in pairs(entry or {}) do
@@ -281,6 +298,7 @@ function candidates.validate(args)
     for _, entry in ipairs(routeHistory.byKind(history, "room")) do
         appendRoomCandidateFindings(candidateFindings, history, entry)
         appendSiblingCandidateFindings(candidateFindings, entry)
+        appendVariantCandidateFindings(candidateFindings, entry)
         appendRewardCandidateFindings(candidateFindings, history, entry, rulesByTarget)
     end
     return validResult(candidateFindings)

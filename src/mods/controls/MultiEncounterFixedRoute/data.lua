@@ -6,8 +6,6 @@ local rowEngine = deps.rowEngine
 local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
 local buildOptionChoices = common.buildOptionChoices
-local validStatus = common.validStatus
-local invalidStatus = common.invalidStatus
 local fixedBiomeDepthCacheCost = common.fixedBiomeDepthCacheCost
 local routeBiomeDepthCacheCost = common.routeBiomeDepthCacheCost
 local routeStartOrdinal = common.routeStartOrdinal
@@ -36,28 +34,6 @@ end
 
 local function isFixedIdentitySlot(slot)
     return isPrebossSlot(slot) or isFixedRoleSlot(slot)
-end
-
-local function rangeContains(value, range)
-    if range == nil or value == nil then
-        return true
-    end
-    if range.exact ~= nil and value ~= range.exact then
-        return false
-    end
-    if range.min ~= nil and value < range.min then
-        return false
-    end
-    if range.max ~= nil and value > range.max then
-        return false
-    end
-    if range.minExclusive ~= nil and value <= range.minExclusive then
-        return false
-    end
-    if range.maxExclusive ~= nil and value >= range.maxExclusive then
-        return false
-    end
-    return true
 end
 
 local function buildFixedRoleSlot(instance, ordinal, special)
@@ -246,19 +222,6 @@ local function encounterPolicyForRole(instance, role)
     return instance.encounterPoliciesByKey and instance.encounterPoliciesByKey[role.encounterPolicy] or nil
 end
 
-local function isVariantAvailableAtContext(variant, context)
-    if variant == nil then
-        return false
-    end
-    if variant.availableAtBiomeEncounterDepth == nil then
-        return true
-    end
-    if context == nil or context.biomeEncounterDepth == nil then
-        return false
-    end
-    return rangeContains(context.biomeEncounterDepth, variant.availableAtBiomeEncounterDepth)
-end
-
 local function prepareVariantChoiceCache(instance)
     instance.variantValuesByRowRole = {}
     for _, slot in ipairs(instance.routeSlots or {}) do
@@ -273,7 +236,7 @@ local function prepareVariantChoiceCache(instance)
     end
 end
 
-local function variantValuesForContext(instance, rows, rowIndex, roleKey)
+local function variantValuesForContext(instance, _rows, rowIndex, roleKey)
     local values = instance.variantValuesByRowRole
         and instance.variantValuesByRowRole[rowIndex]
         and instance.variantValuesByRowRole[rowIndex][roleKey]
@@ -284,12 +247,8 @@ local function variantValuesForContext(instance, rows, rowIndex, roleKey)
 
     clearList(values)
     local policy = data.variantPolicyForRole(instance, roleKey)
-    local context = data.rowContext(instance, rows, rowIndex)
     for _, variantKey in ipairs(policy and policy.values or {}) do
-        local variant = policy.optionsByKey[variantKey]
-        if isVariantAvailableAtContext(variant, context) then
-            values[#values + 1] = variantKey
-        end
+        values[#values + 1] = variantKey
     end
     return values
 end
@@ -363,30 +322,6 @@ local adapter = {
             return nil
         end
         return data.biomeEncounterDepthCostForVariant(instance, rows, rowIndex, roleKey)
-    end,
-
-    validateSlot = function(instance, rows, rowIndex, _, role, slot)
-        if isPrebossSlot(slot) then
-            return validStatus()
-        end
-
-        local policy = encounterPolicyForRole(instance, role)
-        if policy == nil then
-            return nil
-        end
-
-        local variantKey = rows:read(rowIndex, "VariantKey") or ""
-        local variant = policy.optionsByKey[variantKey]
-        if variant == nil then
-            return invalidStatus("unknown_variant", "Unknown encounter count: " .. tostring(variantKey))
-        end
-        if not isVariantAvailableAtContext(variant, data.rowContext(instance, rows, rowIndex)) then
-            return invalidStatus(
-                "variant_unavailable",
-                tostring(variant.label or variantKey) .. " is not valid at this depth"
-            )
-        end
-        return nil
     end,
 
     optionUnavailableMessage = function(_, _, _, _, role)
@@ -463,10 +398,6 @@ function data.encounterRewardLegCountForRow(instance, rows, rowIndex)
     if realCombatCount <= 0 then
         return 0
     end
-    if not isVariantAvailableAtContext(variant, data.rowContext(instance, rows, rowIndex)) then
-        return 0
-    end
-
     local activeCount = realCombatCount - 1
     local legCount = #(policy.rewardLegs or {})
     if activeCount > legCount then

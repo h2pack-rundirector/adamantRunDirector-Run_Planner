@@ -91,12 +91,42 @@ local function selectedRoomKey(slot, option)
 end
 
 local function formValidation(instance, routeRows, rowIndex)
-    return form.validateRoomChoice({
+    local validation = form.validateRoomChoice({
         data = data,
         instance = instance,
         rows = routeRows,
         rowIndex = rowIndex,
     })
+    if not validation.valid then
+        return validation
+    end
+
+    local roleKey = data.resolveRole(instance, routeRows, rowIndex)
+    local policy = data.variantPolicyForRole(instance, roleKey)
+    if policy == nil then
+        return validation
+    end
+
+    local variantKey = routeRows and routeRows:read(rowIndex, "VariantKey") or ""
+    if variantKey == "" then
+        return form.invalid({
+            code = "selection_required",
+            message = "Choose a combat count",
+            tabKey = "rooms",
+            controlAlias = "VariantKey",
+            label = "Combat count",
+        })
+    end
+    if policy.optionsByKey[variantKey] == nil then
+        return form.invalid({
+            code = "unknown_variant",
+            message = "Unknown encounter count: " .. tostring(variantKey),
+            tabKey = "rooms",
+            controlAlias = "VariantKey",
+            label = "Combat count",
+        })
+    end
+    return validation
 end
 
 local function selectedEncounterRewardSnapshots(fields, instance, routeRows, rowIndex)

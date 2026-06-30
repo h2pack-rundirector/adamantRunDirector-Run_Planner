@@ -12,9 +12,6 @@ local topologyFactory = import("mods/controls/FieldsCageRoute/data/topology.lua"
     slots = slots,
 })
 
-local invalidStatus = common.invalidStatus
-local validStatus = common.validStatus
-
 local data
 local topology
 local EMPTY_VALUES = {}
@@ -192,40 +189,6 @@ local adapter = {
             return true
         end
         return false
-    end,
-
-    validateSlot = function(instance, rows, rowIndex, roleKey, role, slot)
-        if slots.isFixedSlot(slot) then
-            return validStatus()
-        end
-
-        local policy = cagePolicyForRole(instance, role)
-        if policy == nil then
-            return nil
-        end
-
-        local cageCountKey = rows:read(rowIndex, "VariantKey") or ""
-        local choice = policy.optionsByKey[cageCountKey]
-        if choice == nil and cageCountKey == "" then
-            return nil
-        end
-        if choice == nil then
-            return invalidStatus("unknown_cage_count", "Unknown cage reward count: " .. tostring(cageCountKey))
-        end
-        local option = selectedCombatOption(instance, rows, rowIndex, roleKey)
-        if option == nil and (rows:read(rowIndex, "OptionKey") or "") ~= "" then
-            return nil
-        end
-        if not isCageCountValidForOption(choice, option) then
-            if option == nil then
-                return invalidStatus("cage_count_requires_map", "Forced cage rewards require a combat map")
-            end
-            return invalidStatus(
-                "cage_count_exceeds_map",
-                tostring(choice.label or cageCountKey) .. " exceeds " .. tostring(option.label or option.key)
-            )
-        end
-        return nil
     end,
 
     optionUnavailableMessage = function(_, _, _, _, role)

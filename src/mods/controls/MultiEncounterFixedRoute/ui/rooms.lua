@@ -107,7 +107,11 @@ local function getVariantOpts(control, instance, rowIndex, roleKey)
         optsByRole[roleKey] = opts
     end
     opts.values = data.variantValuesForRow(instance, control:routeRows(), rowIndex, roleKey)
-    return opts
+    return decorations.decorateDropdown(
+        opts,
+        opts,
+        valueStateHelpers.history(instance, rowIndex, "VariantKey")
+    )
 end
 
 local function optionLabelAddsInformation(role, option)

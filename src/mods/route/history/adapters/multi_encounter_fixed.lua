@@ -157,6 +157,19 @@ local function variantForRow(biome, role, selectedRow)
     return optionByControlKey(policy and policy.countControl or nil, selectedRow.variantKey)
 end
 
+local function variantCandidates(policy)
+    local candidates = {}
+    for _, option in ipairs(policy and policy.countControl and policy.countControl.options or EMPTY_LIST) do
+        candidates[#candidates + 1] = {
+            key = option.key,
+            label = option.label or option.key,
+            availableAtBiomeEncounterDepth = option.availableAtBiomeEncounterDepth,
+            controlAlias = "VariantKey",
+        }
+    end
+    return candidates
+end
+
 local function wheelOfferForKey(policy, key)
     return optionByControlKey(policy and policy.wheelOfferControl or nil, key)
 end
@@ -428,6 +441,9 @@ local function appendRoom(history, routeHistory, context, selectedRow, resolved)
         roleKey = selectedRow.roleKey,
         optionKey = selectedRow.optionKey,
         variantKey = selectedRow.variantKey,
+        variantLabel = resolved.variant and resolved.variant.label or nil,
+        variantAvailability = resolved.variant and resolved.variant.availableAtBiomeEncounterDepth or nil,
+        variantCandidates = variantCandidates(resolved.policy),
         nextRoomTags = resolved.option and resolved.option.nextRoomTags or nil,
         tags = resolved.option and resolved.option.tags or nil,
         source = selectedRow,

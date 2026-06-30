@@ -39,6 +39,13 @@ function findings.siblingCandidateInvalid(entry, candidate, reason, fields)
     }, fields))
 end
 
+function findings.variantCandidateInvalid(entry, candidate, reason, fields)
+    return base("variantCandidateInvalid", entry, reason, copyFields({
+        variantKey = candidate and candidate.key or nil,
+        candidate = candidate,
+    }, fields))
+end
+
 function findings.rewardCandidateInvalid(entry, candidate, rewardType, reason, fields)
     return base("rewardCandidateInvalid", entry, reason, copyFields({
         address = candidate and candidate.address or nil,
