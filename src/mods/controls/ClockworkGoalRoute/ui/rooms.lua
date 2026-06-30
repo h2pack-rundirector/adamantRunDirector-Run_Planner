@@ -376,14 +376,18 @@ local function drawRoomChoice(draw, control, instance, rowIndex, label, inline)
     end
 end
 
-local function drawRoomRow(draw, control, instance, rowIndex)
+local function drawRoomRow(draw, control, instance, rowIndex, terminalRowIndex)
     local slot = control:slot(rowIndex)
     if slot == nil then
         return
     end
 
     local imgui = draw.imgui
-    control._nextChoiceRoomView = nextChoiceView.fillRow(control._nextChoiceRoomView or {}, rowIndex, control:rowCount())
+    control._nextChoiceRoomView = nextChoiceView.fillRow(
+        control._nextChoiceRoomView or {},
+        rowIndex,
+        terminalRowIndex
+    )
     local view = control._nextChoiceRoomView
     local currentRoom = view.currentRoom
     local nextChoices = view.nextChoices
@@ -397,14 +401,12 @@ local function drawRoomRow(draw, control, instance, rowIndex)
         drawCurrentRoomLabel(draw, control, instance, currentRoom.rowIndex, true)
     end
 
-    if pickedDoor.active then
+    if nextChoices.active then
         drawNextChoicesHeader(imgui)
         drawRoomChoice(draw, control, instance, pickedDoor.targetRowIndex, PICKED_DOOR_LABEL, false)
-    elseif data.activeSiblingStructureCount(instance, control:routeRows(), otherDoors.sourceRowIndex) > 0 then
-        drawNextChoicesHeader(imgui)
-    end
-    if drawSiblingStructureDropdowns(draw, control, instance, otherDoors.sourceRowIndex, ROUTE_KIND_COLUMN_X) then
-        control:invalidateReadPass()
+        if drawSiblingStructureDropdowns(draw, control, instance, otherDoors.sourceRowIndex, ROUTE_KIND_COLUMN_X) then
+            control:invalidateReadPass()
+        end
     end
 end
 
@@ -424,10 +426,20 @@ local function shouldRenderRow(control, instance, rows, rowIndex)
         and not valueStateHelpers.rowInactive(instance, rowIndex)
 end
 
+local function lastRenderedRoomRowIndex(control, instance, rows, rowCount)
+    for rowIndex = rowCount, 1, -1 do
+        if shouldRenderRow(control, instance, rows, rowIndex) then
+            return rowIndex
+        end
+    end
+    return rowCount
+end
+
 function rooms.draw(draw, control, instance)
     local rowCount = control:rowCount()
     local drewRow = false
     local rows = control:routeRows()
+    local terminalRowIndex = lastRenderedRoomRowIndex(control, instance, rows, rowCount)
     local allRowsInactive, inactiveBoundary = decorations.routeInactiveBoundary(instance)
     control:beginReadPass()
     for rowIndex = 1, rowCount do
@@ -439,7 +451,7 @@ function rooms.draw(draw, control, instance)
                 draw.imgui,
                 decorations.routeRowInactive(allRowsInactive, inactiveBoundary, control:slot(rowIndex), "rooms")
             )
-            drawRoomRow(draw, control, instance, rowIndex)
+            drawRoomRow(draw, control, instance, rowIndex, terminalRowIndex)
             decorations.popInactive(draw.imgui, inactive)
             drewRow = true
         end

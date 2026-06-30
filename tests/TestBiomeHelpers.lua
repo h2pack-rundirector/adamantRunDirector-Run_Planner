@@ -24,11 +24,13 @@ function TestRunPlannerBiomeHelpers.testNextChoiceModelMapsCurrentAndNextRows()
     )
 
     lu.assertFalse(view.currentRoom.isEntry)
+    lu.assertFalse(view.currentRoom.isTerminal)
     lu.assertEquals(view.currentRoom.rowIndex, 2)
     lu.assertEquals(view.currentRoom.label, "Depth 1")
     lu.assertEquals(view.currentRoom.slot, slots[2])
 
     lu.assertEquals(view.nextChoices.sourceRowIndex, 2)
+    lu.assertTrue(view.nextChoices.active)
     lu.assertTrue(view.nextChoices.picked.active)
     lu.assertEquals(view.nextChoices.picked.targetRowIndex, 3)
     lu.assertEquals(view.nextChoices.picked.targetLabel, "Depth 2")
@@ -45,6 +47,8 @@ function TestRunPlannerBiomeHelpers.testNextChoiceModelMarksEntryAndRouteEnd()
     local view = nextChoiceView.fillRow({}, 2, 2)
 
     lu.assertEquals(view.currentRoom.rowIndex, 2)
+    lu.assertTrue(view.currentRoom.isTerminal)
+    lu.assertFalse(view.nextChoices.active)
     lu.assertFalse(view.nextChoices.picked.active)
     lu.assertNil(view.nextChoices.picked.targetRowIndex)
 end

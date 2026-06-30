@@ -27,10 +27,15 @@ local function isEntryRow(rowIndex)
     return rowIndex == 1
 end
 
-local function fillCurrentRoom(currentRoom, rowIndex, slotAt, labelForRow)
+local function isTerminalRow(rowIndex, rowCount)
+    return rowIndex ~= nil and rowCount ~= nil and rowIndex >= rowCount
+end
+
+local function fillCurrentRoom(currentRoom, rowIndex, rowCount, slotAt, labelForRow)
     clear(currentRoom)
     currentRoom.rowIndex = rowIndex
     currentRoom.isEntry = isEntryRow(rowIndex)
+    currentRoom.isTerminal = isTerminalRow(rowIndex, rowCount)
 
     if slotAt ~= nil and rowIndex ~= nil then
         currentRoom.slot = slotAt(rowIndex)
@@ -74,6 +79,7 @@ local function fillNextChoices(nextChoices, rowIndex, rowCount, slotAt, labelFor
     nextChoices.others = others
 
     fillPickedDoor(picked, pickedDoorTargetRowIndex(rowIndex, rowCount), slotAt, labelForRow)
+    nextChoices.active = picked.active
 end
 
 function nextChoiceView.fillRow(target, rowIndex, rowCount, slotAt, labelForRow)
@@ -87,7 +93,7 @@ function nextChoiceView.fillRow(target, rowIndex, rowCount, slotAt, labelForRow)
 
     target.currentRoom = currentRoom
     target.nextChoices = nextChoices
-    fillCurrentRoom(currentRoom, rowIndex, slotAt, labelForRow)
+    fillCurrentRoom(currentRoom, rowIndex, rowCount, slotAt, labelForRow)
     fillNextChoices(nextChoices, rowIndex, rowCount, slotAt, labelForRow)
     fillOtherDoors(nextChoices.others, rowIndex, slotAt, labelForRow)
 
