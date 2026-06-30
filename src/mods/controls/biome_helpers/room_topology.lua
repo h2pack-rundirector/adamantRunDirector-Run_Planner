@@ -1,12 +1,10 @@
 local deps = ...
 local common = deps.common
-local availability = deps.availability
 local valueStates = deps.valueStates
 
 local buildKeyLookup = common.buildKeyLookup
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
-local availabilityStatus = availability.status
 
 local roomTopology = {}
 
@@ -29,6 +27,31 @@ end
 
 local function statusCode(policy, suffix)
     return tostring(policy.namespace or "topology") .. "_" .. suffix
+end
+
+local function rangeContains(range, value)
+    if range == nil then
+        return true
+    end
+    if value == nil then
+        return false
+    end
+    if range.exact ~= nil and value ~= range.exact then
+        return false
+    end
+    if range.min ~= nil and value < range.min then
+        return false
+    end
+    if range.max ~= nil and value > range.max then
+        return false
+    end
+    if range.minExclusive ~= nil and value <= range.minExclusive then
+        return false
+    end
+    if range.maxExclusive ~= nil and value >= range.maxExclusive then
+        return false
+    end
+    return true
 end
 
 function roomTopology.roomKey(candidate)
@@ -117,9 +140,14 @@ local function windowStatus(policy, rowContext, availabilityField)
     if policy == nil then
         return validStatus()
     end
-    return availabilityStatus({
-        availability = policy[availabilityField],
-    }, rowContext)
+    local window = policy[availabilityField]
+    if window == nil then
+        return validStatus()
+    end
+    if not rangeContains(window.biomeDepthCache, rowContext and rowContext.biomeDepthCache) then
+        return invalidStatus("biome_depth_unavailable", "Topology controls are not active at this biome depth")
+    end
+    return validStatus()
 end
 
 function roomTopology.siblingTopologyStatus(policy, rowContext)
@@ -345,9 +373,6 @@ local function forceCandidateAvailable(policy, ctx, candidate)
     end
 
     local option = forcedCandidateOption(policy, candidate)
-    if not availabilityStatus(option, ctx.rowContext).valid then
-        return nil
-    end
     return option
 end
 
@@ -508,11 +533,6 @@ function roomTopology.siblingCandidateStatus(policy, ctx, candidate)
         return validStatus()
     end
 
-    local status = availabilityStatus(candidate, ctx.rowContext)
-    if not status.valid then
-        return status
-    end
-
     local roomKey = roomTopology.roomKey(candidate)
     if roomKey ~= nil and roomKey == ctx.selectedRoomKey then
         return invalidStatus(statusCode(policy, "sibling_same_room"), "Sibling cannot use the selected room")
@@ -533,7 +553,7 @@ function roomTopology.siblingCandidateStatus(policy, ctx, candidate)
         return invalidStatus(statusCode(policy, "sibling_room_planned"), "Sibling room is already planned on this route")
     end
     if ctx.extraRuleStatus ~= nil then
-        status = ctx.extraRuleStatus(candidate, ctx.candidateSiblingIndex)
+        local status = ctx.extraRuleStatus(candidate, ctx.candidateSiblingIndex)
         if not status.valid then
             return status
         end

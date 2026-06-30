@@ -1,6 +1,5 @@
 local deps = ...
 local common = deps.common
-local availability = deps.availability
 local timeline = deps.timeline
 local rowEngine = deps.rowEngine
 
@@ -37,6 +36,28 @@ end
 
 local function isFixedIdentitySlot(slot)
     return isPrebossSlot(slot) or isFixedRoleSlot(slot)
+end
+
+local function rangeContains(value, range)
+    if range == nil or value == nil then
+        return true
+    end
+    if range.exact ~= nil and value ~= range.exact then
+        return false
+    end
+    if range.min ~= nil and value < range.min then
+        return false
+    end
+    if range.max ~= nil and value > range.max then
+        return false
+    end
+    if range.minExclusive ~= nil and value <= range.minExclusive then
+        return false
+    end
+    if range.maxExclusive ~= nil and value >= range.maxExclusive then
+        return false
+    end
+    return true
 end
 
 local function buildFixedRoleSlot(instance, ordinal, special)
@@ -235,7 +256,7 @@ local function isVariantAvailableAtContext(variant, context)
     if context == nil or context.biomeEncounterDepth == nil then
         return false
     end
-    return availability.isInRange(context.biomeEncounterDepth, variant.availableAtBiomeEncounterDepth)
+    return rangeContains(context.biomeEncounterDepth, variant.availableAtBiomeEncounterDepth)
 end
 
 local function prepareVariantChoiceCache(instance)

@@ -71,7 +71,6 @@ local function loadRouteDeps()
         })
         route = {
             common = rows.common,
-            availability = rows.availability,
             readCache = rows.readCache,
             valueStates = rows.valueStates,
             rowEngine = rows.engine,

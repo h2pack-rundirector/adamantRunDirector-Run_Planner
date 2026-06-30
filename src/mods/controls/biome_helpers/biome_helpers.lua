@@ -4,7 +4,6 @@ local route = deps.route
 local roomStructure = import("mods/controls/biome_helpers/room_structure.lua")
 local roomTopology = import("mods/controls/biome_helpers/room_topology.lua", nil, {
     common = route.common,
-    availability = route.availability,
     valueStates = route.valueStates,
 })
 

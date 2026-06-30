@@ -355,7 +355,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageValueStatesEchoBeforeThirdP
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 4).Bridge)
 end
 
-function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesUseRoomAvailability()
+function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesUseTopologyRules()
     local catalog = loadCatalog()
     local data = loadFieldsCageData()
     local instance = data.prepare({
@@ -371,15 +371,15 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesUseRoomAv
     })
 
     lu.assertTrue(data.siblingStructureStatus(instance, rows, 2).valid)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 2).H_MiniBoss01, valueStates.HIDDEN)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 2).H_MiniBoss02, valueStates.HIDDEN)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 2).Bridge, valueStates.HIDDEN)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).H_MiniBoss01)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).H_MiniBoss02)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).Bridge)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).CombatCage2)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).CombatCage3)
 
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss01)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss02)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 3).Bridge, valueStates.HIDDEN)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).Bridge)
 
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).H_MiniBoss01)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).H_MiniBoss02)
@@ -387,7 +387,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesUseRoomAv
 
     lu.assertEquals(data.siblingStructureValueStatesForRow(instance, unresolvedForceRows, 5).H_MiniBoss01, valueStates.INVALID)
     lu.assertEquals(data.siblingStructureValueStatesForRow(instance, unresolvedForceRows, 5).H_MiniBoss02, valueStates.INVALID)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, unresolvedForceRows, 5).Bridge, valueStates.HIDDEN)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, unresolvedForceRows, 5).Bridge, valueStates.INVALID)
     lu.assertEquals(data.siblingStructureStatus(instance, rows, 6).code, "biome_depth_unavailable")
 end
 
