@@ -958,29 +958,14 @@ end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearCombatRoomsCannotRepeatInOneBiome()
     local catalog = loadCatalog()
-    local data = loadFixedLinearData()
     local template = loadFixedLinearTemplate()
-    local instance = data.prepare({
-        name = "RouteF",
-        biome = catalog.lookup.F,
-    })
     local rowData = {
         fOpeningRow(),
         { RoleKey = "Combat", OptionKey = "F_Combat06", Reward1Key = "Major", Reward2Key = "MaxHealthDrop" },
         { RoleKey = "Combat", OptionKey = "F_Combat06", Reward1Key = "Major", Reward2Key = "MaxHealthDrop" },
     }
-    local rows = fakeRows(rowData)
 
-    lu.assertTrue(data.validateRow(instance, rows, 2).valid)
-    local validation = data.validateRow(instance, rows, 3)
-    lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "option_limit")
-    lu.assertEquals(
-        data.optionValueStatesForRow(instance, rows, 3, "Combat").F_Combat06,
-        valueStates.INVALID
-    )
-
-    instance = template.prepare({
+    local instance = template.prepare({
         name = "RouteF",
         biome = catalog.lookup.F,
     })
@@ -1573,42 +1558,40 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearAvailabilityConsumesPrior
 
     data.fillRoleValues(instance, rows, 7, values)
     lu.assertTrue(hasValue(values, "Story"))
-    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 7).Story)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 7).Story)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearReadPassInvalidationRefreshesCachedValues()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
     local instance = data.prepare({
-        name = "RouteF",
-        biome = catalog.lookup.F,
+        name = "RouteP",
+        biome = catalog.lookup.P,
     })
     local rowState = {
         { RoleKey = "" },
-        { RoleKey = "Combat", OptionKey = "F_Combat01" },
-        { RoleKey = "Combat", OptionKey = "F_Combat02" },
-        { RoleKey = "Combat", OptionKey = "F_Combat03" },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat01",
-        },
+        { RoleKey = "Combat", OptionKey = "P_Combat05" },
+        { RoleKey = "Combat", OptionKey = "P_Combat06" },
+        { RoleKey = "Combat", OptionKey = "P_Combat11" },
+        { RoleKey = "Miniboss", OptionKey = "P_MiniBoss02" },
+        { RoleKey = "Combat", OptionKey = "P_Combat02" },
     }
     local rows = fakeRows(rowState)
 
     data.beginReadPass(instance)
     lu.assertEquals(
-        data.optionValueStatesForRow(instance, rows, 5, "Combat").F_Combat01,
+        data.optionValueStatesForRow(instance, rows, 6, "Combat").P_Combat02,
         valueStates.INVALID
     )
 
-    rowState[2].OptionKey = "F_Combat04"
+    rowState[5].OptionKey = "P_MiniBoss01"
     lu.assertEquals(
-        data.optionValueStatesForRow(instance, rows, 5, "Combat").F_Combat01,
+        data.optionValueStatesForRow(instance, rows, 6, "Combat").P_Combat02,
         valueStates.INVALID
     )
 
     data.invalidateReadPass(instance)
-    lu.assertNil(data.optionValueStatesForRow(instance, rows, 5, "Combat").F_Combat01)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").P_Combat02)
     data.endReadPass(instance)
 end
 

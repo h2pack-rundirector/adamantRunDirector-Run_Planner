@@ -69,7 +69,90 @@ local function appendAvailabilityFinding(target, createFinding, entry, candidate
     })
 end
 
-local function appendRoomCandidateFindings(target, entry)
+local function roomEntryBefore(entry, candidate)
+    local entryRoomHistory = entry and entry.roomHistoryOrdinal or nil
+    local candidateRoomHistory = candidate and candidate.roomHistoryOrdinal or nil
+    if entryRoomHistory ~= nil and candidateRoomHistory ~= nil then
+        return candidateRoomHistory < entryRoomHistory
+    end
+    local entryOrdinal = entry and entry.routeOrdinal or nil
+    local candidateOrdinal = candidate and candidate.routeOrdinal or nil
+    if entryOrdinal ~= nil and candidateOrdinal ~= nil then
+        return candidateOrdinal < entryOrdinal
+    end
+    return false
+end
+
+local function roleCap(candidate)
+    return candidate and (
+        candidate.roleMaxCreationsThisRun
+            or candidate.roleMaxAppearancesThisBiome
+            or candidate.maxSelectionsPerBiome
+    ) or nil
+end
+
+local function optionCap(candidate)
+    return candidate and (
+        candidate.optionMaxCreationsThisRun
+            or candidate.optionMaxAppearancesThisBiome
+    ) or nil
+end
+
+local function priorRoleCount(history, entry, roleKey)
+    if roleKey == nil or roleKey == "" then
+        return 0
+    end
+    local count = 0
+    for _, room in ipairs(routeHistory.byKind(history, "room")) do
+        if room.biomeKey == entry.biomeKey
+            and room.roleKey == roleKey
+            and roomEntryBefore(entry, room)
+        then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function priorOptionCount(history, entry, optionKey)
+    if optionKey == nil or optionKey == "" then
+        return 0
+    end
+    local count = 0
+    for _, room in ipairs(routeHistory.byKind(history, "room")) do
+        if room.biomeKey == entry.biomeKey
+            and room.optionKey == optionKey
+            and roomEntryBefore(entry, room)
+        then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function appendCapFindings(target, history, entry, candidate)
+    local roleLimit = roleCap(candidate)
+    if roleLimit ~= nil
+        and priorRoleCount(history, entry, candidate.roleKey) >= roleLimit
+    then
+        target[#target + 1] = findings.roomCandidateInvalid(entry, candidate, "role_limit", {
+            controlAlias = "RoleKey",
+            controlValue = candidate.roleKey,
+        })
+    end
+
+    local optionLimit = optionCap(candidate)
+    if optionLimit ~= nil
+        and priorOptionCount(history, entry, candidate.optionKey) >= optionLimit
+    then
+        target[#target + 1] = findings.roomCandidateInvalid(entry, candidate, "option_limit", {
+            controlAlias = "OptionKey",
+            controlValue = candidate.optionKey,
+        })
+    end
+end
+
+local function appendRoomCandidateFindings(target, history, entry)
     for _, candidate in ipairs(entry.roomCandidates or EMPTY_LIST) do
         appendAvailabilityFinding(
             target,
@@ -78,6 +161,7 @@ local function appendRoomCandidateFindings(target, entry)
             candidate,
             candidate.optionAvailability or candidate.roleAvailability
         )
+        appendCapFindings(target, history, entry, candidate)
     end
 end
 
@@ -148,7 +232,7 @@ function candidates.validate(args)
     local rulesByTarget = rewardValidator.rulesByTarget(selectedLegalityRules)
     local candidateFindings = {}
     for _, entry in ipairs(routeHistory.byKind(history, "room")) do
-        appendRoomCandidateFindings(candidateFindings, entry)
+        appendRoomCandidateFindings(candidateFindings, history, entry)
         appendSiblingCandidateFindings(candidateFindings, entry)
         appendRewardCandidateFindings(candidateFindings, history, entry, rulesByTarget)
     end

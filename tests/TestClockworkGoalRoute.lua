@@ -554,12 +554,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalCombatRoomsCannotRepe
 
     lu.assertTrue(data.validateRow(instance, rows, 2).valid)
     local validation = data.validateRow(instance, rows, 3)
-    lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "option_limit")
-    lu.assertEquals(
-        data.optionValueStatesForRow(instance, rows, 3, "RewardCombat").I_Combat01,
-        valueStates.INVALID
-    )
+    lu.assertTrue(validation.valid)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "RewardCombat").I_Combat01)
 end
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalRuntimeBuildsValidatedSnapshot()

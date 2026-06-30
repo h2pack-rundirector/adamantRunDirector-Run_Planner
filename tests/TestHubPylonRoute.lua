@@ -221,11 +221,9 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
 
     lu.assertEquals(snapshot.biomeKey, "N")
     lu.assertEquals(snapshot.adapter, "hubPylon")
-    lu.assertFalse(snapshot.valid)
-    lu.assertTrue(snapshot.disabled)
-    lu.assertEquals(#snapshot.invalidRows, 1)
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 7)
-    lu.assertEquals(snapshot.invalidRows[1].code, "role_limit")
+    lu.assertTrue(snapshot.valid)
+    lu.assertFalse(snapshot.disabled)
+    lu.assertNil(snapshot.invalidRows)
 
     lu.assertEquals(snapshot.rows[1].slotKind, "fixedBeforeHub")
     lu.assertEquals(snapshot.rows[1].slotLabel, "Opening")
@@ -328,8 +326,8 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
     lu.assertTrue(snapshot.rows[6].valid)
 
     lu.assertEquals(snapshot.rows[7].roleKey, "Story")
-    lu.assertFalse(snapshot.rows[7].valid)
-    lu.assertEquals(snapshot.rows[7].invalidCode, "role_limit")
+    lu.assertTrue(snapshot.rows[7].valid)
+    lu.assertNil(snapshot.rows[7].invalidCode)
 
     lu.assertEquals(snapshot.rows[10].slotKind, "preboss")
     lu.assertEquals(snapshot.rows[10].slotLabel, "Preboss Shop")

@@ -1,6 +1,5 @@
 local deps = ...
 local common = deps.common
-local availability = deps.availability
 local readCache = deps.readCache
 local valueStates = deps.valueStates
 local timeline = deps.timeline
@@ -18,7 +17,6 @@ local buildLookup = common.buildLookup
 local buildRoleChoices = common.buildRoleChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
-local optionCap = availability.optionCap
 local activeReadCache = readCache.active
 local rowRecord = readCache.rowRecord
 local nestedRecord = readCache.nestedRecord
@@ -401,63 +399,6 @@ function rowEngine.create(adapter)
         return value
     end
 
-    local function countPriorRoleSelections(instance, rows, rowIndex, roleKey)
-        if rows == nil or roleKey == nil or roleKey == "" then
-            return 0
-        end
-
-        local count = 0
-        for priorIndex = 1, rowIndex - 1 do
-            local priorRoleKey = data.resolveRole(instance, rows, priorIndex)
-            if priorRoleKey == roleKey
-                and data.isRoleAvailable(instance, rows, priorIndex, priorRoleKey)
-            then
-                count = count + 1
-            end
-        end
-        return count
-    end
-
-    local function countPriorOptionSelections(instance, _role, rows, rowIndex, optionKey)
-        if rows == nil or optionKey == nil or optionKey == "" then
-            return 0
-        end
-
-        local count = 0
-        for priorIndex = 1, rowIndex - 1 do
-            local priorRoleKey, priorRole = data.resolveRole(instance, rows, priorIndex)
-            local priorOptionKey, priorOption = data.resolveOption(instance, rows, priorIndex, priorRoleKey)
-            if priorRole ~= nil
-                and priorOption ~= nil
-                and priorOptionKey == optionKey
-                and data.isOptionAvailable(instance, rows, priorIndex, priorRoleKey, priorOptionKey)
-            then
-                count = count + 1
-            end
-        end
-        return count
-    end
-
-    local function isRoleWithinSelectionCap(instance, role, rows, rowIndex)
-        local maxSelections = role and (
-            role.maxCreationsThisRun
-                or role.maxAppearancesThisBiome
-                or role.routeRules and role.routeRules.maxSelectionsPerBiome
-        )
-        if maxSelections == nil then
-            return true
-        end
-        return countPriorRoleSelections(instance, rows, rowIndex, role.key) < maxSelections
-    end
-
-    local function isOptionWithinSelectionCap(instance, role, option, rows, rowIndex)
-        local maxSelections = optionCap(option)
-        if maxSelections == nil then
-            return true
-        end
-        return countPriorOptionSelections(instance, role, rows, rowIndex, option.key) < maxSelections
-    end
-
     local function findFirstAvailableOption(instance, rows, rowIndex, role)
         local values = role.optionValues or instance.optionValuesByRole[role.key] or {}
         for _, optionKey in ipairs(values) do
@@ -531,7 +472,6 @@ function rowEngine.create(adapter)
             return false
         end
         return nextRoomTagsFailureCode(instance, rows, rowIndex, option) == nil
-            and isOptionWithinSelectionCap(instance, role, option, rows, rowIndex)
             and isOptionAllowed(instance, rows, rowIndex, roleKey, optionKey, role, option)
     end
 
@@ -570,9 +510,6 @@ function rowEngine.create(adapter)
             return true
         end
         if not isRoleAllowed(instance, rows, rowIndex, roleKey, role) then
-            return false
-        end
-        if not isRoleWithinSelectionCap(instance, role, rows, rowIndex) then
             return false
         end
         local options = optionListForRole(role)
@@ -719,9 +656,6 @@ function rowEngine.create(adapter)
             end
             return invalidStatus("role_unavailable", tostring(role.label or roleKey) .. " is not valid here")
         end
-        if not isRoleWithinSelectionCap(instance, role, rows, rowIndex) then
-            return invalidStatus("role_limit", tostring(role.label or roleKey) .. " is already planned for this biome")
-        end
 
         local options = optionListForRole(role)
         if #options == 0 then
@@ -743,12 +677,6 @@ function rowEngine.create(adapter)
             })
         end
         if resolvedOptionKey ~= "" then
-            if not isOptionWithinSelectionCap(instance, role, option, rows, rowIndex) then
-                return invalidStatus(
-                    "option_limit",
-                    tostring(option.label or resolvedOptionKey) .. " is already planned for this biome"
-                )
-            end
             local nextRoomTagsCode = nextRoomTagsFailureCode(instance, rows, rowIndex, option)
             if nextRoomTagsCode ~= nil then
                 return invalidStatus(nextRoomTagsCode, nextRoomTagsMessage(instance, rows, rowIndex))
@@ -974,9 +902,6 @@ function rowEngine.create(adapter)
             state,
             valueStates.forFailureCodeOrNormal(nextRoomTagsFailureCode(instance, rows, rowIndex, option))
         )
-        if not isOptionWithinSelectionCap(instance, role, option, rows, rowIndex) then
-            state = valueStates.merge(state, valueStates.INVALID)
-        end
         state = valueStates.merge(
             state,
             optionAllowedValueState(instance, rows, rowIndex, roleKey, optionKey, role, option)
@@ -1030,9 +955,6 @@ function rowEngine.create(adapter)
         end
 
         local state = roleAllowedValueState(instance, rows, rowIndex, roleKey, role)
-        if not isRoleWithinSelectionCap(instance, role, rows, rowIndex) then
-            state = valueStates.merge(state, valueStates.INVALID)
-        end
         if #options > 0 then
             state = valueStates.merge(state, optionState)
         end

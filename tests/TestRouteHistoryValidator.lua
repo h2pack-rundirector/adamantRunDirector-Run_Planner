@@ -170,6 +170,38 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateConcre
     lu.assertEquals(states.F_Combat02, valueStates.INVALID)
 end
 
+function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateCappedRole()
+    local history = routeHistory.create()
+    emitRoom(history, 1, {
+        biomeKey = "N",
+        rowIndex = 5,
+        roomKey = "N_Story01",
+        roleKey = "Story",
+        optionKey = "N_Story01",
+    })
+    emitRoom(history, 2, {
+        biomeKey = "N",
+        rowIndex = 7,
+        roomKey = "N_Story01",
+        roleKey = "Story",
+        optionKey = "N_Story01",
+    })
+    local catalog = h.loadCatalog()
+
+    local result = historyValidator.validate({
+        route = {
+            key = "Surface",
+            biomes = { "N" },
+        },
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "role_limit")
+    lu.assertEquals(result.invalids[1].rowIndex, 7)
+end
+
 function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMidshopAfterOneExitRoom()
     local history = routeHistory.create()
     emitRoom(history, 4, {
@@ -315,6 +347,92 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsEncounte
     local feedback = historyFeedback.fromFindings(result.findings)
     local states = historyFeedback.valueStatesForControl(feedback, "F", 3, "OptionKey")
     lu.assertEquals(states.F_Combat05, valueStates.INVALID)
+end
+
+function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRoleCapFindings()
+    local history = routeHistory.create()
+    emitRoom(history, 1, {
+        biomeKey = "F",
+        rowIndex = 1,
+        roomKey = "F_Story01",
+        roleKey = "Story",
+        optionKey = "F_Story01",
+    })
+    emitRoom(history, 2, {
+        biomeKey = "F",
+        rowIndex = 2,
+        roomKey = "F_Combat01",
+        roleKey = "Combat",
+        optionKey = "F_Combat01",
+        roomCandidates = {
+            {
+                roleKey = "Story",
+                optionKey = "F_Story01",
+                roomKey = "F_Story01",
+                maxSelectionsPerBiome = 1,
+            },
+        },
+    })
+
+    local result = historyValidator.validate({
+        route = {
+            key = "Underworld",
+            biomes = {},
+        },
+        history = history,
+        biomeLookup = {},
+    })
+
+    local finding = firstFinding(result, "roomCandidateInvalid", "roleKey", "Story")
+    lu.assertNotNil(finding)
+    lu.assertEquals(finding.reason, "role_limit")
+
+    local feedback = historyFeedback.fromFindings(result.findings)
+    local states = historyFeedback.valueStatesForControl(feedback, "F", 2, "RoleKey")
+    lu.assertEquals(states.Story, valueStates.INVALID)
+end
+
+function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsOptionCapFindings()
+    local history = routeHistory.create()
+    emitRoom(history, 1, {
+        biomeKey = "F",
+        rowIndex = 1,
+        roomKey = "F_Combat02",
+        roleKey = "Combat",
+        optionKey = "F_Combat02",
+    })
+    emitRoom(history, 2, {
+        biomeKey = "F",
+        rowIndex = 2,
+        roomKey = "F_Combat03",
+        roleKey = "Combat",
+        optionKey = "F_Combat03",
+        roomCandidates = {
+            {
+                roleKey = "Combat",
+                optionKey = "F_Combat02",
+                roomKey = "F_Combat02",
+                optionMaxCreationsThisRun = 1,
+            },
+        },
+    })
+
+    local result = historyValidator.validate({
+        route = {
+            key = "Underworld",
+            biomes = {},
+        },
+        history = history,
+        biomeLookup = {},
+    })
+
+    local finding = firstFinding(result, "roomCandidateInvalid", "roomKey", "F_Combat02")
+    lu.assertNotNil(finding)
+    lu.assertEquals(finding.reason, "option_limit")
+
+    local feedback = historyFeedback.fromFindings(result.findings)
+    local states = historyFeedback.valueStatesForControl(feedback, "F", 2, "OptionKey")
+    lu.assertEquals(states.F_Combat02, valueStates.INVALID)
 end
 
 function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsSiblingFindings()

@@ -16,7 +16,6 @@ return {
     readCache = readCache,
     engine = import("mods/route/rows/engine.lua", nil, {
         common = common,
-        availability = availability,
         readCache = readCache,
         valueStates = valueStates,
         timeline = timeline,

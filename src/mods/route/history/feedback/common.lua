@@ -38,6 +38,9 @@ local function siblingControlAlias(record)
 end
 
 local function roomControlAlias(record)
+    if record ~= nil and record.controlAlias ~= nil then
+        return record.controlAlias
+    end
     if record ~= nil and record.optionKey ~= nil and record.optionKey ~= "" then
         return "OptionKey"
     end
@@ -140,7 +143,9 @@ function common.targetFor(record)
         return {
             tabKey = "rooms",
             controlAlias = roomControlAlias(record),
-            value = record.optionKey ~= nil and record.optionKey ~= "" and record.optionKey or record.roleKey,
+            value = record.controlValue
+                or record.optionKey ~= nil and record.optionKey ~= "" and record.optionKey
+                or record.roleKey,
         }
     elseif record.kind == "rewardCandidateInvalid" or record.rewardType ~= nil then
         return {
