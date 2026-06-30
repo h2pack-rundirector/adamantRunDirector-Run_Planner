@@ -14,7 +14,7 @@ return {
     roomStructure = roomStructure,
     roomTopology = roomTopology,
     slotTimeline = import("mods/controls/biome_helpers/slot_timeline.lua"),
-    valueStates = import("mods/controls/biome_helpers/value_states.lua", nil, {
+    valueStateHelpers = import("mods/controls/biome_helpers/value_state_helpers.lua", nil, {
         valueStates = form.valueStates,
     }),
     roomTopologyAdapter = import("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {

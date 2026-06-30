@@ -23,7 +23,7 @@ local ui = import("mods/controls/MultiEncounterFixedRoute/ui/ui.lua", nil, {
     rewards = deps.rewards,
     runtime = runtime,
     rewardRatio = biomeHelpers.rewardRatio,
-    valueStateHelpers = biomeHelpers.valueStates,
+    valueStateHelpers = biomeHelpers.valueStateHelpers,
     decorations = deps.decorations,
     form = deps.form,
 })

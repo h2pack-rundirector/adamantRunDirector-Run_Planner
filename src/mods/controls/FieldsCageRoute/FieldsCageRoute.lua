@@ -25,7 +25,7 @@ local ui = import("mods/controls/FieldsCageRoute/ui/ui.lua", nil, {
     data = data,
     rewards = deps.rewards,
     runtime = runtime,
-    valueStateHelpers = biomeHelpers.valueStates,
+    valueStateHelpers = biomeHelpers.valueStateHelpers,
     decorations = deps.decorations,
     form = deps.form,
 })

@@ -3,7 +3,7 @@ local h = require("tests.support.control_harness")
 
 local form = h.withTestImport(function()
     return h.testImport("mods/controls/form.lua", nil, {
-        valueStates = h.testImport("mods/route/value_states.lua"),
+        valueStates = h.testImport("mods/ui/value_states.lua"),
     })
 end)
 

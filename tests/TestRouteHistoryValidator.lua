@@ -13,7 +13,7 @@ local historyFeedback = historySystem.feedback
 local historyBuilder = historySystem.builder
 local historyValidator = historySystem.validator
 local valueStates = h.withTestImport(function()
-    return h.testImport("mods/route/value_states.lua")
+    return h.testImport("mods/ui/value_states.lua")
 end)
 
 -- luacheck: globals TestRunPlannerRouteHistoryValidator

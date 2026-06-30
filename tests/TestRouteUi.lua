@@ -21,7 +21,7 @@ local measureCpuMs = h.measureCpuMs
 TestRunPlannerRouteUi = {}
 
 local function loadValueStates()
-    return dofile("src/mods/route/value_states.lua")
+    return dofile("src/mods/ui/value_states.lua")
 end
 
 local function loadRoutePosition()

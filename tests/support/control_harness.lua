@@ -59,7 +59,7 @@ local function loadRouteDeps()
         local rewards = testImport("mods/rewards/rewards.lua").create({
             rewardDomain = loadRewardDomain(),
         })
-        local valueStates = testImport("mods/route/value_states.lua")
+        local valueStates = testImport("mods/ui/value_states.lua")
         local controlForm = testImport("mods/controls/form.lua", nil, {
             rewards = rewards,
             valueStates = valueStates,

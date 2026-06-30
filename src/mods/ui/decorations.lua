@@ -1,5 +1,5 @@
 local deps = ... or {}
-local valueStates = deps.valueStates or import("mods/route/value_states.lua")
+local valueStates = deps.valueStates or import("mods/ui/value_states.lua")
 local routePosition = deps.routePosition or import("mods/route/position.lua")
 
 local decorations = {}

@@ -9,7 +9,7 @@ function routeFactory.create(opts)
     local invalidLocations = import("mods/route/invalid_locations.lua")
     local controlForm = import("mods/controls/form.lua", nil, {
         rewards = rewards,
-        valueStates = import("mods/route/value_states.lua"),
+        valueStates = import("mods/ui/value_states.lua"),
     })
     local historySystem = import("mods/route/history/assembly.lua").create({
         rewardDomain = rewards.rewardDomain,

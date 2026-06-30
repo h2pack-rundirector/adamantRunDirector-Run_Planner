@@ -14,7 +14,7 @@ function historyAssembly.create(opts)
         history = history,
     })
     local findings = import("mods/route/history/findings.lua")
-    local valueStates = import("mods/route/value_states.lua")
+    local valueStates = import("mods/ui/value_states.lua")
     local feedbackCommon = import("mods/route/history/feedback/common.lua", nil, {
         valueStates = valueStates,
     })

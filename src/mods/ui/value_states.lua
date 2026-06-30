@@ -1,6 +1,6 @@
 local policy = _G.import
-    and _G.import("mods/route/value_state_policy.lua")
-    or dofile("src/mods/route/value_state_policy.lua")
+    and _G.import("mods/ui/value_state_policy.lua")
+    or dofile("src/mods/ui/value_state_policy.lua")
 
 local valueStates = {}
 

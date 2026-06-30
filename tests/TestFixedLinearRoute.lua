@@ -9,7 +9,7 @@ local routeFields = h.routeFields
 local routeUiFields = h.routeUiFields
 local noOpDraw = h.noOpDraw
 local loadRouteDeps = h.loadRouteDeps
-local valueStates = dofile("src/mods/route/value_states.lua")
+local valueStates = dofile("src/mods/ui/value_states.lua")
 
 -- luacheck: globals TestRunPlannerFixedLinearRoute
 TestRunPlannerFixedLinearRoute = {}

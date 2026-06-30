@@ -24,7 +24,7 @@ local ui = import("mods/controls/HubPylonRoute/ui/ui.lua", nil, {
     rewards = deps.rewards,
     runtime = runtime,
     sideRoomProbability = sideRoomProbability,
-    valueStateHelpers = biomeHelpers.valueStates,
+    valueStateHelpers = biomeHelpers.valueStateHelpers,
     decorations = deps.decorations,
     form = deps.form,
 })
