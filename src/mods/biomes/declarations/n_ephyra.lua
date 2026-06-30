@@ -113,6 +113,7 @@ return function(deps)
                 mapOptions = layout.combatRooms,
                 reward = rewards.roomStore("HubRewards"),
                 biomeEncounterDepthCost = 1,
+                requiresConcreteOption = true,
                 sideRooms = {
                     identity = "parentCombatRoomAndDoorId",
                 },

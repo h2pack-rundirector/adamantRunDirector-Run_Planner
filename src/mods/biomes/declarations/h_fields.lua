@@ -73,6 +73,7 @@ return function(deps)
                     ineligibleRewardTypes = { "Devotion" },
                 }),
                 cageRewardPolicy = "H_FieldsCageRewards",
+                requiresConcreteOption = true,
                 biomeEncounterDepthCost = 1,
             },
             {

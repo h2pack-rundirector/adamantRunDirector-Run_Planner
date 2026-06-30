@@ -179,6 +179,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingCountUsesPhysicalExi
         },
     })
 
+    lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 2), 1)
     lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 3), 1)
 end
 

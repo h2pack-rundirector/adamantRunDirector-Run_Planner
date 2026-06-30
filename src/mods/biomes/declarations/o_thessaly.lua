@@ -54,6 +54,7 @@ return function(deps)
                 mapOptions = layout.combatRooms,
                 reward = rewards.none(),
                 encounterPolicy = "O_CombatData",
+                requiresConcreteOption = true,
             },
             {
                 key = "Story",

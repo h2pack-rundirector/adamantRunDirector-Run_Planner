@@ -65,6 +65,7 @@ return function(deps)
                 mapOptions = layout.combatRooms,
                 reward = rewards.majorMinor(),
                 biomeEncounterDepthCost = 1,
+                requiresConcreteOption = true,
             },
             {
                 key = "Story",

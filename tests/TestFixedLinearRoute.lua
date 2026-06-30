@@ -147,7 +147,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyDefaultsControlsA
 
     lu.assertTrue(data.siblingTopologyStatus(instance, rows, 3).valid)
     lu.assertTrue(data.siblingStructureStatus(instance, rows, 3).valid)
+    lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 2), 1)
     lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 3), 1)
+    lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 2, 1))
     lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 3, 1))
     lu.assertFalse(data.shouldDrawSiblingRewardClass(instance, rows, 3, 1))
     lu.assertNil(data.roomTopology(instance, rows, 3))

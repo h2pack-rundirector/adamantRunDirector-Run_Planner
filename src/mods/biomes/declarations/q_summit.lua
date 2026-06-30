@@ -53,6 +53,7 @@ return function(deps)
                 mapOptions = layout.combatRooms,
                 reward = rewards.none(),
                 biomeEncounterDepthCost = 1,
+                requiresConcreteOption = true,
             },
             {
                 key = "Miniboss",

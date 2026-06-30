@@ -69,9 +69,6 @@ return function(deps)
         topologyWindow = {
             biomeDepthCache = { min = 1, max = 10 },
         },
-        siblingControlWindow = {
-            biomeDepthCache = { min = 4, max = 8 },
-        },
         forcedGroups = {
             {
                 key = "F_Shop",

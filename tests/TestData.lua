@@ -380,7 +380,7 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
     )
 
     lu.assertEquals(erebus.topologyWindow, { biomeDepthCache = { min = 1, max = 10 } })
-    lu.assertEquals(erebus.siblingControlWindow, { biomeDepthCache = { min = 4, max = 8 } })
+    lu.assertNil(erebus.siblingControlWindow)
     assertFixedLinearSiblingOptions(erebus, {
         keys = {
             "",
@@ -411,7 +411,7 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
     lu.assertTrue(erebus.forcedGroups[2].pickedCandidateBeforeDeadlineClosesGroup)
 
     lu.assertEquals(oceanus.topologyWindow, { biomeDepthCache = { min = 1, max = 7 } })
-    lu.assertEquals(oceanus.siblingControlWindow, { biomeDepthCache = { min = 3, max = 7 } })
+    lu.assertNil(oceanus.siblingControlWindow)
     assertFixedLinearSiblingOptions(oceanus, {
         keys = {
             "",
@@ -436,7 +436,7 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
     lu.assertEquals(oceanus.forcedGroups[2].forceAtBiomeDepthMax, 7)
 
     lu.assertEquals(olympus.topologyWindow, { biomeDepthCache = { min = 1, max = 8 } })
-    lu.assertEquals(olympus.siblingControlWindow, { biomeDepthCache = { min = 3, max = 7 } })
+    lu.assertNil(olympus.siblingControlWindow)
     assertFixedLinearSiblingOptions(olympus, {
         keys = {
             "",
@@ -690,6 +690,21 @@ function TestRunPlannerData.testBiomeDefinitionsResolveRouteEncounterDepthCosts(
                 option.biomeEncounterDepthCost,
                 biome.key .. ".roomTopology.combatEncounterPolicy." .. tostring(option.key)
             )
+        end
+    end
+end
+
+function TestRunPlannerData.testMapBackedRolesRequireConcreteOptions()
+    local biomes = loadBiomes()
+
+    for _, biome in ipairs(biomes.ordered) do
+        for _, role in ipairs(biome.roles or {}) do
+            if role.mapOptions ~= nil then
+                lu.assertTrue(
+                    role.requiresConcreteOption == true,
+                    biome.key .. "." .. tostring(role.key) .. " map options must be concrete"
+                )
+            end
         end
     end
 end

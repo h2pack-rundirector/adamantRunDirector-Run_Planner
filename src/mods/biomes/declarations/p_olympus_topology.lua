@@ -71,9 +71,6 @@ return function(deps)
         topologyWindow = {
             biomeDepthCache = { min = 1, max = 8 },
         },
-        siblingControlWindow = {
-            biomeDepthCache = { min = 3, max = 7 },
-        },
         forcedGroups = {
             {
                 key = "P_Minibosses",

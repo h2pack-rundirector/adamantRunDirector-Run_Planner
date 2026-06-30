@@ -112,20 +112,11 @@ function roomTopology.prepareSiblingPolicy(topology, opts)
     return policy
 end
 
-function roomTopology.generationSourceRowIndex(rowIndex)
-    local sourceIndex = math.floor(tonumber(rowIndex) or 0) - 1
-    if sourceIndex < 1 then
-        return nil
-    end
-    return sourceIndex
-end
-
 function roomTopology.generatedStructuralCount(ctx, field)
-    local sourceIndex = roomTopology.generationSourceRowIndex(ctx.rowIndex)
-    if sourceIndex == nil or ctx.structuralCountAt == nil then
+    if ctx.structuralCountAt == nil then
         return 0
     end
-    return math.floor(tonumber(ctx.structuralCountAt(sourceIndex, field)) or 0)
+    return math.floor(tonumber(ctx.structuralCountAt(ctx.rowIndex, field)) or 0)
 end
 
 function roomTopology.siblingCountForExitCount(exitCount)

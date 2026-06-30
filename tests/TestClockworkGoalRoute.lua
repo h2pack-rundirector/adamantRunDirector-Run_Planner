@@ -128,7 +128,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalForcePressureUsesNonG
         { RouteKindKey = "Goal", OptionKey = "I_Combat02" },
         {
             RouteKindKey = "Goal",
-            OptionKey = "I_Combat03",
+            OptionKey = "I_Combat05",
         },
     })
 
