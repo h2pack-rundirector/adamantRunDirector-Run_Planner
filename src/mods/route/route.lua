@@ -34,7 +34,6 @@ function routeFactory.create(opts)
         common = rows.common,
         availability = rows.availability,
         readCache = rows.readCache,
-        requirements = rows.requirements,
         valueStates = rows.valueStates,
         rowEngine = rows.engine,
         timeline = routeTimeline,

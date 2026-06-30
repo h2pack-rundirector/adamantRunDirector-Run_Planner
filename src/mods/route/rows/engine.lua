@@ -2,7 +2,6 @@ local deps = ...
 local common = deps.common
 local availability = deps.availability
 local readCache = deps.readCache
-local requirements = deps.requirements
 local valueStates = deps.valueStates
 local timeline = deps.timeline
 local rewards = deps.rewards
@@ -19,9 +18,6 @@ local buildLookup = common.buildLookup
 local buildRoleChoices = common.buildRoleChoices
 local validStatus = common.validStatus
 local invalidStatus = common.invalidStatus
-local isAvailable = availability.isAvailable
-local availabilityStatus = availability.status
-local availabilityFailureCode = availability.failureCode
 local optionCap = availability.optionCap
 local activeReadCache = readCache.active
 local rowRecord = readCache.rowRecord
@@ -103,7 +99,6 @@ local function prepareRoles(instance)
     instance.rolesByKey = buildLookup(instance.roles)
     for _, role in ipairs(instance.roles) do
         role.optionsByKey = buildLookup(optionListForRole(role))
-        requirements.prepareRole(role)
     end
 end
 
@@ -111,7 +106,6 @@ function rowEngine.create(adapter)
     adapter = adapter or {}
 
     local data = {}
-    local routeApi
 
     local slotForRow = adapter.slotForRow or defaultSlotForRow
     local isFixedIdentitySlot = adapter.isFixedIdentitySlot or defaultIsFixedIdentitySlot
@@ -482,8 +476,7 @@ function rowEngine.create(adapter)
         buildRoleChoices(instance)
     end
 
-    function data.prepareSlots(instance)
-        requirements.prepareSlots(instance.routeSlots)
+    function data.prepareSlots(_instance)
     end
 
     function data.buildRewardRows()
@@ -537,8 +530,7 @@ function rowEngine.create(adapter)
         if option == nil then
             return false
         end
-        return isAvailable(option, data.rowContext(instance, rows, rowIndex))
-            and nextRoomTagsFailureCode(instance, rows, rowIndex, option) == nil
+        return nextRoomTagsFailureCode(instance, rows, rowIndex, option) == nil
             and isOptionWithinSelectionCap(instance, role, option, rows, rowIndex)
             and isOptionAllowed(instance, rows, rowIndex, roleKey, optionKey, role, option)
     end
@@ -583,10 +575,6 @@ function rowEngine.create(adapter)
         if not isRoleWithinSelectionCap(instance, role, rows, rowIndex) then
             return false
         end
-        if not requirements.isSatisfied(routeApi, instance, rows, rowIndex, role) then
-            return false
-        end
-
         local options = optionListForRole(role)
         if #options == 0 then
             return true
@@ -735,11 +723,6 @@ function rowEngine.create(adapter)
             return invalidStatus("role_limit", tostring(role.label or roleKey) .. " is already planned for this biome")
         end
 
-        local roleRequirementStatus = requirements.status(routeApi, instance, rows, rowIndex, role)
-        if not roleRequirementStatus.valid then
-            return invalidStatus(roleRequirementStatus.code, roleRequirementStatus.message)
-        end
-
         local options = optionListForRole(role)
         if #options == 0 then
             return validStatus()
@@ -760,10 +743,6 @@ function rowEngine.create(adapter)
             })
         end
         if resolvedOptionKey ~= "" then
-            local status = availabilityStatus(option, data.rowContext(instance, rows, rowIndex))
-            if not status.valid then
-                return invalidStatus(status.code, status.message)
-            end
             if not isOptionWithinSelectionCap(instance, role, option, rows, rowIndex) then
                 return invalidStatus(
                     "option_limit",
@@ -784,10 +763,6 @@ function rowEngine.create(adapter)
             return invalidStatus("option_unavailable", message)
         end
 
-        local requirementStatus = requirements.status(routeApi, instance, rows, rowIndex, role, option)
-        if not requirementStatus.valid then
-            return invalidStatus(requirementStatus.code, requirementStatus.message)
-        end
         return validStatus()
     end
 
@@ -994,9 +969,7 @@ function rowEngine.create(adapter)
             return valueStates.INVALID
         end
 
-        local state = valueStates.forFailureCodeOrNormal(
-            availabilityFailureCode(option, data.rowContext(instance, rows, rowIndex))
-        )
+        local state = valueStates.NORMAL
         state = valueStates.merge(
             state,
             valueStates.forFailureCodeOrNormal(nextRoomTagsFailureCode(instance, rows, rowIndex, option))
@@ -1060,10 +1033,6 @@ function rowEngine.create(adapter)
         if not isRoleWithinSelectionCap(instance, role, rows, rowIndex) then
             state = valueStates.merge(state, valueStates.INVALID)
         end
-        if not requirements.isSatisfied(routeApi, instance, rows, rowIndex, role) then
-            state = valueStates.merge(state, valueStates.INVALID)
-        end
-
         if #options > 0 then
             state = valueStates.merge(state, optionState)
         end
@@ -1129,15 +1098,6 @@ function rowEngine.create(adapter)
     function data.endReadPass(instance)
         readCache.finish(instance)
     end
-
-    routeApi = {
-        resolveRole = data.resolveRole,
-        resolveOption = data.resolveOption,
-        rowContext = data.rowContext,
-        rowRoomKey = data.rowRoomKey,
-        validateBaseRow = data.validateBaseRow,
-        validateRow = data.validateRow,
-    }
 
     return data
 end

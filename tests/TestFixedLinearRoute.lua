@@ -813,11 +813,11 @@ function TestRunPlannerFixedLinearRoute.testErebusSpecialRoomsUseSelectionDepthW
 
     lu.assertEquals(instance.routeSlots[4].routeOrdinal, 3)
     lu.assertTrue(hasValue(data.optionValuesForRow(instance, rows, 4, "Story"), "F_Story01"))
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 4, "Story").F_Story01, valueStates.HIDDEN)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 4, "Story").F_Story01)
 
     lu.assertEquals(instance.routeSlots[5].routeOrdinal, 4)
     lu.assertTrue(hasValue(data.optionValuesForRow(instance, rows, 5, "Story"), "F_Story01"))
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 5, "Story").F_Story01, valueStates.HIDDEN)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 5, "Story").F_Story01)
 
     lu.assertEquals(instance.routeSlots[6].routeOrdinal, 5)
     lu.assertTrue(hasValue(data.optionValuesForRow(instance, rows, 6, "Story"), "F_Story01"))
@@ -1262,10 +1262,10 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesRolesByRouteRo
     lu.assertTrue(hasValue(values, "Fountain"))
     lu.assertTrue(hasValue(values, "Midshop"))
     lu.assertTrue(hasValue(values, "Miniboss"))
-    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 2).Story, valueStates.HIDDEN)
-    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 2).Fountain, valueStates.HIDDEN)
-    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 2).Midshop, valueStates.HIDDEN)
-    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 2).Miniboss, valueStates.HIDDEN)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 2).Story)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 2).Fountain)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 2).Midshop)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 2).Miniboss)
 
     rows = fakeRows({
         { RoleKey = "" },
@@ -1301,7 +1301,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesOptionsByRoute
     data.fillOptionValues(instance, rows, 2, "Combat", values)
     lu.assertTrue(hasValue(values, "F_Combat01"))
     lu.assertTrue(hasValue(values, "F_Combat05"))
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 2, "Combat").F_Combat05, valueStates.INVALID)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 2, "Combat").F_Combat05)
 
     rows = fakeRows({
         { RoleKey = "" },
@@ -1314,7 +1314,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesOptionsByRoute
     lu.assertTrue(hasValue(values, "F_Combat05"))
     lu.assertTrue(hasValue(values, "F_Combat09"))
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").F_Combat05)
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 6, "Combat").F_Combat09, valueStates.INVALID)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").F_Combat09)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearOlympusFirstRouteRowRequiresOutdoorCombatMap()
@@ -1331,7 +1331,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearOlympusFirstRouteRowRequi
     data.fillOptionValues(instance, rows, 2, "Combat", values)
     lu.assertTrue(hasValue(values, "P_Combat02"))
     lu.assertTrue(hasValue(values, "P_Combat05"))
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 2, "Combat").P_Combat02, valueStates.HIDDEN)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 2, "Combat").P_Combat02)
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 2, "Combat").P_Combat05)
 
     lu.assertEquals(data.rowContext(instance, rows, 3).biomeDepthCache, 2)
@@ -1388,8 +1388,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesScriptedExactD
     lu.assertTrue(hasValue(values, "Q_Combat03"))
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 2, "Combat").Q_Combat10)
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 2, "Combat").Q_Combat11)
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 2, "Combat").Q_Combat01, valueStates.HIDDEN)
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 2, "Combat").Q_Combat03, valueStates.HIDDEN)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 2, "Combat").Q_Combat01)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 2, "Combat").Q_Combat03)
 
     data.fillOptionValues(instance, rows, 3, "Combat", values)
     lu.assertTrue(hasValue(values, "Q_Combat03"))
@@ -1399,14 +1399,14 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesScriptedExactD
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "Combat").Q_Combat03)
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "Combat").Q_Combat05)
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "Combat").Q_Combat15)
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 3, "Combat").Q_Combat01, valueStates.HIDDEN)
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 3, "Combat").Q_Combat10, valueStates.HIDDEN)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "Combat").Q_Combat01)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "Combat").Q_Combat10)
 
     data.fillOptionValues(instance, rows, 4, "Miniboss", values)
     lu.assertTrue(hasValue(values, "Q_MiniBoss02"))
     lu.assertTrue(hasValue(values, "Q_MiniBoss05"))
     lu.assertTrue(hasValue(values, "Q_MiniBoss03"))
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 4, "Miniboss").Q_MiniBoss03, valueStates.HIDDEN)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 4, "Miniboss").Q_MiniBoss03)
 
     data.fillOptionValues(instance, rows, 5, "Combat", values)
     lu.assertTrue(hasValue(values, "Q_Combat01"))
@@ -1415,8 +1415,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesScriptedExactD
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 5, "Combat").Q_Combat01)
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 5, "Combat").Q_Combat06)
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 5, "Combat").Q_Combat16)
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 5, "Combat").Q_Combat03, valueStates.HIDDEN)
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 5, "Combat").Q_Combat12, valueStates.HIDDEN)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 5, "Combat").Q_Combat03)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 5, "Combat").Q_Combat12)
 
     data.fillOptionValues(instance, rows, 6, "Combat", values)
     lu.assertTrue(hasValue(values, "Q_Combat12"))
@@ -1425,14 +1425,14 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesScriptedExactD
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").Q_Combat12)
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").Q_Combat13)
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").Q_Combat14)
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 6, "Combat").Q_Combat01, valueStates.HIDDEN)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 6, "Combat").Q_Combat01)
 
     data.fillOptionValues(instance, rows, 7, "Miniboss", values)
     lu.assertTrue(hasValue(values, "Q_MiniBoss03"))
     lu.assertTrue(hasValue(values, "Q_MiniBoss04"))
     lu.assertTrue(hasValue(values, "Q_MiniBoss02"))
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 7, "Miniboss").Q_MiniBoss03)
-    lu.assertEquals(data.optionValueStatesForRow(instance, rows, 7, "Miniboss").Q_MiniBoss02, valueStates.HIDDEN)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 7, "Miniboss").Q_MiniBoss02)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesExactDepthRoles()
@@ -1448,18 +1448,18 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesExactDepthRole
     data.fillRoleValues(instance, rows, 2, values)
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
-    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 2).Miniboss, valueStates.HIDDEN)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 2).Miniboss)
 
     data.fillRoleValues(instance, rows, 4, values)
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
-    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 4).Combat, valueStates.HIDDEN)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 4).Combat)
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 4).Miniboss)
 
     data.fillRoleValues(instance, rows, 7, values)
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
-    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 7).Combat, valueStates.HIDDEN)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 7).Combat)
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 7).Miniboss)
 end
 
@@ -1488,14 +1488,14 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearExactDepthUsesBiomeDepthC
     data.fillRoleValues(instance, rows, 4, values)
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
-    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 4).Miniboss)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 4).Miniboss)
 
     lu.assertEquals(data.rowContext(instance, rows, 5).routeOrdinal, 4)
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeDepthCache, 3)
     data.fillRoleValues(instance, rows, 5, values)
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
-    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 5).Combat)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 5).Combat)
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 5).Miniboss)
 end
 
@@ -1576,44 +1576,6 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearAvailabilityConsumesPrior
     lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 7).Story)
 end
 
-function TestRunPlannerFixedLinearRoute.testFixedLinearAvailabilityChecksPreviousRoomExitRequirement()
-    local catalog = loadCatalog()
-    local data = loadFixedLinearData()
-    local instance = data.prepare({
-        name = "RouteF",
-        biome = catalog.lookup.F,
-    })
-    local missingExitRows = fakeRows({
-        { RoleKey = "" },
-        { RoleKey = "Combat", OptionKey = "F_Combat01" },
-        { RoleKey = "Combat", OptionKey = "F_Combat02" },
-        { RoleKey = "Combat", OptionKey = "F_Combat03" },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat10",
-        },
-    })
-    local validExitRows = fakeRows({
-        { RoleKey = "" },
-        { RoleKey = "Combat", OptionKey = "F_Combat01" },
-        { RoleKey = "Combat", OptionKey = "F_Combat02" },
-        { RoleKey = "Combat", OptionKey = "F_Combat03" },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat04",
-        },
-    })
-    local values = {}
-
-    data.fillRoleValues(instance, missingExitRows, 6, values)
-    lu.assertTrue(hasValue(values, "Midshop"))
-    lu.assertNotNil(data.roleValueStatesForRow(instance, missingExitRows, 6).Midshop)
-
-    data.fillRoleValues(instance, validExitRows, 6, values)
-    lu.assertTrue(hasValue(values, "Midshop"))
-    lu.assertNil(data.roleValueStatesForRow(instance, validExitRows, 6).Midshop)
-end
-
 function TestRunPlannerFixedLinearRoute.testFixedLinearReadPassInvalidationRefreshesCachedValues()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
@@ -1634,16 +1596,19 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearReadPassInvalidationRefre
     local rows = fakeRows(rowState)
 
     data.beginReadPass(instance)
-    local values = data.roleValuesForRow(instance, rows, 6)
-    lu.assertTrue(hasValue(values, "Midshop"))
-    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 6).Midshop)
+    lu.assertEquals(
+        data.optionValueStatesForRow(instance, rows, 5, "Combat").F_Combat01,
+        valueStates.INVALID
+    )
 
-    rowState[5].OptionKey = "F_Combat04"
-    lu.assertNotNil(data.roleValueStatesForRow(instance, rows, 6).Midshop)
+    rowState[2].OptionKey = "F_Combat04"
+    lu.assertEquals(
+        data.optionValueStatesForRow(instance, rows, 5, "Combat").F_Combat01,
+        valueStates.INVALID
+    )
 
     data.invalidateReadPass(instance)
-    lu.assertTrue(hasValue(data.roleValuesForRow(instance, rows, 6), "Midshop"))
-    lu.assertNil(data.roleValueStatesForRow(instance, rows, 6).Midshop)
+    lu.assertNil(data.optionValueStatesForRow(instance, rows, 5, "Combat").F_Combat01)
     data.endReadPass(instance)
 end
 
@@ -1695,28 +1660,6 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRowContextUsesSelectionDe
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeDepthCache, 4)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepth, 5)
     lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthCost, 1)
-end
-
-function TestRunPlannerFixedLinearRoute.testFixedLinearEncounterDepthRejectsOutOfRangeDepthGatedOptions()
-    local catalog = loadCatalog()
-    local data = loadFixedLinearData()
-    local instance = data.prepare({
-        name = "RouteF",
-        biome = catalog.lookup.F,
-    })
-    local rows = fakeRows({
-        fOpeningRow(),
-        fCombatRow("F_Combat02", "Major"),
-        fCombatRow("F_Combat05", "Major"),
-    })
-
-    local context = data.rowContext(instance, rows, 3)
-    lu.assertEquals(context.biomeEncounterDepth, 3)
-    lu.assertFalse(data.isOptionAvailable(instance, rows, 3, "Combat", "F_Combat05"))
-
-    local validation = data.validateRow(instance, rows, 3)
-    lu.assertFalse(validation.valid)
-    lu.assertEquals(validation.code, "encounter_depth_unavailable")
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRowContextUsesOptionDepthCostOverrides()

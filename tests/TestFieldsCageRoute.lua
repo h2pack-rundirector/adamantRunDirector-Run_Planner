@@ -1254,14 +1254,14 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageValueStatesEchoBeforeThirdP
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
     lu.assertTrue(hasValue(values, "Bridge"))
-    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 2).Miniboss, valueStates.HIDDEN)
-    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 2).Bridge, valueStates.HIDDEN)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 2).Miniboss)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 2).Bridge)
 
     data.fillRoleValues(instance, rows, 3, values)
     lu.assertTrue(hasValue(values, "Miniboss"))
     lu.assertTrue(hasValue(values, "Bridge"))
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 3).Miniboss)
-    lu.assertEquals(data.roleValueStatesForRow(instance, rows, 3).Bridge, valueStates.HIDDEN)
+    lu.assertNil(data.roleValueStatesForRow(instance, rows, 3).Bridge)
 
     data.fillRoleValues(instance, rows, 4, values)
     lu.assertTrue(hasValue(values, "Bridge"))

@@ -1,6 +1,7 @@
 local deps = ... or {}
 
 local routeHistory = deps.history
+local routeQuery = deps.query
 local findings = deps.findings
 
 local biomeStructure = {}
@@ -643,6 +644,43 @@ local function validatePickedEntries(history, biome)
     return nil
 end
 
+local function validateRouteRequirement(history, entry, requirement)
+    if requirement.kind == "previousRoomExitCount" then
+        if routeQuery.requiredMinExits(history, entry, requirement.minCount) then
+            return nil
+        end
+        return invalidAt(
+            entry,
+            "previous_room_exit_count",
+            "Previous planned room must have at least " .. tostring(requirement.minCount) .. " exits"
+        )
+    end
+    return invalidAt(
+        entry,
+        "unknown_route_requirement",
+        "Unknown route requirement: " .. tostring(requirement.kind)
+    )
+end
+
+local function validateRouteRequirements(history, biome)
+    for _, entry in ipairs(biomeRoomEntries(history, biome.key)) do
+        local role, option = declarationForEntry(biome, entry)
+        for _, requirement in ipairs(role and role.routeRequirements or EMPTY_LIST) do
+            local invalid = validateRouteRequirement(history, entry, requirement)
+            if invalid ~= nil then
+                return invalid
+            end
+        end
+        for _, requirement in ipairs(option and option.routeRequirements or EMPTY_LIST) do
+            local invalid = validateRouteRequirement(history, entry, requirement)
+            if invalid ~= nil then
+                return invalid
+            end
+        end
+    end
+    return nil
+end
+
 local function validateForcePressure(history, biome)
     local topology = routeStructureForBiome(biome)
     if topology == nil then
@@ -721,6 +759,9 @@ function biomeStructure.validate(args)
             local findingsForInvalid
             local invalid
             invalid, findingsForInvalid = validatePickedEntries(history, biome)
+            if invalid == nil then
+                invalid = validateRouteRequirements(history, biome)
+            end
             if invalid == nil then
                 invalid, findingsForInvalid = validateClockworkProgression(history, biome)
                 appendFindings(resultFindings, findingsForInvalid)

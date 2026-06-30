@@ -82,7 +82,6 @@ local function loadRouteDeps()
             common = rows.common,
             availability = rows.availability,
             readCache = rows.readCache,
-            requirements = rows.requirements,
             valueStates = rows.valueStates,
             rowEngine = rows.engine,
             timeline = timeline,

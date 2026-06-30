@@ -101,8 +101,12 @@ local function emitRoom(history, roomHistoryOrdinal, fields)
         kind = "room",
         eventKey = fields and fields.roomKey or "Room" .. tostring(roomHistoryOrdinal),
         roomKey = fields and fields.roomKey or "Room" .. tostring(roomHistoryOrdinal),
+        roleKey = fields and fields.roleKey or nil,
+        optionKey = fields and fields.optionKey or nil,
         topology = fields and fields.topology or nil,
         reward = fields and fields.reward or nil,
+        roomCandidates = fields and fields.roomCandidates or nil,
+        siblingCandidates = fields and fields.siblingCandidates or nil,
         rewardCandidates = fields and fields.rewardCandidates or nil,
     })
 end
@@ -166,6 +170,78 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateConcre
     lu.assertEquals(states.F_Combat02, valueStates.INVALID)
 end
 
+function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMidshopAfterOneExitRoom()
+    local history = routeHistory.create()
+    emitRoom(history, 4, {
+        biomeKey = "F",
+        rowIndex = 5,
+        roomKey = "F_Combat10",
+        roleKey = "Combat",
+        optionKey = "F_Combat10",
+        topology = {
+            selected = { roomKey = "F_Combat10" },
+        },
+    })
+    emitRoom(history, 5, {
+        biomeKey = "F",
+        rowIndex = 6,
+        roomKey = "F_Shop01",
+        roleKey = "Midshop",
+        optionKey = "F_Shop01",
+        biomeDepthCache = 5,
+    })
+    local catalog = h.loadCatalog()
+
+    local result = historyValidator.validate({
+        route = {
+            key = "Underworld",
+            biomes = { "F" },
+        },
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "previous_room_exit_count")
+    lu.assertEquals(result.invalids[1].rowIndex, 6)
+    lu.assertEquals(result.invalids[1].roomKey, "F_Shop01")
+end
+
+function TestRunPlannerRouteHistoryValidator.testValidatorAcceptsMidshopAfterTwoExitRoom()
+    local history = routeHistory.create()
+    emitRoom(history, 4, {
+        biomeKey = "F",
+        rowIndex = 5,
+        roomKey = "F_Combat04",
+        roleKey = "Combat",
+        optionKey = "F_Combat04",
+        topology = {
+            selected = { roomKey = "F_Combat04" },
+            sibling = { roomKey = "F_Combat05" },
+        },
+    })
+    emitRoom(history, 5, {
+        biomeKey = "F",
+        rowIndex = 6,
+        roomKey = "F_Shop01",
+        roleKey = "Midshop",
+        optionKey = "F_Shop01",
+        biomeDepthCache = 5,
+    })
+    local catalog = h.loadCatalog()
+
+    local result = historyValidator.validate({
+        route = {
+            key = "Underworld",
+            biomes = { "F" },
+        },
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+
+    lu.assertTrue(result.valid)
+end
+
 function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRoomFindings()
     local route = {
         key = "Underworld",
@@ -199,6 +275,46 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRoomFind
     local feedback = historyFeedback.fromFindings(result.findings)
     local states = historyFeedback.valueStatesForControl(feedback, "F", finding.rowIndex, "OptionKey")
     lu.assertEquals(states.F_Story01, valueStates.HIDDEN)
+end
+
+function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsEncounterDepthRoomFindings()
+    local history = routeHistory.create()
+    emitRoom(history, 3, {
+        biomeKey = "F",
+        rowIndex = 3,
+        roomKey = "F_Combat02",
+        roleKey = "Combat",
+        optionKey = "F_Combat02",
+        biomeEncounterDepth = 3,
+        roomCandidates = {
+            {
+                roleKey = "Combat",
+                optionKey = "F_Combat05",
+                roomKey = "F_Combat05",
+                optionAvailability = {
+                    biomeEncounterDepth = { min = 4 },
+                },
+            },
+        },
+    })
+
+    local result = historyValidator.validate({
+        route = {
+            key = "Underworld",
+            biomes = {},
+        },
+        history = history,
+        biomeLookup = {},
+    })
+
+    local finding = firstFinding(result, "roomCandidateInvalid", "roomKey", "F_Combat05")
+    lu.assertNotNil(finding)
+    lu.assertEquals(finding.reason, "encounter_depth_unavailable")
+    lu.assertEquals(finding.axis, "biomeEncounterDepth")
+
+    local feedback = historyFeedback.fromFindings(result.findings)
+    local states = historyFeedback.valueStatesForControl(feedback, "F", 3, "OptionKey")
+    lu.assertEquals(states.F_Combat05, valueStates.INVALID)
 end
 
 function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsSiblingFindings()
