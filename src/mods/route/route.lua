@@ -5,7 +5,6 @@ function routeFactory.create(opts)
 
     local rewards = opts.rewards
 
-    local routeTimeline = import("mods/route/timeline.lua")
     local routePosition = import("mods/route/position.lua")
     local invalidLocations = import("mods/route/invalid_locations.lua")
     local controlForm = import("mods/controls/form.lua", nil, {
@@ -17,7 +16,6 @@ function routeFactory.create(opts)
         selectedLegalityRules = rewards.selectedLegalityRules,
     })
     local route = {
-        timeline = routeTimeline,
         controlForm = controlForm,
         invalidLocations = invalidLocations,
         rewards = rewards,

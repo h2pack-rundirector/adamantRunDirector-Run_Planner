@@ -1,7 +1,7 @@
 local deps = ...
 local common = deps.common
-local timeline = deps.timeline
 local rowData = deps.rowData
+local slotTimeline = deps.slotTimeline
 local slots = import("mods/controls/FieldsCageRoute/data/slots.lua", nil, {
     common = common,
 })
@@ -209,7 +209,7 @@ function data.prepare(instance)
     prepareCageRewardContexts(instance)
 
     slots.buildRouteSlots(instance)
-    timeline.applyRouteSlots(instance)
+    slotTimeline.applyRouteSlots(instance)
     instance.maxCageRewardCount = maxCageRewardCount(instance)
     data.buildRoleChoices(instance)
     slots.addFixedRoleLabels(instance)

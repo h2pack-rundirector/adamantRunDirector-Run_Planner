@@ -13,6 +13,7 @@ return {
     rewardRatio = import("mods/controls/biome_helpers/reward_ratio.lua"),
     roomStructure = roomStructure,
     roomTopology = roomTopology,
+    slotTimeline = import("mods/controls/biome_helpers/slot_timeline.lua"),
     valueStates = import("mods/controls/biome_helpers/value_states.lua", nil, {
         valueStates = form.valueStates,
     }),

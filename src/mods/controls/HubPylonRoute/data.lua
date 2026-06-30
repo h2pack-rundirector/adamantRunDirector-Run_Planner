@@ -1,7 +1,7 @@
 local deps = ...
 local common = deps.common
-local timeline = deps.timeline
 local rowData = deps.rowData
+local slotTimeline = deps.slotTimeline
 
 local ENABLED_SIDE_ROOM_MODE = "Enabled"
 local DISABLED_SIDE_ROOM_MODE = "Disabled"
@@ -265,7 +265,7 @@ function data.prepare(instance)
     addSideRoomModeChoices(instance)
     addSideRoomEncounterClassChoices(instance)
     buildRouteSlots(instance)
-    timeline.applyRouteSlots(instance)
+    slotTimeline.applyRouteSlots(instance)
     prepareSideRoomRows(instance)
     data.buildRoleChoices(instance)
     buildOptionEnrichmentColors(instance)

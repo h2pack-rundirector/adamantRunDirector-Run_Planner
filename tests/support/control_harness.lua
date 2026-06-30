@@ -59,14 +59,12 @@ local function loadRouteDeps()
         local rewards = testImport("mods/rewards/rewards.lua").create({
             rewardDomain = loadRewardDomain(),
         })
-        local timeline = testImport("mods/route/timeline.lua")
         local valueStates = testImport("mods/route/value_states.lua")
         local controlForm = testImport("mods/controls/form.lua", nil, {
             rewards = rewards,
             valueStates = valueStates,
         })
         route = {
-            timeline = timeline,
             controlForm = controlForm,
             rewards = rewards,
         }
@@ -119,6 +117,7 @@ local function addFormDeps(deps, routeDeps)
     deps.readCache = form.readCache
     deps.rowData = form.rowData
     deps.valueStates = form.valueStates
+    deps.slotTimeline = testImport("mods/controls/biome_helpers/slot_timeline.lua")
 end
 
 local function loadFixedLinearData()

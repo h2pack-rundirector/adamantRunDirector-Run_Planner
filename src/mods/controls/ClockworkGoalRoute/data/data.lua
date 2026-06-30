@@ -1,8 +1,8 @@
 local deps = ...
 local common = deps.common
-local timeline = deps.timeline
 local rowData = deps.rowData
 local valueStates = deps.valueStates
+local slotTimeline = deps.slotTimeline
 local slots = import("mods/controls/ClockworkGoalRoute/data/slots.lua", nil, {
     common = common,
 })
@@ -213,7 +213,7 @@ function data.prepare(instance)
     instance.label = instance.label or instance.biome.label or instance.biomeKey
     data.prepareRoles(instance)
     slots.buildRouteSlots(instance)
-    timeline.applyRouteSlots(instance)
+    slotTimeline.applyRouteSlots(instance)
     data.buildRoleChoices(instance)
     state.addFixedRoleLabels(instance)
     data.prepareSlots(instance)

@@ -1,7 +1,7 @@
 local deps = ...
 local common = deps.common
-local timeline = deps.timeline
 local rowData = deps.rowData
+local slotTimeline = deps.slotTimeline
 local slots = import("mods/controls/FixedLinearRoute/data/slots.lua", nil, {
     common = common,
 })
@@ -75,7 +75,7 @@ function data.prepare(instance)
     data.prepareRoles(instance)
 
     slots.buildRouteSlots(instance)
-    timeline.applyRouteSlots(instance)
+    slotTimeline.applyRouteSlots(instance)
     data.buildRoleChoices(instance)
     data.prepareSlots(instance)
     topology.prepareSiblingStructurePolicy(instance)

@@ -1,7 +1,7 @@
 local deps = ...
 local common = deps.common
-local timeline = deps.timeline
 local rowData = deps.rowData
+local slotTimeline = deps.slotTimeline
 
 local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
@@ -339,7 +339,7 @@ function data.prepare(instance)
     prepareEncounterPolicies(instance)
 
     buildRouteSlots(instance)
-    timeline.applyRouteSlots(instance)
+    slotTimeline.applyRouteSlots(instance)
     prepareVariantChoiceCache(instance)
     prepareEncounterRewardRows(instance)
     data.buildRoleChoices(instance)
