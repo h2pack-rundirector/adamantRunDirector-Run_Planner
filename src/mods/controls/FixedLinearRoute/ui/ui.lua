@@ -45,6 +45,7 @@ local rooms = import("mods/controls/FixedLinearRoute/ui/rooms.lua", nil, {
     valueStateHelpers = deps.valueStateHelpers,
     decorations = deps.decorations,
     form = deps.form,
+    nextChoiceView = deps.nextChoiceView,
 })
 local rewards = import("mods/controls/FixedLinearRoute/ui/rewards.lua", nil, {
     data = data,

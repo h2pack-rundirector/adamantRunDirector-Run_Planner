@@ -1,18 +1,18 @@
-return function(deps)
-    local layout = import("mods/biomes/declarations/g_oceanus_layout.lua")
-    local topology = import("mods/biomes/declarations/g_oceanus_topology.lua")({
-        layout = layout,
-    })
-    local parser = deps.parser
-    local rewards = deps.rewards
-    local routeRules = deps.routeRules
-    local combatRooms = parser.withReward(
-        layout.combatRooms,
-        layout.devotionCombatRooms,
-        rewards.majorMinor({ allowDevotion = true })
-    )
+local deps = ...
+local layout = import("mods/biomes/declarations/g_oceanus_layout.lua")
+local topology = import("mods/biomes/declarations/g_oceanus_topology.lua")({
+    layout = layout,
+})
+local parser = deps.parser
+local rewards = deps.rewards
+local routeRules = deps.routeRules
+local combatRooms = parser.withReward(
+    layout.combatRooms,
+    layout.devotionCombatRooms,
+    rewards.majorMinor({ allowDevotion = true })
+)
 
-    return {
+return {
         key = "G",
         label = "Oceanus",
         region = "Underworld",
@@ -103,5 +103,4 @@ return function(deps)
                 reserve = true,
             },
         },
-    }
-end
+}

@@ -1,13 +1,13 @@
-return function(deps)
-    local layout = import("mods/biomes/declarations/p_olympus_layout.lua")
-    local topology = import("mods/biomes/declarations/p_olympus_topology.lua")({
-        layout = layout,
-    })
-    local parser = deps.parser
-    local rewards = deps.rewards
-    local routeRules = deps.routeRules
+local deps = ...
+local layout = import("mods/biomes/declarations/p_olympus_layout.lua")
+local topology = import("mods/biomes/declarations/p_olympus_topology.lua")({
+    layout = layout,
+})
+local parser = deps.parser
+local rewards = deps.rewards
+local routeRules = deps.routeRules
 
-    return {
+return {
         key = "P",
         label = "Olympus",
         region = "Surface",
@@ -104,5 +104,4 @@ return function(deps)
                 reserve = true,
             },
         },
-    }
-end
+}

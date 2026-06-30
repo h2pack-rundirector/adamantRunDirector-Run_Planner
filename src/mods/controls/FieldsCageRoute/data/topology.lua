@@ -1,7 +1,7 @@
 local deps = ...
 local common = deps.common
 local roomTopology = deps.roomTopology
-local roomTopologyAdapter = deps.roomTopologyAdapter
+local topologyControls = deps.topologyControls
 local slots = deps.slots
 
 local topology = {}
@@ -64,19 +64,6 @@ local function hasSelectableSiblingStructure(roleKey)
 end
 
 function topology.create(data)
-    local shared = roomTopologyAdapter.create(data, {
-        namespace = "fields",
-        slots = slots,
-        topologyForInstance = function(instance)
-            return instance.biome.fields
-                and instance.biome.fields.roomTopology
-                or nil
-        end,
-        hasSelectableSiblingStructure = function(_, _, _, roleKey)
-            return hasSelectableSiblingStructure(roleKey)
-        end,
-    })
-
     local function selectedCombatCageRewardCount(instance, rows, rowIndex)
         local roleKey = data.resolveRole(instance, rows, rowIndex)
         if roleKey ~= "Combat" then
@@ -119,111 +106,59 @@ function topology.create(data)
             and isFirstFieldsPick(instance, rows, rowIndex)
     end
 
-    local api = {}
-
-    function api.prepareSiblingStructurePolicy(instance)
-        return shared.prepareSiblingStructurePolicy(instance)
-    end
-
-    function api.siblingStructureAlias(instance)
-        return shared.siblingStructureAlias(instance)
-    end
-
-    function api.siblingStructureLabels(instance)
-        return shared.siblingStructureLabels(instance)
-    end
-
-    function api.siblingStructureValues(instance)
-        return shared.siblingStructureValues(instance)
-    end
-
-    function api.siblingStructureStatus(instance, rows, rowIndex)
-        return shared.siblingStructureStatus(instance, rows, rowIndex)
-    end
-
-    function api.shouldDrawSiblingStructure(instance, rows, rowIndex)
-        if hasImplicitFirstPickSiblingStructure(instance, rows, rowIndex) then
-            return false
-        end
-        return shared.shouldDrawSiblingStructure(instance, rows, rowIndex, 1)
-    end
-
-    function api.resolveSiblingStructure(instance, rows, rowIndex)
-        local implicit = implicitFirstPickSiblingStructure(instance, rows, rowIndex)
-        if implicit ~= nil then
-            return implicit.key, implicit
-        end
-        return shared.resolveSiblingStructure(instance, rows, rowIndex)
-    end
-
-    function api.siblingStructureValueStatesForRow(instance, rows, rowIndex)
-        return shared.siblingStructureValueStatesForRow(instance, rows, rowIndex)
-    end
-
-    function api.validateRoomTopology(instance, rows, rowIndex)
-        local roleKey = data.resolveRole(instance, rows, rowIndex)
-        if data.isFixedIdentityRow(instance, rowIndex) then
+    return topologyControls.create(data, {
+        namespace = "fields",
+        slots = slots,
+        topologyKind = "fieldsChoice",
+        isFixedIdentityRow = data.isFixedIdentityRow,
+        topologyForInstance = function(instance)
+            return instance.biome.fields
+                and instance.biome.fields.roomTopology
+                or nil
+        end,
+        hasSelectableSiblingStructure = function(_, _, _, roleKey)
+            return hasSelectableSiblingStructure(roleKey)
+        end,
+        shouldDrawSiblingStructure = function(shared, instance, rows, rowIndex)
+            if hasImplicitFirstPickSiblingStructure(instance, rows, rowIndex) then
+                return false
+            end
+            return shared.shouldDrawSiblingStructure(instance, rows, rowIndex, 1)
+        end,
+        implicitSiblingStructure = function(_, instance, rows, rowIndex)
+            return implicitFirstPickSiblingStructure(instance, rows, rowIndex)
+        end,
+        shouldValidateRow = function(instance, rows, rowIndex)
+            return not data.isFixedIdentityRow(instance, rowIndex)
+                and hasSelectableSiblingStructure(data.resolveRole(instance, rows, rowIndex))
+        end,
+        validateSelected = function(instance, rows, rowIndex)
+            local roleKey = data.resolveRole(instance, rows, rowIndex)
+            local _, cageCount = data.resolveCageCount(instance, rows, rowIndex, roleKey)
+            if roleKey == "Combat" and (cageCount == nil or (cageCount.cageRewardCount or 0) <= 0) then
+                return invalidStatus("fields_cage_count_required", "Fields topology needs picked cage reward count")
+            end
             return nil
-        end
-
-        if not hasSelectableSiblingStructure(roleKey) then
-            return nil
-        end
-
-        local _, cageCount = data.resolveCageCount(instance, rows, rowIndex, roleKey)
-        if roleKey == "Combat" and (cageCount == nil or (cageCount.cageRewardCount or 0) <= 0) then
-            return invalidStatus("fields_cage_count_required", "Fields topology needs picked cage reward count")
-        end
-        if hasImplicitFirstPickSiblingStructure(instance, rows, rowIndex) then
-            return nil
-        end
-
-        return shared.validateSiblingStructures(instance, rows, rowIndex, {
-            requiredCode = "fields_sibling_structure_required",
-            requiredMessage = "Fields topology needs sibling door structure",
-            unavailableCode = "fields_sibling_structure_unavailable",
-            unavailableMessage = function(sibling, siblingKey)
-                return "Sibling " .. tostring(sibling.label or siblingKey) .. " is not valid at this pick"
-            end,
-        })
-    end
-
-    function api.roomTopology(instance, rows, rowIndex)
-        local roleKey = data.resolveRole(instance, rows, rowIndex)
-        if data.isFixedIdentityRow(instance, rowIndex) then
-            return nil
-        end
-        if data.activeSiblingStructureCount(instance, rows, rowIndex) < 1 then
-            return nil
-        end
-        if not data.siblingStructureStatus(instance, rows, rowIndex).valid then
-            return nil
-        end
-
-        local _, cageCount = data.resolveCageCount(instance, rows, rowIndex, roleKey)
-        local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
-        local _, sibling = data.resolveSiblingStructure(instance, rows, rowIndex)
-        if not shared.siblingAvailabilityStatus(instance, rows, rowIndex, nil, sibling).valid then
-            return nil
-        end
-        local selected = selectedRoomTopology(roleKey, option, cageCount)
-        local siblingTopology = siblingRoomTopology(sibling)
-        if selected == nil or siblingTopology == nil then
-            return nil
-        end
-
-        return {
-            kind = "fieldsChoice",
-            selected = selected,
-            sibling = siblingTopology,
-        }
-    end
-
-    function api.activeSiblingStructureCount(instance, rows, rowIndex)
-        return shared.activeSiblingStructureCount(instance, rows, rowIndex)
-    end
-
-    return api
+        end,
+        skipSiblingValidation = function(instance, rows, rowIndex)
+            return hasImplicitFirstPickSiblingStructure(instance, rows, rowIndex)
+        end,
+        requiredCode = "fields_sibling_structure_required",
+        requiredMessage = "Fields topology needs sibling door structure",
+        unavailableCode = "fields_sibling_structure_unavailable",
+        unavailableMessage = function(sibling, siblingKey)
+            return "Other Door " .. tostring(sibling.label or siblingKey) .. " is not valid at this pick"
+        end,
+        selectedTopology = function(instance, rows, rowIndex)
+            local roleKey = data.resolveRole(instance, rows, rowIndex)
+            local _, cageCount = data.resolveCageCount(instance, rows, rowIndex, roleKey)
+            local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
+            return selectedRoomTopology(roleKey, option, cageCount)
+        end,
+        siblingTopology = function(_, _, _, _, _, option)
+            return siblingRoomTopology(option)
+        end,
+    })
 end
 
 return topology

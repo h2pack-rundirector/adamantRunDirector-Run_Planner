@@ -18,5 +18,6 @@ local function clockworkTarget(record)
 end
 
 return common.createAdapter({
+    renderRecord = common.nextChoiceRenderRecord,
     targetFor = clockworkTarget,
 })

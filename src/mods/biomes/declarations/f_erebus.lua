@@ -1,18 +1,18 @@
-return function(deps)
-    local layout = import("mods/biomes/declarations/f_erebus_layout.lua")
-    local topology = import("mods/biomes/declarations/f_erebus_topology.lua")({
-        layout = layout,
-    })
-    local parser = deps.parser
-    local rewards = deps.rewards
-    local routeRules = deps.routeRules
-    local combatRooms = parser.withReward(
-        layout.combatRooms,
-        layout.devotionCombatRooms,
-        rewards.majorMinor({ allowDevotion = true })
-    )
+local deps = ...
+local layout = import("mods/biomes/declarations/f_erebus_layout.lua")
+local topology = import("mods/biomes/declarations/f_erebus_topology.lua")({
+    layout = layout,
+})
+local parser = deps.parser
+local rewards = deps.rewards
+local routeRules = deps.routeRules
+local combatRooms = parser.withReward(
+    layout.combatRooms,
+    layout.devotionCombatRooms,
+    rewards.majorMinor({ allowDevotion = true })
+)
 
-    return {
+return {
         key = "F",
         label = "Erebus",
         region = "Underworld",
@@ -114,5 +114,4 @@ return function(deps)
                 reserve = true,
             },
         },
-    }
-end
+}

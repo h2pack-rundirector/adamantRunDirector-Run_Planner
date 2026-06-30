@@ -30,6 +30,9 @@ function horizon.tabOrder(tabKey)
 end
 
 function horizon.tabKeyForInvalid(invalid)
+    if invalid ~= nil and invalid.renderTabKey ~= nil then
+        return invalid.renderTabKey
+    end
     if invalid ~= nil and invalid.tabKey ~= nil then
         return invalid.tabKey
     end
@@ -56,6 +59,13 @@ end
 
 function horizon.after(currentKey, horizonKey)
     return currentKey ~= nil and horizonKey ~= nil and currentKey > horizonKey
+end
+
+function horizon.routeOrdinalForInvalid(invalid)
+    if invalid ~= nil and invalid.renderRouteOrdinal ~= nil then
+        return invalid.renderRouteOrdinal
+    end
+    return invalid and invalid.routeOrdinal or nil
 end
 
 return horizon

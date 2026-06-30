@@ -56,15 +56,6 @@ local function prepareForcedGroups(groups)
     return preparedGroups
 end
 
-local function candidateInPreparedGroups(groups, roomKey)
-    for _, group in ipairs(groups or EMPTY_VALUES) do
-        if roomKey ~= nil and group.candidatesByKey ~= nil and group.candidatesByKey[roomKey] == true then
-            return true
-        end
-    end
-    return false
-end
-
 function roomTopology.prepareSiblingPolicy(topology, opts)
     local control = topology and topology.siblingStructureControl or nil
     if control == nil then
@@ -86,7 +77,6 @@ function roomTopology.prepareSiblingPolicy(topology, opts)
         labels = {},
         optionsByKey = {},
         optionsByRoomKey = {},
-        ungroupedForceCandidates = {},
     }
 
     for _, option in ipairs(control.options or EMPTY_VALUES) do
@@ -97,16 +87,6 @@ function roomTopology.prepareSiblingPolicy(topology, opts)
         local roomKey = roomTopology.roomKey(option)
         if roomKey ~= nil then
             policy.optionsByRoomKey[roomKey] = option
-        end
-    end
-    for _, key in ipairs(policy.values) do
-        local option = policy.optionsByKey[key]
-        local roomKey = roomTopology.roomKey(option)
-        if roomKey ~= nil
-            and option.force ~= nil
-            and not candidateInPreparedGroups(policy.forcedGroups, roomKey)
-        then
-            policy.ungroupedForceCandidates[#policy.ungroupedForceCandidates + 1] = roomKey
         end
     end
     return policy
@@ -173,10 +153,6 @@ local function siblingCountAt(ctx, index)
     return math.floor(tonumber(ctx.siblingCountAt(index)) or 0)
 end
 
-function roomTopology.forcedGroupsStatus()
-    return validStatus()
-end
-
 local function plannedRoomRowIndex(ctx, roomKey)
     if roomKey == nil then
         return nil
@@ -225,22 +201,22 @@ function roomTopology.siblingCandidateStatus(policy, ctx, candidate)
 
     local roomKey = roomTopology.roomKey(candidate)
     if roomKey ~= nil and roomKey == ctx.selectedRoomKey then
-        return invalidStatus(statusCode(policy, "sibling_same_room"), "Sibling cannot use the selected room")
+        return invalidStatus(statusCode(policy, "sibling_same_room"), "Other Door cannot use the selected room")
     end
     if siblingRoomAlreadySelected(ctx, roomKey) then
-        return invalidStatus(statusCode(policy, "sibling_same_sibling_room"), "Sibling cannot duplicate another sibling")
+        return invalidStatus(statusCode(policy, "sibling_same_sibling_room"), "Other Door cannot duplicate another door")
     end
     if siblingRoomGeneratedBeforeRow(ctx, roomKey) then
-        return invalidStatus(statusCode(policy, "sibling_room_generated"), "Sibling room was already generated")
+        return invalidStatus(statusCode(policy, "sibling_room_generated"), "Other Door room was already generated")
     end
     if pickedCandidateClosesGroup(policy, ctx, roomKey) then
         return invalidStatus(
             statusCode(policy, "sibling_miniboss_after_selected"),
-            "Sibling miniboss cannot appear after a picked miniboss"
+            "Other Door miniboss cannot appear after a picked miniboss"
         )
     end
     if plannedRoomRowIndex(ctx, roomKey) ~= nil then
-        return invalidStatus(statusCode(policy, "sibling_room_planned"), "Sibling room is already planned on this route")
+        return invalidStatus(statusCode(policy, "sibling_room_planned"), "Other Door room is already planned on this route")
     end
     if ctx.extraRuleStatus ~= nil then
         local status = ctx.extraRuleStatus(candidate, ctx.candidateSiblingIndex)
@@ -248,7 +224,7 @@ function roomTopology.siblingCandidateStatus(policy, ctx, candidate)
             return status
         end
     end
-    return roomTopology.forcedGroupsStatus(policy, ctx, candidate)
+    return validStatus()
 end
 
 local function siblingUnavailableMessage(opts, sibling, siblingKey)
@@ -256,7 +232,7 @@ local function siblingUnavailableMessage(opts, sibling, siblingKey)
     if type(message) == "function" then
         return message(sibling, siblingKey)
     end
-    return message or ("Sibling " .. tostring(sibling and sibling.label or siblingKey) .. " is not valid")
+    return message or ("Other Door " .. tostring(sibling and sibling.label or siblingKey) .. " is not valid")
 end
 
 function roomTopology.validateSiblingStructures(policy, ctx, opts)
@@ -289,7 +265,6 @@ function roomTopology.isSiblingTopologyStatus(policy, status)
     local code = tostring(status and status.code or "")
     local namespace = tostring(policy and policy.namespace or "topology")
     return string.match(code, "^" .. namespace .. "_sibling_") ~= nil
-        or string.match(code, "^" .. namespace .. "_forced_topology_") ~= nil
 end
 
 function roomTopology.valueStateForSiblingStatus(policy, status)

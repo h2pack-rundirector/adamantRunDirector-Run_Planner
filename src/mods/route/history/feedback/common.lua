@@ -66,6 +66,49 @@ local function selectedRoomTarget(record)
     }
 end
 
+local function previousRouteOrdinal(record)
+    if record == nil or record.routeOrdinal == nil then
+        return nil
+    end
+    local routeOrdinal = math.floor(tonumber(record.routeOrdinal) or 0)
+    if routeOrdinal <= 0 then
+        return routeOrdinal
+    end
+    return routeOrdinal - 1
+end
+
+local function previousRowIndex(record)
+    if record == nil or record.rowIndex == nil then
+        return nil
+    end
+    local rowIndex = math.floor(tonumber(record.rowIndex) or 0)
+    if rowIndex <= 1 then
+        return rowIndex
+    end
+    return rowIndex - 1
+end
+
+function common.nextChoiceRenderRecord(record)
+    if record == nil
+        or record.kind == "siblingCandidateInvalid"
+        or record.rewardType ~= nil
+        or record.address ~= nil
+        or record.tabKey == "rewards"
+        or record.tabKey == "sideRooms"
+    then
+        return record
+    end
+
+    local copy = {}
+    for key, value in pairs(record) do
+        copy[key] = value
+    end
+    copy.renderRowIndex = previousRowIndex(record)
+    copy.renderRouteOrdinal = previousRouteOrdinal(record)
+    copy.renderTabKey = "rooms"
+    return copy
+end
+
 function common.stateFor(record)
     return valueStates.forFailureCode(record and (record.reason or record.code) or nil)
 end
@@ -184,6 +227,7 @@ end
 function common.createAdapter(opts)
     opts = opts or {}
     return {
+        renderRecord = opts.renderRecord,
         translate = function(feedbackState, records)
             common.translateAll(feedbackState, records, opts)
         end,

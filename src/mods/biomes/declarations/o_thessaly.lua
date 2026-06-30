@@ -1,11 +1,11 @@
-return function(deps)
-    local layout = import("mods/biomes/declarations/o_thessaly_layout.lua")()
-    local topology = import("mods/biomes/declarations/o_thessaly_topology.lua")(deps)
-    local parser = deps.parser
-    local rewards = deps.rewards
-    local routeRules = deps.routeRules
+local deps = ...
+local layout = import("mods/biomes/declarations/o_thessaly_layout.lua")()
+local topology = import("mods/biomes/declarations/o_thessaly_topology.lua")(deps)
+local parser = deps.parser
+local rewards = deps.rewards
+local routeRules = deps.routeRules
 
-    return {
+return {
         key = "O",
         label = "Thessaly",
         region = "Surface",
@@ -103,5 +103,4 @@ return function(deps)
                 reserve = true,
             },
         },
-    }
-end
+}

@@ -353,7 +353,7 @@ function decorations.routeInactiveBoundary(instance)
     local horizonKey = routeHorizon.key({
         routeBiomeIndex = horizon.routeBiomeIndex,
         tabKey = routeHorizon.tabKeyForInvalid(horizon),
-        routeOrdinal = horizon.routeOrdinal,
+        routeOrdinal = routeHorizon.routeOrdinalForInvalid(horizon),
     })
     if horizonKey ~= nil then
         return false, {

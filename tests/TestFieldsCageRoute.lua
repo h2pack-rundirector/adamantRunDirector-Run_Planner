@@ -132,6 +132,81 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureRendersInRo
     lu.assertEquals(rewardSiblingDropdownCount, 0)
 end
 
+function TestRunPlannerFieldsCageRoute.testFieldsCageRoomsViewEditsNextPickedDoor()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(2, "RoleKey"):write("Combat")
+    fields.Rooms:get(2, "OptionKey"):write("H_Combat04")
+    fields.Rooms:get(2, "VariantKey"):write("TwoRewards")
+    fields.Rooms:get(3, "RoleKey"):write("Combat")
+    fields.Rooms:get(3, "OptionKey"):write("H_Combat05")
+    fields.Rooms:get(3, "VariantKey"):write("TwoRewards")
+    local control = template.createUi(fields, instance)
+    local row3RoleField = fields.Rooms:get(3, "RoleKey")
+    local row3OptionField = fields.Rooms:get(3, "OptionKey")
+    local row3VariantField = fields.Rooms:get(3, "VariantKey")
+    local row3SiblingField = fields.Rooms:get(3, "SiblingStructureKey")
+    local row3RoleDropdowns = 0
+    local row3OptionDropdowns = 0
+    local row3VariantDropdowns = 0
+    local row3SiblingDropdowns = 0
+    local draw = noOpDraw()
+
+    draw.widgets.dropdown = function(field)
+        if field == row3RoleField then
+            row3RoleDropdowns = row3RoleDropdowns + 1
+        elseif field == row3OptionField then
+            row3OptionDropdowns = row3OptionDropdowns + 1
+        elseif field == row3VariantField then
+            row3VariantDropdowns = row3VariantDropdowns + 1
+        elseif field == row3SiblingField then
+            row3SiblingDropdowns = row3SiblingDropdowns + 1
+        end
+        return false
+    end
+
+    template.views.rooms(draw, control, instance)
+
+    lu.assertEquals(row3RoleDropdowns, 1)
+    lu.assertEquals(row3OptionDropdowns, 1)
+    lu.assertEquals(row3VariantDropdowns, 1)
+    lu.assertEquals(row3SiblingDropdowns, 1)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageRoomsViewShowsMinibossOptionsForPickedDoor()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(2, "RoleKey"):write("Miniboss")
+    local control = template.createUi(fields, instance)
+    local row2OptionField = fields.Rooms:get(2, "OptionKey")
+    local optionValues
+    local draw = noOpDraw()
+
+    draw.widgets.dropdown = function(field, opts)
+        if field == row2OptionField then
+            optionValues = opts.values
+        end
+        return false
+    end
+
+    template.views.rooms(draw, control, instance)
+
+    lu.assertEquals(optionValues, {
+        "H_MiniBoss01",
+        "H_MiniBoss02",
+    })
+end
+
 function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureIsImplicitAtFirstPick()
     local catalog = loadCatalog()
     local template = loadFieldsCageTemplate()

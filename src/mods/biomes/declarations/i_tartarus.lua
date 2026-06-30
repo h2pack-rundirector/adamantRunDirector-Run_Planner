@@ -1,18 +1,18 @@
-return function(deps)
-    local goalCombatRole = "GoalCombat"
-    local rewardCombatRole = "RewardCombat"
-    local prebossRole = "Preboss"
-    local layout = import("mods/biomes/declarations/i_tartarus_layout.lua")(deps)
-    local topology = import("mods/biomes/declarations/i_tartarus_topology.lua")({
-        layout = layout,
-        goalCombatRole = goalCombatRole,
-        rewardCombatRole = rewardCombatRole,
-        prebossRole = prebossRole,
-    })
-    local parser = deps.parser
-    local rewards = deps.rewards
+local deps = ...
+local goalCombatRole = "GoalCombat"
+local rewardCombatRole = "RewardCombat"
+local prebossRole = "Preboss"
+local layout = import("mods/biomes/declarations/i_tartarus_layout.lua")(deps)
+local topology = import("mods/biomes/declarations/i_tartarus_topology.lua")({
+    layout = layout,
+    goalCombatRole = goalCombatRole,
+    rewardCombatRole = rewardCombatRole,
+    prebossRole = prebossRole,
+})
+local parser = deps.parser
+local rewards = deps.rewards
 
-    return {
+return {
         key = "I",
         label = "Tartarus",
         region = "Underworld",
@@ -132,5 +132,4 @@ return function(deps)
                 biomeEncounterDepthCost = 0,
             },
         },
-    }
-end
+}

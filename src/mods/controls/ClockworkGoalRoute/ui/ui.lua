@@ -31,6 +31,7 @@ local rooms = import("mods/controls/ClockworkGoalRoute/ui/rooms.lua", nil, {
     resetRowDetails = resetRowDetails,
     valueStateHelpers = deps.valueStateHelpers,
     decorations = deps.decorations,
+    nextChoiceView = deps.nextChoiceView,
 })
 local rewards = import("mods/controls/ClockworkGoalRoute/ui/rewards.lua", nil, {
     data = data,

@@ -7,8 +7,8 @@ local slots = import("mods/controls/FixedLinearRoute/data/slots.lua", nil, {
 })
 local topologyFactory = import("mods/controls/FixedLinearRoute/data/topology.lua", nil, {
     common = common,
-    roomTopologyAdapter = deps.roomTopologyAdapter,
     roomTopology = deps.roomTopology,
+    topologyControls = deps.topologyControls,
     slots = slots,
 })
 

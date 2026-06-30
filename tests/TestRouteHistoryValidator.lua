@@ -259,9 +259,18 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateConcre
     lu.assertEquals(result.invalids[1].biomeKey, "F")
     lu.assertEquals(result.invalids[1].roomKey, "F_Combat02")
 
-    local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
+    local catalog = h.loadCatalog()
+    local feedback = historyFeedback.fromResult({
+        biomeLookup = catalog.lookup,
+        findings = result.findings,
+        invalids = result.invalids,
+    })
     local states = historyFeedback.valueStatesForControl(feedback, "F", 3, "OptionKey")
     lu.assertEquals(states.F_Combat02, valueStates.INVALID)
+    lu.assertEquals(feedback.route.primary.rowIndex, 3)
+    lu.assertEquals(feedback.route.primary.routeOrdinal, 2)
+    lu.assertEquals(feedback.route.primary.renderRowIndex, 2)
+    lu.assertEquals(feedback.route.primary.renderRouteOrdinal, 1)
 end
 
 function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateCappedRole()
@@ -1278,4 +1287,36 @@ function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsDevotionS
     lu.assertEquals(feedback.route.related[1].lootType, "Devotion")
     lu.assertEquals(feedback.route.related[1].markerKind, "related")
     lu.assertEquals(#feedback.route.markers, 2)
+end
+
+function TestRunPlannerRouteHistoryValidator.testErebusTopologyControlsAreActiveAtFirstGeneratedRoom()
+    local catalog = h.loadCatalog()
+    local template = h.loadFixedLinearTemplate()
+    local history = buildHistory(catalog.routes.lookup.Underworld, "F", template, {
+        {
+            RoleKey = "Opening",
+            OptionKey = "F_Opening01",
+            Reward1Key = "SpellDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat02",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+            SiblingStructureKey = "Combat",
+            SiblingRewardClassKey = "Major",
+        },
+    })
+
+    local feedback = historyFeedback.fromResult({
+        route = catalog.routes.lookup.Underworld,
+        biomeLookup = catalog.lookup,
+        history = history,
+        findings = {},
+        invalids = {},
+    })
+
+    lu.assertEquals(routeHistory.byKind(history, "room")[2].biomeDepthCache, 0)
+    lu.assertTrue(feedback.byBiome.F[2].topology.active)
+    lu.assertTrue(feedback.byBiome.F[2].topology.controlsActive)
 end

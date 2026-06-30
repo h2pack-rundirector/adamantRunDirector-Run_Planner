@@ -1,13 +1,13 @@
-return function(deps)
-    local layout = import("mods/biomes/declarations/h_fields_layout.lua")()
-    local topology = import("mods/biomes/declarations/h_fields_topology.lua")({
-        layout = layout,
-    })
-    local parser = deps.parser
-    local rewards = deps.rewards
-    local routeRules = deps.routeRules
+local deps = ...
+local layout = import("mods/biomes/declarations/h_fields_layout.lua")()
+local topology = import("mods/biomes/declarations/h_fields_topology.lua")({
+    layout = layout,
+})
+local parser = deps.parser
+local rewards = deps.rewards
+local routeRules = deps.routeRules
 
-    return {
+return {
         key = "H",
         label = "Fields",
         region = "Underworld",
@@ -94,5 +94,4 @@ return function(deps)
                 reserve = true,
             },
         },
-    }
-end
+}

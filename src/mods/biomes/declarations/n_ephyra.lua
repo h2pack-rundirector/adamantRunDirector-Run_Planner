@@ -1,13 +1,13 @@
-return function(deps)
-    local layout = import("mods/biomes/declarations/n_ephyra_layout.lua")(deps)
-    local topology = import("mods/biomes/declarations/n_ephyra_topology.lua")({
-        layout = layout,
-    })
-    local parser = deps.parser
-    local rewards = deps.rewards
-    local routeRules = deps.routeRules
+local deps = ...
+local layout = import("mods/biomes/declarations/n_ephyra_layout.lua")(deps)
+local topology = import("mods/biomes/declarations/n_ephyra_topology.lua")({
+    layout = layout,
+})
+local parser = deps.parser
+local rewards = deps.rewards
+local routeRules = deps.routeRules
 
-    return {
+return {
         key = "N",
         label = "Ephyra",
         region = "Surface",
@@ -137,5 +137,4 @@ return function(deps)
                 reserve = true,
             },
         },
-    }
-end
+}

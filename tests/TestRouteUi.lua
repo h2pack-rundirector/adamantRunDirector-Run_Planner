@@ -788,6 +788,42 @@ function TestRunPlannerRouteUi.testDecorationsRouteInactiveBoundaryIgnoresLaterB
     lu.assertNil(inactiveBoundary)
 end
 
+function TestRunPlannerRouteUi.testDecorationsRouteInactiveBoundaryUsesRenderOrdinal()
+    local decorations = loadDecorations()
+    local horizon = {
+        layer = "route",
+        biomeKey = "F",
+        routeBiomeIndex = 1,
+        routeOrdinal = 3,
+        renderRouteOrdinal = 2,
+        renderTabKey = "rooms",
+    }
+    local routeContext = {
+        blockingHorizon = function()
+            return horizon
+        end,
+        routeInfo = function()
+            return {
+                index = 1,
+            }
+        end,
+        isRouteBiomeInactive = function()
+            return false
+        end,
+    }
+
+    local allInactive, inactiveBoundary = decorations.routeInactiveBoundary({
+        routeContext = routeContext,
+        routeKey = "Underworld",
+        biomeKey = "F",
+    })
+
+    lu.assertFalse(allInactive)
+    lu.assertNotNil(inactiveBoundary)
+    lu.assertFalse(decorations.routeRowInactive(allInactive, inactiveBoundary, { routeOrdinal = 2 }, "rooms"))
+    lu.assertTrue(decorations.routeRowInactive(allInactive, inactiveBoundary, { routeOrdinal = 3 }, "rooms"))
+end
+
 function TestRunPlannerRouteUi.testRouteUiColorsInvalidRouteAndRegionTabs()
     local routeUi
     local capturedTabs

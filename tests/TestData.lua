@@ -379,7 +379,7 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
         "mods/biomes/declarations/p_olympus_topology.lua"
     )
 
-    lu.assertEquals(erebus.topologyWindow, { biomeDepthCache = { min = 1, max = 10 } })
+    lu.assertEquals(erebus.topologyWindow, { biomeDepthCache = { min = 0, max = 10 } })
     lu.assertNil(erebus.siblingControlWindow)
     assertFixedLinearSiblingOptions(erebus, {
         keys = {

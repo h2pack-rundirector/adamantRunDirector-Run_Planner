@@ -1,6 +1,6 @@
 local deps = ...
 local roomTopology = deps.roomTopology
-local roomTopologyAdapter = deps.roomTopologyAdapter
+local topologyControls = deps.topologyControls
 local slots = deps.slots
 
 local topology = {}
@@ -144,18 +144,6 @@ local function siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex,
 end
 
 function topology.create(data)
-    local shared = roomTopologyAdapter.create(data, {
-        namespace = "fixed",
-        slots = slots,
-        indexedAliases = true,
-        topologyForInstance = function(instance)
-            return instance.biome.roomTopology
-        end,
-        hasSelectableSiblingStructure = function(_, _, _, roleKey, _, option)
-            return hasSelectableSiblingStructure(roleKey, option)
-        end,
-    })
-
     local function implicitSiblingStructure(instance, rows, rowIndex)
         if data.siblingTopologyStatus(instance, rows, rowIndex).valid ~= true
             or data.siblingStructureStatus(instance, rows, rowIndex).valid == true
@@ -170,27 +158,6 @@ function topology.create(data)
 
         local policy = instance.siblingStructurePolicy
         return policy and policy.optionsByKey and policy.optionsByKey.Combat or nil
-    end
-
-    local function siblingTopologies(instance, rows, rowIndex)
-        local siblings = {}
-        local count = data.activeSiblingStructureCount(instance, rows, rowIndex)
-        for siblingIndex = 1, count do
-            local _, sibling = data.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
-            if shared.siblingAvailabilityStatus(instance, rows, rowIndex, siblingIndex, sibling).valid ~= true then
-                return nil
-            end
-
-            local siblingTopology = siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex, count, sibling)
-            if siblingTopology == nil then
-                return nil
-            end
-            siblings[#siblings + 1] = siblingTopology
-        end
-        if siblings[1] == nil then
-            return nil
-        end
-        return siblings
     end
 
     local function deterministicRoomTopology(instance, rows, rowIndex)
@@ -226,117 +193,37 @@ function topology.create(data)
         }
     end
 
-    local api = {}
-
-    function api.prepareSiblingStructurePolicy(instance)
-        return shared.prepareSiblingStructurePolicy(instance)
-    end
-
-    function api.prepareSiblingStructureCount(instance)
-        return shared.prepareSiblingStructureCount(instance)
-    end
-
-    function api.maxSiblingStructureCount(instance)
-        return shared.maxSiblingStructureCount(instance)
-    end
-
-    function api.siblingStructureAlias(instance, siblingIndex)
-        return shared.siblingStructureAlias(instance, siblingIndex)
-    end
-
-    function api.siblingStructureLabels(instance)
-        return shared.siblingStructureLabels(instance)
-    end
-
-    function api.siblingStructureValues(instance)
-        return shared.siblingStructureValues(instance)
-    end
-
-    function api.siblingStructureStatus(instance, rows, rowIndex)
-        return shared.siblingStructureStatus(instance, rows, rowIndex)
-    end
-
-    function api.siblingTopologyStatus(instance, rows, rowIndex)
-        return shared.siblingTopologyStatus(instance, rows, rowIndex)
-    end
-
-    function api.activeSiblingStructureCount(instance, rows, rowIndex)
-        return shared.activeSiblingStructureCount(instance, rows, rowIndex)
-    end
-
-    function api.shouldDrawSiblingStructure(instance, rows, rowIndex, siblingIndex)
-        return shared.shouldDrawSiblingStructure(instance, rows, rowIndex, siblingIndex)
-    end
-
-    function api.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
-        local implicit = implicitSiblingStructure(instance, rows, rowIndex)
-        if implicit ~= nil then
-            return implicit.key, implicit
-        end
-        return shared.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
-    end
-
-    function api.siblingStructureValueStatesForRow(instance, rows, rowIndex, siblingIndex)
-        return shared.siblingStructureValueStatesForRow(instance, rows, rowIndex, siblingIndex)
-    end
-
-    function api.validateRoomTopology(instance, rows, rowIndex)
-        local roleKey = data.resolveRole(instance, rows, rowIndex)
-        local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
-        if not hasSelectableSiblingStructure(roleKey, option) then
-            return nil
-        end
-
-        local siblingInvalid = shared.validateSiblingStructures(instance, rows, rowIndex, {
-            requiredCode = "fixed_sibling_structure_required",
-            requiredMessage = "Topology needs sibling door structure",
-            unavailableCode = "fixed_sibling_structure_unavailable",
-            unavailableMessage = function(sibling, siblingKey)
-                return "Sibling " .. tostring(sibling.label or siblingKey) .. " is not valid at this depth"
-            end,
-        })
-        if siblingInvalid ~= nil then
-            return siblingInvalid
-        end
-
-        local forcedStatus = roomTopology.forcedGroupsStatus(
-            instance.siblingStructurePolicy,
-            shared.siblingPolicyContext(instance, rows, rowIndex)
-        )
-        if not forcedStatus.valid then
-            return forcedStatus
-        end
-        return nil
-    end
-
-    function api.roomTopology(instance, rows, rowIndex)
-        local deterministic = deterministicRoomTopology(instance, rows, rowIndex)
-        if deterministic ~= nil then
-            return deterministic
-        end
-
-        if instance.siblingStructurePolicy == nil
-            or data.isFixedIdentityRow(instance, rowIndex)
-            or not data.siblingTopologyStatus(instance, rows, rowIndex).valid
-        then
-            return nil
-        end
-
-        local selected = selectedRoomTopologyForRow(data, instance, rows, rowIndex)
-        local siblings = siblingTopologies(instance, rows, rowIndex)
-        if selected == nil or siblings == nil then
-            return nil
-        end
-
-        return {
-            kind = "fixedLinearSiblingChoice",
-            selected = selected,
-            sibling = siblings[1],
-            siblings = siblings,
-        }
-    end
-
-    return api
+    return topologyControls.create(data, {
+        namespace = "fixed",
+        slots = slots,
+        indexedAliases = true,
+        topologyKind = "fixedLinearSiblingChoice",
+        isFixedIdentityRow = data.isFixedIdentityRow,
+        deterministicTopology = deterministicRoomTopology,
+        implicitSiblingStructure = function(_, instance, rows, rowIndex)
+            return implicitSiblingStructure(instance, rows, rowIndex)
+        end,
+        hasSelectableSiblingStructure = function(_, _, _, roleKey, _, option)
+            return hasSelectableSiblingStructure(roleKey, option)
+        end,
+        shouldValidateRow = function(instance, rows, rowIndex)
+            local roleKey = data.resolveRole(instance, rows, rowIndex)
+            local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
+            return hasSelectableSiblingStructure(roleKey, option)
+        end,
+        requiredCode = "fixed_sibling_structure_required",
+        requiredMessage = "Topology needs sibling door structure",
+        unavailableCode = "fixed_sibling_structure_unavailable",
+        unavailableMessage = function(sibling, siblingKey)
+            return "Other Door " .. tostring(sibling.label or siblingKey) .. " is not valid at this depth"
+        end,
+        selectedTopology = function(instance, rows, rowIndex)
+            return selectedRoomTopologyForRow(data, instance, rows, rowIndex)
+        end,
+        siblingTopology = function(instance, rows, rowIndex, siblingIndex, activeSiblingCount, option)
+            return siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex, activeSiblingCount, option)
+        end,
+    })
 end
 
 return topology

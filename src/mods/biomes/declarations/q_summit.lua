@@ -1,13 +1,13 @@
-return function(deps)
-    local layout = import("mods/biomes/declarations/q_summit_layout.lua")
-    local topology = import("mods/biomes/declarations/q_summit_topology.lua")({
-        layout = layout,
-    })
-    local parser = deps.parser
-    local rewards = deps.rewards
-    local routeRules = deps.routeRules
+local deps = ...
+local layout = import("mods/biomes/declarations/q_summit_layout.lua")
+local topology = import("mods/biomes/declarations/q_summit_topology.lua")({
+    layout = layout,
+})
+local parser = deps.parser
+local rewards = deps.rewards
+local routeRules = deps.routeRules
 
-    return {
+return {
         key = "Q",
         label = "Summit",
         region = "Surface",
@@ -65,5 +65,4 @@ return function(deps)
                 reserve = true,
             },
         },
-    }
-end
+}

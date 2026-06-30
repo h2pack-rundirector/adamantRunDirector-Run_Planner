@@ -207,7 +207,7 @@ function overview.install(context, deps)
         local horizonKey = routeHorizon.key({
             routeBiomeIndex = horizon.routeBiomeIndex,
             tabKey = routeHorizon.tabKeyForInvalid(horizon),
-            routeOrdinal = horizon.routeOrdinal,
+            routeOrdinal = routeHorizon.routeOrdinalForInvalid(horizon),
         })
         if horizonKey == nil then
             return self:isRouteBiomeInactive(routeKey, biomeKey)

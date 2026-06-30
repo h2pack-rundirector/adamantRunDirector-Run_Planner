@@ -194,6 +194,108 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyControlsUseRouteF
     lu.assertFalse(data.shouldDrawSiblingStructure(instance, rows, 3, 1))
 end
 
+function TestRunPlannerFixedLinearRoute.testFixedLinearRoomsViewEditsNextPickedDoor()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(1, "OptionKey"):write("F_Opening01")
+    fields.Rooms:get(2, "RoleKey"):write("Combat")
+    fields.Rooms:get(2, "OptionKey"):write("F_Combat02")
+    local control = template.createUi(fields, instance)
+    local row2RoleField = fields.Rooms:get(2, "RoleKey")
+    local row2OptionField = fields.Rooms:get(2, "OptionKey")
+    local row2SiblingField = fields.Rooms:get(2, "SiblingStructureKey")
+    local row2RoleDropdowns = 0
+    local row2OptionDropdowns = 0
+    local row2SiblingDropdowns = 0
+    local draw = noOpDraw()
+
+    draw.widgets.dropdown = function(field)
+        if field == row2RoleField then
+            row2RoleDropdowns = row2RoleDropdowns + 1
+        elseif field == row2OptionField then
+            row2OptionDropdowns = row2OptionDropdowns + 1
+        elseif field == row2SiblingField then
+            row2SiblingDropdowns = row2SiblingDropdowns + 1
+        end
+        return false
+    end
+
+    template.views.rooms(draw, control, instance)
+
+    lu.assertEquals(row2RoleDropdowns, 1)
+    lu.assertEquals(row2OptionDropdowns, 1)
+    lu.assertEquals(row2SiblingDropdowns, 1)
+end
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearOpeningDoesNotUsePickedDoorExitCountForSibling()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(1, "OptionKey"):write("F_Opening01")
+    fields.Rooms:get(2, "RoleKey"):write("Combat")
+    fields.Rooms:get(2, "OptionKey"):write("F_Combat02")
+    local control = template.createUi(fields, instance)
+    local row1SiblingField = fields.Rooms:get(1, "SiblingStructureKey")
+    local row2SiblingField = fields.Rooms:get(2, "SiblingStructureKey")
+    local row1SiblingDropdowns = 0
+    local row2SiblingDropdowns = 0
+    local draw = noOpDraw()
+
+    draw.widgets.dropdown = function(field)
+        if field == row1SiblingField then
+            row1SiblingDropdowns = row1SiblingDropdowns + 1
+        elseif field == row2SiblingField then
+            row2SiblingDropdowns = row2SiblingDropdowns + 1
+        end
+        return false
+    end
+
+    template.views.rooms(draw, control, instance)
+
+    lu.assertEquals(row1SiblingDropdowns, 0)
+    lu.assertEquals(row2SiblingDropdowns, 1)
+end
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearRoomsViewShowsMinibossOptionsForPickedDoor()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(1, "OptionKey"):write("F_Opening01")
+    fields.Rooms:get(2, "RoleKey"):write("Miniboss")
+    local control = template.createUi(fields, instance)
+    local row2OptionField = fields.Rooms:get(2, "OptionKey")
+    local optionValues
+    local draw = noOpDraw()
+
+    draw.widgets.dropdown = function(field, opts)
+        if field == row2OptionField then
+            optionValues = opts.values
+        end
+        return false
+    end
+
+    template.views.rooms(draw, control, instance)
+
+    lu.assertEquals(optionValues, {
+        "F_MiniBoss01",
+        "F_MiniBoss02",
+        "F_MiniBoss03",
+    })
+end
+
 function TestRunPlannerFixedLinearRoute.testFixedLinearRewardRatioSummaryCountsMajorMinorChoices()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()

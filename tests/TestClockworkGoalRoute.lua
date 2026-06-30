@@ -330,6 +330,85 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalCombatRoomsCannotRepe
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "RewardCombat").I_Combat01)
 end
 
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalRoomsViewEditsNextPickedDoor()
+    local catalog = loadCatalog()
+    local template = loadClockworkGoalTemplate()
+    local instance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(2, "RouteKindKey"):write("Goal")
+    fields.Rooms:get(2, "OptionKey"):write("I_Combat01")
+    fields.Rooms:get(2, "SiblingStructureKey"):write("CombatReward")
+    fields.Rooms:get(3, "RouteKindKey"):write("NonGoal")
+    fields.Rooms:get(3, "NonGoalKindKey"):write("RewardCombat")
+    fields.Rooms:get(3, "OptionKey"):write("I_Combat03")
+    fields.Rooms:get(3, "SiblingStructureKey"):write("CombatGoal")
+    local control = template.createUi(fields, instance)
+    local row3RouteKindField = fields.Rooms:get(3, "RouteKindKey")
+    local row3NonGoalKindField = fields.Rooms:get(3, "NonGoalKindKey")
+    local row3OptionField = fields.Rooms:get(3, "OptionKey")
+    local row3SiblingField = fields.Rooms:get(3, "SiblingStructureKey")
+    local row3RouteKindDropdowns = 0
+    local row3NonGoalKindDropdowns = 0
+    local row3OptionDropdowns = 0
+    local row3SiblingDropdowns = 0
+    local draw = noOpDraw()
+
+    draw.widgets.dropdown = function(field)
+        if field == row3RouteKindField then
+            row3RouteKindDropdowns = row3RouteKindDropdowns + 1
+        elseif field == row3NonGoalKindField then
+            row3NonGoalKindDropdowns = row3NonGoalKindDropdowns + 1
+        elseif field == row3OptionField then
+            row3OptionDropdowns = row3OptionDropdowns + 1
+        elseif field == row3SiblingField then
+            row3SiblingDropdowns = row3SiblingDropdowns + 1
+        end
+        return false
+    end
+
+    template.views.rooms(draw, control, instance)
+
+    lu.assertEquals(row3RouteKindDropdowns, 1)
+    lu.assertEquals(row3NonGoalKindDropdowns, 1)
+    lu.assertEquals(row3OptionDropdowns, 1)
+    lu.assertEquals(row3SiblingDropdowns, 1)
+end
+
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalRoomsViewShowsMinibossOptionsForPickedDoor()
+    local catalog = loadCatalog()
+    local template = loadClockworkGoalTemplate()
+    local instance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(2, "RouteKindKey"):write("Goal")
+    fields.Rooms:get(2, "OptionKey"):write("I_Combat01")
+    fields.Rooms:get(3, "RouteKindKey"):write("NonGoal")
+    fields.Rooms:get(3, "NonGoalKindKey"):write("Miniboss")
+    local control = template.createUi(fields, instance)
+    local row3OptionField = fields.Rooms:get(3, "OptionKey")
+    local optionValues
+    local draw = noOpDraw()
+
+    draw.widgets.dropdown = function(field, opts)
+        if field == row3OptionField then
+            optionValues = opts.values
+        end
+        return false
+    end
+
+    template.views.rooms(draw, control, instance)
+
+    lu.assertEquals(optionValues, {
+        "I_MiniBoss01",
+        "I_MiniBoss02",
+    })
+end
+
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalEmitsDumbSelectedRowsSnapshot()
     local catalog = loadCatalog()

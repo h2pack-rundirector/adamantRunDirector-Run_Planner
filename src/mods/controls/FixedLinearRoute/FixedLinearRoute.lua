@@ -8,7 +8,7 @@ dataDeps.common = deps.form.common
 dataDeps.rowData = deps.form.rowData
 dataDeps.valueStates = deps.form.valueStates
 dataDeps.roomTopology = biomeHelpers.roomTopology
-dataDeps.roomTopologyAdapter = biomeHelpers.roomTopologyAdapter
+dataDeps.topologyControls = biomeHelpers.topologyControls
 dataDeps.roomStructure = biomeHelpers.roomStructure
 dataDeps.slotTimeline = deps.form.slots
 
@@ -29,6 +29,7 @@ local ui = import("mods/controls/FixedLinearRoute/ui/ui.lua", nil, {
     valueStateHelpers = deps.form.feedback,
     decorations = deps.decorations,
     form = deps.form,
+    nextChoiceView = biomeHelpers.nextChoiceView,
 })
 
 return {

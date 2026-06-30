@@ -11,13 +11,6 @@ local BIOME_IMPORTS = {
     "mods/biomes/declarations/q_summit.lua",
 }
 
-local function resolveDefinition(imported, deps)
-    if type(imported) == "function" then
-        return imported(deps)
-    end
-    return imported
-end
-
 function assembly.load(opts)
     opts = opts or {}
 
@@ -30,7 +23,7 @@ function assembly.load(opts)
     local lookup = {}
 
     for _, importPath in ipairs(BIOME_IMPORTS) do
-        local definition = biomeParser.normalize(resolveDefinition(import(importPath), declarationDeps))
+        local definition = biomeParser.normalize(import(importPath, nil, declarationDeps))
         ordered[#ordered + 1] = definition
         lookup[definition.key] = definition
     end

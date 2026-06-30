@@ -67,7 +67,7 @@ return function(deps)
 
     return {
         topologyWindow = {
-            biomeDepthCache = { min = 1, max = 10 },
+            biomeDepthCache = { min = 0, max = 10 },
         },
         forcedGroups = {
             {
