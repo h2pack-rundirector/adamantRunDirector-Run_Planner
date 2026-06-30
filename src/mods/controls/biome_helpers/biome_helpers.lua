@@ -1,12 +1,12 @@
 local deps = ...
-local route = deps.route
+local form = deps.form
 
 local roomStructure = import("mods/controls/biome_helpers/room_structure.lua")
 local roomTopology = import("mods/controls/biome_helpers/room_topology.lua", nil, {
-    common = route.common,
+    common = form.common,
     roomStructure = roomStructure,
-    valueStates = route.valueStates,
-    form = route.controlForm,
+    valueStates = form.valueStates,
+    form = form,
 })
 
 return {
@@ -14,14 +14,14 @@ return {
     roomStructure = roomStructure,
     roomTopology = roomTopology,
     valueStates = import("mods/controls/biome_helpers/value_states.lua", nil, {
-        valueStates = route.valueStates,
+        valueStates = form.valueStates,
     }),
     roomTopologyAdapter = import("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
-        common = route.common,
-        readCache = route.readCache,
+        common = form.common,
+        readCache = form.readCache,
         roomStructure = roomStructure,
         roomTopology = roomTopology,
-        valueStates = route.valueStates,
-        form = route.controlForm,
+        valueStates = form.valueStates,
+        form = form,
     }),
 }

@@ -7,6 +7,7 @@ local godData = deps.godData
 local form = route.controlForm
 local biomeHelpers = import("mods/controls/biome_helpers/biome_helpers.lua", nil, {
     route = route,
+    form = form,
 })
 
 return {

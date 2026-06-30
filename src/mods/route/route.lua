@@ -9,21 +9,14 @@ function routeFactory.create(opts)
     local routePosition = import("mods/route/position.lua")
     local invalidLocations = import("mods/route/invalid_locations.lua")
     local controlForm = import("mods/controls/form.lua", nil, {
-        valueStates = import("mods/route/value_states.lua"),
-    })
-    local rows = import("mods/route/rows.lua", nil, {
         rewards = rewards,
-        timeline = routeTimeline,
+        valueStates = import("mods/route/value_states.lua"),
     })
     local historySystem = import("mods/route/history/assembly.lua").create({
         rewardDomain = rewards.rewardDomain,
         selectedLegalityRules = rewards.selectedLegalityRules,
     })
     local route = {
-        common = rows.common,
-        readCache = rows.readCache,
-        valueStates = rows.valueStates,
-        rowEngine = rows.engine,
         timeline = routeTimeline,
         controlForm = controlForm,
         invalidLocations = invalidLocations,

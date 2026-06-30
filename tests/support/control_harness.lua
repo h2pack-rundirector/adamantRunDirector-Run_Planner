@@ -62,17 +62,10 @@ local function loadRouteDeps()
         local timeline = testImport("mods/route/timeline.lua")
         local valueStates = testImport("mods/route/value_states.lua")
         local controlForm = testImport("mods/controls/form.lua", nil, {
+            rewards = rewards,
             valueStates = valueStates,
         })
-        local rows = testImport("mods/route/rows.lua", nil, {
-            rewards = rewards,
-            timeline = timeline,
-        })
         route = {
-            common = rows.common,
-            readCache = rows.readCache,
-            valueStates = rows.valueStates,
-            rowEngine = rows.engine,
             timeline = timeline,
             controlForm = controlForm,
             rewards = rewards,
@@ -120,25 +113,34 @@ local function loadRouteGlobalTemplate()
     return loadControlTemplates().RouteGlobal
 end
 
+local function addFormDeps(deps, routeDeps)
+    local form = routeDeps.controlForm
+    deps.common = form.common
+    deps.readCache = form.readCache
+    deps.rowData = form.rowData
+    deps.valueStates = form.valueStates
+end
+
 local function loadFixedLinearData()
     local routeDeps = loadRouteDeps()
     local deps = {}
     for key, value in pairs(routeDeps) do
         deps[key] = value
     end
+    addFormDeps(deps, routeDeps)
     deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     deps.roomTopology = testImport("mods/controls/biome_helpers/room_topology.lua", nil, {
-        common = routeDeps.common,
+        common = deps.common,
         roomStructure = deps.roomStructure,
-        valueStates = routeDeps.valueStates,
+        valueStates = deps.valueStates,
         form = routeDeps.controlForm,
     })
     deps.roomTopologyAdapter = testImport("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
-        common = routeDeps.common,
-        readCache = routeDeps.readCache,
+        common = deps.common,
+        readCache = deps.readCache,
         roomTopology = deps.roomTopology,
         roomStructure = deps.roomStructure,
-        valueStates = routeDeps.valueStates,
+        valueStates = deps.valueStates,
         form = routeDeps.controlForm,
     })
     return withTestImport(function()
@@ -152,19 +154,20 @@ local function loadClockworkGoalData()
     for key, value in pairs(routeDeps) do
         deps[key] = value
     end
+    addFormDeps(deps, routeDeps)
     deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     deps.roomTopology = testImport("mods/controls/biome_helpers/room_topology.lua", nil, {
-        common = routeDeps.common,
+        common = deps.common,
         roomStructure = deps.roomStructure,
-        valueStates = routeDeps.valueStates,
+        valueStates = deps.valueStates,
         form = routeDeps.controlForm,
     })
     deps.roomTopologyAdapter = testImport("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
-        common = routeDeps.common,
-        readCache = routeDeps.readCache,
+        common = deps.common,
+        readCache = deps.readCache,
         roomTopology = deps.roomTopology,
         roomStructure = deps.roomStructure,
-        valueStates = routeDeps.valueStates,
+        valueStates = deps.valueStates,
         form = routeDeps.controlForm,
     })
     return withTestImport(function()
@@ -173,11 +176,23 @@ local function loadClockworkGoalData()
 end
 
 local function loadHubPylonData()
-    return testImport("mods/controls/HubPylonRoute/data.lua", nil, loadRouteDeps())
+    local routeDeps = loadRouteDeps()
+    local deps = {}
+    for key, value in pairs(routeDeps) do
+        deps[key] = value
+    end
+    addFormDeps(deps, routeDeps)
+    return testImport("mods/controls/HubPylonRoute/data.lua", nil, deps)
 end
 
 local function loadMultiEncounterData()
-    return testImport("mods/controls/MultiEncounterFixedRoute/data.lua", nil, loadRouteDeps())
+    local routeDeps = loadRouteDeps()
+    local deps = {}
+    for key, value in pairs(routeDeps) do
+        deps[key] = value
+    end
+    addFormDeps(deps, routeDeps)
+    return testImport("mods/controls/MultiEncounterFixedRoute/data.lua", nil, deps)
 end
 
 local function loadFieldsCageDeps()
@@ -186,19 +201,20 @@ local function loadFieldsCageDeps()
     for key, value in pairs(routeDeps) do
         deps[key] = value
     end
+    addFormDeps(deps, routeDeps)
     deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     deps.roomTopology = testImport("mods/controls/biome_helpers/room_topology.lua", nil, {
-        common = routeDeps.common,
+        common = deps.common,
         roomStructure = deps.roomStructure,
-        valueStates = routeDeps.valueStates,
+        valueStates = deps.valueStates,
         form = routeDeps.controlForm,
     })
     deps.roomTopologyAdapter = testImport("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
-        common = routeDeps.common,
-        readCache = routeDeps.readCache,
+        common = deps.common,
+        readCache = deps.readCache,
         roomTopology = deps.roomTopology,
         roomStructure = deps.roomStructure,
-        valueStates = routeDeps.valueStates,
+        valueStates = deps.valueStates,
         form = routeDeps.controlForm,
     })
     return deps

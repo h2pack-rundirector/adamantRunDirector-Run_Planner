@@ -1,7 +1,7 @@
 local deps = ...
 local common = deps.common
 local timeline = deps.timeline
-local rowEngine = deps.rowEngine
+local rowData = deps.rowData
 local valueStates = deps.valueStates
 local slots = import("mods/controls/ClockworkGoalRoute/data/slots.lua", nil, {
     common = common,
@@ -203,7 +203,7 @@ local adapter = {
 
 }
 
-data = rowEngine.create(adapter)
+data = rowData.create(adapter)
 topology = topologyFactory.create(data)
 
 function data.prepare(instance)

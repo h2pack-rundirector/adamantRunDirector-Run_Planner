@@ -1,10 +1,17 @@
 local deps = ...
 local biomeHelpers = deps.biomeHelpers
 local sideRoomProbability = import("mods/controls/HubPylonRoute/side_room_probability.lua")
-local data = import("mods/controls/HubPylonRoute/data.lua", nil, deps.route)
+local dataDeps = {}
+for key, value in pairs(deps.route) do
+    dataDeps[key] = value
+end
+dataDeps.common = deps.form.common
+dataDeps.rowData = deps.form.rowData
+dataDeps.valueStates = deps.form.valueStates
+local data = import("mods/controls/HubPylonRoute/data.lua", nil, dataDeps)
 local runtime = import("mods/controls/HubPylonRoute/runtime.lua", nil, {
     data = data,
-    common = deps.route.common,
+    common = deps.form.common,
     rewards = deps.rewards,
     roomStructure = biomeHelpers.roomStructure,
     sideRoomProbability = sideRoomProbability,

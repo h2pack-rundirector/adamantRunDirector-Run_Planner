@@ -4,6 +4,9 @@ local dataDeps = {}
 for key, value in pairs(deps.route) do
     dataDeps[key] = value
 end
+dataDeps.common = deps.form.common
+dataDeps.rowData = deps.form.rowData
+dataDeps.valueStates = deps.form.valueStates
 dataDeps.roomTopology = biomeHelpers.roomTopology
 dataDeps.roomTopologyAdapter = biomeHelpers.roomTopologyAdapter
 dataDeps.roomStructure = biomeHelpers.roomStructure
@@ -11,7 +14,7 @@ dataDeps.roomStructure = biomeHelpers.roomStructure
 local data = import("mods/controls/FieldsCageRoute/data/data.lua", nil, dataDeps)
 local runtime = import("mods/controls/FieldsCageRoute/runtime.lua", nil, {
     data = data,
-    common = deps.route.common,
+    common = deps.form.common,
     rewards = deps.rewards,
     roomStructure = biomeHelpers.roomStructure,
     invalidLocations = deps.route.invalidLocations,

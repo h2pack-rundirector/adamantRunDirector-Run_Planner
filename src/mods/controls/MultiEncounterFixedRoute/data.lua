@@ -1,7 +1,7 @@
 local deps = ...
 local common = deps.common
 local timeline = deps.timeline
-local rowEngine = deps.rowEngine
+local rowData = deps.rowData
 
 local shallowCopyList = common.shallowCopyList
 local buildLookup = common.buildLookup
@@ -329,7 +329,7 @@ local adapter = {
     end,
 }
 
-data = rowEngine.create(adapter)
+data = rowData.create(adapter)
 
 function data.prepare(instance)
     instance.biome = instance.biome or {}

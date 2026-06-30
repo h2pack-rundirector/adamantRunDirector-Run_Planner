@@ -1,9 +1,16 @@
 local deps = ...
 local biomeHelpers = deps.biomeHelpers
-local data = import("mods/controls/MultiEncounterFixedRoute/data.lua", nil, deps.route)
+local dataDeps = {}
+for key, value in pairs(deps.route) do
+    dataDeps[key] = value
+end
+dataDeps.common = deps.form.common
+dataDeps.rowData = deps.form.rowData
+dataDeps.valueStates = deps.form.valueStates
+local data = import("mods/controls/MultiEncounterFixedRoute/data.lua", nil, dataDeps)
 local runtime = import("mods/controls/MultiEncounterFixedRoute/runtime.lua", nil, {
     data = data,
-    common = deps.route.common,
+    common = deps.form.common,
     rewards = deps.rewards,
     roomStructure = biomeHelpers.roomStructure,
     rewardRatio = biomeHelpers.rewardRatio,

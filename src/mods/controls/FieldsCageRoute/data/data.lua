@@ -1,7 +1,7 @@
 local deps = ...
 local common = deps.common
 local timeline = deps.timeline
-local rowEngine = deps.rowEngine
+local rowData = deps.rowData
 local slots = import("mods/controls/FieldsCageRoute/data/slots.lua", nil, {
     common = common,
 })
@@ -196,7 +196,7 @@ local adapter = {
     end,
 }
 
-data = rowEngine.create(adapter)
+data = rowData.create(adapter)
 topology = topologyFactory.create(data)
 
 function data.prepare(instance)

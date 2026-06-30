@@ -4,7 +4,7 @@ local readCache = deps.readCache
 local valueStates = deps.valueStates
 local rewards = deps.rewards
 
-local rowEngine = {}
+local rowData = {}
 
 local VANILLA_ROLE_KEY = common.VANILLA_ROLE_KEY
 
@@ -87,7 +87,7 @@ local function prepareRoles(instance)
     end
 end
 
-function rowEngine.create(adapter)
+function rowData.create(adapter)
     adapter = adapter or {}
 
     local data = {}
@@ -676,4 +676,4 @@ function rowEngine.create(adapter)
     return data
 end
 
-return rowEngine
+return rowData
