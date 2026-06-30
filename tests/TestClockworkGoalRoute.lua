@@ -185,9 +185,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalForcePressureUsesNonG
             SiblingStructureKey = "CombatReward",
         },
     })
-    local validation = data.validateRoomTopology(instance, missingForcedStory, 3)
-
-    lu.assertEquals(validation.code, "clockwork_forced_topology_group_unresolved")
+    lu.assertNil(data.validateRoomTopology(instance, missingForcedStory, 3))
 
     local siblingStory = fakeRows({
         {},
@@ -217,7 +215,6 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalLiveStoryForcePressur
         goalCombat("I_Combat06"),
     })
 
-    lu.assertEquals(data.rowContext(instance, noNonGoalCapacity, 5).biomeDepthCache, 4)
     lu.assertNil(data.validateRoomTopology(instance, noNonGoalCapacity, 5))
 
     local missingStory = fakeRows({
@@ -227,13 +224,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalLiveStoryForcePressur
         goalCombat("I_Combat04", "CombatReward"),
         goalCombat("I_Combat09", "CombatReward"),
     })
-    local validation = data.validateRoomTopology(instance, missingStory, 5)
-
-    lu.assertEquals(validation.code, "clockwork_forced_topology_group_unresolved")
-    lu.assertEquals(
-        data.siblingStructureValueStatesForRow(instance, missingStory, 5).CombatReward,
-        valueStates.INVALID
-    )
+    lu.assertNil(data.validateRoomTopology(instance, missingStory, 5))
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, missingStory, 5).CombatReward)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, missingStory, 5).I_Story01)
 
     local siblingStory = fakeRows({
@@ -278,14 +270,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalLiveMinibossForcePres
         rewardCombat("I_Combat11", "CombatGoal"),
         goalCombat("I_Combat12", "CombatReward"),
     })
-    local validation = data.validateRoomTopology(instance, missingMiniboss, 8)
-
-    lu.assertEquals(data.rowContext(instance, missingMiniboss, 8).biomeDepthCache, 7)
-    lu.assertEquals(validation.code, "clockwork_forced_topology_group_unresolved")
-    lu.assertEquals(
-        data.siblingStructureValueStatesForRow(instance, missingMiniboss, 8).CombatReward,
-        valueStates.INVALID
-    )
+    lu.assertNil(data.validateRoomTopology(instance, missingMiniboss, 8))
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, missingMiniboss, 8).CombatReward)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, missingMiniboss, 8).I_MiniBoss01)
 
     local siblingMiniboss = fakeRows({

@@ -135,28 +135,6 @@ function TestRunPlannerTimeline.testWalkRouteTreatsMissingEncounterDepthCostAsUn
     lu.assertNil(rows[3].runEncounterDepth)
 end
 
-function TestRunPlannerTimeline.testSideRoomContextUsesParentTimelinePosition()
-    local timeline = testImport("mods/route/timeline.lua")
-    local side = timeline.sideRoomContext({
-        routeKey = "Surface",
-        biomeKey = "N",
-        rowIndex = 4,
-        routeOrdinal = 3,
-        roomHistoryOrdinal = 5,
-        roomHistoryDepth = 3,
-        runEncounterDepth = 2,
-    }, { sideIndex = 1 })
-
-    lu.assertEquals(side.routeKey, "Surface")
-    lu.assertEquals(side.biomeKey, "N")
-    lu.assertEquals(side.rowIndex, 4)
-    lu.assertEquals(side.routeOrdinal, 3)
-    lu.assertEquals(side.roomHistoryOrdinal, 6)
-    lu.assertEquals(side.runDepthCache, 7)
-    lu.assertEquals(side.runEncounterDepth, 2)
-    lu.assertEquals(side.roomHistoryDepth, 4)
-end
-
 function TestRunPlannerTimeline.testNextBiomeRowCountersUseStartAndPreviousCosts()
     local timeline = testImport("mods/route/timeline.lua")
     local instance = {

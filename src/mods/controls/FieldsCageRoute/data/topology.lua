@@ -102,9 +102,9 @@ function topology.create(data)
         return count
     end
 
-    local function isFirstFieldsPick(instance, rows, rowIndex)
-        local context = data.rowContext(instance, rows, rowIndex)
-        return context ~= nil and context.biomeDepthCache == 1
+    local function isFirstFieldsPick(instance, _rows, rowIndex)
+        local slot = slots.slotForRow(instance, rowIndex)
+        return slot ~= nil and slot.routeOrdinal == 1
     end
 
     local function implicitFirstPickSiblingStructure(instance, rows, rowIndex)

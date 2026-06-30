@@ -363,12 +363,6 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesUseTopolo
         biome = catalog.lookup.H,
     })
     local rows = fakeRows({})
-    local unresolvedForceRows = fakeRows({
-        {},
-        hCombatTwoRewardRow("H_Combat13"),
-        hCombatTwoRewardRow("H_Combat04", "PoseidonUpgrade"),
-        hCombatTwoRewardRow("H_Combat05", "ApolloUpgrade"),
-    })
 
     lu.assertTrue(data.siblingStructureStatus(instance, rows, 2).valid)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).H_MiniBoss01)
@@ -384,11 +378,6 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesUseTopolo
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).H_MiniBoss01)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).H_MiniBoss02)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).Bridge)
-
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, unresolvedForceRows, 5).H_MiniBoss01, valueStates.INVALID)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, unresolvedForceRows, 5).H_MiniBoss02, valueStates.INVALID)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, unresolvedForceRows, 5).Bridge, valueStates.INVALID)
-    lu.assertEquals(data.siblingStructureStatus(instance, rows, 6).code, "biome_depth_unavailable")
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkMismatchedCombatCageCount()
@@ -441,8 +430,8 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkUnres
         },
     })
 
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).CombatCage2, valueStates.INVALID)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).CombatCage3, valueStates.INVALID)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).CombatCage2)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).CombatCage3)
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02)
 end
 

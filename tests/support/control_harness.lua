@@ -126,12 +126,13 @@ local function loadFixedLinearData()
     for key, value in pairs(routeDeps) do
         deps[key] = value
     end
+    deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     deps.roomTopology = testImport("mods/controls/biome_helpers/room_topology.lua", nil, {
         common = routeDeps.common,
+        roomStructure = deps.roomStructure,
         valueStates = routeDeps.valueStates,
         form = routeDeps.controlForm,
     })
-    deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     deps.roomTopologyAdapter = testImport("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
         common = routeDeps.common,
         readCache = routeDeps.readCache,
@@ -151,12 +152,13 @@ local function loadClockworkGoalData()
     for key, value in pairs(routeDeps) do
         deps[key] = value
     end
+    deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     deps.roomTopology = testImport("mods/controls/biome_helpers/room_topology.lua", nil, {
         common = routeDeps.common,
+        roomStructure = deps.roomStructure,
         valueStates = routeDeps.valueStates,
         form = routeDeps.controlForm,
     })
-    deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     deps.roomTopologyAdapter = testImport("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
         common = routeDeps.common,
         readCache = routeDeps.readCache,
@@ -184,12 +186,13 @@ local function loadFieldsCageDeps()
     for key, value in pairs(routeDeps) do
         deps[key] = value
     end
+    deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     deps.roomTopology = testImport("mods/controls/biome_helpers/room_topology.lua", nil, {
         common = routeDeps.common,
+        roomStructure = deps.roomStructure,
         valueStates = routeDeps.valueStates,
         form = routeDeps.controlForm,
     })
-    deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     deps.roomTopologyAdapter = testImport("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
         common = routeDeps.common,
         readCache = routeDeps.readCache,

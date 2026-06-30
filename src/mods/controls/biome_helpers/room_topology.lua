@@ -1,5 +1,6 @@
 local deps = ...
 local common = deps.common
+local roomStructure = deps.roomStructure
 local valueStates = deps.valueStates
 local form = deps.form
 
@@ -10,7 +11,6 @@ local invalidStatus = common.invalidStatus
 local roomTopology = {}
 
 local EMPTY_VALUES = {}
-local MAX_NORMAL_SIBLING_COUNT = 2
 
 local function clearMap(map)
     for key in pairs(map) do
@@ -28,31 +28,6 @@ end
 
 local function statusCode(policy, suffix)
     return tostring(policy.namespace or "topology") .. "_" .. suffix
-end
-
-local function rangeContains(range, value)
-    if range == nil then
-        return true
-    end
-    if value == nil then
-        return false
-    end
-    if range.exact ~= nil and value ~= range.exact then
-        return false
-    end
-    if range.min ~= nil and value < range.min then
-        return false
-    end
-    if range.max ~= nil and value > range.max then
-        return false
-    end
-    if range.minExclusive ~= nil and value <= range.minExclusive then
-        return false
-    end
-    if range.maxExclusive ~= nil and value >= range.maxExclusive then
-        return false
-    end
-    return true
 end
 
 function roomTopology.roomKey(candidate)
@@ -137,28 +112,6 @@ function roomTopology.prepareSiblingPolicy(topology, opts)
     return policy
 end
 
-local function windowStatus(policy, rowContext, availabilityField)
-    if policy == nil then
-        return validStatus()
-    end
-    local window = policy[availabilityField]
-    if window == nil then
-        return validStatus()
-    end
-    if not rangeContains(window.biomeDepthCache, rowContext and rowContext.biomeDepthCache) then
-        return invalidStatus("biome_depth_unavailable", "Topology controls are not active at this biome depth")
-    end
-    return validStatus()
-end
-
-function roomTopology.siblingTopologyStatus(policy, rowContext)
-    return windowStatus(policy, rowContext, "topologyAvailability")
-end
-
-function roomTopology.siblingControlStatus(policy, rowContext)
-    return windowStatus(policy, rowContext, "controlAvailability")
-end
-
 function roomTopology.generationSourceRowIndex(rowIndex)
     local sourceIndex = math.floor(tonumber(rowIndex) or 0) - 1
     if sourceIndex < 1 then
@@ -176,11 +129,7 @@ function roomTopology.generatedStructuralCount(ctx, field)
 end
 
 function roomTopology.siblingCountForExitCount(exitCount)
-    local count = math.max(math.floor(tonumber(exitCount) or 0) - 1, 0)
-    if count > MAX_NORMAL_SIBLING_COUNT then
-        return MAX_NORMAL_SIBLING_COUNT
-    end
-    return count
+    return roomStructure.siblingCountForExitCount(exitCount)
 end
 
 function roomTopology.activeSiblingCount(policy, ctx)
@@ -233,258 +182,7 @@ local function siblingCountAt(ctx, index)
     return math.floor(tonumber(ctx.siblingCountAt(index)) or 0)
 end
 
-local function siblingRoomKeyForSlot(ctx, index, siblingIndex, candidateOverride)
-    if index == ctx.rowIndex
-        and candidateOverride ~= nil
-        and siblingIndex == (ctx.candidateSiblingIndex or 1)
-    then
-        return roomTopology.roomKey(candidateOverride)
-    end
-    if ctx.siblingRoomKeyAt == nil then
-        return nil
-    end
-    return ctx.siblingRoomKeyAt(index, siblingIndex)
-end
-
-local function generatedSiblingCandidateAt(ctx, index, candidate, candidateOverride)
-    local count = siblingCountAt(ctx, index)
-    for siblingIndex = 1, count do
-        if siblingRoomKeyForSlot(ctx, index, siblingIndex, candidateOverride) == candidate then
-            return true
-        end
-    end
-    return false
-end
-
-local function generatedCandidateAtRow(ctx, index, candidate, candidateOverride)
-    if ctx.roomKeyAt(index) == candidate then
-        return true
-    end
-    return generatedSiblingCandidateAt(ctx, index, candidate, candidateOverride)
-end
-
-local function generatedCandidateBeforeRow(ctx, candidate)
-    for currentRowIndex = 1, ctx.rowIndex - 1 do
-        if generatedCandidateAtRow(ctx, currentRowIndex, candidate) then
-            return true
-        end
-    end
-    return false
-end
-
-local function generatedCandidateThroughRow(ctx, candidate, candidateOverride)
-    for currentRowIndex = 1, ctx.rowIndex do
-        if generatedCandidateAtRow(ctx, currentRowIndex, candidate, candidateOverride) then
-            return true
-        end
-    end
-    return false
-end
-
-local function generatedCandidateCountThroughRow(ctx, group, candidateOverride)
-    local count = 0
-    for _, candidate in ipairs(group.candidates or EMPTY_VALUES) do
-        if generatedCandidateThroughRow(ctx, candidate, candidateOverride) then
-            count = count + 1
-        end
-    end
-    return count
-end
-
-local function generatedCapacityForGroup(ctx, group)
-    if group.generatedExitCount ~= nil then
-        return group.generatedExitCount
-    end
-    if group.generatedCapacityKind == "sourceSiblingCount" then
-        return roomTopology.siblingCountForExitCount(roomTopology.generatedStructuralCount(ctx, "exitCount"))
-    end
-    if group.generatedCapacityKind == "sourceExitCount" then
-        return roomTopology.generatedStructuralCount(ctx, "exitCount")
-    end
-    if group.generatedExitCountField ~= nil and ctx.structuralCountAt ~= nil then
-        return roomTopology.generatedStructuralCount(ctx, group.generatedExitCountField)
-    end
-    return 0
-end
-
-local function requiredGeneratedCountForGroup(ctx, group)
-    if group.requiredGeneratedCount ~= nil then
-        return group.requiredGeneratedCount
-    end
-    return math.min(#(group.candidates or EMPTY_VALUES), generatedCapacityForGroup(ctx, group))
-end
-
-local function forcedCandidateOption(policy, candidate)
-    return policy and (
-        policy.optionsByKey[candidate]
-        or policy.optionsByRoomKey[candidate]
-    ) or nil
-end
-
-local function forceRangeWindowActive(force, rowContext)
-    local range = force and force.biomeDepthCache or nil
-    local depth = rowContext and rowContext.biomeDepthCache or nil
-    if range == nil or depth == nil then
-        return false
-    end
-
-    if range.exact ~= nil then
-        return depth == range.exact
-    end
-    if range.min ~= nil and depth < range.min then
-        return false
-    end
-    return range.min ~= nil or range.max ~= nil
-end
-
-local function forceRangeDeadlineActive(force, rowContext)
-    local range = force and force.biomeDepthCache or nil
-    local depth = rowContext and rowContext.biomeDepthCache or nil
-    if range == nil or depth == nil then
-        return false
-    end
-
-    if range.exact ~= nil then
-        return depth == range.exact
-    end
-    if range.min ~= nil and depth < range.min then
-        return false
-    end
-    return range.max ~= nil and depth >= range.max
-end
-
-local function forceCandidateClosedByPickedGroup(policy, ctx, candidate)
-    for _, group in ipairs(policy and policy.forcedGroups or EMPTY_VALUES) do
-        if group.pickedCandidateBeforeDeadlineClosesGroup
-            and candidateInGroup(group, candidate)
-            and pickedCandidateBeforeRow(ctx, group)
-        then
-            return true
-        end
-    end
-    return false
-end
-
-local function forceCandidateAvailable(policy, ctx, candidate)
-    if generatedCandidateBeforeRow(ctx, candidate) then
-        return nil
-    end
-    if forceCandidateClosedByPickedGroup(policy, ctx, candidate) then
-        return nil
-    end
-
-    local option = forcedCandidateOption(policy, candidate)
-    return option
-end
-
-local function forceWindowCandidateActive(policy, ctx, candidate)
-    local option = forceCandidateAvailable(policy, ctx, candidate)
-    return option ~= nil and forceRangeWindowActive(option.force, ctx.rowContext)
-end
-
-local function forceDeadlineCandidateActive(policy, ctx, candidate)
-    local option = forceCandidateAvailable(policy, ctx, candidate)
-    return option ~= nil and forceRangeDeadlineActive(option.force, ctx.rowContext)
-end
-
-local function forceCandidateKeys(policy)
-    local index = 0
-    return function()
-        while true do
-            index = index + 1
-            local key = policy and policy.values and policy.values[index] or nil
-            if key == nil then
-                return nil
-            end
-
-            local candidate = roomTopology.roomKey(policy.optionsByKey[key])
-            if candidate ~= nil then
-                return candidate
-            end
-        end
-    end
-end
-
-local function generatedForceWindowCandidateCount(policy, ctx, candidateOverride)
-    local count = 0
-    for candidate in forceCandidateKeys(policy) do
-        if forceWindowCandidateActive(policy, ctx, candidate)
-            and generatedCandidateAtRow(ctx, ctx.rowIndex, candidate, candidateOverride)
-        then
-            count = count + 1
-        end
-    end
-    return count
-end
-
-local function hardForcePressureStatus(policy, ctx, candidateOverride)
-    if policy == nil or #(policy.ungroupedForceCandidates or EMPTY_VALUES) <= 0 then
-        return validStatus()
-    end
-
-    local capacity = roomTopology.generatedStructuralCount(ctx, "exitCount")
-    if capacity <= 0 then
-        return validStatus()
-    end
-
-    local hasMissingHardForce = false
-    for _, candidate in ipairs(policy.ungroupedForceCandidates) do
-        if forceDeadlineCandidateActive(policy, ctx, candidate)
-            and not generatedCandidateAtRow(ctx, ctx.rowIndex, candidate, candidateOverride)
-        then
-            hasMissingHardForce = true
-            break
-        end
-    end
-    if not hasMissingHardForce then
-        return validStatus()
-    end
-
-    if generatedForceWindowCandidateCount(policy, ctx, candidateOverride) >= capacity then
-        return validStatus()
-    end
-    return invalidStatus(
-        statusCode(policy, "forced_topology_pressure_unresolved"),
-        "Hard-forced topology needs generated force-window doors"
-    )
-end
-
-local function forcedGroupStatus(policy, ctx, group, candidateOverride)
-    local deadline = group.forceAtBiomeDepthMax
-    if deadline == nil then
-        return validStatus()
-    end
-
-    if (ctx.rowContext.biomeDepthCache or 0) < deadline then
-        return validStatus()
-    end
-    if group.pickedCandidateBeforeDeadlineClosesGroup and pickedCandidateBeforeRow(ctx, group) then
-        return validStatus()
-    end
-
-    local generatedCount = generatedCandidateCountThroughRow(ctx, group, candidateOverride)
-    local requiredGeneratedCount = requiredGeneratedCountForGroup(ctx, group)
-    if generatedCount >= requiredGeneratedCount then
-        return validStatus()
-    end
-    return invalidStatus(
-        statusCode(policy, "forced_topology_group_unresolved"),
-        "Forced " .. tostring(group.key or "topology") .. " deadline needs generated forced doors"
-    )
-end
-
-function roomTopology.forcedGroupsStatus(policy, ctx, candidateOverride)
-    local hardForceStatus = hardForcePressureStatus(policy, ctx, candidateOverride)
-    if not hardForceStatus.valid then
-        return hardForceStatus
-    end
-
-    for _, group in ipairs(policy and policy.forcedGroups or EMPTY_VALUES) do
-        local status = forcedGroupStatus(policy, ctx, group, candidateOverride)
-        if not status.valid then
-            return status
-        end
-    end
+function roomTopology.forcedGroupsStatus()
     return validStatus()
 end
 
@@ -572,10 +270,6 @@ end
 
 function roomTopology.validateSiblingStructures(policy, ctx, opts)
     opts = opts or {}
-    if roomTopology.siblingControlStatus(policy, ctx.rowContext).valid ~= true then
-        return nil
-    end
-
     local count = roomTopology.activeSiblingCount(policy, ctx)
     for siblingIndex = 1, count do
         local siblingKey, sibling = ctx.siblingAt(siblingIndex)
@@ -614,9 +308,6 @@ end
 function roomTopology.fillSiblingValueStates(policy, ctx, states)
     clearMap(states)
     if policy == nil then
-        return states
-    end
-    if not roomTopology.siblingControlStatus(policy, ctx.rowContext).valid then
         return states
     end
     for _, key in ipairs(policy.values or EMPTY_VALUES) do

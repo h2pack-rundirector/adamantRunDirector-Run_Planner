@@ -39,6 +39,23 @@ local function structuralCountForRow(data, slots, instance, rows, rowIndex, fiel
     return 0
 end
 
+local function appliedFeedback(instance)
+    local routeContext = instance.routeContext
+    if routeContext == nil or routeContext.routeGeneration == nil then
+        return nil
+    end
+    if instance.routeFeedbackGeneration ~= routeContext:routeGeneration(instance.routeKey) then
+        return nil
+    end
+    return instance.routeFeedback
+end
+
+local function topologyFeedback(instance, rowIndex)
+    local feedback = appliedFeedback(instance)
+    local row = feedback and feedback[rowIndex] or nil
+    return row and row.topology or nil
+end
+
 local function maxExitCountForRole(data, role)
     local maxCount = math.floor(tonumber(roomStructure.exitCount(nil, role)) or 0)
     for _, option in ipairs(data.optionListForRole(role)) do
@@ -143,7 +160,6 @@ function adapter.create(data, opts)
                 role,
                 option
             ),
-            rowContext = data.rowContext(instance, rows, rowIndex),
             selectedRoomKey = rowRoomKey(instance, rows, rowIndex),
             structuralCountAt = function(index, field)
                 return structuralCountForRow(data, slots, instance, rows, index, field)
@@ -175,42 +191,28 @@ function adapter.create(data, opts)
         }
     end
 
-    function api.siblingTopologyStatus(instance, rows, rowIndex)
+    function api.siblingTopologyStatus(instance, _rows, rowIndex)
         local policy = instance.siblingStructurePolicy
         if policy == nil then
             return validStatus()
         end
-        local cache = activeReadCache(instance)
-        if cache == nil then
-            return roomTopology.siblingTopologyStatus(policy, data.rowContext(instance, rows, rowIndex))
+        local feedback = topologyFeedback(instance, rowIndex)
+        if feedback ~= nil and feedback.active == false then
+            return common.invalidStatus("biome_depth_unavailable", "Topology controls are not active at this biome depth")
         end
-
-        cache.siblingTopologyStatus = cache.siblingTopologyStatus or {}
-        local record = rowRecord(cache.siblingTopologyStatus, rowIndex)
-        if record.pass ~= cache.pass then
-            record.pass = cache.pass
-            record.status = roomTopology.siblingTopologyStatus(policy, data.rowContext(instance, rows, rowIndex))
-        end
-        return record.status
+        return validStatus()
     end
 
-    function api.siblingStructureStatus(instance, rows, rowIndex)
+    function api.siblingStructureStatus(instance, _rows, rowIndex)
         local policy = instance.siblingStructurePolicy
         if policy == nil then
             return validStatus()
         end
-        local cache = activeReadCache(instance)
-        if cache == nil then
-            return roomTopology.siblingControlStatus(policy, data.rowContext(instance, rows, rowIndex))
+        local feedback = topologyFeedback(instance, rowIndex)
+        if feedback ~= nil and feedback.controlsActive == false then
+            return common.invalidStatus("biome_depth_unavailable", "Topology controls are not active at this biome depth")
         end
-
-        cache.siblingStructureStatus = cache.siblingStructureStatus or {}
-        local record = rowRecord(cache.siblingStructureStatus, rowIndex)
-        if record.pass ~= cache.pass then
-            record.pass = cache.pass
-            record.status = roomTopology.siblingControlStatus(policy, data.rowContext(instance, rows, rowIndex))
-        end
-        return record.status
+        return validStatus()
     end
 
     function api.activeSiblingStructureCount(instance, rows, rowIndex)

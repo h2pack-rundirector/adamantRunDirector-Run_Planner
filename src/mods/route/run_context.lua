@@ -404,6 +404,7 @@ function runContext.create(opts)
                 })
                 feedback = historySystem.feedback.fromResult({
                     route = route,
+                    history = history,
                     biomeLookup = self.biomeLookup,
                     findings = result.findings,
                     invalids = result.invalids,

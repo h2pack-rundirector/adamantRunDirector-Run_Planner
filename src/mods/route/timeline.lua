@@ -172,27 +172,6 @@ local function advanceBiomeDepth(biomeState, rowCost)
     biomeState.roomHistoryDepth = biomeState.roomHistoryOrdinal - biomeState.roomHistoryDepthOffset
 end
 
-function timeline.sideRoomContext(rowContext, sideRoom, cost)
-    local sideCost = numericCost(cost, DEFAULT_ROOM_HISTORY_COST)
-    local roomHistoryOrdinal = (rowContext and rowContext.roomHistoryOrdinal or 0) + sideCost
-    local roomHistoryDepth = (rowContext and rowContext.roomHistoryDepth or 0) + sideCost
-    return {
-        route = rowContext and rowContext.route or nil,
-        routeKey = rowContext and rowContext.routeKey or nil,
-        routeBiomeIndex = rowContext and rowContext.routeBiomeIndex or nil,
-        biomeKey = rowContext and rowContext.biomeKey or nil,
-        row = rowContext and rowContext.row or nil,
-        rowIndex = rowContext and rowContext.rowIndex or nil,
-        routeOrdinal = rowContext and rowContext.routeOrdinal or nil,
-        roomHistoryOrdinal = roomHistoryOrdinal,
-        runDepthCache = timeline.runDepthCache(roomHistoryOrdinal),
-        runEncounterDepth = rowContext and rowContext.runEncounterDepth or nil,
-        roomHistoryDepth = roomHistoryDepth,
-        sideRoom = sideRoom,
-        sideRoomHistoryCost = sideCost,
-    }
-end
-
 function timeline.walkRoute(route, opts)
     opts = opts or {}
     local snapshotForBiome = opts.snapshotForBiome

@@ -132,7 +132,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
 end
 
 
-function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyExportsImplicitCombatSiblingOutsideControlWindow()
+function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyDefaultsControlsActiveWithoutFeedback()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
     local instance = data.prepare({
@@ -146,39 +146,11 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyExportsImplicitCo
     })
 
     lu.assertTrue(data.siblingTopologyStatus(instance, rows, 3).valid)
-    lu.assertFalse(data.siblingStructureStatus(instance, rows, 3).valid)
+    lu.assertTrue(data.siblingStructureStatus(instance, rows, 3).valid)
     lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 3), 1)
-    lu.assertFalse(data.shouldDrawSiblingStructure(instance, rows, 3, 1))
+    lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 3, 1))
     lu.assertFalse(data.shouldDrawSiblingRewardClass(instance, rows, 3, 1))
-    lu.assertEquals(data.roomTopology(instance, rows, 3), {
-        kind = "fixedLinearSiblingChoice",
-        selected = {
-            structure = "Combat",
-            roomKey = "F_Combat03",
-            rewardStore = "RunProgress",
-            rewardClass = "Major",
-            rewardBranch = "majorMinor",
-            rewardBranchAddress = "row",
-            rewardBranchControlAlias = "Reward1Key",
-            rewardBranchLabel = "Rewards",
-            offerCount = 1,
-            rewardAddresses = { "row" },
-        },
-        sibling = {
-            structure = "Combat",
-            rewardStore = "RunProgress",
-            rewardClass = "Major",
-            offerCount = 1,
-        },
-        siblings = {
-            {
-                structure = "Combat",
-                rewardStore = "RunProgress",
-                rewardClass = "Major",
-                offerCount = 1,
-            },
-        },
-    })
+    lu.assertNil(data.roomTopology(instance, rows, 3))
 end
 
 
@@ -186,6 +158,39 @@ end
 
 
 
+
+function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyControlsUseRouteFeedbackWindow()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local rows = fakeRows({
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major"),
+        fCombatRow("F_Combat03", "Major"),
+    })
+    instance.routeKey = "Underworld"
+    instance.routeContext = {
+        routeGeneration = function()
+            return 7
+        end,
+    }
+    instance.routeFeedbackGeneration = 7
+    instance.routeFeedback = {
+        [3] = {
+            topology = {
+                active = true,
+                controlsActive = false,
+            },
+        },
+    }
+
+    lu.assertTrue(data.siblingTopologyStatus(instance, rows, 3).valid)
+    lu.assertFalse(data.siblingStructureStatus(instance, rows, 3).valid)
+    lu.assertFalse(data.shouldDrawSiblingStructure(instance, rows, 3, 1))
+end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRewardRatioSummaryCountsMajorMinorChoices()
     local catalog = loadCatalog()
@@ -485,14 +490,12 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearOlympusFirstRouteRowRequi
     local rows = fakeRows({})
     local values = {}
 
-    lu.assertEquals(data.rowContext(instance, rows, 2).biomeDepthCache, 1)
     data.fillOptionValues(instance, rows, 2, "Combat", values)
     lu.assertTrue(hasValue(values, "P_Combat02"))
     lu.assertTrue(hasValue(values, "P_Combat05"))
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 2, "Combat").P_Combat02)
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 2, "Combat").P_Combat05)
 
-    lu.assertEquals(data.rowContext(instance, rows, 3).biomeDepthCache, 2)
     data.fillOptionValues(instance, rows, 3, "Combat", values)
     lu.assertNil(data.optionValueStatesForRow(instance, rows, 3, "Combat").P_Combat02)
 end
@@ -514,7 +517,6 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearMegaDraconOnlyLeadsToOutd
     })
     local values = {}
 
-    lu.assertEquals(data.rowContext(instance, rows, 6).biomeDepthCache, 5)
     data.fillOptionValues(instance, rows, 6, "Combat", values)
     lu.assertTrue(hasValue(values, "P_Combat02"))
     lu.assertTrue(hasValue(values, "P_Combat13"))
@@ -636,15 +638,11 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearExactDepthUsesBiomeDepthC
     local rows = fakeRows({})
     local values = {}
 
-    lu.assertEquals(data.rowContext(instance, rows, 4).routeOrdinal, 3)
-    lu.assertEquals(data.rowContext(instance, rows, 4).biomeDepthCache, 2)
     data.fillRoleValues(instance, rows, 4, values)
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 4).Miniboss)
 
-    lu.assertEquals(data.rowContext(instance, rows, 5).routeOrdinal, 4)
-    lu.assertEquals(data.rowContext(instance, rows, 5).biomeDepthCache, 3)
     data.fillRoleValues(instance, rows, 5, values)
     lu.assertTrue(hasValue(values, "Combat"))
     lu.assertTrue(hasValue(values, "Miniboss"))
@@ -695,102 +693,6 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearAvailabilityConsumesPrior
     lu.assertNil(data.roleValueStatesForRow(instance, rows, 7).Story)
 end
 
-function TestRunPlannerFixedLinearRoute.testFixedLinearRowContextUsesSelectionDepthCosts()
-    local catalog = loadCatalog()
-    local data = loadFixedLinearData()
-    local instance = data.prepare({
-        name = "RouteF",
-        biome = catalog.lookup.F,
-    })
-    local rows = fakeRows({
-        {
-            RoleKey = "",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat01",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat02",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat03",
-        },
-        {
-            RoleKey = "Story",
-            OptionKey = "F_Story01",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat04",
-        },
-    })
-
-    lu.assertEquals(data.rowContext(instance, rows, 1), {
-        rowIndex = 1,
-        routeOrdinal = 0,
-        biomeDepthCache = 0,
-        biomeDepthCacheCost = 0,
-        biomeEncounterDepth = 1,
-        biomeEncounterDepthCost = 1,
-        roomHistoryCost = 1,
-    })
-    lu.assertEquals(data.rowContext(instance, rows, 5).biomeDepthCache, 3)
-    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepth, 5)
-    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCost, 0)
-    lu.assertEquals(data.rowContext(instance, rows, 6).biomeDepthCache, 4)
-    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepth, 5)
-    lu.assertEquals(data.rowContext(instance, rows, 6).biomeEncounterDepthCost, 1)
-end
-
-function TestRunPlannerFixedLinearRoute.testFixedLinearRowContextUsesOptionDepthCostOverrides()
-    local catalog = loadCatalog()
-    local data = loadFixedLinearData()
-    local instance = data.prepare({
-        name = "RouteQ",
-        biome = catalog.lookup.Q,
-    })
-    local rows = fakeRows({
-        {
-            RoleKey = "",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "Q_Combat10",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "Q_Combat03",
-        },
-        {
-            RoleKey = "Miniboss",
-            OptionKey = "Q_MiniBoss02",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "Q_Combat04",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "Q_Combat12",
-        },
-        {
-            RoleKey = "Miniboss",
-            OptionKey = "Q_MiniBoss04",
-        },
-        {
-            RoleKey = "Shop",
-        },
-    })
-
-    lu.assertEquals(data.rowContext(instance, rows, 7).biomeDepthCache, 6)
-    lu.assertEquals(data.rowContext(instance, rows, 7).biomeEncounterDepth, 6)
-    lu.assertEquals(data.rowContext(instance, rows, 7).biomeEncounterDepthCost, 0)
-    lu.assertEquals(data.rowContext(instance, rows, 8).biomeEncounterDepth, 6)
-end
-
 function TestRunPlannerFixedLinearRoute.testMinibossRequiresConcreteOption()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
@@ -829,37 +731,6 @@ function TestRunPlannerFixedLinearRoute.testMinibossRequiresConcreteOption()
             mode = "selected",
         },
     })
-end
-
-function TestRunPlannerFixedLinearRoute.testConcreteMinibossOptionUsesLeafDepthCost()
-    local catalog = loadCatalog()
-    local data = loadFixedLinearData()
-    local instance = data.prepare({
-        name = "RouteP",
-        biome = catalog.lookup.P,
-    })
-    local rows = fakeRows({
-        {
-            OptionKey = "P_Intro",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "P_Combat05",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "P_Combat06",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "P_Combat11",
-        },
-        {
-            RoleKey = "Miniboss",
-            OptionKey = "P_MiniBoss01",
-        },
-    })
-    lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCost, 0)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeRoutesRewardValueStateContext()

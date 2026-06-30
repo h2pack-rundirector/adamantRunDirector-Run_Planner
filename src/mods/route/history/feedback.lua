@@ -2,10 +2,93 @@ local deps = ... or {}
 
 local feedbackAdapters = deps.adapters or {}
 local routeFeedback = deps.routeFeedback
+local routeHistory = deps.history
 
 local feedback = {}
 
 local EMPTY_LIST = {}
+
+local function rangeContains(range, value)
+    if range == nil then
+        return true
+    end
+    if value == nil then
+        return false
+    end
+    if range.exact ~= nil and value ~= range.exact then
+        return false
+    end
+    if range.min ~= nil and value < range.min then
+        return false
+    end
+    if range.max ~= nil and value > range.max then
+        return false
+    end
+    if range.minExclusive ~= nil and value <= range.minExclusive then
+        return false
+    end
+    if range.maxExclusive ~= nil and value >= range.maxExclusive then
+        return false
+    end
+    return true
+end
+
+local function topologyForBiome(biome)
+    return biome and (
+        biome.roomTopology
+            or biome.fields and biome.fields.roomTopology
+    ) or nil
+end
+
+local function topologyWindow(topology)
+    return topology and (topology.topologyWindow or topology.siblingStructureWindow) or nil
+end
+
+local function controlWindow(topology)
+    return topology and (
+        topology.siblingControlWindow
+            or topology.siblingStructureWindow
+            or topology.topologyWindow
+    ) or nil
+end
+
+local function windowActive(window, entry)
+    return rangeContains(window and window.biomeDepthCache or nil, entry and entry.biomeDepthCache)
+end
+
+local function rowFeedback(feedbackState, biomeKey, rowIndex)
+    local biome = feedbackState.byBiome[biomeKey]
+    if biome == nil then
+        biome = {}
+        feedbackState.byBiome[biomeKey] = biome
+    end
+    local row = biome[rowIndex]
+    if row == nil then
+        row = {
+            valueStates = {},
+            rewardValueStates = {},
+        }
+        biome[rowIndex] = row
+    end
+    return row
+end
+
+local function applyTopologyMetadata(args, feedbackState)
+    local history = args and args.history or nil
+    if history == nil or routeHistory == nil then
+        return
+    end
+
+    for _, entry in ipairs(routeHistory.byKind(history, "room")) do
+        local topology = topologyForBiome(args.biomeLookup and args.biomeLookup[entry.biomeKey] or nil)
+        if topology ~= nil and entry.rowIndex ~= nil then
+            rowFeedback(feedbackState, entry.biomeKey, entry.rowIndex).topology = {
+                active = windowActive(topologyWindow(topology), entry),
+                controlsActive = windowActive(controlWindow(topology), entry),
+            }
+        end
+    end
+end
 
 local function recordsByBiome(args)
     local findings = args.findings
@@ -56,6 +139,7 @@ function feedback.fromResult(args)
         route = routeFeedback.fromResult(args or {}),
         byBiome = {},
     }
+    applyTopologyMetadata(args or {}, feedbackState)
     translate(args or {}, feedbackState)
     return feedbackState
 end
@@ -83,6 +167,15 @@ function feedback.valueStatesForBiomeRow(biomeFeedback, rowIndex, controlAlias, 
         end
     end
     return row and row.valueStates and row.valueStates[controlAlias] or nil
+end
+
+function feedback.topologyForBiomeRow(biomeFeedback, rowIndex)
+    local row = biomeFeedback and biomeFeedback[rowIndex] or nil
+    return row and row.topology or nil
+end
+
+function feedback.topologyForRow(feedbackState, biomeKey, rowIndex)
+    return feedback.topologyForBiomeRow(feedback.forBiome(feedbackState, biomeKey), rowIndex)
 end
 
 function feedback.biomeRowInactive(biomeFeedback, rowIndex)

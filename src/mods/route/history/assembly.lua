@@ -38,6 +38,7 @@ function historyAssembly.create(opts)
     local routeFeedback = import("mods/route/history/feedback/route.lua")
     local feedback = import("mods/route/history/feedback.lua", nil, {
         adapters = feedbackAdapters,
+        history = history,
         routeFeedback = routeFeedback,
     })
     local rewardCandidates = import("mods/route/history/candidates/rewards.lua", nil, {
