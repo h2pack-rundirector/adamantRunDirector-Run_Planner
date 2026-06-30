@@ -90,6 +90,7 @@ function historyAssembly.create(opts)
     local candidateValidator = import("mods/route/history/validator/candidates.lua", nil, {
         history = history,
         findings = findings,
+        ruleValidators = biomeStructureValidator.ruleValidators,
         rewards = rewardValidator,
         selectedLegalityRules = opts.selectedLegalityRules,
     })
