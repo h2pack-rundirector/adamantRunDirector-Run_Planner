@@ -101,12 +101,7 @@ function TestRunPlannerRouteHistoryValidator.testThessalyThreeCombatVariantUsesH
     lu.assertEquals(result.invalids[1].targetFinding.kind, "variantCandidateInvalid")
     lu.assertEquals(result.invalids[1].targetFinding.variantKey, "ThreeCombats")
 
-    local feedback = historyFeedback.fromResult({
-        route = route,
-        biomeLookup = h.loadCatalog().lookup,
-        findings = result.findings,
-        invalids = result.invalids,
-    })
+    local feedback = historyFeedback.fromFindings(result.findings)
     local states = historyFeedback.valueStatesForControl(feedback, "O", 2, "VariantKey")
     lu.assertEquals(states.ThreeCombats, valueStates.INVALID)
 end
@@ -772,6 +767,37 @@ function TestRunPlannerRouteHistoryValidator.testClockworkRejectsPrebossBeforeGo
     lu.assertEquals(states.Preboss, valueStates.INVALID)
 end
 
+function TestRunPlannerRouteHistoryValidator.testClockworkRejectsPickedPrebossBeforeGoalsComplete()
+    local route = {
+        key = "Underworld",
+        biomes = { "I" },
+    }
+    local result = validate(route, "I", h.loadClockworkGoalTemplate(), {
+        {},
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat02",
+        },
+        {
+            RouteKindKey = "Preboss",
+        },
+    })
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "clockwork_preboss_too_early")
+    lu.assertEquals(result.invalids[1].targetFinding.clockworkControl, "routeKind")
+    lu.assertEquals(result.invalids[1].targetFinding.clockworkValue, "Preboss")
+
+    local feedback = historyFeedback.fromResult({
+        route = route,
+        biomeLookup = h.loadCatalog().lookup,
+        findings = result.findings,
+        invalids = result.invalids,
+    })
+    local states = historyFeedback.valueStatesForControl(feedback, "I", 3, "RouteKindKey")
+    lu.assertEquals(states.Preboss, valueStates.INVALID)
+end
+
 function TestRunPlannerRouteHistoryValidator.testClockworkRejectsGeneratedDoorsWithoutGoalBeforeComplete()
     local route = {
         key = "Underworld",
@@ -856,7 +882,7 @@ function TestRunPlannerRouteHistoryValidator.testClockworkRequiresPrebossAfterGo
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat09",
-            SiblingStructureKey = "CombatReward",
+            SiblingStructureKey = "I_Story01",
         },
         {
             RouteKindKey = "Goal",
@@ -925,6 +951,59 @@ function TestRunPlannerRouteHistoryValidator.testClockworkEmitsInactiveBoundaryA
     local feedback = historyFeedback.fromFindings(result.findings)
     lu.assertFalse(historyFeedback.rowInactive(feedback, "I", 6))
     lu.assertTrue(historyFeedback.rowInactive(feedback, "I", 7))
+end
+
+function TestRunPlannerRouteHistoryValidator.testClockworkPickedPrebossEndsRoute()
+    local route = {
+        key = "Underworld",
+        biomes = { "I" },
+    }
+    local result = validate(route, "I", h.loadClockworkGoalTemplate(), {
+        {},
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat03",
+            SiblingStructureKey = "CombatReward",
+        },
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat04",
+            SiblingStructureKey = "CombatReward",
+        },
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat09",
+            SiblingStructureKey = "I_Story01",
+        },
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat10",
+            SiblingStructureKey = "CombatReward",
+        },
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat11",
+            SiblingStructureKey = "CombatReward",
+        },
+        {
+            RouteKindKey = "Preboss",
+        },
+        {
+            RouteKindKey = "NonGoal",
+            NonGoalKindKey = "Story",
+            OptionKey = "I_Story01",
+        },
+    })
+
+    lu.assertTrue(result.valid)
+
+    local finding = firstFinding(result, "rowInactiveBoundary", "rowIndex", 7)
+    lu.assertNotNil(finding)
+    lu.assertEquals(finding.reason, "clockwork_route_complete")
+
+    local feedback = historyFeedback.fromFindings(result.findings)
+    lu.assertFalse(historyFeedback.rowInactive(feedback, "I", 7))
+    lu.assertTrue(historyFeedback.rowInactive(feedback, "I", 8))
 end
 
 function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsTalentBeforeSpell()

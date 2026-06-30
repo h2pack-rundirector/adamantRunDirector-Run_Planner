@@ -396,6 +396,9 @@ local function clockworkFindingForEntry(entry, progression, reason, message)
     if entry and entry.roleKey == progression.goalRole then
         return routeKindFinding(entry, "Goal", reason, message)
     end
+    if entry and entry.roleKey == progression.prebossRole then
+        return routeKindFinding(entry, progression.prebossStructure or "Preboss", reason, message)
+    end
     if entry and entry.roleKey ~= nil and entry.roleKey ~= "" then
         return nonGoalKindFinding(entry, entry.roleKey, reason, message)
     end
@@ -510,6 +513,16 @@ local function validateClockworkProgression(history, biome)
                     )
                     break
                 end
+            end
+            if pickedClockworkPreboss(entry, progression) then
+                progressionFindings[#progressionFindings + 1] = findings.rowInactiveBoundary(
+                    entry,
+                    "clockwork_route_complete",
+                    {
+                        message = "Tartarus route is complete after Preboss",
+                    }
+                )
+                break
             end
         end
     end

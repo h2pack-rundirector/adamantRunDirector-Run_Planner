@@ -2,6 +2,7 @@ return function(deps)
     local layout = deps.layout
     local goalCombatRole = deps.goalCombatRole
     local rewardCombatRole = deps.rewardCombatRole
+    local prebossRole = deps.prebossRole or "Preboss"
 
     local function roomSibling(room, structure, opts)
         opts = opts or {}
@@ -58,9 +59,10 @@ return function(deps)
             offerCount = 1,
         },
         {
-            key = "Preboss",
+            key = prebossRole,
             label = "Preboss",
-            structure = "Preboss",
+            structure = prebossRole,
+            roleKey = prebossRole,
             isPreboss = true,
             offerCount = 0,
         },

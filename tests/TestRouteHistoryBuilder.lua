@@ -275,7 +275,9 @@ local function fullITartarusRows()
         },
         iGoal("I_Combat11", "CombatReward"),
         iRewardCombat("I_Combat12", "Preboss", "RoomMoneyDrop"),
-        {},
+        {
+            RouteKindKey = "Preboss",
+        },
         {},
         {},
     }
@@ -982,7 +984,7 @@ function TestRunPlannerRouteHistoryBuilder.testClockworkGoalSkipsInactiveRowsAnd
     local rooms = roomEvents(history)
     lu.assertEquals(rooms[11].rowIndex, 11)
     lu.assertEquals(rooms[11].roomHistoryOrdinal, 11)
-    lu.assertEquals(rooms[12].rowIndex, 14)
+    lu.assertEquals(rooms[12].rowIndex, 12)
     lu.assertEquals(rooms[12].roomHistoryOrdinal, 12)
     lu.assertEquals(rooms[12].biomeDepthCache, 11)
     lu.assertEquals(rooms[12].biomeEncounterDepth, 9)

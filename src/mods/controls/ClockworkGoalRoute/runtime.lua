@@ -192,7 +192,7 @@ function runtime.create(fields, instance)
             return nil
         end
 
-        local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
+        local roleKey = data.resolveRole(instance, routeRows, rowIndex)
         local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
         if slot.roleKey ~= nil then
             roleKey = slot.roleKey
@@ -213,11 +213,6 @@ function runtime.create(fields, instance)
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
             routeKindKey = data.readRouteKind(instance, routeRows, rowIndex),
             nonGoalKindKey = data.readNonGoalKind(instance, routeRows, rowIndex),
-            state = {
-                priorGoals = data.priorGoalCount(instance, routeRows, rowIndex),
-                countsGoal = data.rowCountsGoal(instance, routeRows, rowIndex, role, option),
-                countsNonGoalReward = data.rowCountsNonGoalReward(instance, routeRows, rowIndex, role, option),
-            },
             topology = {
                 siblings = siblings,
             },
@@ -238,9 +233,6 @@ function runtime.create(fields, instance)
         for rowIndex = 1, self:rowCount() do
             rows[#rows + 1] = self:selectedRowSnapshot(rowIndex)
         end
-        local goalCount = data.countGoals(instance, routeRows)
-        local nonGoalCount = data.countNonGoals(instance, routeRows)
-        local storyCount = data.countStories(instance, routeRows)
         self:endReadPass()
         return {
             schema = "selectedRows.v1",
@@ -248,13 +240,6 @@ function runtime.create(fields, instance)
             controlName = instance.name,
             biomeKey = instance.biomeKey,
             adapter = instance.biome.adapter,
-            clockwork = {
-                goalCount = goalCount,
-                requiredGoals = data.requiredGoals(instance),
-                nonGoalRewardCount = nonGoalCount,
-                maxNonGoalRewards = data.maxNonGoalRewards(instance),
-                storyCount = storyCount,
-            },
             rows = rows,
         }
     end
@@ -286,9 +271,6 @@ function runtime.create(fields, instance)
                 completionInvalidRows[#completionInvalidRows + 1] = invalidRow
             end
         end
-        local goalCount = data.countGoals(instance, routeRows)
-        local nonGoalCount = data.countNonGoals(instance, routeRows)
-        local storyCount = data.countStories(instance, routeRows)
         self:endReadPass()
         instance.completionInvalidMessage = completionInvalidRows[1] ~= nil
                 and ("Data incomplete: " .. tostring(completionInvalidRows[1].message or completionInvalidRows[1].code))
@@ -300,13 +282,6 @@ function runtime.create(fields, instance)
             valid = completionInvalidRows[1] == nil,
             disabled = completionInvalidRows[1] ~= nil,
             completionInvalidRows = completionInvalidRows,
-            clockwork = {
-                goalCount = goalCount,
-                requiredGoals = data.requiredGoals(instance),
-                nonGoalRewardCount = nonGoalCount,
-                maxNonGoalRewards = data.maxNonGoalRewards(instance),
-                storyCount = storyCount,
-            },
         }
     end
 

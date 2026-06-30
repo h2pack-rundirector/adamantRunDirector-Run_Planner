@@ -1,11 +1,13 @@
 return function(deps)
     local goalCombatRole = "GoalCombat"
     local rewardCombatRole = "RewardCombat"
+    local prebossRole = "Preboss"
     local layout = import("mods/biomes/declarations/i_tartarus_layout.lua")(deps)
     local topology = import("mods/biomes/declarations/i_tartarus_topology.lua")({
         layout = layout,
         goalCombatRole = goalCombatRole,
         rewardCombatRole = rewardCombatRole,
+        prebossRole = prebossRole,
     })
     local parser = deps.parser
     local rewards = deps.rewards
@@ -45,20 +47,13 @@ return function(deps)
                     locked = true,
                 },
             },
-            fixedAfterGoals = {
-                {
-                    key = "Preboss",
-                    label = "Preboss Shop",
-                    reward = rewards.shop("I_WorldShop"),
-                    biomeEncounterDepthCost = 0,
-                },
-            },
         },
         clockwork = {
             forcedFirstRouteRole = goalCombatRole,
             progression = {
                 goalRole = goalCombatRole,
-                prebossStructure = "Preboss",
+                prebossRole = prebossRole,
+                prebossStructure = prebossRole,
                 requiredGoals = 5,
                 exactlyOneGoalDoorBeforeComplete = true,
                 prebossRequiredAfterComplete = true,
@@ -127,6 +122,12 @@ return function(deps)
                 maxCreationsThisRun = 1,
                 requiresPrevious = { supportsExtensionChoice = true },
                 reserve = true,
+            },
+            {
+                key = prebossRole,
+                label = "Preboss Shop",
+                reward = rewards.shop("I_WorldShop"),
+                biomeEncounterDepthCost = 0,
             },
         },
     }

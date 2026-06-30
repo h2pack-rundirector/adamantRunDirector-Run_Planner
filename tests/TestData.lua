@@ -1025,9 +1025,8 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
 
     lu.assertEquals(tartarus.slotLayout.fixedBeforeRoute[1].room.key, "I_Intro")
     lu.assertEquals(tartarus.slotLayout.fixedBeforeRoute[1].reward, noneReward())
-    lu.assertEquals(tartarus.slotLayout.fixedAfterGoals[1].key, "Preboss")
-    lu.assertNil(tartarus.slotLayout.fixedAfterGoals[1].room)
-    lu.assertEquals(tartarus.slotLayout.fixedAfterGoals[1].reward, shopReward("I_WorldShop"))
+    lu.assertNil(tartarus.slotLayout.fixedAfterGoals)
+    lu.assertEquals(tartarus.rolesByKey.Preboss.reward, shopReward("I_WorldShop"))
 
     lu.assertEquals(tartarus.clockwork.forcedFirstRouteRole, "GoalCombat")
     lu.assertEquals(tartarus.clockwork.routeCounters, {
@@ -1049,6 +1048,7 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
         key = "Preboss",
         label = "Preboss",
         structure = "Preboss",
+        roleKey = "Preboss",
         isPreboss = true,
         offerCount = 0,
     })
