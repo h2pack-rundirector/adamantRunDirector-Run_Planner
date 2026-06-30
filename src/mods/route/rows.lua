@@ -15,22 +15,17 @@ local requirements = import("mods/route/rows/requirements.lua", nil, {
     rewards = rewards,
     query = routeQuery,
 })
-local biomeRules = import("mods/route/rows/biome_rules.lua", nil, {
-    common = common,
-})
 
 return {
     common = common,
     availability = availability,
     readCache = readCache,
     requirements = requirements,
-    biomeRules = biomeRules,
     engine = import("mods/route/rows/engine.lua", nil, {
         common = common,
         availability = availability,
         readCache = readCache,
         requirements = requirements,
-        biomeRules = biomeRules,
         valueStates = valueStates,
         timeline = timeline,
         rewards = rewards,

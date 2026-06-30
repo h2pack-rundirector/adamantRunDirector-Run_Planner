@@ -73,17 +73,6 @@ function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
         "N_MiniBoss02",
     })
     lu.assertEquals(instance.maxSideDoorCount, 3)
-    lu.assertEquals(instance.biome.roomTopology.hub.rewardRowGroup, {
-        key = "N_HubPylons",
-        effectTiming = "afterGroup",
-        constraints = {
-            uniqueRewardTypes = {
-                allow = {
-                    Boon = true,
-                },
-            },
-        },
-    })
     lu.assertEquals(instance.biome.hub.sideRoomAvailability.vanillaPolicy, {
         minPerPylon = 0.5,
         chanceAfterMinimum = 0.3,
@@ -281,7 +270,6 @@ function TestRunPlannerHubPylonRoute.testHubPylonRuntimeBuildsValidatedSnapshot(
             generatedRewardExitCount = 10,
             selectedDoorCount = 6,
             effectTiming = "afterGroup",
-            rewardRowGroup = instance.biome.roomTopology.hub.rewardRowGroup,
         },
         sideRooms = snapshot.rows[4].sideRooms,
     })
@@ -399,7 +387,6 @@ function TestRunPlannerHubPylonRoute.testHubPylonEmitsDumbSelectedRowsSnapshot()
     lu.assertEquals(snapshot.hub.selectedDoorCount, 6)
     lu.assertNil(snapshot.rows[1].valid)
     lu.assertNil(snapshot.rows[1].roomTopology)
-    lu.assertNil(snapshot.rows[1].rewardItems)
     lu.assertEquals(snapshot.rows[1].roleKey, "Opening")
     lu.assertEquals(snapshot.rows[1].roomKey, "N_Opening01")
     lu.assertEquals(snapshot.rows[3].roleKey, "Hub")
@@ -413,7 +400,6 @@ function TestRunPlannerHubPylonRoute.testHubPylonEmitsDumbSelectedRowsSnapshot()
     lu.assertEquals(pylon.roomKey, "N_Combat12")
     lu.assertEquals(pylon.hubDoorId, 561389)
     lu.assertEquals(pylon.topology.hub.roomKey, "N_Hub")
-    lu.assertEquals(pylon.topology.hub.rewardRowGroup, instance.biome.roomTopology.hub.rewardRowGroup)
     lu.assertEquals(pylon.rewards.row.values[1], "Boon")
     lu.assertEquals(pylon.rewards.row.values[2], "ZeusUpgrade")
     lu.assertEquals(#pylon.sideRooms, 3)

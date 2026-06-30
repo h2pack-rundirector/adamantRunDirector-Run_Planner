@@ -1,9 +1,7 @@
 return function(deps)
     local layout = import("mods/biomes/declarations/n_ephyra_layout.lua")(deps)
-    local rewardLayout = import("mods/biomes/declarations/n_ephyra_rewards.lua")(deps)
     local topology = import("mods/biomes/declarations/n_ephyra_topology.lua")({
         layout = layout,
-        rewardLayout = rewardLayout,
     })
     local parser = deps.parser
     local rewards = deps.rewards

@@ -1,33 +1,30 @@
 local rewardSystem = {}
 
-local function rewardValueStatesForControl(instance, surfaceControl, rewardFields, sourceContext)
-    if instance.routeContext ~= nil and instance.routeContext.rewardValueStates ~= nil then
+local function historyValueStates(instance, surfaceControl, _rewardFields, sourceContext)
+    if instance.routeContext ~= nil and instance.routeContext.historyValueStates ~= nil then
         local rewardAddress = surfaceControl and surfaceControl.rewardAddress
             or sourceContext and sourceContext.address
-        return instance.routeContext:rewardValueStates(
+        return instance.routeContext:historyValueStates(
             instance.routeKey,
             instance.biomeKey,
             sourceContext and sourceContext.rowIndex,
-            rewardAddress,
             surfaceControl and surfaceControl.alias,
-            surfaceControl,
-            rewardFields,
-            sourceContext
+            rewardAddress
         )
     end
     return nil
 end
 
-local function routeValueStatesForControl(instance)
-    if instance.routeContext == nil or instance.routeContext.rewardValueStates == nil then
+local function historyValueStatesForControl(instance)
+    if instance.routeContext == nil or instance.routeContext.historyValueStates == nil then
         return nil
     end
-    if instance.rewardValueStatesForControl == nil then
-        instance.rewardValueStatesForControl = function(surfaceControl, rewardFields, sourceContext)
-            return rewardValueStatesForControl(instance, surfaceControl, rewardFields, sourceContext)
+    if instance.historyValueStatesForControl == nil then
+        instance.historyValueStatesForControl = function(surfaceControl, rewardFields, sourceContext)
+            return historyValueStates(instance, surfaceControl, rewardFields, sourceContext)
         end
     end
-    return instance.rewardValueStatesForControl
+    return instance.historyValueStatesForControl
 end
 
 function rewardSystem.create(opts)
@@ -62,7 +59,6 @@ function rewardSystem.create(opts)
         stateAlias = storage.stateAlias,
 
         catalogSurfaces = parts.catalogSurfaces,
-        legalityConditions = parts.conditions,
         rewardDomain = parts.rewardDomain,
         selectedLegalityRules = parts.selectedLegalityRules,
 
@@ -73,7 +69,7 @@ function rewardSystem.create(opts)
         surfaceFor = runtime.surfaceFor,
 
         godLootOptions = surfaceRegistry.godLootOptions,
-        routeValueStatesForControl = routeValueStatesForControl,
+        historyValueStatesForControl = historyValueStatesForControl,
     }
 end
 

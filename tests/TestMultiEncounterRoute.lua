@@ -70,27 +70,6 @@ local function buildThessalyControlWithEncounterRewards(rows)
     return template.createRuntime(thessalyRouteFields(rows), instance)
 end
 
-function TestRunPlannerMultiEncounterRoute.testThessalyRequiresStoryOrShopByDepthFive()
-    local control = buildThessalyRuntime({
-        {},
-        thessalyCombat("O_Combat01"),
-        thessalyCombat("O_Combat02"),
-        thessalyCombat("O_Combat03"),
-        thessalyCombat("O_Combat05"),
-        thessalyCombat("O_Combat06"),
-    })
-    local snapshot = h.buildRuntimeRowsSnapshot(control)
-
-    lu.assertFalse(snapshot.valid)
-    lu.assertTrue(snapshot.disabled)
-    lu.assertTrue(snapshot.rows[5].valid)
-    lu.assertFalse(snapshot.rows[6].valid)
-    lu.assertEquals(snapshot.rows[6].routeOrdinal, 5)
-    lu.assertEquals(snapshot.rows[6].invalidCode, "thessaly_story_or_shop_deadline")
-    lu.assertEquals(snapshot.invalidRows[1].rowIndex, 6)
-    lu.assertEquals(snapshot.invalidRows[1].code, "thessaly_story_or_shop_deadline")
-end
-
 function TestRunPlannerMultiEncounterRoute.testThessalyDepthFiveStorySatisfiesDeadline()
     local control = buildThessalyRuntime({
         {},
@@ -253,7 +232,6 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterEmitsDumbSelectedRo
     lu.assertEquals(snapshot.adapter, "multiEncounterFixed")
     lu.assertNil(snapshot.rows[1].valid)
     lu.assertNil(snapshot.rows[1].roomTopology)
-    lu.assertNil(snapshot.rows[1].rewardItems)
     lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
     lu.assertEquals(snapshot.rows[1].optionKey, "O_Intro")
     lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
@@ -462,7 +440,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRoomTopologySurvive
             },
         },
     })
-    lu.assertEquals(snapshot.rows[3].rewardItems[1].rewardKind, "vanilla")
+    lu.assertEquals(snapshot.rows[3].rewardKind, "vanilla")
 end
 
 function TestRunPlannerMultiEncounterRoute.testMultiEncounterRuntimeBuildsValidatedSnapshot()

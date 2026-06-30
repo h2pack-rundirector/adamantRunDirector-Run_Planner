@@ -11,12 +11,6 @@ local function createRewardDomain(godData, primitives, bagDefinitions, shopDefin
     }
 end
 
-local function createConditions(godData)
-    return import("mods/rewards/declarations/conditions.lua")({
-        godData = godData,
-    })
-end
-
 local function createSelectedLegalityRules(godData)
     return import("mods/rewards/declarations/selected_legality.lua")({
         godData = godData,
@@ -38,10 +32,6 @@ function assembly.create(opts)
     local bagDefinitions = opts.bagDefinitions or import("mods/rewards/declarations/bags.lua")
     local shopDefinitions = opts.shopDefinitions or import("mods/rewards/declarations/shops.lua")
     local rewardDomain = opts.rewardDomain or createRewardDomain(opts.godData, primitives, bagDefinitions, shopDefinitions)
-    local conditions = opts.conditions
-    if conditions == nil and opts.godData ~= nil then
-        conditions = createConditions(opts.godData)
-    end
     local selectedLegalityRules = opts.selectedLegalityRules
     if selectedLegalityRules == nil and opts.godData ~= nil then
         selectedLegalityRules = createSelectedLegalityRules(opts.godData)
@@ -54,7 +44,6 @@ function assembly.create(opts)
 
     return {
         catalogSurfaces = catalogSurfaces,
-        conditions = conditions,
         rewardDomain = rewardDomain,
         selectedLegalityRules = selectedLegalityRules,
     }

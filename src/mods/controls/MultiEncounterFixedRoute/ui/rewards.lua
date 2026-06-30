@@ -73,11 +73,10 @@ local function wheelOfferOpts(control, instance, roleKey)
 end
 
 local function wheelOfferValueStates(control, rowIndex, legIndex, alias, opts)
-    return control:rewardValueStates(
+    return control:historyRewardValueStates(
         rowIndex,
         "encounter:" .. tostring(legIndex),
-        alias,
-        opts
+        alias
     )
 end
 

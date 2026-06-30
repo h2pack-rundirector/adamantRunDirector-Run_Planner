@@ -147,6 +147,7 @@ local function selectedRewardFromMajorMinor(context, rewards)
             kind = "majorMinor",
             rewardClass = rewardClass,
             rewardStore = context.majorRewardStore or MAJOR_REWARD_STORE,
+            controlAlias = "Reward2Key",
             rewardType = rewardType ~= "" and rewardType or nil,
             boonSource = rewardType == "Boon" and values[3] or nil,
             devotionSources = rewardType == "Devotion" and { values[5], values[6] } or nil,
@@ -157,6 +158,7 @@ local function selectedRewardFromMajorMinor(context, rewards)
             kind = "majorMinor",
             rewardClass = rewardClass,
             rewardStore = context.minorRewardStore or MINOR_REWARD_STORE,
+            controlAlias = "Reward4Key",
             rewardType = rewardType ~= "" and rewardType or nil,
         }
     end
@@ -180,6 +182,7 @@ local function selectedRewardFromRoomStore(context, rewards)
     return {
         kind = "roomStore",
         rewardStore = context.rewardStore,
+        controlAlias = "Reward1Key",
         rewardType = rewardType ~= "" and rewardType or nil,
         eligibleRewardTypes = copyList(context.eligibleRewardTypes),
         ineligibleRewardTypes = copyList(context.ineligibleRewardTypes),
@@ -201,11 +204,13 @@ local function roomStoreOfferSummary(offer, rewardType, boonSource)
     if offer == nil then
         return nil
     end
+    local rewardAliasStart = math.floor(tonumber(offer.rewardAliasStart) or 1)
     return {
         kind = "roomStore",
         address = offer.address,
         rewardStore = offer.rewardStore,
         offerCount = offer.offerCount,
+        controlAlias = "Reward" .. tostring(rewardAliasStart) .. "Key",
         rewardType = rewardType ~= "" and rewardType or nil,
         boonSource = rewardType == "Boon" and boonSource or nil,
         eligibleRewardTypes = copyList(offer.eligibleRewardTypes),
@@ -252,6 +257,7 @@ local function prebossShopOutcome(context, rewards)
         offers[index] = {
             rewardType = values[index] ~= "" and values[index] or nil,
             boonSource = loot[index] ~= "" and loot[index] or nil,
+            controlAlias = "Reward" .. tostring(index) .. "Key",
             state = states[index] ~= "" and states[index] or nil,
             bought = states[index] == SHOP_BOUGHT_VALUE,
         }

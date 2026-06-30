@@ -444,7 +444,7 @@ function validator.validateCatalog(catalog, opts)
     return issues
 end
 
-function validator.validateGodLists(godData, rewardDomain, routeRules, rewardConditions)
+function validator.validateGodLists(godData, rewardDomain, routeRules, selectedLegalityRules)
     local issues = {}
 
     local function assertSameList(name, expected, actual)
@@ -470,24 +470,28 @@ function validator.validateGodLists(godData, rewardDomain, routeRules, rewardCon
     for _, key in ipairs(godLootNames) do
         godLookup[key] = true
     end
-    for ruleIndex, rule in ipairs(rewardConditions or {}) do
+    for ruleIndex, rule in ipairs(selectedLegalityRules or {}) do
         for reqIndex, requirement in ipairs(rule.requirements or {}) do
-            if requirement.kind == "priorDistinctGodLoot" then
+            if requirement.kind == "PriorDistinctLootSources" then
                 assertSameList(
-                    "conditions[" .. tostring(ruleIndex) .. "].requirements[" .. tostring(reqIndex) .. "].countedLootNames",
+                    "selectedLegalityRules[" .. tostring(ruleIndex) .. "].requirements["
+                        .. tostring(reqIndex)
+                        .. "].sourceValues",
                     devotionPrerequisiteLootNames,
-                    requirement.countedLootNames
+                    requirement.sourceValues
                 )
             end
-            for lootIndex, lootName in ipairs(requirement.countedLootNames or {}) do
+            for lootIndex, lootName in ipairs(requirement.sourceValues or {}) do
                 if not godLookup[lootName] then
                     addIssue(
                         issues,
                         "god_list_drift",
-                        "conditions[" .. tostring(ruleIndex) .. "].requirements[" .. tostring(reqIndex) .. "].countedLootNames["
+                        "selectedLegalityRules[" .. tostring(ruleIndex) .. "].requirements["
+                            .. tostring(reqIndex)
+                            .. "].sourceValues["
                             .. tostring(lootIndex)
                             .. "]",
-                        "Reward condition references unknown god loot"
+                        "Selected legality rule references unknown god loot"
                     )
                 end
             end

@@ -71,8 +71,17 @@ function feedback.forBiome(feedbackState, biomeKey)
     return feedbackState and feedbackState.byBiome and feedbackState.byBiome[biomeKey] or nil
 end
 
-function feedback.valueStatesForBiomeRow(biomeFeedback, rowIndex, controlAlias)
+function feedback.valueStatesForBiomeRow(biomeFeedback, rowIndex, controlAlias, rewardAddress)
     local row = biomeFeedback and biomeFeedback[rowIndex] or nil
+    if rewardAddress ~= nil and rewardAddress ~= "" then
+        local addressStates = row
+            and row.rewardValueStates
+            and row.rewardValueStates[rewardAddress]
+            or nil
+        if addressStates ~= nil and addressStates[controlAlias] ~= nil then
+            return addressStates[controlAlias]
+        end
+    end
     return row and row.valueStates and row.valueStates[controlAlias] or nil
 end
 
@@ -83,11 +92,12 @@ function feedback.biomeRowInactive(biomeFeedback, rowIndex)
         and rowIndex > biomeFeedback.inactiveAfterRowIndex
 end
 
-function feedback.valueStatesForControl(feedbackState, biomeKey, rowIndex, controlAlias)
+function feedback.valueStatesForControl(feedbackState, biomeKey, rowIndex, controlAlias, rewardAddress)
     return feedback.valueStatesForBiomeRow(
         feedback.forBiome(feedbackState, biomeKey),
         rowIndex,
-        controlAlias
+        controlAlias,
+        rewardAddress
     )
 end
 

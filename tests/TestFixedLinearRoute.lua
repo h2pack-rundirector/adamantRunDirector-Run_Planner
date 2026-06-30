@@ -1178,11 +1178,6 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeBuildsValidatedSna
             value = "ZeusUpgrade",
         },
     })
-    lu.assertEquals(snapshot.rows[4].rewardItems[1].address, "row")
-    lu.assertEquals(snapshot.rows[4].rewardItems[1].sourceKind, "row")
-    lu.assertEquals(snapshot.rows[4].rewardItems[1].rewardKind, "roomStore")
-    lu.assertEquals(snapshot.rows[4].rewardItems[1].rewards[1], "Boon")
-    lu.assertEquals(snapshot.rows[4].rewardItems[1].rewardPicks[2].value, "ZeusUpgrade")
 
     lu.assertEquals(snapshot.rows[5].roleKey, "Missing")
     lu.assertEquals(snapshot.rows[5].invalidCode, "unknown_role")
@@ -1838,42 +1833,6 @@ function TestRunPlannerFixedLinearRoute.testConcreteMinibossOptionUsesLeafDepthC
     lu.assertEquals(data.rowContext(instance, rows, 5).biomeEncounterDepthCost, 0)
 end
 
-function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeUsesRouteRewardValidation()
-    local catalog = loadCatalog()
-    local template = loadFixedLinearTemplate()
-    local instance = template.prepare({
-        name = "RouteF",
-        biome = catalog.lookup.F,
-    })
-    local control = template.createRuntime(routeFields({
-        {
-            RoleKey = "",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat02",
-            Reward1Key = "Major",
-            Reward2Key = "MaxHealthDrop",
-        },
-    }), instance)
-    control:setRouteContext({
-        rewardRowValidation = function(_, routeKey, biomeKey, rowIndex)
-            if routeKey == "Underworld" and biomeKey == "F" and rowIndex == 2 then
-                return {
-                    valid = false,
-                    code = "route_reward",
-                    message = "Route reward invalid",
-                }
-            end
-            return nil
-        end,
-    }, "Underworld")
-
-    local validation = control:rowValidation(2)
-
-    lu.assertTrue(validation.valid)
-end
-
 function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeRoutesRewardValueStateContext()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
@@ -1895,25 +1854,19 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeRoutesRewardValueS
         blockingHorizon = function()
             return nil
         end,
-        rewardValueStates = function(
+        historyValueStates = function(
             _,
             routeKey,
             biomeKey,
             rowIndex,
-            rewardAddress,
             controlAlias,
-            surfaceControl,
-            rewardFields,
-            rewardContext
+            rewardAddress
         )
             seen.routeKey = routeKey
             seen.biomeKey = biomeKey
             seen.rowIndex = rowIndex
             seen.rewardAddress = rewardAddress
             seen.controlAlias = controlAlias
-            seen.surfaceControl = surfaceControl
-            seen.rewardFields = rewardFields
-            seen.rewardContext = rewardContext
             return {
                 Boon = 2,
             }
@@ -1941,9 +1894,6 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeRoutesRewardValueS
     lu.assertEquals(seen.rowIndex, 2)
     lu.assertEquals(seen.rewardAddress, "row")
     lu.assertEquals(seen.controlAlias, "Reward1Key")
-    lu.assertIs(seen.surfaceControl, surfaceControl)
-    lu.assertIs(seen.rewardFields, rewardFields)
-    lu.assertIs(seen.rewardContext, rewardContext)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingRewardDropdownUsesRouteValueStateContext()
@@ -1985,28 +1935,23 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingRewardDropdownUses
         blockingHorizon = function()
             return nil
         end,
-        rewardValueStates = function(
+        historyValueStates = function(
             _,
             routeKey,
             biomeKey,
             rowIndex,
-            rewardAddress,
             controlAlias,
-            surfaceControl,
-            _rewardFields,
-            rewardContext
+            rewardAddress
         )
-            if rewardAddress == "sibling:1" then
-                seen.routeKey = routeKey
-                seen.biomeKey = biomeKey
-                seen.rowIndex = rowIndex
-                seen.rewardAddress = rewardAddress
-                seen.controlAlias = controlAlias
-                seen.surfaceControl = surfaceControl
-                seen.rewardContext = rewardContext
-            end
-            return {
-                Minor = 2,
+        if rewardAddress == "sibling:1" then
+            seen.routeKey = routeKey
+            seen.biomeKey = biomeKey
+            seen.rowIndex = rowIndex
+            seen.rewardAddress = rewardAddress
+            seen.controlAlias = controlAlias
+        end
+        return {
+            Minor = 2,
             }
         end,
     }, "Underworld")
@@ -2029,8 +1974,6 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingRewardDropdownUses
     lu.assertEquals(seen.rowIndex, 6)
     lu.assertEquals(seen.rewardAddress, "sibling:1")
     lu.assertEquals(seen.controlAlias, "SiblingRewardClassKey")
-    lu.assertEquals(seen.surfaceControl.alias, "SiblingRewardClassKey")
-    lu.assertEquals(seen.rewardContext.address, "sibling:1")
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRuntimeInvalidatesPreviousRoomExitRequirement()

@@ -23,7 +23,7 @@ game provenance.
 These fields are part of the current active declaration contract.
 
 - Root biome: `key`, `label`, `region`, `adapter`, `timeline`,
-  `featurePolicies`, `biomeRules`, `roles`.
+  `featurePolicies`, `roles`.
 - `slotLayout`: `routeRowLabelPrefix`, `biomeDepthCacheStart`,
   `defaultFixedBiomeDepthCacheCost`, `routeBiomeDepthCacheCost`,
   `routeStartOrdinal`, `routeEndOrdinal`, `entry`, `special`,
@@ -47,8 +47,7 @@ These fields are part of the current active declaration contract.
 - O Thessaly active policy: `combatEncounterPolicy`, its `countControl`,
   variant legs, and role `encounterPolicy`.
 - Q Summit active policy: `forcedDepthOptions`.
-- N Ephyra active reward row group: `hub.rewardRowGroup`,
-  `hub.sideRoomAvailability.modes`,
+- N Ephyra active policy: `hub.sideRoomAvailability.modes`,
   `hub.pylonRoomHistoryCost`, combat/miniboss/story room lists, side doors, and
   side-door rewards embedded on each side door.
 - I Tartarus active policy: `clockwork.requiredGoalRewards`,
@@ -199,9 +198,6 @@ These fields may look descriptive, but current behavior depends on them.
 
 - `featurePolicies`
   - Consumed by route context feature target filtering.
-
-- `biomeRules`
-  - Consumed by row validation, currently for the Thessaly story/shop deadline.
 
 - `vanillaDepthHints`
   - Consumed indirectly by the Q fixed-linear adapter through

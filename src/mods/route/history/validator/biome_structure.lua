@@ -666,6 +666,50 @@ local function validateForcePressure(history, biome)
     return nil
 end
 
+local function generatedRoomKeyThrough(entries, entryIndex, roomKeys)
+    for index = 1, entryIndex do
+        if candidateInList(roomKeys, entries[index].roomKey or entries[index].eventKey) then
+            return true
+        end
+        for _, exit in ipairs(selectedAndGeneratedExits(entries[index])) do
+            if candidateInList(roomKeys, exit.roomKey) then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function validateDeadlineRequirements(history, biome)
+    local topology = routeStructureForBiome(biome)
+    if topology == nil then
+        return nil
+    end
+
+    local entries = biomeRoomEntries(history, biome.key)
+    for _, requirement in ipairs(topology.deadlineRequirements or EMPTY_LIST) do
+        local deadline = requirement.biomeDepthCache
+        if deadline ~= nil then
+            for index, entry in ipairs(entries) do
+                if (entry.biomeDepthCache or 0) >= deadline then
+                    if not generatedRoomKeyThrough(entries, index, requirement.roomKeys) then
+                        return invalidAt(
+                            entry,
+                            requirement.code or "room_deadline_requirement",
+                            requirement.message or "Required room missing by deadline",
+                            {
+                                topologyRequirementKey = requirement.key,
+                            }
+                        )
+                    end
+                    break
+                end
+            end
+        end
+    end
+    return nil
+end
+
 function biomeStructure.validate(args)
     local history = args and args.history or nil
     local route = args and args.route or nil
@@ -683,6 +727,9 @@ function biomeStructure.validate(args)
             end
             if invalid == nil then
                 invalid, findingsForInvalid = validateForcePressure(history, biome)
+            end
+            if invalid == nil then
+                invalid = validateDeadlineRequirements(history, biome)
             end
             if invalid ~= nil then
                 return {

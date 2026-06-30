@@ -892,9 +892,8 @@ except for rooms reserved for future planned picks.
   of a one-of group instead of allowing the vanilla coin flip to discard it.
 - Normal combat rooms can contain fixed side-room doors. These side rooms are
   children of the selected combat map, not additional pylon picks.
-- Planned pylon row rewards participate in `hub.rewardRowGroup`. This models
-  the hub's persistent door-offer reward set as one reward phase: pylon rewards
-  validate against the same prior context, then apply after the group closes.
+- Hub pylon reward bag timing is deferred until the reward-bag simulation pass;
+  current validation treats selected pylon rewards in traversal order.
 
 Side-room identity is `parent combat room + door id`, not only `N_SubXX`,
 because the same subroom template can appear behind multiple parent rooms.

@@ -3,6 +3,15 @@ return function(deps)
 
     return {
         kind = "shipCombat",
+        deadlineRequirements = {
+            {
+                key = "story_or_shop_deadline",
+                biomeDepthCache = 5,
+                roomKeys = { "O_Story01", "O_Shop01" },
+                code = "thessaly_story_or_shop_deadline",
+                message = "Thessaly requires Circe or Shop by depth 5",
+            },
+        },
         combatEncounterPolicy = {
             key = "O_CombatData",
             label = "Ship Combat",

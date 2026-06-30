@@ -266,7 +266,6 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageEmitsDumbSelectedRowsSnapsh
     lu.assertEquals(snapshot.adapter, "fieldsCageRoute")
     lu.assertNil(snapshot.rows[1].valid)
     lu.assertNil(snapshot.rows[1].roomTopology)
-    lu.assertNil(snapshot.rows[1].rewardItems)
     lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
     lu.assertEquals(snapshot.rows[1].optionKey, "H_Intro")
     lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
@@ -349,9 +348,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSharedStructureSurvivesWhen
     lu.assertTrue(snapshot.valid)
     lu.assertEquals(snapshot.rows[2].exitCount, 2)
     lu.assertEquals(snapshot.rows[2].rewardExitCount, 2)
-    lu.assertNil(snapshot.rows[2].rewardKind)
-    lu.assertEquals(snapshot.rows[2].rewardItems[1].rewardKind, "vanilla")
-    lu.assertNil(snapshot.rows[2].rewardItems[2])
+    lu.assertEquals(snapshot.rows[2].rewardKind, "vanilla")
     lu.assertEquals(snapshot.rows[2].roomTopology, {
         kind = "fieldsChoice",
         selected = {
@@ -540,9 +537,10 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeBuildsValidatedSnaps
     lu.assertEquals(snapshot.rows[6].slotLabel, "Preboss")
     lu.assertNil(snapshot.rows[6].roomKey)
     lu.assertEquals(snapshot.rows[6].roleKey, "Preboss")
-    lu.assertEquals(primaryRewardItem(snapshot.rows[6]).rewardKind, "shop")
-    lu.assertEquals(snapshot.rows[6].rewardItems[2].address, "prebossReward")
-    lu.assertEquals(snapshot.rows[6].rewardItems[2].rewardKind, "roomStore")
+    lu.assertEquals(snapshot.rows[6].rewardKind, "preboss")
+    lu.assertEquals(snapshot.rows[6].rewardOffers[1].kind, "shop")
+    lu.assertEquals(snapshot.rows[6].rewardOffers[2].address, "prebossReward")
+    lu.assertEquals(snapshot.rows[6].rewardOffers[2].kind, "roomStore")
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageRuntimeInvalidatesCageCountAboveMapCapacity()

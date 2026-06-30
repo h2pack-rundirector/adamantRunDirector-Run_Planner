@@ -4,7 +4,6 @@ local deps = ...
 local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
-local rewardItems = deps.rewardItems
 local roomStructure = deps.roomStructure
 local sideRoomProbability = deps.sideRoomProbability
 local invalidLocations = deps.invalidLocations
@@ -57,11 +56,6 @@ local function hubTopology(instance)
     return instance.biome.roomTopology.hub
 end
 
-local function hubRewardRowGroup(instance)
-    local topology = hubTopology(instance)
-    return topology and topology.rewardRowGroup or nil
-end
-
 local function pylonRoomTopology(instance, slot, row)
     if slot == nil or slot.kind ~= "biomeRow" then
         return nil
@@ -89,17 +83,9 @@ local function pylonRoomTopology(instance, slot, row)
             generatedRewardExitCount = topology.generatedRewardExitCount,
             selectedDoorCount = topology.selectedDoorCount,
             effectTiming = topology.effectTiming,
-            rewardRowGroup = topology.rewardRowGroup,
         },
         sideRooms = row.sideRooms,
     }
-end
-
-local function routeRewardValidation(instance, rowIndex)
-    if instance.routeContext ~= nil and instance.routeContext.rewardRowValidation ~= nil then
-        return instance.routeContext:rewardRowValidation(instance.routeKey, instance.biomeKey, rowIndex)
-    end
-    return nil
 end
 
 local function prewarmRewardSurface(role, option)
@@ -281,7 +267,7 @@ function runtime.create(fields, instance)
         end
         instance.rewardDrawOpts.hideGenericRewardLabel = baseOpts and baseOpts.hideGenericRewardLabel
         instance.rewardDrawOpts.godSource = self:godSource()
-        instance.rewardDrawOpts.valueStatesForControl = rewardSystem.routeValueStatesForControl(instance)
+        instance.rewardDrawOpts.valueStatesForControl = rewardSystem.historyValueStatesForControl(instance)
         instance.rewardDrawOpts.onControlChanged = instance.rewardDrawChanged
         return instance.rewardDrawOpts
     end
@@ -335,14 +321,6 @@ function runtime.create(fields, instance)
         local validation = data.validateRow(instance, routeRows, rowIndex)
         if not validation.valid then
             return validation
-        end
-        if not self:rewardsConfigured() then
-            return validation
-        end
-
-        local rewardInvalid = routeRewardValidation(instance, rowIndex)
-        if rewardInvalid ~= nil and not rewardInvalid.valid then
-            return rewardInvalid
         end
         return validation
     end
@@ -404,7 +382,6 @@ function runtime.create(fields, instance)
             hubDoorId = option and option.hubDoorId or slot.hubDoorId,
             sideDoors = option and option.sideDoors or slot.sideDoors,
             sideRooms = sideRoomSnapshots(instance, fields, routeRows, rowIndex, rewardsConfigured),
-            rewardRowGroup = slot.kind == "biomeRow" and hubRewardRowGroup(instance) or nil,
             valid = validation.valid,
             invalidCode = validation.code,
             invalidReason = validation.message,
@@ -418,7 +395,7 @@ function runtime.create(fields, instance)
             selectionRequirements = selectionRequirements,
         }
         row.roomTopology = pylonRoomTopology(instance, slot, row)
-        return rewardItems.attach(row)
+        return row
     end
 
     function control:selectedRowSnapshot(rowIndex)

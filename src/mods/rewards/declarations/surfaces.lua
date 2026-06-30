@@ -1,6 +1,5 @@
 return function(deps)
 local routeRules = deps.routeRules
-local rewardConstraints = deps.rewardConstraints
 local rewards = {}
 
 local DEFAULT_SHOP_REWARD_GENERATION = {
@@ -145,15 +144,6 @@ function rewards.preboss(shopProfile, rewardStore, opts)
             },
             roomOffer,
         },
-    }
-end
-
-function rewards.rewardRowGroup(groupKey, opts)
-    opts = opts or {}
-    return {
-        key = groupKey,
-        effectTiming = opts.effectTiming,
-        constraints = rewardConstraints.rewardRowGroup(groupKey),
     }
 end
 

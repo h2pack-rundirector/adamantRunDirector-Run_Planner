@@ -65,10 +65,6 @@ local function loadUi()
     }), runtime
 end
 
-local function loadConditions()
-    return importHarness.loadRewardConditions()
-end
-
 local function loadSelectedLegalityRules()
     return importHarness.loadSelectedLegalityRules()
 end
@@ -141,10 +137,6 @@ local function appendUnknownRewardReferencesFromRequirement(unknown, primitives,
             child
         )
     end
-end
-
-local function loadSemantics()
-    return dofile("src/mods/route/reward_planning/semantics.lua")
 end
 
 local function qSummitShopContext()
@@ -317,212 +309,8 @@ function TestRunPlannerRewards.testDropdownValueDecoratorGatesEnrichmentColors()
     lu.assertEquals(invalidRoute.valueColors.B, { 1.0, 0.22, 0.16, 1.0 })
 end
 
-function TestRunPlannerRewards.testSemanticsDecodeRewardTypesAndSources()
-    local semantics = loadSemantics()
-
-    lu.assertEquals(semantics.rewardType({
-        rewardKind = "boonSource",
-        rewards = { "ZeusUpgrade" },
-    }), "Boon")
-    lu.assertEquals(semantics.boonSource({
-        rewardKind = "boonSource",
-        rewards = { "ZeusUpgrade" },
-    }), "ZeusUpgrade")
-
-    lu.assertEquals(semantics.rewardType({
-        rewardKind = "majorMinor",
-        rewards = { "Major", "Boon", "HeraUpgrade" },
-        rewardPicks = {
-            { key = "rewardType", value = "Boon" },
-            { key = "boonSource", value = "AphroditeUpgrade" },
-        },
-    }), "Boon")
-    lu.assertEquals(semantics.boonSource({
-        rewardKind = "majorMinor",
-        rewards = { "Major", "Boon", "HeraUpgrade" },
-        rewardPicks = {
-            { key = "boonSource", value = "AphroditeUpgrade" },
-        },
-    }), "AphroditeUpgrade")
-
-end
-
-function TestRunPlannerRewards.testSemanticsCollectGodLootSources()
-    local semantics = loadSemantics()
-    local sources = {}
-
-    lu.assertEquals(semantics.godLootSources({
-        rewardKind = "devotionPair",
-        rewards = { "ApolloUpgrade", "HestiaUpgrade" },
-    }, sources), {
-        "ApolloUpgrade",
-        "HestiaUpgrade",
-    })
-
-    lu.assertEquals(semantics.godLootSources({
-        rewardKind = "shop",
-        rewards = { "RandomLoot", "BlindBoxLoot", "BoostedRandomLoot" },
-        rewardLoot = { "ZeusUpgrade", "HeraUpgrade", "PoseidonUpgrade" },
-        rewardPicks = {
-            { key = "purchaseState:1", value = "Bought" },
-            { key = "purchaseState:3", value = "Bought" },
-        },
-    }, sources), {
-        "ZeusUpgrade",
-        "PoseidonUpgrade",
-    })
-end
-
-function TestRunPlannerRewards.testSemanticsExposeRewardEvents()
-    local semantics = loadSemantics()
-    local row = {
-        rowIndex = 3,
-        rewardItems = {
-            {
-                address = "row",
-                rewardKind = "shop",
-                rewards = { "RandomLoot", "WeaponUpgradeDrop" },
-                rewardLoot = { "DemeterUpgrade", "" },
-            },
-        },
-    }
-    local rewardItems = {
-        collect = function()
-            return row.rewardItems
-        end,
-    }
-
-    local events = semantics.eventsForRow(row, rewardItems, {})
-
-    lu.assertEquals(#events, 2)
-    lu.assertEquals(events[1].rewardType, "RandomLoot")
-    lu.assertEquals(events[1].address, "shop:1")
-    lu.assertEquals(events[1].boonSource, "DemeterUpgrade")
-    lu.assertEquals(events[2].rewardType, "WeaponUpgradeDrop")
-    lu.assertEquals(events[2].address, "shop:2")
-end
-
-function TestRunPlannerRewards.testSemanticsExposeFieldsCageRewardEvents()
-    local semantics = loadSemantics()
-    local row = {
-        rowIndex = 2,
-        rewardItems = {
-            {
-                address = "row",
-                rewardKind = "fieldsCages",
-                rewardSourceCount = 3,
-                rewards = { "Boon", "HermesUpgrade", "StackUpgrade" },
-                rewardLoot = { "ZeusUpgrade", "", "" },
-            },
-        },
-    }
-    local rewardItems = {
-        collect = function()
-            return row.rewardItems
-        end,
-    }
-
-    local events = semantics.eventsForRow(row, rewardItems, {})
-
-    lu.assertEquals(#events, 3)
-    lu.assertEquals(events[1].rewardType, "Boon")
-    lu.assertEquals(events[1].address, "cage:1")
-    lu.assertEquals(events[1].addressLabel, "Cage 1 Reward")
-    lu.assertEquals(events[1].boonSource, "ZeusUpgrade")
-    lu.assertEquals(events[2].rewardType, "HermesUpgrade")
-    lu.assertEquals(events[2].address, "cage:2")
-    lu.assertEquals(events[3].rewardType, "StackUpgrade")
-    lu.assertEquals(events[3].address, "cage:3")
-end
-
-function TestRunPlannerRewards.testSemanticsExposeCandidateRewardEvents()
-    local semantics = loadSemantics()
-    local row = {
-        rowIndex = 4,
-    }
-
-    local devotionEvent = semantics.candidateEventForControl(row, {
-        address = "row",
-        sourceLabel = "Rewards",
-        rewardKind = "majorMinor",
-        rewards = { "Major", "", "", "", "ZeusUpgrade", "ApolloUpgrade" },
-        rewardPicks = {
-            { key = "lootAName", value = "HeraUpgrade" },
-            { key = "lootBName", value = "HestiaUpgrade" },
-        },
-    }, {
-        kind = "rewardType",
-        rowIndex = 1,
-    }, "Devotion", "row")
-
-    lu.assertNotNil(devotionEvent)
-    lu.assertEquals(devotionEvent.rewardType, "Devotion")
-    lu.assertEquals(devotionEvent.address, "row")
-    lu.assertEquals(devotionEvent.addressLabel, "Rewards")
-    lu.assertEquals(devotionEvent.devotionSourceA, "HeraUpgrade")
-    lu.assertEquals(devotionEvent.devotionSourceB, "HestiaUpgrade")
-
-    local shopEvent = semantics.candidateEventForControl(row, {
-        address = "row",
-        rewardKind = "shop",
-        rewards = { "" },
-        rewardLoot = { "DemeterUpgrade" },
-    }, {
-        kind = "shopOption",
-        rowIndex = 1,
-    }, "RandomLoot", "row")
-
-    lu.assertNotNil(shopEvent)
-    lu.assertEquals(shopEvent.rewardType, "RandomLoot")
-    lu.assertEquals(shopEvent.address, "shop:1")
-    lu.assertEquals(shopEvent.addressLabel, "Shop Offer 1")
-    lu.assertEquals(shopEvent.boonSource, "DemeterUpgrade")
-
-    local cageEvent = semantics.candidateEventForControl(row, {
-        address = "row",
-        rewardKind = "fieldsCages",
-        rewardSourceCount = 2,
-        rewards = { "", "" },
-        rewardLoot = { "ZeusUpgrade", "PoseidonUpgrade" },
-    }, {
-        kind = "rewardType",
-        sourceIndex = 2,
-    }, "Boon", "row")
-
-    lu.assertNotNil(cageEvent)
-    lu.assertEquals(cageEvent.rewardType, "Boon")
-    lu.assertEquals(cageEvent.address, "cage:2")
-    lu.assertEquals(cageEvent.addressLabel, "Cage 2 Reward")
-    lu.assertEquals(cageEvent.boonSource, "PoseidonUpgrade")
-end
-
-function TestRunPlannerRewards.testSemanticsConcreteAndBannedChecks()
-    local semantics = loadSemantics()
-
-    lu.assertFalse(semantics.isConcrete({
-        rewardKind = "majorMinor",
-        rewards = { "Major", "" },
-    }))
-    lu.assertTrue(semantics.isConcrete({
-        rewardKind = "majorMinor",
-        rewards = { "Major", "Boon", "ZeusUpgrade" },
-    }))
-    lu.assertTrue(semantics.hasBannedValue({
-        rewardKind = "boonSource",
-        rewards = { "ZeusUpgrade" },
-    }, {
-        Boon = true,
-    }))
-    lu.assertTrue(semantics.hasBannedValue({
-        rewardKind = "roomStore",
-        rewards = { "SpellDrop" },
-    }, {
-        SpellDrop = true,
-    }))
-end
-
-function TestRunPlannerRewards.testConditionsGroupTalentVariantsBehindSpellRequirement()
-    local rules = loadConditions()
+function TestRunPlannerRewards.testSelectedLegalityGroupsTalentVariantsBehindSpellRequirement()
+    local rules = loadSelectedLegalityRules()
     local talentRule = ruleByRequirementCode(rules, "talent_requires_spell")
 
     lu.assertNotNil(talentRule)
@@ -532,24 +320,37 @@ function TestRunPlannerRewards.testConditionsGroupTalentVariantsBehindSpellRequi
         "TalentBigDrop",
     })
     lu.assertEquals(talentRule.requirements[1], {
-        kind = "minPriorCount",
-        counter = "spell",
-        scope = "route",
-        min = 1,
+        kind = "RequiredNotInStore",
+        name = "TalentDrop",
+        code = "talent_shop_conflict",
+        message = "Path of Stars cannot be planned after a shop Path of Stars offer",
+        related = {
+            {
+                kind = "pendingOffer",
+                name = "TalentDrop",
+            },
+        },
+    })
+    lu.assertEquals(talentRule.requirements[2], {
+        kind = "LootTypeHistory",
+        countOf = {
+            "SpellDrop",
+        },
+        comparison = ">=",
+        value = 1,
         code = "talent_requires_spell",
         message = "Path of Stars rewards require an earlier Selene's Gift",
     })
 end
 
-function TestRunPlannerRewards.testConditionsApplyDevotionByRewardTypeWithThessalyExitException()
-    local rules = loadConditions()
+function TestRunPlannerRewards.testSelectedLegalityAppliesDevotionWithThessalyExitException()
+    local rules = loadSelectedLegalityRules()
     local devotionRule = ruleByTarget(rules, "Devotion")
 
     lu.assertNotNil(devotionRule)
-    lu.assertNil(devotionRule.appliesToRewardKinds)
     lu.assertEquals(devotionRule.requirements[3], {
-        kind = "previousRoomExitCount",
-        minCount = 2,
+        kind = "RequiredMinExits",
+        value = 2,
         exceptBiomes = {
             "O",
         },
@@ -558,8 +359,8 @@ function TestRunPlannerRewards.testConditionsApplyDevotionByRewardTypeWithThessa
     })
 end
 
-function TestRunPlannerRewards.testConditionsBlockTalentAfterShopTalent()
-    local rules = loadConditions()
+function TestRunPlannerRewards.testSelectedLegalityBlocksTalentAfterShopTalent()
+    local rules = loadSelectedLegalityRules()
     local blockerRule = ruleByRequirementCode(rules, "talent_shop_conflict")
 
     lu.assertNotNil(blockerRule)
@@ -569,42 +370,36 @@ function TestRunPlannerRewards.testConditionsBlockTalentAfterShopTalent()
         "TalentBigDrop",
     })
     lu.assertEquals(blockerRule.requirements[1], {
-        kind = "pendingOfferExclusion",
-        rewards = {
-            "TalentDrop",
-        },
+        kind = "RequiredNotInStore",
+        name = "TalentDrop",
         code = "talent_shop_conflict",
         message = "Path of Stars cannot be planned after a shop Path of Stars offer",
-        relatedParticipants = {
+        related = {
             {
-                kind = "event",
-                source = "pendingOffer",
-                select = "last",
+                kind = "pendingOffer",
+                name = "TalentDrop",
             },
         },
     })
 end
 
-function TestRunPlannerRewards.testConditionsBlockRoomHammerAfterShopHammer()
-    local rules = loadConditions()
+function TestRunPlannerRewards.testSelectedLegalityBlocksRoomHammerAfterShopHammer()
+    local rules = loadSelectedLegalityRules()
     local hammerRule = ruleByTarget(rules, "WeaponUpgrade")
     local blockerRule = ruleByRequirementCode(rules, "weapon_upgrade_shop_conflict")
 
     lu.assertNotNil(hammerRule)
     lu.assertNotNil(blockerRule)
-    lu.assertEquals(blockerRule.targets, { "WeaponUpgrade" })
+    lu.assertEquals(blockerRule.targets, { "WeaponUpgrade", "WeaponUpgradeDrop" })
     lu.assertEquals(blockerRule.requirements[1], {
-        kind = "pendingOfferExclusion",
-        rewards = {
-            "WeaponUpgradeDrop",
-        },
+        kind = "RequiredNotInStore",
+        name = "WeaponUpgradeDrop",
         code = "weapon_upgrade_shop_conflict",
         message = "Hammer cannot be planned after a shop Hammer offer",
-        relatedParticipants = {
+        related = {
             {
-                kind = "event",
-                source = "pendingOffer",
-                select = "last",
+                kind = "pendingOffer",
+                name = "WeaponUpgradeDrop",
             },
         },
     })
@@ -612,7 +407,6 @@ end
 
 function TestRunPlannerRewards.testRewardSystemExposesSelectedLegalityRules()
     local rewards = importHarness.loadRewards()
-    lu.assertNotNil(rewards.legalityConditions)
     lu.assertNotNil(rewards.selectedLegalityRules)
     lu.assertEquals(ruleByTarget(rewards.selectedLegalityRules, "SpellDrop").requirements[1].kind, "RequiredNotInStore")
 end
@@ -680,37 +474,6 @@ function TestRunPlannerRewards.testRewardDeclarationReferencesResolveToPrimitive
                 "shopOptionSets." .. tostring(optionSetKey) .. ".options[" .. tostring(index) .. "]",
                 rewardType
             )
-        end
-    end
-
-    for ruleIndex, rule in ipairs(loadConditions()) do
-        for index, rewardType in ipairs(rule.targets or {}) do
-            appendUnknownRewardReference(
-                unknown,
-                primitives,
-                "conditions[" .. tostring(ruleIndex) .. "].targets[" .. tostring(index) .. "]",
-                rewardType
-            )
-        end
-        for requirementIndex, requirement in ipairs(rule.requirements or {}) do
-            for index, rewardType in ipairs(requirement.rewards or {}) do
-                appendUnknownRewardReference(
-                    unknown,
-                    primitives,
-                    "conditions[" .. tostring(ruleIndex) .. "].requirements[" .. tostring(requirementIndex)
-                        .. "].rewards[" .. tostring(index) .. "]",
-                    rewardType
-                )
-            end
-            for index, rewardType in ipairs(requirement.countedLootNames or {}) do
-                appendUnknownRewardReference(
-                    unknown,
-                    primitives,
-                    "conditions[" .. tostring(ruleIndex) .. "].requirements[" .. tostring(requirementIndex)
-                        .. "].countedLootNames[" .. tostring(index) .. "]",
-                    rewardType
-                )
-            end
         end
     end
 

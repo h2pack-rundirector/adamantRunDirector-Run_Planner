@@ -394,7 +394,6 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearEmitsDumbSelectedRowsS
     lu.assertEquals(snapshot.adapter, "fixedLinear")
     lu.assertNil(snapshot.rows[1].valid)
     lu.assertNil(snapshot.rows[1].roomTopology)
-    lu.assertNil(snapshot.rows[1].rewardItems)
     lu.assertEquals(snapshot.rows[1].roleKey, "Opening")
     lu.assertEquals(snapshot.rows[1].optionKey, "F_Opening01")
     lu.assertEquals(snapshot.rows[2].roleKey, "Combat")

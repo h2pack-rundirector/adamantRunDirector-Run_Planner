@@ -1,6 +1,5 @@
 return function(deps)
     local layout = deps.layout
-    local rewardLayout = deps.rewardLayout
 
     return {
         kind = "hubDoorBatch",
@@ -10,7 +9,6 @@ return function(deps)
             generatedDoorCount = 10,
             generatedRewardExitCount = 10,
             selectedDoorCount = 6,
-            rewardRowGroup = rewardLayout.hubPylons,
             effectTiming = "afterGroup",
             traversal = {
                 opening = {

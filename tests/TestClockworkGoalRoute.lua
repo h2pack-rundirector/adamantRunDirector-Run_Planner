@@ -714,7 +714,6 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalEmitsDumbSelectedRows
     lu.assertEquals(snapshot.clockwork.nonGoalRewardCount, 1)
     lu.assertNil(snapshot.rows[1].valid)
     lu.assertNil(snapshot.rows[1].roomTopology)
-    lu.assertNil(snapshot.rows[1].rewardItems)
     lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
     lu.assertEquals(snapshot.rows[1].optionKey, "I_Intro")
     lu.assertEquals(snapshot.rows[2].roleKey, "GoalCombat")

@@ -108,35 +108,13 @@ local function siblingRewardClassControl(control, instance, siblingIndex)
     return surfaceControl
 end
 
-local function siblingRewardContext(control, rowIndex, surfaceControl)
-    control._siblingRewardContextsByRow = control._siblingRewardContextsByRow or {}
-    local contextsByAddress = control._siblingRewardContextsByRow[rowIndex]
-    if contextsByAddress == nil then
-        contextsByAddress = {}
-        control._siblingRewardContextsByRow[rowIndex] = contextsByAddress
-    end
-
-    local context = contextsByAddress[surfaceControl.rewardAddress]
-    if context == nil then
-        context = {
-            rowIndex = rowIndex,
-            address = surfaceControl.rewardAddress,
-        }
-        contextsByAddress[surfaceControl.rewardAddress] = context
-    end
-    return context
-end
-
 local function decoratedSiblingRewardClassOpts(control, instance, rowIndex, siblingIndex)
     local opts = siblingRewardClassOpts(control, instance, siblingIndex)
     local surfaceControl = siblingRewardClassControl(control, instance, siblingIndex)
-    local rewardContext = siblingRewardContext(control, rowIndex, surfaceControl)
-    local states = control:rewardValueStates(
+    local states = control:historyRewardValueStates(
         rowIndex,
         surfaceControl.rewardAddress,
-        surfaceControl.alias,
-        surfaceControl,
-        rewardContext
+        surfaceControl.alias
     )
     return decorations.decorateDropdown(opts, opts, states)
 end

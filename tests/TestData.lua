@@ -234,15 +234,6 @@ function TestRunPlannerData.testBiomeDefinitionsExposeVanillaDepthScope()
     lu.assertEquals(biomes.lookup.O.slotLayout.routeRowLabelPrefix, "Depth")
     lu.assertEquals(biomes.lookup.O.slotLayout.routeStartOrdinal, 1)
     lu.assertEquals(biomes.lookup.O.slotLayout.routeEndOrdinal, 6)
-    lu.assertEquals(biomes.lookup.O.biomeRules[1], {
-        key = "story_or_shop_deadline",
-        type = "requireAnyRoomByCounter",
-        counter = "biomeDepthCache",
-        deadline = 5,
-        roomKeys = { "O_Story01", "O_Shop01" },
-        code = "thessaly_story_or_shop_deadline",
-        message = "Thessaly requires Circe or Shop by depth 5",
-    })
 
     lu.assertEquals(biomes.lookup.P.slotLayout.depthRange, { min = 1, max = 9 })
     lu.assertEquals(biomes.lookup.P.slotLayout.routeRowLabelPrefix, "Depth")
@@ -911,9 +902,6 @@ function TestRunPlannerData.testBiomeDefinitionsDeclareRoleCapabilities()
     lu.assertEquals(biomes.lookup.H.rolesByKey.Combat.mapOptions[1].key, "H_Combat01")
     lu.assertEquals(biomes.lookup.H.rolesByKey.Combat.reward, fieldsCagesReward("RunProgress", {
         ineligibleRewardTypes = { "Devotion" },
-        rewardGeneration = {
-            effectTiming = "afterBatch",
-        },
     }))
     lu.assertEquals(biomes.lookup.H.rolesByKey.Miniboss.roomOptions[1].encounter, "MiniBossVampire")
     lu.assertEquals(biomes.lookup.H.rolesByKey.Miniboss.roomOptions[2].encounter, "MiniBossLamia")
@@ -1208,17 +1196,6 @@ function TestRunPlannerData.testEphyraHubLayoutModelsPylonRoute()
         },
     })
     lu.assertEquals(#ephyra.roomTopology.hub.doorRooms, 26)
-    lu.assertEquals(ephyra.roomTopology.hub.rewardRowGroup, {
-        key = "N_HubPylons",
-        effectTiming = "afterGroup",
-        constraints = {
-            uniqueRewardTypes = {
-                allow = {
-                    Boon = true,
-                },
-            },
-        },
-    })
 
     local combat12 = ephyra.hub.combatRoomsByKey.N_Combat12
     lu.assertEquals(combat12.hubDoorId, 561389)

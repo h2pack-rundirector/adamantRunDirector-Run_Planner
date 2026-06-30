@@ -41,6 +41,7 @@ local function emitLoot(history, roomEntry, summary, opts)
         parentEntry = roomEntry,
         parentRoomKey = roomEntry.roomKey or roomEntry.eventKey,
         address = opts.address or summary.address,
+        controlAlias = summary.controlAlias or opts.controlAlias,
         lootKind = summary.kind,
         lootType = lootType,
         lootName = nonEmpty(summary.boonSource),
@@ -71,11 +72,13 @@ local function emitPendingShopOffer(history, roomEntry, offer, opts)
         kind = "shop",
         rewardType = rewardType,
         boonSource = offer.boonSource,
+        controlAlias = offer.controlAlias,
         shopProfile = opts.shopProfile,
         state = offer.state,
         bought = offer.bought,
     }, {
         address = opts.address,
+        controlAlias = offer.controlAlias,
         sourceKind = opts.sourceKind,
         shopProfile = opts.shopProfile,
         state = offer.state,
@@ -92,8 +95,10 @@ local function emitFieldCageLoot(history, roomEntry, reward)
             rewardStore = reward.rewardStore,
             rewardType = pick.rewardType,
             boonSource = pick.boonSource,
+            controlAlias = pick.controlAlias,
         }, {
             address = "cage:" .. tostring(index),
+            controlAlias = pick.controlAlias,
             sourceKind = "fieldsCage",
         })
     end
@@ -128,12 +133,14 @@ local function emitPrebossLoot(history, roomEntry, reward, nextRoomEntry)
                     kind = "shop",
                     rewardType = offer.rewardType,
                     boonSource = offer.boonSource,
+                    controlAlias = offer.controlAlias,
                     shopProfile = shop.shopProfile,
                     state = offer.state,
                     bought = offer.bought,
                     acquiredAfterRoomHistoryOrdinal = pendingUntil,
                 }, {
                     address = "shop:" .. tostring(index),
+                    controlAlias = offer.controlAlias,
                     sourceKind = "prebossShop",
                     shopProfile = shop.shopProfile,
                     state = offer.state or SHOP_BOUGHT_VALUE,

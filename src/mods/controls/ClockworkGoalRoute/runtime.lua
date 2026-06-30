@@ -4,7 +4,6 @@ local deps = ...
 local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
-local rewardItems = deps.rewardItems
 local roomStructure = deps.roomStructure
 local invalidLocations = deps.invalidLocations
 local controlRequirements = deps.controlRequirements
@@ -28,13 +27,6 @@ local function rewardSurface(instance, rows, rowIndex, role, option)
         return nil
     end
     return rewardSystem.surfaceFor(data.rewardContext(instance, rows, rowIndex, role, option))
-end
-
-local function routeRewardValidation(instance, rowIndex)
-    if instance.routeContext ~= nil and instance.routeContext.rewardRowValidation ~= nil then
-        return instance.routeContext:rewardRowValidation(instance.routeKey, instance.biomeKey, rowIndex)
-    end
-    return nil
 end
 
 local function prewarmRewardSurface(instance, routeRows, rowIndex, role, option)
@@ -123,7 +115,7 @@ function runtime.create(fields, instance)
         end
         instance.rewardDrawOpts.hideGenericRewardLabel = baseOpts and baseOpts.hideGenericRewardLabel
         instance.rewardDrawOpts.godSource = self:godSource()
-        instance.rewardDrawOpts.valueStatesForControl = rewardSystem.routeValueStatesForControl(instance)
+        instance.rewardDrawOpts.valueStatesForControl = rewardSystem.historyValueStatesForControl(instance)
         instance.rewardDrawOpts.onControlChanged = instance.rewardDrawChanged
         return instance.rewardDrawOpts
     end
@@ -175,14 +167,6 @@ function runtime.create(fields, instance)
             return topologyInvalid
         end
 
-        if not self:rewardsConfigured() then
-            return validation
-        end
-
-        local rewardInvalid = routeRewardValidation(instance, rowIndex)
-        if rewardInvalid ~= nil and not rewardInvalid.valid then
-            return rewardInvalid
-        end
         return validation
     end
 
@@ -260,7 +244,7 @@ function runtime.create(fields, instance)
             rewardPicks = rewardPicks,
             selectionRequirements = selectionRequirements,
         }
-        return rewardItems.attach(row)
+        return row
     end
 
     function control:selectedRowSnapshot(rowIndex)

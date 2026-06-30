@@ -3,12 +3,10 @@ local testImport = importHarness.testImport
 local withTestImport = importHarness.withTestImport
 
 local function normalizeRewardRows(rows)
-    local rewardItems = testImport("mods/route/reward_planning/items.lua")
     for _, row in ipairs(rows or {}) do
         if row.biomeEncounterDepthCost == nil then
             row.biomeEncounterDepthCost = 1
         end
-        rewardItems.attach(row)
     end
     return rows
 end
@@ -23,14 +21,16 @@ local function loadCatalogDeps()
 end
 
 local function primaryRewardItem(row)
-    return row and row.rewardItems and row.rewardItems[1] or nil
+    return row
 end
 
 local function rewardItemBySource(row, sourceKind, sourceIndex)
-    for _, item in ipairs(row and row.rewardItems or {}) do
-        if item.sourceKind == sourceKind and (sourceIndex == nil or item.sourceIndex == sourceIndex) then
-            return item
-        end
+    if sourceKind == "row" then
+        return row
+    elseif sourceKind == "side" then
+        return row and row.sideRooms and row.sideRooms[sourceIndex] or nil
+    elseif sourceKind == "encounter" then
+        return row and row.encounterRewardLegs and row.encounterRewardLegs[sourceIndex] or nil
     end
     return nil
 end
@@ -51,15 +51,6 @@ local function loadRewardDomain()
         loadedRewardDomain = importHarness.loadRewardDomain()
     end
     return loadedRewardDomain
-end
-
-local loadedRewardConditions
-
-local function loadRewardConditions()
-    if loadedRewardConditions == nil then
-        loadedRewardConditions = importHarness.loadRewardConditions()
-    end
-    return loadedRewardConditions
 end
 
 local function loadRouteDeps()
@@ -92,7 +83,6 @@ local function loadRouteDeps()
             availability = rows.availability,
             readCache = rows.readCache,
             requirements = rows.requirements,
-            biomeRules = rows.biomeRules,
             valueStates = rows.valueStates,
             rowEngine = rows.engine,
             timeline = timeline,
@@ -141,41 +131,6 @@ end
 
 local function loadRouteGlobalTemplate()
     return loadControlTemplates().RouteGlobal
-end
-
-local function loadRewardLegality()
-    local semantics = testImport("mods/route/reward_planning/semantics.lua")
-    local invalidLocations = testImport("mods/route/invalid_locations.lua")
-    local routeEvents = testImport("mods/route/events.lua")
-    local routeHistory = testImport("mods/route/history.lua", nil, {
-        events = routeEvents,
-    })
-    local routeQuery = testImport("mods/route/query.lua", nil, {
-        events = routeEvents,
-        history = routeHistory,
-    })
-    local valueStates = testImport("mods/route/value_states.lua")
-    local controlRequirements = testImport("mods/route/control_requirements.lua", nil, {
-        valueStates = valueStates,
-    })
-    return testImport("mods/route/reward_planning/legality.lua", nil, {
-        conditions = loadRewardConditions(),
-        rewardItems = testImport("mods/route/reward_planning/items.lua"),
-        semantics = semantics,
-        invalidLocations = invalidLocations,
-        context = testImport("mods/route/reward_planning/context.lua"),
-        markers = testImport("mods/route/reward_planning/marker_targets.lua", nil, {
-            markers = testImport("mods/route/markers.lua"),
-            semantics = semantics,
-            invalidLocations = invalidLocations,
-        }),
-        topologyBranches = testImport("mods/route/reward_planning/topology_branches.lua", nil, {
-            valueStates = valueStates,
-            controlRequirements = controlRequirements,
-        }),
-        controlRequirements = controlRequirements,
-        query = routeQuery,
-    })
 end
 
 local function loadFixedLinearData()
@@ -267,9 +222,6 @@ end
 
 local function loadRunContext(opts)
     opts = opts or {}
-    local timeline = testImport("mods/route/timeline.lua")
-    local rewardItems = testImport("mods/route/reward_planning/items.lua")
-    local semantics = testImport("mods/route/reward_planning/semantics.lua")
     local rewards = importHarness.loadRewards()
     local historySystem = opts.historySystem
         or withTestImport(function()
@@ -282,13 +234,6 @@ local function loadRunContext(opts)
         controls = testImport("mods/route/run_context/controls.lua"),
         historySystem = historySystem,
         position = testImport("mods/route/position.lua"),
-        rewards = testImport("mods/route/run_context/rewards.lua", nil, {
-            rewardLegality = loadRewardLegality(),
-            rewardItems = rewardItems,
-            semantics = semantics,
-            timeline = timeline,
-            valueStates = testImport("mods/route/value_states.lua"),
-        }),
     })
 end
 
@@ -601,7 +546,6 @@ local function routeRewardRow(rowIndex, rewardType, opts)
         invalidCompletion = opts.invalidCompletion,
         locationLabel = opts.locationLabel,
         rewardConstraints = opts.rewardConstraints,
-        rewardRowGroup = opts.rewardRowGroup,
         roomTopology = opts.roomTopology,
         biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1,
     }
@@ -651,18 +595,6 @@ local function fakeRouteControlSnapshot(controlName, rows)
     }
 end
 
-local function rewardLegalityRouteContext(route, controls, opts)
-    opts = opts or {}
-    local catalog = opts.biomes == nil and loadCatalog() or nil
-    return loadRunContext().create({
-        routes = routeDefinitions({ route }),
-        biomes = opts.biomes or catalog.lookup,
-        controlResolver = function(controlName)
-            return controls[controlName]
-        end,
-    })
-end
-
 local function attachSingleBiomeRouteContext(control, routeKey, biomeKey, opts)
     opts = opts or {}
     routeKey = routeKey or "TestRoute"
@@ -704,7 +636,6 @@ local function devotionRewardRow(rowIndex, opts)
     return routeRewardRow(rowIndex, "Devotion", {
         exitCount = opts.exitCount,
         rewardKind = "majorMinor",
-        rewardRowGroup = opts.rewardRowGroup,
         rewards = {
             "Major",
             "Devotion",
@@ -722,7 +653,6 @@ local function boonRewardRow(rowIndex, lootName, opts)
         exitCount = opts.exitCount,
         rewards = { "Major", "Boon", lootName },
         rewardKind = "majorMinor",
-        rewardRowGroup = opts.rewardRowGroup,
         rewardPicks = {
             { kind = "boonSource", value = lootName },
         },
@@ -784,7 +714,6 @@ return {
     loadMultiEncounterTemplate = loadMultiEncounterTemplate,
     loadFieldsCageTemplate = loadFieldsCageTemplate,
     loadRouteGlobalTemplate = loadRouteGlobalTemplate,
-    loadRewardLegality = loadRewardLegality,
     loadFixedLinearData = loadFixedLinearData,
     loadClockworkGoalData = loadClockworkGoalData,
     loadHubPylonData = loadHubPylonData,
@@ -809,9 +738,8 @@ return {
     buildThessalyRuntime = buildThessalyRuntime,
     routeRewardRow = routeRewardRow,
     fakeRouteControlSnapshot = fakeRouteControlSnapshot,
-rewardLegalityRouteContext = rewardLegalityRouteContext,
-attachSingleBiomeRouteContext = attachSingleBiomeRouteContext,
-fakeTimelineBiome = fakeTimelineBiome,
+    attachSingleBiomeRouteContext = attachSingleBiomeRouteContext,
+    fakeTimelineBiome = fakeTimelineBiome,
     devotionRewardRow = devotionRewardRow,
     boonRewardRow = boonRewardRow,
     firstValidDevotionRows = firstValidDevotionRows,

@@ -4,7 +4,6 @@ local deps = ...
 local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
-local rewardItems = deps.rewardItems
 local roomStructure = deps.roomStructure
 local rewardRatio = deps.rewardRatio
 local invalidLocations = deps.invalidLocations
@@ -45,24 +44,14 @@ local function rewardSurface(role, option)
     return rewardSystem.surfaceFor(rewardContext(role, option))
 end
 
-local function routeRewardValidation(instance, rowIndex)
-    if instance.routeContext ~= nil and instance.routeContext.rewardRowValidation ~= nil then
-        return instance.routeContext:rewardRowValidation(instance.routeKey, instance.biomeKey, rowIndex)
-    end
-    return nil
-end
-
-local function routeRewardValueStates(instance, rowIndex, rewardAddress, controlAlias, surfaceControl, sourceContext)
-    if instance.routeContext ~= nil and instance.routeContext.rewardValueStates ~= nil then
-        return instance.routeContext:rewardValueStates(
+local function historyRewardValueStates(instance, rowIndex, rewardAddress, controlAlias)
+    if instance.routeContext ~= nil and instance.routeContext.historyValueStates ~= nil then
+        return instance.routeContext:historyValueStates(
             instance.routeKey,
             instance.biomeKey,
             rowIndex,
-            rewardAddress,
             controlAlias,
-            surfaceControl,
-            nil,
-            sourceContext
+            rewardAddress
         )
     end
     return nil
@@ -256,7 +245,7 @@ function runtime.create(fields, instance)
         end
         instance.rewardDrawOpts.hideGenericRewardLabel = baseOpts and baseOpts.hideGenericRewardLabel
         instance.rewardDrawOpts.godSource = self:godSource()
-        instance.rewardDrawOpts.valueStatesForControl = rewardSystem.routeValueStatesForControl(instance)
+        instance.rewardDrawOpts.valueStatesForControl = rewardSystem.historyValueStatesForControl(instance)
         instance.rewardDrawOpts.onControlChanged = instance.rewardDrawChanged
         return instance.rewardDrawOpts
     end
@@ -296,8 +285,8 @@ function runtime.create(fields, instance)
         return rewardSurface(role, self:option(rowIndex))
     end
 
-    function control:rewardValueStates(rowIndex, rewardAddress, controlAlias, surfaceControl, sourceContext)
-        return routeRewardValueStates(instance, rowIndex, rewardAddress, controlAlias, surfaceControl, sourceContext)
+    function control:historyRewardValueStates(rowIndex, rewardAddress, controlAlias)
+        return historyRewardValueStates(instance, rowIndex, rewardAddress, controlAlias)
     end
 
     function control:rewardRatioSummary()
@@ -324,14 +313,6 @@ function runtime.create(fields, instance)
             return topologyInvalid
         end
 
-        if not self:rewardsConfigured() then
-            return validation
-        end
-
-        local rewardInvalid = routeRewardValidation(instance, rowIndex)
-        if rewardInvalid ~= nil and not rewardInvalid.valid then
-            return rewardInvalid
-        end
         return validation
     end
 
@@ -411,7 +392,7 @@ function runtime.create(fields, instance)
             rewardPicks = rewardPicks,
             selectionRequirements = selectionRequirements,
         }
-        return rewardItems.attach(row)
+        return row
     end
 
     function control:selectedRowSnapshot(rowIndex)

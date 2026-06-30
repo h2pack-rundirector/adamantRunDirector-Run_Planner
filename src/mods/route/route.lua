@@ -1,35 +1,5 @@
 local routeFactory = {}
 
-local function createRewardPlanning(routeQuery, invalidLocations, routeMarkers, legalityConditions, controlRequirements)
-    local rewardItems = import("mods/route/reward_planning/items.lua")
-    local rewardSemantics = import("mods/route/reward_planning/semantics.lua")
-    local rewardMarkers = import("mods/route/reward_planning/marker_targets.lua", nil, {
-        markers = routeMarkers,
-        semantics = rewardSemantics,
-        invalidLocations = invalidLocations,
-    })
-    local rewardLegality = import("mods/route/reward_planning/legality.lua", nil, {
-        conditions = legalityConditions,
-        rewardItems = rewardItems,
-        semantics = rewardSemantics,
-        invalidLocations = invalidLocations,
-        context = import("mods/route/reward_planning/context.lua"),
-        markers = rewardMarkers,
-        topologyBranches = import("mods/route/reward_planning/topology_branches.lua", nil, {
-            valueStates = import("mods/route/value_states.lua"),
-            controlRequirements = controlRequirements,
-        }),
-        controlRequirements = controlRequirements,
-        query = routeQuery,
-    })
-
-    return {
-        rewardItems = rewardItems,
-        rewardSemantics = rewardSemantics,
-        rewardLegality = rewardLegality,
-    }
-end
-
 function routeFactory.create(opts)
     opts = opts or {}
 
@@ -50,13 +20,6 @@ function routeFactory.create(opts)
     local controlRequirements = import("mods/route/control_requirements.lua", nil, {
         valueStates = import("mods/route/value_states.lua"),
     })
-    local planning = createRewardPlanning(
-        routeQuery,
-        invalidLocations,
-        routeMarkers,
-        rewards.legalityConditions,
-        controlRequirements
-    )
     local rows = import("mods/route/rows.lua", nil, {
         rewards = rewards,
         timeline = routeTimeline,
@@ -72,7 +35,6 @@ function routeFactory.create(opts)
         availability = rows.availability,
         readCache = rows.readCache,
         requirements = rows.requirements,
-        biomeRules = rows.biomeRules,
         valueStates = rows.valueStates,
         rowEngine = rows.engine,
         timeline = routeTimeline,
@@ -83,21 +45,12 @@ function routeFactory.create(opts)
         controlRequirements = controlRequirements,
         invalidLocations = invalidLocations,
         rewards = rewards,
-        rewardItems = planning.rewardItems,
-        rewardSemantics = planning.rewardSemantics,
-        rewardLegality = planning.rewardLegality,
         historySystem = historySystem,
     }
     route.runContext = import("mods/route/run_context.lua", nil, {
         controls = import("mods/route/run_context/controls.lua"),
         historySystem = historySystem,
         position = routePosition,
-        rewards = import("mods/route/run_context/rewards.lua", nil, {
-            rewardLegality = planning.rewardLegality,
-            semantics = planning.rewardSemantics,
-            timeline = routeTimeline,
-            valueStates = rows.valueStates,
-        }),
     })
     return route
 end

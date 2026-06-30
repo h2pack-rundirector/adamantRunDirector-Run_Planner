@@ -38,14 +38,6 @@ function importHarness.loadRewardDomain(godData)
     end)
 end
 
-function importHarness.loadRewardConditions(godData)
-    return importHarness.withTestImport(function()
-        return importHarness.testImport("mods/rewards/declarations/conditions.lua")({
-            godData = godData or importHarness.loadGodData(),
-        })
-    end)
-end
-
 function importHarness.loadSelectedLegalityRules(godData)
     return importHarness.withTestImport(function()
         return importHarness.testImport("mods/rewards/declarations/selected_legality.lua")({

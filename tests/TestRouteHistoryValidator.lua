@@ -48,6 +48,14 @@ local function validate(route, biomeKey, template, rows)
     })
 end
 
+local function thessalyCombat(optionKey, variantKey)
+    return {
+        RoleKey = "Combat",
+        OptionKey = optionKey,
+        VariantKey = variantKey or "TwoCombats",
+    }
+end
+
 local function validateHistory(history)
     return historyValidator.validate({
         route = {
@@ -57,6 +65,25 @@ local function validateHistory(history)
         history = history,
         biomeLookup = {},
     })
+end
+
+function TestRunPlannerRouteHistoryValidator.testThessalyRequiresStoryOrShopByDepthFive()
+    local result = validate({
+        key = "Surface",
+        biomes = { "O" },
+    }, "O", h.loadMultiEncounterTemplate(), {
+        {},
+        thessalyCombat("O_Combat01"),
+        thessalyCombat("O_Combat02"),
+        thessalyCombat("O_Combat03"),
+        thessalyCombat("O_Combat05"),
+        thessalyCombat("O_Combat06"),
+    })
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "thessaly_story_or_shop_deadline")
+    lu.assertEquals(result.invalids[1].rowIndex, 6)
+    lu.assertEquals(result.invalids[1].routeOrdinal, 5)
 end
 
 local function emitRoom(history, roomHistoryOrdinal, fields)
@@ -88,6 +115,9 @@ local function emitLoot(history, room, lootType, fields)
         parentEntry = room,
         parentRoomKey = room.roomKey,
         address = fields and fields.address or "row",
+        controlAlias = fields and fields.controlAlias or nil,
+        rewardClass = fields and fields.rewardClass or nil,
+        rewardStore = fields and fields.rewardStore or nil,
         sourceValues = fields and fields.sourceValues or nil,
         lootName = fields and fields.lootName or nil,
     })
@@ -227,7 +257,7 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRewardFi
     lu.assertEquals(finding.rewardClass, "Major")
 
     local feedback = historyFeedback.fromFindings(result.findings)
-    local states = historyFeedback.valueStatesForControl(feedback, "F", 1, "Reward2Key")
+    local states = historyFeedback.valueStatesForControl(feedback, "F", 1, "Reward2Key", "row")
     lu.assertEquals(states.TalentDrop, valueStates.INVALID)
 end
 
@@ -252,7 +282,57 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsFieldsCa
     lu.assertEquals(finding.address, "cage:2")
 
     local feedback = historyFeedback.fromFindings(result.findings)
-    local states = historyFeedback.valueStatesForControl(feedback, "H", 1, "Reward2Key")
+    local states = historyFeedback.valueStatesForControl(feedback, "H", 1, "Reward2Key", "cage:2")
+    lu.assertEquals(states.TalentDrop, valueStates.INVALID)
+end
+
+function TestRunPlannerRouteHistoryValidator.testRewardFeedbackScopesStatesByAddress()
+    local history = routeHistory.create()
+    emitRoom(history, 1, {
+        rewardCandidates = {
+            {
+                kind = "rewardType",
+                address = "row",
+                rewardStore = "RunProgress",
+                rewardTypes = { "TalentDrop" },
+            },
+            {
+                kind = "rewardType",
+                address = "side:1",
+                rewardStore = "RunProgress",
+                rewardTypes = { "MinorTalentDrop" },
+            },
+        },
+    })
+
+    local result = validateHistory(history)
+    local feedback = historyFeedback.fromFindings(result.findings)
+    local rowStates = historyFeedback.valueStatesForControl(feedback, "F", 1, "Reward1Key", "row")
+    local sideStates = historyFeedback.valueStatesForControl(feedback, "F", 1, "Reward1Key", "side:1")
+
+    lu.assertEquals(rowStates.TalentDrop, valueStates.INVALID)
+    lu.assertNil(rowStates.MinorTalentDrop)
+    lu.assertEquals(sideStates.MinorTalentDrop, valueStates.INVALID)
+    lu.assertNil(sideStates.TalentDrop)
+end
+
+function TestRunPlannerRouteHistoryValidator.testSelectedRewardInvalidPreservesControlTarget()
+    local history = routeHistory.create()
+    local room = emitRoom(history, 1)
+    emitLoot(history, room, "TalentDrop", {
+        address = "row",
+        controlAlias = "Reward2Key",
+        rewardClass = "Major",
+        rewardStore = "RunProgress",
+    })
+
+    local result = validateHistory(history)
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].controlAlias, "Reward2Key")
+    lu.assertEquals(result.invalids[1].rewardClass, "Major")
+
+    local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
+    local states = historyFeedback.valueStatesForControl(feedback, "F", 1, "Reward2Key", "row")
     lu.assertEquals(states.TalentDrop, valueStates.INVALID)
 end
 
@@ -524,7 +604,7 @@ function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsTalentBef
     lu.assertEquals(result.invalids[1].roomKey, "Room1")
 
     local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
-    local states = historyFeedback.valueStatesForControl(feedback, "F", 1, "Reward1Key")
+    local states = historyFeedback.valueStatesForControl(feedback, "F", 1, "Reward1Key", "row")
     lu.assertEquals(states.TalentDrop, valueStates.INVALID)
 end
 
@@ -553,7 +633,7 @@ function TestRunPlannerRouteHistoryValidator.testRewardValidatorTreatsFieldsCage
     lu.assertEquals(result.invalids[1].address, "cage:2")
 
     local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
-    local states = historyFeedback.valueStatesForControl(feedback, "H", 1, "Reward2Key")
+    local states = historyFeedback.valueStatesForControl(feedback, "H", 1, "Reward2Key", "cage:2")
     lu.assertEquals(states.TalentBigDrop, valueStates.INVALID)
 end
 

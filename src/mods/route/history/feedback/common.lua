@@ -15,6 +15,9 @@ local function rewardAliasForAddress(address)
 end
 
 local function rewardControlAlias(record)
+    if record ~= nil and record.controlAlias ~= nil then
+        return record.controlAlias
+    end
     local addressAlias = rewardAliasForAddress(record and record.address or nil)
     if addressAlias ~= nil then
         return addressAlias
@@ -84,13 +87,25 @@ function common.setValueState(feedbackState, record, target, state)
     if row == nil then
         row = {
             valueStates = {},
+            rewardValueStates = {},
         }
         biome[rowIndex] = row
     end
-    local control = row.valueStates[target.controlAlias]
+
+    local controls = row.valueStates
+    if target.tabKey == "rewards" and target.address ~= nil and target.address ~= "" then
+        local addressStates = row.rewardValueStates[target.address]
+        if addressStates == nil then
+            addressStates = {}
+            row.rewardValueStates[target.address] = addressStates
+        end
+        controls = addressStates
+    end
+
+    local control = controls[target.controlAlias]
     if control == nil then
         control = {}
-        row.valueStates[target.controlAlias] = control
+        controls[target.controlAlias] = control
     end
     valueStates.set(control, target.value, target.state or state)
 end
@@ -130,6 +145,7 @@ function common.targetFor(record)
     elseif record.kind == "rewardCandidateInvalid" or record.rewardType ~= nil then
         return {
             tabKey = "rewards",
+            address = record.address or "row",
             controlAlias = rewardControlAlias(record),
             value = record.rewardType,
         }

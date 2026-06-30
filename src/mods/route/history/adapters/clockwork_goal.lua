@@ -145,6 +145,7 @@ local function selectedRoomStoreReward(context, rewards)
     return {
         kind = "roomStore",
         rewardStore = context.rewardStore,
+        controlAlias = "Reward1Key",
         rewardType = rewardType ~= "" and rewardType or nil,
         eligibleRewardTypes = copyList(context.eligibleRewardTypes),
         ineligibleRewardTypes = copyList(context.ineligibleRewardTypes),

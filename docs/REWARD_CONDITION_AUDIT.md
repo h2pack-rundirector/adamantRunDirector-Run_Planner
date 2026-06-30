@@ -66,9 +66,9 @@ Room fields still matter before reward-specific rules:
 Planner status: partially represented in bundles and reward row groups.
 
 Recommended model: keep structural filters in bundle/surface declarations, then
-run a route reward validator over the selected rewards. Dynamic reward legality
-belongs in `src/mods/rewards/declarations/conditions.lua`; interpretation belongs in
-`src/mods/route/reward_planning/legality.lua`.
+run the route-history reward validator over selected rewards. Dynamic selected
+reward legality belongs in `src/mods/rewards/declarations/selected_legality.lua`;
+interpretation belongs in `src/mods/route/history/validator/rewards.lua`.
 
 ### Reward Store Entries And Depletion
 

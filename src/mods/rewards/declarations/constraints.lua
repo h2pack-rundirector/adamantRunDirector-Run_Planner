@@ -37,16 +37,6 @@ local SHOP_PROFILE_CONSTRAINTS = {
     },
 }
 
-local REWARD_ROW_GROUP_CONSTRAINTS = {
-    N_HubPylons = {
-        uniqueRewardTypes = {
-            allow = {
-                Boon = true,
-            },
-        },
-    },
-}
-
 local function copyList(items)
     local copy = {}
     for index, item in ipairs(items or EMPTY_LIST) do
@@ -115,10 +105,6 @@ end
 
 function constraints.shopProfile(shopProfile)
     return copyConstraints(SHOP_PROFILE_CONSTRAINTS[shopProfile])
-end
-
-function constraints.rewardRowGroup(groupKey)
-    return copyMap(REWARD_ROW_GROUP_CONSTRAINTS[groupKey])
 end
 
 return constraints

@@ -3,7 +3,6 @@ local common = deps.common
 local availability = deps.availability
 local readCache = deps.readCache
 local requirements = deps.requirements
-local biomeRules = deps.biomeRules
 local valueStates = deps.valueStates
 local timeline = deps.timeline
 local rewards = deps.rewards
@@ -797,17 +796,7 @@ function rowEngine.create(adapter)
     end
 
     local function validateRowUncached(instance, rows, rowIndex)
-        local status = validateBaseRowUncached(instance, rows, rowIndex)
-        if not status.valid then
-            return status
-        end
-        if biomeRules ~= nil then
-            status = biomeRules.status(routeApi, instance, rows, rowIndex)
-            if not status.valid then
-                return status
-            end
-        end
-        return status
+        return validateBaseRowUncached(instance, rows, rowIndex)
     end
 
     function data.validateRow(instance, rows, rowIndex)

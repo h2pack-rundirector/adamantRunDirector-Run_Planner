@@ -76,13 +76,13 @@ function TestRunPlannerBiomeDeclarations.testGodListDuplicatesStayInSync()
     local godData = importHarness.loadGodData()
     local routeRules = importHarness.loadRouteRules(godData)
     local rewardDomain = importHarness.loadRewardDomain(godData)
-    local rewardConditions = importHarness.loadRewardConditions(godData)
+    local selectedLegalityRules = importHarness.loadSelectedLegalityRules(godData)
 
     assertNoIssues(validator.validateGodLists(
         godData,
         rewardDomain,
         routeRules,
-        rewardConditions
+        selectedLegalityRules
     ))
 end
 

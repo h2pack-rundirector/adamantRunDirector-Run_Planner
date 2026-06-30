@@ -118,6 +118,7 @@ local function selectedRoomStoreReward(context, rewards)
     return {
         kind = "roomStore",
         rewardStore = context.rewardStore,
+        controlAlias = "Reward1Key",
         rewardType = rewardType ~= "" and rewardType or nil,
         eligibleRewardTypes = copyList(context.eligibleRewardTypes),
         ineligibleRewardTypes = copyList(context.ineligibleRewardTypes),
@@ -152,6 +153,7 @@ local function sideRoomRewardSummary(sideRoom)
     return {
         kind = "roomStore",
         rewardStore = sideRoom.rewardStore,
+        controlAlias = "Reward1Key",
         rewardType = rewardType ~= "" and rewardType or nil,
         boonSource = rewardType == "Boon" and sideRoom.rewardLoot and sideRoom.rewardLoot[1] or nil,
     }
@@ -173,7 +175,6 @@ local function hubTopologySummary(hub)
             generatedRewardExitCount = hub.generatedRewardExitCount,
             selectedDoorCount = hub.selectedDoorCount,
             effectTiming = hub.effectTiming,
-            rewardRowGroup = hub.rewardRowGroup,
             minibossAvailability = hub.minibossAvailability,
         },
     }

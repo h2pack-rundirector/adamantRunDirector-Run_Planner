@@ -5,7 +5,6 @@ local runtime = import("mods/controls/MultiEncounterFixedRoute/runtime.lua", nil
     data = data,
     common = deps.route.common,
     rewards = deps.rewards,
-    rewardItems = deps.route.rewardItems,
     roomStructure = biomeHelpers.roomStructure,
     rewardRatio = biomeHelpers.rewardRatio,
     invalidLocations = deps.route.invalidLocations,

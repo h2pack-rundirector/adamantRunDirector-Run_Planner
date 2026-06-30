@@ -1,6 +1,5 @@
 local deps = ... or {}
 local routeControls = deps.controls
-local routeRewards = deps.rewards
 local routePosition = deps.position
 local historySystem = deps.historySystem
 
@@ -91,25 +90,6 @@ local function controlCompletionReport(context, routeKey, biomeKey)
     local report = control ~= nil and control.read ~= nil and control:read("completion") or nil
     reports[biomeKey] = report or false
     return report
-end
-
-local function legacyRowsReport(context, routeKey, biomeKey)
-    local control = context:controlForBiome(routeKey, biomeKey)
-    if control == nil or control.rowSnapshot == nil or control.rowCount == nil then
-        return nil
-    end
-
-    local rows = {}
-    for rowIndex = 1, control:rowCount() do
-        rows[#rows + 1] = control:rowSnapshot(rowIndex)
-    end
-    local completion = controlCompletionReport(context, routeKey, biomeKey)
-    return {
-        controlName = completion and completion.controlName or nil,
-        biomeKey = biomeKey,
-        adapter = completion and completion.adapter or nil,
-        rows = rows,
-    }
 end
 
 local function selectedRowsSnapshot(context, routeKey, biomeKey)
@@ -216,15 +196,10 @@ function runContext.create(opts)
         controls = opts.controls,
         completionByRoute = {},
         overviewByRoute = {},
-        rewardLegalityByRoute = {},
         historyFeedbackByRoute = {},
         godSourceByRoute = {},
         generationByRoute = {},
     }
-    context.rewardState = routeRewards.create({
-        rewardLegality = opts.rewardLegality,
-        routeControlName = routeControlName,
-    })
 
     function context:beginPass(controls)
         self.controls = controls or self.controls
@@ -256,7 +231,6 @@ function runContext.create(opts)
             bumpRouteGeneration(self, route.key)
         end
         clearMap(self.completionByRoute)
-        clearMap(self.rewardLegalityByRoute)
         clearMap(self.historyFeedbackByRoute)
     end
 
@@ -267,7 +241,6 @@ function runContext.create(opts)
                 routeOverviewState(self, routeKey).dirty = true
                 bumpRouteGeneration(self, routeKey)
                 self.completionByRoute[routeKey] = nil
-                self.rewardLegalityByRoute[routeKey] = nil
                 self.historyFeedbackByRoute[routeKey] = nil
                 marked = true
             end
@@ -282,7 +255,6 @@ function runContext.create(opts)
             routeOverviewState(self, routeKey).dirty = true
             bumpRouteGeneration(self, routeKey)
             self.completionByRoute[routeKey] = nil
-            self.rewardLegalityByRoute[routeKey] = nil
             self.historyFeedbackByRoute[routeKey] = nil
             return
         end
@@ -365,10 +337,6 @@ function runContext.create(opts)
         return controlCompletionReport(self, routeKey, biomeKey)
     end
 
-    function context:legacyRowsReport(routeKey, biomeKey)
-        return legacyRowsReport(self, routeKey, biomeKey)
-    end
-
     function context:godSourceForRoute(routeKey)
         if self.godSourceByRoute[routeKey] ~= nil then
             return self.godSourceByRoute[routeKey]
@@ -407,47 +375,6 @@ function runContext.create(opts)
                 self:controlForBiome(route.key, biomeKey)
             end
         end
-    end
-
-    function context:rewardLegality(routeKey, rewardOpts)
-        return self.rewardState.legality(self, routeKey, rewardOpts)
-    end
-
-    function context:rewardRowValidation(routeKey, biomeKey, rowIndex)
-        return self.rewardState.rowValidation(self, routeKey, biomeKey, rowIndex)
-    end
-
-    function context:rewardValueStates(
-        routeKey,
-        biomeKey,
-        rowIndex,
-        rewardAddress,
-        controlAlias,
-        control,
-        fields,
-        rewardContext
-    )
-        local states = self.rewardState.valueStates(
-            self,
-            routeKey,
-            biomeKey,
-            rowIndex,
-            rewardAddress,
-            controlAlias,
-            control,
-            fields,
-            rewardContext
-        )
-        local historyStates = self:historyValueStates(routeKey, biomeKey, rowIndex, controlAlias)
-        if historyStates == nil then
-            return states
-        elseif states == nil then
-            return historyStates
-        end
-        for value, state in pairs(historyStates) do
-            states[value] = state
-        end
-        return states
     end
 
     function context:historyFeedback(routeKey)
@@ -490,13 +417,14 @@ function runContext.create(opts)
         return state.feedback, state.result
     end
 
-    function context:historyValueStates(routeKey, biomeKey, rowIndex, controlAlias)
+    function context:historyValueStates(routeKey, biomeKey, rowIndex, controlAlias, rewardAddress)
         local feedback = self:historyFeedback(routeKey)
         return historySystem.feedback.valueStatesForControl(
             feedback,
             biomeKey,
             rowIndex,
-            controlAlias
+            controlAlias,
+            rewardAddress
         )
     end
 
