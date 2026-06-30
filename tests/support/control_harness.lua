@@ -238,7 +238,7 @@ local function loadRunContext(opts)
     return testImport("mods/route/run_context.lua", nil, {
         controls = testImport("mods/route/run_context/controls.lua"),
         historySystem = historySystem,
-        position = testImport("mods/route/position.lua"),
+        horizon = testImport("mods/route/run_context/horizon.lua"),
     })
 end
 

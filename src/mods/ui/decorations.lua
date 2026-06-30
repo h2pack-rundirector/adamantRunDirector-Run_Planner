@@ -1,6 +1,6 @@
 local deps = ... or {}
 local valueStates = deps.valueStates or import("mods/ui/value_states.lua")
-local routePosition = deps.routePosition or import("mods/route/position.lua")
+local routeHorizon = deps.routeHorizon or import("mods/route/run_context/horizon.lua")
 
 local decorations = {}
 
@@ -64,7 +64,7 @@ local function invalidMatchesPlannerTab(invalid, controlName, biomeKey, tabKey)
     if not invalidMatchesControl(invalid, controlName, biomeKey) then
         return false
     end
-    return routePosition.tabKeyForInvalid(invalid) == tabKey
+    return routeHorizon.tabKeyForInvalid(invalid) == tabKey
 end
 
 local function colorForState(state, opts)
@@ -304,8 +304,8 @@ function decorations.plannerTabInactive(control, tabKey, instance)
         return false
     end
 
-    local horizonOrder = routePosition.tabOrder(routePosition.tabKeyForInvalid(horizon))
-    local tabOrder = routePosition.tabOrder(tabKey)
+    local horizonOrder = routeHorizon.tabOrder(routeHorizon.tabKeyForInvalid(horizon))
+    local tabOrder = routeHorizon.tabOrder(tabKey)
     return horizonOrder ~= nil and tabOrder ~= nil and tabOrder > horizonOrder
 end
 
@@ -350,9 +350,9 @@ function decorations.routeInactiveBoundary(instance)
         return true, nil
     end
     local info = routeContext:routeInfo(instance.routeKey, instance.biomeKey)
-    local horizonKey = routePosition.key({
+    local horizonKey = routeHorizon.key({
         routeBiomeIndex = horizon.routeBiomeIndex,
-        tabKey = routePosition.tabKeyForInvalid(horizon),
+        tabKey = routeHorizon.tabKeyForInvalid(horizon),
         routeOrdinal = horizon.routeOrdinal,
     })
     if horizonKey ~= nil then
@@ -369,8 +369,8 @@ function decorations.routeRowInactive(allInactive, inactiveBoundary, slot, tabKe
         or (
             inactiveBoundary ~= nil
             and slot ~= nil
-            and routePosition.after(
-                routePosition.key({
+            and routeHorizon.after(
+                routeHorizon.key({
                     routeBiomeIndex = inactiveBoundary.routeBiomeIndex,
                     tabKey = tabKey,
                     routeOrdinal = slot.routeOrdinal,

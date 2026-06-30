@@ -24,15 +24,15 @@ local function loadValueStates()
     return dofile("src/mods/ui/value_states.lua")
 end
 
-local function loadRoutePosition()
-    return dofile("src/mods/route/position.lua")
+local function loadRouteHorizon()
+    return dofile("src/mods/route/run_context/horizon.lua")
 end
 
 local function loadDecorations()
     local chunk = assert(loadfile("src/mods/ui/decorations.lua"))
     return chunk({
         valueStates = loadValueStates(),
-        routePosition = loadRoutePosition(),
+        routeHorizon = loadRouteHorizon(),
     })
 end
 
@@ -511,37 +511,37 @@ function TestRunPlannerRouteUi.testRouteContextValidatesOnlyConfiguredBiomePrefi
     lu.assertFalse(routeContext:isBiomeInConfiguredScope("Underworld", "G"))
 end
 
-function TestRunPlannerRouteUi.testRoutePositionOrdersBiomeTabAndRow()
-    local position = loadRoutePosition()
-    local latestFReward = position.key({
+function TestRunPlannerRouteUi.testRouteHorizonOrdersBiomeTabAndRow()
+    local horizon = loadRouteHorizon()
+    local latestFReward = horizon.key({
         routeBiomeIndex = 1,
         tabKey = "rewards",
         routeOrdinal = 31,
     })
-    local firstGRoom = position.key({
+    local firstGRoom = horizon.key({
         routeBiomeIndex = 2,
         tabKey = "rooms",
         routeOrdinal = 0,
     })
-    local roomRowAfterRewardRow = position.key({
+    local roomRowAfterRewardRow = horizon.key({
         routeBiomeIndex = 3,
         tabKey = "rooms",
         routeOrdinal = 9,
     })
-    local rewardRow = position.key({
+    local rewardRow = horizon.key({
         routeBiomeIndex = 3,
         tabKey = "rewards",
         routeOrdinal = 2,
     })
-    local sideRow = position.key({
+    local sideRow = horizon.key({
         routeBiomeIndex = 3,
         tabKey = "sideRooms",
         routeOrdinal = 0,
     })
 
-    lu.assertTrue(position.after(firstGRoom, latestFReward))
-    lu.assertFalse(position.after(roomRowAfterRewardRow, rewardRow))
-    lu.assertTrue(position.after(sideRow, rewardRow))
+    lu.assertTrue(horizon.after(firstGRoom, latestFReward))
+    lu.assertFalse(horizon.after(roomRowAfterRewardRow, rewardRow))
+    lu.assertTrue(horizon.after(sideRow, rewardRow))
 end
 
 function TestRunPlannerRouteUi.testRouteContextDoesNotApplyLaterBiomeRowHorizonToEarlierBiomes()

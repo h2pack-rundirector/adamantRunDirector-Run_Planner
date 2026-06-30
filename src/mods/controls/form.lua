@@ -4,6 +4,7 @@ local valueStates = deps.valueStates
 
 local form = {}
 local common = import("mods/controls/form/common.lua")
+local locations = import("mods/controls/form/locations.lua")
 local readCache = import("mods/controls/form/read_cache.lua")
 local rowData = import("mods/controls/form/row_data.lua", nil, {
     common = common,
@@ -204,6 +205,7 @@ local function optionForKey(role, optionKey)
 end
 
 form.common = common
+form.locations = locations
 form.readCache = readCache
 form.rowData = rowData
 form.valueStates = valueStates

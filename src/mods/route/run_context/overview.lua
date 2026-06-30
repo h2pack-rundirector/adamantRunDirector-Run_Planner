@@ -64,7 +64,7 @@ end
 
 function overview.install(context, deps)
     local state = deps.state
-    local routePosition = deps.position
+    local routeHorizon = deps.horizon
     local routeControlName = deps.routeControlName
     local EMPTY_LIST = deps.EMPTY_LIST
 
@@ -204,16 +204,16 @@ function overview.install(context, deps)
             return false
         end
         local info = self:routeInfo(routeKey, biomeKey)
-        local horizonKey = routePosition.key({
+        local horizonKey = routeHorizon.key({
             routeBiomeIndex = horizon.routeBiomeIndex,
-            tabKey = routePosition.tabKeyForInvalid(horizon),
+            tabKey = routeHorizon.tabKeyForInvalid(horizon),
             routeOrdinal = horizon.routeOrdinal,
         })
         if horizonKey == nil then
             return self:isRouteBiomeInactive(routeKey, biomeKey)
         end
-        return routePosition.after(
-            routePosition.key({
+        return routeHorizon.after(
+            routeHorizon.key({
                 routeBiomeIndex = info and info.index or nil,
                 tabKey = tabKey or "rooms",
                 routeOrdinal = routeOrdinal,

@@ -1,7 +1,7 @@
-local position = {}
+local horizon = {}
 
-position.ROW_CAPACITY = 32
-position.TAB_CAPACITY = 4
+horizon.ROW_CAPACITY = 32
+horizon.TAB_CAPACITY = 4
 
 local TAB_ORDER = {
     rooms = 1,
@@ -9,7 +9,7 @@ local TAB_ORDER = {
     sideRooms = 3,
 }
 
-local BIOME_STRIDE = position.TAB_CAPACITY * position.ROW_CAPACITY
+local BIOME_STRIDE = horizon.TAB_CAPACITY * horizon.ROW_CAPACITY
 
 local function isRewardInvalid(invalid)
     return invalid ~= nil and (invalid.rewardType ~= nil or invalid.address ~= nil)
@@ -25,11 +25,11 @@ local function isSideInvalid(invalid)
         )
 end
 
-function position.tabOrder(tabKey)
+function horizon.tabOrder(tabKey)
     return TAB_ORDER[tabKey]
 end
 
-function position.tabKeyForInvalid(invalid)
+function horizon.tabKeyForInvalid(invalid)
     if invalid ~= nil and invalid.tabKey ~= nil then
         return invalid.tabKey
     end
@@ -42,20 +42,20 @@ function position.tabKeyForInvalid(invalid)
     return "rooms"
 end
 
-function position.key(opts)
+function horizon.key(opts)
     local routeBiomeIndex = opts.routeBiomeIndex
-    local tabOrder = opts.tabOrder or (opts.tabKey and position.tabOrder(opts.tabKey))
+    local tabOrder = opts.tabOrder or (opts.tabKey and horizon.tabOrder(opts.tabKey))
     local routeOrdinal = opts.routeOrdinal
     if routeBiomeIndex == nil or tabOrder == nil or routeOrdinal == nil then
         return nil
     end
     return routeBiomeIndex * BIOME_STRIDE
-        + (tabOrder - 1) * position.ROW_CAPACITY
+        + (tabOrder - 1) * horizon.ROW_CAPACITY
         + routeOrdinal
 end
 
-function position.after(currentKey, horizonKey)
+function horizon.after(currentKey, horizonKey)
     return currentKey ~= nil and horizonKey ~= nil and currentKey > horizonKey
 end
 
-return position
+return horizon

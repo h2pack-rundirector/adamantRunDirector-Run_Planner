@@ -1,6 +1,6 @@
 local deps = ... or {}
 local routeControls = deps.controls
-local routePosition = deps.position
+local routeHorizon = deps.horizon
 local historySystem = deps.historySystem
 
 local function load(path)
@@ -49,7 +49,7 @@ function runContext.create(opts)
     })
     overview.install(context, {
         EMPTY_LIST = EMPTY_LIST,
-        position = routePosition,
+        horizon = routeHorizon,
         routeControlName = routeControls.routeControlName,
         state = state,
     })

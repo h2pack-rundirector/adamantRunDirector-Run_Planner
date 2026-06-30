@@ -5,8 +5,7 @@ function routeFactory.create(opts)
 
     local rewards = opts.rewards
 
-    local routePosition = import("mods/route/position.lua")
-    local invalidLocations = import("mods/route/invalid_locations.lua")
+    local routeHorizon = import("mods/route/run_context/horizon.lua")
     local controlForm = import("mods/controls/form.lua", nil, {
         rewards = rewards,
         valueStates = import("mods/ui/value_states.lua"),
@@ -17,14 +16,13 @@ function routeFactory.create(opts)
     })
     local route = {
         controlForm = controlForm,
-        invalidLocations = invalidLocations,
         rewards = rewards,
         historySystem = historySystem,
     }
     route.runContext = import("mods/route/run_context.lua", nil, {
         controls = import("mods/route/run_context/controls.lua"),
         historySystem = historySystem,
-        position = routePosition,
+        horizon = routeHorizon,
     })
     return route
 end

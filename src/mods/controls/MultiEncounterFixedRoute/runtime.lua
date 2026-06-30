@@ -5,7 +5,6 @@ local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
 local rewardRatio = deps.rewardRatio
-local invalidLocations = deps.invalidLocations
 local form = deps.form
 
 local runtime = {}
@@ -371,7 +370,7 @@ function runtime.create(fields, instance)
                 local invalidRow = {
                     rowIndex = rowIndex,
                     routeOrdinal = row.routeOrdinal,
-                    locationLabel = invalidLocations.biomeRow(instance, row),
+                    locationLabel = form.locations.biomeRow(instance, row),
                     code = validation.code,
                     message = validation.message,
                     tabKey = validation.tabKey,
