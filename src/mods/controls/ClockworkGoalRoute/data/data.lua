@@ -17,8 +17,6 @@ local topologyFactory = import("mods/controls/ClockworkGoalRoute/data/topology.l
     slots = slots,
 })
 
-local INACTIVE_ROLE_KEY = state.INACTIVE_ROLE_KEY
-
 local ROUTE_KIND_ALIAS = "RouteKindKey"
 local NON_GOAL_KIND_ALIAS = "NonGoalKindKey"
 local OPTION_ALIAS = "OptionKey"
@@ -30,11 +28,9 @@ local REWARD_COMBAT_ROLE_KEY = "RewardCombat"
 
 local ROUTE_KIND_VALUES = { GOAL_KIND, NON_GOAL_KIND }
 local GOAL_KIND_VALUES = { GOAL_KIND }
-local INACTIVE_KIND_VALUES = { INACTIVE_ROLE_KEY }
 local ROUTE_KIND_LABELS = {
     Goal = "Goal",
     NonGoal = "Non Goal",
-    Inactive = "Inactive",
 }
 local NON_GOAL_KIND_VALUES = {
     REWARD_COMBAT_ROLE_KEY,
@@ -61,7 +57,7 @@ local function routeKindForRoleKey(roleKey)
     if roleKey == GOAL_COMBAT_ROLE_KEY then
         return GOAL_KIND
     end
-    if roleKey ~= nil and roleKey ~= "" and roleKey ~= INACTIVE_ROLE_KEY then
+    if roleKey ~= nil and roleKey ~= "" then
         return NON_GOAL_KIND
     end
     return roleKey or ""
@@ -107,13 +103,10 @@ local adapter = {
         if forcedRoleKey ~= nil and forcedRoleKey ~= "" then
             return forcedRoleKey
         end
-        if state.routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
-            return INACTIVE_ROLE_KEY
-        end
         return roleKeyForRouteChoice(rows, rowIndex)
     end,
 
-    roleForRow = function(instance, rowIndex, roleKey, slot, defaultRoleForRow, rows)
+    roleForRow = function(instance, rowIndex, roleKey, slot, defaultRoleForRow, _rows)
         if slots.isFixedSlot(slot) then
             if roleKey == nil or roleKey == "" or roleKey == slot.roleKey then
                 return slot.role
@@ -127,13 +120,10 @@ local adapter = {
             end
             return nil
         end
-        if state.routeTerminatedBeforeRow(instance, rows, rowIndex, slot) and roleKey == INACTIVE_ROLE_KEY then
-            return state.inactiveRole
-        end
         return defaultRoleForRow(instance, rowIndex, roleKey, slot)
     end,
 
-    roleAvailabilityForSlot = function(instance, rows, rowIndex, roleKey, slot)
+    roleAvailabilityForSlot = function(instance, _rows, _rowIndex, roleKey, slot)
         if slots.isFixedSlot(slot) then
             return roleKey == slot.roleKey
         end
@@ -141,13 +131,10 @@ local adapter = {
         if forcedRoleKey ~= nil and forcedRoleKey ~= "" then
             return roleKey == forcedRoleKey
         end
-        if state.routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
-            return roleKey == INACTIVE_ROLE_KEY
-        end
         return nil
     end,
 
-    fillRoleValuesForSlot = function(instance, rows, rowIndex, slot, values)
+    fillRoleValuesForSlot = function(instance, _rows, _rowIndex, slot, values)
         if slots.isFixedSlot(slot) then
             values[#values + 1] = slot.roleKey
             return true
@@ -157,22 +144,11 @@ local adapter = {
             values[#values + 1] = forcedRoleKey
             return true
         end
-        if state.routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
-            values[#values + 1] = INACTIVE_ROLE_KEY
-            return true
-        end
         return false
     end,
 
     skipOptionsForSlot = function(_, _, _, slot)
         return slots.isPrebossSlot(slot)
-    end,
-
-    biomeEncounterDepthCost = function(instance, rows, rowIndex, _, _, _, _, slot)
-        if state.routeTerminatedBeforeRow(instance, rows, rowIndex, slot) then
-            return 0
-        end
-        return nil
     end,
 
     isRoleAllowed = function(instance, rows, rowIndex, roleKey, role, slot)
@@ -279,9 +255,6 @@ end
 
 function data.routeKindValuesForRow(instance, rows, rowIndex)
     local roleValues = data.roleValuesForRow(instance, rows, rowIndex)
-        if roleValues[1] == INACTIVE_ROLE_KEY then
-            return INACTIVE_KIND_VALUES
-        end
     if roleValues[1] == GOAL_COMBAT_ROLE_KEY and roleValues[2] == nil then
         return GOAL_KIND_VALUES
     end
@@ -302,7 +275,6 @@ function data.routeKindValueStatesForRow(instance, rows, rowIndex)
     end
     states[GOAL_KIND] = roleStates[GOAL_COMBAT_ROLE_KEY]
     states[NON_GOAL_KIND] = aggregateAlternativeValueState(roleStates, NON_GOAL_KIND_VALUES)
-    states[INACTIVE_ROLE_KEY] = roleStates[INACTIVE_ROLE_KEY]
     return states
 end
 
@@ -348,10 +320,6 @@ end
 
 function data.isRouteSlot(slot)
     return slots.isRouteSlot(slot)
-end
-
-function data.isInactiveRouteRow(instance, rows, rowIndex)
-    return state.routeTerminatedBeforeRow(instance, rows, rowIndex, slots.slotForRow(instance, rowIndex))
 end
 
 function data.maxSiblingStructureCount(instance)

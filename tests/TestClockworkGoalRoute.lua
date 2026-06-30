@@ -529,35 +529,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
 
 end
 
-function TestRunPlannerClockworkGoalRoute.testClockworkGoalActiveInactiveRowsAreInvalid()
-    local catalog = loadCatalog()
-    local data = loadClockworkGoalData()
-    local instance = data.prepare({
-        name = "RouteI",
-        biome = catalog.lookup.I,
-    })
-    local rows = fakeRows({
-        {},
-        { RouteKindKey = "Goal", OptionKey = "I_Combat01" },
-        { RouteKindKey = "Goal", OptionKey = "I_Combat03" },
-        { RouteKindKey = "Goal", OptionKey = "I_Combat04" },
-        { RouteKindKey = "Goal", OptionKey = "I_Combat09" },
-        { RoleKey = "Inactive" },
-        { RoleKey = "Inactive" },
-        { RoleKey = "Inactive" },
-        { RoleKey = "Inactive" },
-        { RoleKey = "Inactive" },
-        { RoleKey = "Inactive" },
-        { RoleKey = "Inactive" },
-        { RoleKey = "Inactive" },
-        {},
-    })
-
-    lu.assertEquals(data.readRoleKey(instance, rows, 12), "")
-end
-
-
-function TestRunPlannerClockworkGoalRoute.testClockworkGoalTerminatesAfterOneExitFifthGoal()
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalRowsStaySelectableAfterFifthGoal()
     local catalog = loadCatalog()
     local data = loadClockworkGoalData()
     local instance = data.prepare({
@@ -575,11 +547,13 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalTerminatesAfterOneExi
         {},
     })
 
-    lu.assertEquals(data.readRoleKey(instance, rows, 7), "Inactive")
-    lu.assertEquals(data.roleValuesForRow(instance, rows, 7), { "Inactive" })
-    lu.assertTrue(data.isInactiveRouteRow(instance, rows, 7))
+    lu.assertEquals(data.readRoleKey(instance, rows, 7), "Story")
+    local roles = data.roleValuesForRow(instance, rows, 7)
+    lu.assertTrue(hasValue(roles, "GoalCombat"))
+    lu.assertTrue(hasValue(roles, "RewardCombat"))
+    lu.assertTrue(hasValue(roles, "Story"))
     lu.assertEquals(data.countGoals(instance, rows), 5)
-    lu.assertEquals(data.countStories(instance, rows), 0)
+    lu.assertEquals(data.countStories(instance, rows), 1)
     lu.assertEquals(data.readRoleKey(instance, rows, 14), "Preboss")
 end
 
@@ -611,6 +585,20 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRoomViewHidesInactive
     end
 
     local control = template.createUi(fields, instance)
+    instance.routeKey = "Underworld"
+    instance.biomeKey = "I"
+    instance.routeFeedbackGeneration = 1
+    instance.routeFeedback = {
+        inactiveAfterRowIndex = 6,
+    }
+    instance.routeContext = {
+        routeGeneration = function()
+            return 1
+        end,
+        blockingHorizon = function()
+            return nil
+        end,
+    }
     local draw = noOpDraw()
     local rendered = {}
     draw.imgui.Text = function(text)

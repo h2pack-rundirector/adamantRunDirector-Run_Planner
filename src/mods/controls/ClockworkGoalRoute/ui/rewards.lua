@@ -1,7 +1,6 @@
 -- luacheck: no unused args
 
 local deps = ...
-local data = deps.data
 local rewardSystem = deps.rewards
 local decorations = deps.decorations
 local valueStateHelpers = deps.valueStateHelpers
@@ -85,9 +84,8 @@ local function drawRouteRowSeparator(imgui)
     imgui.Spacing()
 end
 
-local function shouldRenderRow(control, instance, rows, rowIndex)
+local function shouldRenderRow(_control, instance, _rows, rowIndex)
     return not valueStateHelpers.rowInactive(instance, rowIndex)
-        and not data.isInactiveRouteRow(instance, rows, rowIndex)
 end
 
 function rewards.draw(draw, control, instance)

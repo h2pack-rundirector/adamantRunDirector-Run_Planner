@@ -214,7 +214,6 @@ function runtime.create(fields, instance)
             routeKindKey = data.readRouteKind(instance, routeRows, rowIndex),
             nonGoalKindKey = data.readNonGoalKind(instance, routeRows, rowIndex),
             state = {
-                inactive = data.isInactiveRouteRow(instance, routeRows, rowIndex) == true,
                 priorGoals = data.priorGoalCount(instance, routeRows, rowIndex),
                 countsGoal = data.rowCountsGoal(instance, routeRows, rowIndex, role, option),
                 countsNonGoalReward = data.rowCountsNonGoalReward(instance, routeRows, rowIndex, role, option),

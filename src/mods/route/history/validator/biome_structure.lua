@@ -508,6 +508,7 @@ local function validateClockworkProgression(history, biome)
                             message = "Tartarus route is complete after Clockwork goals",
                         }
                     )
+                    break
                 end
             end
         end

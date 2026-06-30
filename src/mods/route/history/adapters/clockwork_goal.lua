@@ -7,7 +7,6 @@ local siblingCandidates = deps.siblingCandidates
 
 local EMPTY_LIST = {}
 local BIOME_ENCOUNTER_DEPTH_START = 1
-local INACTIVE_ROLE_KEY = "Inactive"
 
 local function numericCost(value, fallback)
     local cost = math.floor(tonumber(value) or fallback or 0)
@@ -336,7 +335,6 @@ end
 local function shouldEmit(selectedRow)
     return selectedRow.roleKey ~= nil
         and selectedRow.roleKey ~= ""
-        and selectedRow.roleKey ~= INACTIVE_ROLE_KEY
 end
 
 local function appendRoom(history, routeHistory, context, selectedRow, resolved)

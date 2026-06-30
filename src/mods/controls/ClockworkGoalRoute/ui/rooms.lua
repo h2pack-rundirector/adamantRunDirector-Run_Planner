@@ -335,7 +335,6 @@ end
 local function shouldRenderRow(control, instance, rows, rowIndex)
     return isRoomTabRow(control, rowIndex)
         and not valueStateHelpers.rowInactive(instance, rowIndex)
-        and not data.isInactiveRouteRow(instance, rows, rowIndex)
 end
 
 function rooms.draw(draw, control, instance)
