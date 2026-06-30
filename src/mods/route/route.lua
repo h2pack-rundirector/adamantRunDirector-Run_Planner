@@ -8,13 +8,12 @@ function routeFactory.create(opts)
     local routeTimeline = import("mods/route/timeline.lua")
     local routePosition = import("mods/route/position.lua")
     local invalidLocations = import("mods/route/invalid_locations.lua")
-    local controlRequirements = import("mods/route/control_requirements.lua", nil, {
+    local controlForm = import("mods/controls/form.lua", nil, {
         valueStates = import("mods/route/value_states.lua"),
     })
     local rows = import("mods/route/rows.lua", nil, {
         rewards = rewards,
         timeline = routeTimeline,
-        controlRequirements = controlRequirements,
     })
     local historySystem = import("mods/route/history/assembly.lua").create({
         rewardDomain = rewards.rewardDomain,
@@ -26,7 +25,7 @@ function routeFactory.create(opts)
         valueStates = rows.valueStates,
         rowEngine = rows.engine,
         timeline = routeTimeline,
-        controlRequirements = controlRequirements,
+        controlForm = controlForm,
         invalidLocations = invalidLocations,
         rewards = rewards,
         historySystem = historySystem,

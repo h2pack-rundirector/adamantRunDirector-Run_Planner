@@ -61,13 +61,12 @@ local function loadRouteDeps()
         })
         local timeline = testImport("mods/route/timeline.lua")
         local valueStates = testImport("mods/route/value_states.lua")
-        local controlRequirements = testImport("mods/route/control_requirements.lua", nil, {
+        local controlForm = testImport("mods/controls/form.lua", nil, {
             valueStates = valueStates,
         })
         local rows = testImport("mods/route/rows.lua", nil, {
             rewards = rewards,
             timeline = timeline,
-            controlRequirements = controlRequirements,
         })
         route = {
             common = rows.common,
@@ -75,7 +74,7 @@ local function loadRouteDeps()
             valueStates = rows.valueStates,
             rowEngine = rows.engine,
             timeline = timeline,
-            controlRequirements = controlRequirements,
+            controlForm = controlForm,
             rewards = rewards,
         }
     end)
@@ -129,8 +128,8 @@ local function loadFixedLinearData()
     end
     deps.roomTopology = testImport("mods/controls/biome_helpers/room_topology.lua", nil, {
         common = routeDeps.common,
-        availability = routeDeps.availability,
         valueStates = routeDeps.valueStates,
+        form = routeDeps.controlForm,
     })
     deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     deps.roomTopologyAdapter = testImport("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
@@ -139,7 +138,7 @@ local function loadFixedLinearData()
         roomTopology = deps.roomTopology,
         roomStructure = deps.roomStructure,
         valueStates = routeDeps.valueStates,
-        controlRequirements = routeDeps.controlRequirements,
+        form = routeDeps.controlForm,
     })
     return withTestImport(function()
         return testImport("mods/controls/FixedLinearRoute/data/data.lua", nil, deps)
@@ -154,8 +153,8 @@ local function loadClockworkGoalData()
     end
     deps.roomTopology = testImport("mods/controls/biome_helpers/room_topology.lua", nil, {
         common = routeDeps.common,
-        availability = routeDeps.availability,
         valueStates = routeDeps.valueStates,
+        form = routeDeps.controlForm,
     })
     deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     deps.roomTopologyAdapter = testImport("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
@@ -164,7 +163,7 @@ local function loadClockworkGoalData()
         roomTopology = deps.roomTopology,
         roomStructure = deps.roomStructure,
         valueStates = routeDeps.valueStates,
-        controlRequirements = routeDeps.controlRequirements,
+        form = routeDeps.controlForm,
     })
     return withTestImport(function()
         return testImport("mods/controls/ClockworkGoalRoute/data/data.lua", nil, deps)
@@ -187,8 +186,8 @@ local function loadFieldsCageDeps()
     end
     deps.roomTopology = testImport("mods/controls/biome_helpers/room_topology.lua", nil, {
         common = routeDeps.common,
-        availability = routeDeps.availability,
         valueStates = routeDeps.valueStates,
+        form = routeDeps.controlForm,
     })
     deps.roomStructure = testImport("mods/controls/biome_helpers/room_structure.lua")
     deps.roomTopologyAdapter = testImport("mods/controls/biome_helpers/room_topology_adapter.lua", nil, {
@@ -197,7 +196,7 @@ local function loadFieldsCageDeps()
         roomTopology = deps.roomTopology,
         roomStructure = deps.roomStructure,
         valueStates = routeDeps.valueStates,
-        controlRequirements = routeDeps.controlRequirements,
+        form = routeDeps.controlForm,
     })
     return deps
 end

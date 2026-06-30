@@ -6,7 +6,7 @@ local common = deps.common
 local rewardSystem = deps.rewards
 local rewardRatio = deps.rewardRatio
 local invalidLocations = deps.invalidLocations
-local controlRequirements = deps.controlRequirements
+local form = deps.form
 
 local runtime = {}
 
@@ -49,59 +49,19 @@ local function historyRewardValueStates(instance, rowIndex, rewardAddress, contr
 end
 
 local function completionStatus(status)
-    if status ~= nil and not status.valid and controlRequirements.isCompletionInvalid(status) then
+    if status ~= nil and not status.valid and form.isCompletionInvalid(status) then
         return status
     end
     return common.validStatus()
 end
 
 local function formValidation(instance, routeRows, rowIndex)
-    local roleKey, role = data.resolveRole(instance, routeRows, rowIndex)
-    if roleKey == nil or roleKey == "" then
-        return controlRequirements.invalid({
-            code = "role_required",
-            message = "Choose a room type",
-            tabKey = "rooms",
-            controlAlias = "RoleKey",
-            label = "Room type",
-        })
-    end
-    if role == nil then
-        return controlRequirements.invalid({
-            code = "unknown_role",
-            message = "Unknown route role: " .. tostring(roleKey),
-            tabKey = "rooms",
-            controlAlias = "RoleKey",
-            label = "Room type",
-        })
-    end
-
-    local options = data.optionListForRole(role)
-    if #options == 0 then
-        return common.validStatus()
-    end
-
-    local optionKey = routeRows and routeRows:read(rowIndex, "OptionKey") or ""
-    local _, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
-    if optionKey ~= "" and option == nil then
-        return controlRequirements.invalid({
-            code = "unknown_option",
-            message = "Unknown route option: " .. tostring(optionKey),
-            tabKey = "rooms",
-            controlAlias = "OptionKey",
-            label = tostring(role.label or roleKey),
-        })
-    end
-    if optionKey == "" and (role.requiresConcreteOption or #options > 1) then
-        return controlRequirements.invalid({
-            code = "option_required",
-            message = "Choose a " .. tostring(role.label or roleKey),
-            tabKey = "rooms",
-            controlAlias = "OptionKey",
-            label = tostring(role.label or roleKey),
-        })
-    end
-    return common.validStatus()
+    return form.validateRoomChoice({
+        data = data,
+        instance = instance,
+        rows = routeRows,
+        rowIndex = rowIndex,
+    })
 end
 
 local function prewarmRewardSurface(role, option)
@@ -238,7 +198,7 @@ function runtime.create(fields, instance)
         end
 
         local topologyInvalid = data.validateRoomTopology(instance, routeRows, rowIndex)
-        if controlRequirements.isCompletionInvalid(topologyInvalid) then
+        if form.isCompletionInvalid(topologyInvalid) then
             return topologyInvalid
         end
 
@@ -329,7 +289,7 @@ function runtime.create(fields, instance)
         self:beginReadPass()
         for rowIndex = 1, self:rowCount() do
             local validation = self:rowValidation(rowIndex)
-            if controlRequirements.isCompletionInvalid(validation) then
+            if form.isCompletionInvalid(validation) then
                 local slot = self:slot(rowIndex)
                 local row = {
                     rowIndex = rowIndex,

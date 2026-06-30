@@ -15,15 +15,15 @@ local runtime = import("mods/controls/ClockworkGoalRoute/runtime.lua", nil, {
     rewards = deps.rewards,
     roomStructure = biomeHelpers.roomStructure,
     invalidLocations = deps.route.invalidLocations,
-    controlRequirements = deps.route.controlRequirements,
+    form = deps.form,
 })
 local ui = import("mods/controls/ClockworkGoalRoute/ui/ui.lua", nil, {
     data = data,
     rewards = deps.rewards,
     runtime = runtime,
-    roomOptionChanges = biomeHelpers.roomOptionChanges,
     valueStateHelpers = biomeHelpers.valueStates,
     decorations = deps.decorations,
+    form = deps.form,
 })
 
 return {

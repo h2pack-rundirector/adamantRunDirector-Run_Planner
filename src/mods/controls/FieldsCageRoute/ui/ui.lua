@@ -4,7 +4,6 @@ local deps = ...
 local data = deps.data
 local rewardSystem = deps.rewards
 local runtime = deps.runtime
-local optionChanges = deps.roomOptionChanges
 
 local ui = {}
 
@@ -28,6 +27,7 @@ local rooms = import("mods/controls/FieldsCageRoute/ui/rooms.lua", nil, {
     resetRowDetails = resetRowDetails,
     valueStateHelpers = deps.valueStateHelpers,
     decorations = deps.decorations,
+    form = deps.form,
 })
 local rewards = import("mods/controls/FieldsCageRoute/ui/rewards.lua", nil, {
     data = data,
@@ -56,7 +56,7 @@ function ui.create(fields, instance)
     end
 
     function control:onRoomOptionChanged(rowIndex, previousOptionKey)
-        optionChanges.resetRewardsIfContextChanged(self, resetRewardDetails, rowIndex, previousOptionKey)
+        deps.form.resetRewardsIfRoomContextChanged(self, resetRewardDetails, rowIndex, previousOptionKey)
     end
 
     function control:resetRow(rowIndex)

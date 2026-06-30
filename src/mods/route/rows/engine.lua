@@ -4,7 +4,6 @@ local readCache = deps.readCache
 local valueStates = deps.valueStates
 local timeline = deps.timeline
 local rewards = deps.rewards
-local controlRequirements = deps.controlRequirements
 
 local rowEngine = {}
 
@@ -15,8 +14,6 @@ local optionListForRole = common.optionListForRole
 local clearList = common.clearList
 local buildLookup = common.buildLookup
 local buildRoleChoices = common.buildRoleChoices
-local validStatus = common.validStatus
-local invalidStatus = common.invalidStatus
 local activeReadCache = readCache.active
 local rowRecord = readCache.rowRecord
 local nestedRecord = readCache.nestedRecord
@@ -586,80 +583,6 @@ function rowEngine.create(adapter)
 
     function data.rowRoomKey(instance, rows, rowIndex)
         return rowRoomKeyUncached(instance, rows, rowIndex)
-    end
-
-    local function validateFormRowUncached(instance, rows, rowIndex)
-        local slot = slotForRow(instance, rowIndex)
-        local roleKey, role = data.resolveRole(instance, rows, rowIndex)
-        if roleKey == nil or roleKey == "" then
-            return invalidStatus("role_required", "Choose a room type")
-        end
-        if role == nil then
-            return invalidStatus("unknown_role", "Unknown route role: " .. tostring(roleKey))
-        end
-
-        if adapter.validateSlot ~= nil then
-            local result = adapter.validateSlot(instance, rows, rowIndex, roleKey, role, slot)
-            if result ~= nil then
-                return result
-            end
-        end
-        if roleKey == VANILLA_ROLE_KEY then
-            return validStatus()
-        end
-        if not isRoleAllowed(instance, rows, rowIndex, roleKey, role) then
-            if adapter.roleDisallowedStatus ~= nil then
-                return adapter.roleDisallowedStatus(instance, rows, rowIndex, roleKey, role, slot)
-            end
-            return invalidStatus("role_unavailable", tostring(role.label or roleKey) .. " is not valid here")
-        end
-
-        local options = optionListForRole(role)
-        if #options == 0 then
-            return validStatus()
-        end
-
-        local optionKey = readOptionKey(rows, rowIndex) or ""
-        local resolvedOptionKey, option = data.resolveOption(instance, rows, rowIndex, roleKey)
-        if optionKey ~= "" and option == nil then
-            return invalidStatus("unknown_option", "Unknown route option: " .. tostring(optionKey))
-        end
-        if optionKey == "" and (role.requiresConcreteOption or #options > 1) then
-            return controlRequirements.invalid({
-                code = "option_required",
-                message = "Choose a " .. tostring(role.label or roleKey),
-                tabKey = "rooms",
-                controlAlias = "OptionKey",
-                label = tostring(role.label or roleKey),
-            })
-        end
-        if resolvedOptionKey == "" or not data.isOptionAvailable(instance, rows, rowIndex, roleKey, resolvedOptionKey) then
-            local message
-            if adapter.optionUnavailableMessage ~= nil then
-                message = adapter.optionUnavailableMessage(instance, rows, rowIndex, roleKey, role, slot)
-            end
-            message = message or (tostring(role.label or roleKey) .. " is not valid here")
-            return invalidStatus("option_unavailable", message)
-        end
-
-        return validStatus()
-    end
-
-    function data.validateFormRow(instance, rows, rowIndex)
-        local cache = activeReadCache(instance)
-        if cache == nil then
-            return validateFormRowUncached(instance, rows, rowIndex)
-        end
-
-        local record = rowRecord(cache.validations, rowIndex)
-        if record.pass == cache.pass then
-            return record.value
-        end
-
-        local value = validateFormRowUncached(instance, rows, rowIndex)
-        record.pass = cache.pass
-        record.value = value
-        return value
     end
 
     local function fillRoleValuesUncached(instance, rows, rowIndex, values)

@@ -8,16 +8,16 @@ local runtime = import("mods/controls/MultiEncounterFixedRoute/runtime.lua", nil
     roomStructure = biomeHelpers.roomStructure,
     rewardRatio = biomeHelpers.rewardRatio,
     invalidLocations = deps.route.invalidLocations,
-    controlRequirements = deps.route.controlRequirements,
+    form = deps.form,
 })
 local ui = import("mods/controls/MultiEncounterFixedRoute/ui/ui.lua", nil, {
     data = data,
     rewards = deps.rewards,
     runtime = runtime,
     rewardRatio = biomeHelpers.rewardRatio,
-    roomOptionChanges = biomeHelpers.roomOptionChanges,
     valueStateHelpers = biomeHelpers.valueStates,
     decorations = deps.decorations,
+    form = deps.form,
 })
 
 return {

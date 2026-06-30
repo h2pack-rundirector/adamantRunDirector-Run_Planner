@@ -4,7 +4,7 @@ local readCache = deps.readCache
 local roomTopology = deps.roomTopology
 local roomStructure = deps.roomStructure
 local valueStates = deps.valueStates
-local controlRequirements = deps.controlRequirements
+local form = deps.form
 
 local adapter = {}
 
@@ -99,7 +99,7 @@ function adapter.create(data, opts)
     end
 
     function api.siblingStructureControlTargets(instance, siblingIndex)
-        return controlRequirements.selectedTargets({
+        return form.selectedTargets({
             tabKey = "rooms",
             controlAlias = api.siblingStructureAlias(instance, siblingIndex),
             state = INVALID_STATE,

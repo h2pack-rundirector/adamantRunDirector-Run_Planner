@@ -5,11 +5,11 @@ local roomStructure = import("mods/controls/biome_helpers/room_structure.lua")
 local roomTopology = import("mods/controls/biome_helpers/room_topology.lua", nil, {
     common = route.common,
     valueStates = route.valueStates,
+    form = route.controlForm,
 })
 
 return {
     rewardRatio = import("mods/controls/biome_helpers/reward_ratio.lua"),
-    roomOptionChanges = import("mods/controls/biome_helpers/room_option_changes.lua"),
     roomStructure = roomStructure,
     roomTopology = roomTopology,
     valueStates = import("mods/controls/biome_helpers/value_states.lua", nil, {
@@ -21,6 +21,6 @@ return {
         roomStructure = roomStructure,
         roomTopology = roomTopology,
         valueStates = route.valueStates,
-        controlRequirements = route.controlRequirements,
+        form = route.controlForm,
     }),
 }

@@ -5,6 +5,7 @@ local data = deps.data
 local resetRowDetails = deps.resetRowDetails
 local decorations = deps.decorations
 local valueStateHelpers = deps.valueStateHelpers
+local form = deps.form
 
 local rooms = {}
 
@@ -137,10 +138,7 @@ local function siblingStructureOpts(control, instance, rowIndex)
 end
 
 local function optionLabelAddsInformation(role, option)
-    if role == nil or option == nil then
-        return false
-    end
-    return tostring(option.label or option.key or "") ~= tostring(role.label or role.key or "")
+    return form.labelAddsInformation(role, option)
 end
 
 local function drawStaticOptionLabel(draw, role, option, columnX)
@@ -166,11 +164,9 @@ local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey, co
         return
     end
     local storedOptionKey = control:fields().Rooms:read(rowIndex, "OptionKey") or ""
-    if optionOpts.values[2] == nil
-        and optionOpts.values[1] ~= ""
-        and (storedOptionKey == "" or storedOptionKey == optionOpts.values[1])
-    then
-        drawStaticOptionLabel(draw, role, role.optionsByKey and role.optionsByKey[optionOpts.values[1]] or nil, columnX)
+    local staticOptionKey = form.shouldRenderStaticValue(optionOpts.values, storedOptionKey)
+    if staticOptionKey ~= nil then
+        drawStaticOptionLabel(draw, role, role.optionsByKey and role.optionsByKey[staticOptionKey] or nil, columnX)
         return false
     end
 

@@ -1,6 +1,7 @@
 local deps = ...
 local common = deps.common
 local valueStates = deps.valueStates
+local form = deps.form
 
 local buildKeyLookup = common.buildKeyLookup
 local validStatus = common.validStatus
@@ -194,7 +195,7 @@ function roomTopology.activeSiblingCount(policy, ctx)
 end
 
 function roomTopology.shouldDrawActiveSibling(activeSiblingCount, status, siblingIndex)
-    if (activeSiblingCount or 0) < (siblingIndex or 1) then
+    if not form.shouldDrawIndex(activeSiblingCount, siblingIndex or 1) then
         return false
     end
     return status ~= nil and status.valid == true

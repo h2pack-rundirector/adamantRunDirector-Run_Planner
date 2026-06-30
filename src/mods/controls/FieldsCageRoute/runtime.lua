@@ -5,7 +5,7 @@ local data = deps.data
 local common = deps.common
 local rewardSystem = deps.rewards
 local invalidLocations = deps.invalidLocations
-local controlRequirements = deps.controlRequirements
+local form = deps.form
 
 local runtime = {}
 
@@ -58,6 +58,15 @@ local function selectedRoomKey(slot, option)
         return option.key
     end
     return slot and slot.roomKey or nil
+end
+
+local function formValidation(instance, routeRows, rowIndex)
+    return form.validateRoomChoice({
+        data = data,
+        instance = instance,
+        rows = routeRows,
+        rowIndex = rowIndex,
+    })
 end
 
 function runtime.create(fields, instance)
@@ -154,7 +163,7 @@ function runtime.create(fields, instance)
     end
 
     function control:rowValidation(rowIndex)
-        local validation = data.validateFormRow(instance, routeRows, rowIndex)
+        local validation = formValidation(instance, routeRows, rowIndex)
         if not validation.valid then
             return validation
         end
@@ -239,7 +248,7 @@ function runtime.create(fields, instance)
         self:beginReadPass()
         for rowIndex = 1, self:rowCount() do
             local validation = self:rowValidation(rowIndex)
-            if controlRequirements.isCompletionInvalid(validation) then
+            if form.isCompletionInvalid(validation) then
                 local slot = self:slot(rowIndex)
                 local row = {
                     rowIndex = rowIndex,

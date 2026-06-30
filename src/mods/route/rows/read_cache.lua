@@ -8,7 +8,6 @@ local function ensure(instance)
             active = false,
             roles = {},
             options = {},
-            validations = {},
             roleAvailability = {},
             optionAvailability = {},
             roleValues = {},
