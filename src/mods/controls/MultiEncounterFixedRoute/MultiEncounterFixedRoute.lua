@@ -7,7 +7,7 @@ end
 dataDeps.common = deps.form.common
 dataDeps.rowData = deps.form.rowData
 dataDeps.valueStates = deps.form.valueStates
-dataDeps.slotTimeline = biomeHelpers.slotTimeline
+dataDeps.slotTimeline = deps.form.slots
 local data = import("mods/controls/MultiEncounterFixedRoute/data.lua", nil, dataDeps)
 local runtime = import("mods/controls/MultiEncounterFixedRoute/runtime.lua", nil, {
     data = data,
@@ -22,7 +22,7 @@ local ui = import("mods/controls/MultiEncounterFixedRoute/ui/ui.lua", nil, {
     rewards = deps.rewards,
     runtime = runtime,
     rewardRatio = biomeHelpers.rewardRatio,
-    valueStateHelpers = biomeHelpers.valueStateHelpers,
+    valueStateHelpers = deps.form.feedback,
     decorations = deps.decorations,
     form = deps.form,
 })

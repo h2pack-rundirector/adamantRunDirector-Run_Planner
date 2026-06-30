@@ -10,7 +10,7 @@ dataDeps.valueStates = deps.form.valueStates
 dataDeps.roomTopology = biomeHelpers.roomTopology
 dataDeps.roomTopologyAdapter = biomeHelpers.roomTopologyAdapter
 dataDeps.roomStructure = biomeHelpers.roomStructure
-dataDeps.slotTimeline = biomeHelpers.slotTimeline
+dataDeps.slotTimeline = deps.form.slots
 
 local data = import("mods/controls/FieldsCageRoute/data/data.lua", nil, dataDeps)
 local runtime = import("mods/controls/FieldsCageRoute/runtime.lua", nil, {
@@ -24,7 +24,7 @@ local ui = import("mods/controls/FieldsCageRoute/ui/ui.lua", nil, {
     data = data,
     rewards = deps.rewards,
     runtime = runtime,
-    valueStateHelpers = biomeHelpers.valueStateHelpers,
+    valueStateHelpers = deps.form.feedback,
     decorations = deps.decorations,
     form = deps.form,
 })

@@ -1,7 +1,7 @@
 local deps = ...
 local routeValueStates = deps.valueStates
 
-local valueStateHelpers = {}
+local feedback = {}
 
 local function appliedFeedback(instance)
     local routeContext = instance.routeContext
@@ -14,10 +14,10 @@ local function appliedFeedback(instance)
     return instance.routeFeedback
 end
 
-function valueStateHelpers.history(instance, rowIndex, controlAlias)
-    local feedback = appliedFeedback(instance)
-    if feedback ~= nil then
-        local row = feedback[rowIndex]
+function feedback.history(instance, rowIndex, controlAlias)
+    local applied = appliedFeedback(instance)
+    if applied ~= nil then
+        local row = applied[rowIndex]
         return row and row.valueStates and row.valueStates[controlAlias] or nil
     end
 
@@ -33,12 +33,12 @@ function valueStateHelpers.history(instance, rowIndex, controlAlias)
     )
 end
 
-function valueStateHelpers.rowInactive(instance, rowIndex)
-    local feedback = appliedFeedback(instance)
-    if feedback ~= nil then
-        return feedback.inactiveAfterRowIndex ~= nil
+function feedback.rowInactive(instance, rowIndex)
+    local applied = appliedFeedback(instance)
+    if applied ~= nil then
+        return applied.inactiveAfterRowIndex ~= nil
             and rowIndex ~= nil
-            and rowIndex > feedback.inactiveAfterRowIndex
+            and rowIndex > applied.inactiveAfterRowIndex
     end
 
     local routeContext = instance.routeContext
@@ -48,7 +48,7 @@ function valueStateHelpers.rowInactive(instance, rowIndex)
     return routeContext:historyRowInactive(instance.routeKey, instance.biomeKey, rowIndex)
 end
 
-function valueStateHelpers.merge(owner, baseStates, overlayStates)
+function feedback.merge(owner, baseStates, overlayStates)
     if overlayStates == nil then
         return baseStates
     end
@@ -73,4 +73,4 @@ function valueStateHelpers.merge(owner, baseStates, overlayStates)
     return merged
 end
 
-return valueStateHelpers
+return feedback

@@ -8,7 +8,7 @@ end
 dataDeps.common = deps.form.common
 dataDeps.rowData = deps.form.rowData
 dataDeps.valueStates = deps.form.valueStates
-dataDeps.slotTimeline = biomeHelpers.slotTimeline
+dataDeps.slotTimeline = deps.form.slots
 local data = import("mods/controls/HubPylonRoute/data.lua", nil, dataDeps)
 local runtime = import("mods/controls/HubPylonRoute/runtime.lua", nil, {
     data = data,
@@ -23,7 +23,7 @@ local ui = import("mods/controls/HubPylonRoute/ui/ui.lua", nil, {
     rewards = deps.rewards,
     runtime = runtime,
     sideRoomProbability = sideRoomProbability,
-    valueStateHelpers = biomeHelpers.valueStateHelpers,
+    valueStateHelpers = deps.form.feedback,
     decorations = deps.decorations,
     form = deps.form,
 })

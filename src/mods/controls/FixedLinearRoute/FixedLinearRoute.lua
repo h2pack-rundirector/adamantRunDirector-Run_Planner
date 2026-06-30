@@ -10,7 +10,7 @@ dataDeps.valueStates = deps.form.valueStates
 dataDeps.roomTopology = biomeHelpers.roomTopology
 dataDeps.roomTopologyAdapter = biomeHelpers.roomTopologyAdapter
 dataDeps.roomStructure = biomeHelpers.roomStructure
-dataDeps.slotTimeline = biomeHelpers.slotTimeline
+dataDeps.slotTimeline = deps.form.slots
 
 local data = import("mods/controls/FixedLinearRoute/data/data.lua", nil, dataDeps)
 local runtime = import("mods/controls/FixedLinearRoute/runtime.lua", nil, {
@@ -26,7 +26,7 @@ local ui = import("mods/controls/FixedLinearRoute/ui/ui.lua", nil, {
     rewards = deps.rewards,
     runtime = runtime,
     rewardRatio = biomeHelpers.rewardRatio,
-    valueStateHelpers = biomeHelpers.valueStateHelpers,
+    valueStateHelpers = deps.form.feedback,
     decorations = deps.decorations,
     form = deps.form,
 })

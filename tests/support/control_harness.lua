@@ -117,7 +117,7 @@ local function addFormDeps(deps, routeDeps)
     deps.readCache = form.readCache
     deps.rowData = form.rowData
     deps.valueStates = form.valueStates
-    deps.slotTimeline = testImport("mods/controls/biome_helpers/slot_timeline.lua")
+    deps.slotTimeline = form.slots
 end
 
 local function loadFixedLinearData()

@@ -1,4 +1,4 @@
-local slotTimeline = {}
+local slots = {}
 
 local DEFAULT_ROOM_HISTORY_COST = 1
 
@@ -38,7 +38,7 @@ local function configuredSlotCost(instance, slot)
     return numericCost(config.defaultRoomHistoryCost, DEFAULT_ROOM_HISTORY_COST)
 end
 
-function slotTimeline.applyRouteSlots(instance)
+function slots.applyRouteSlots(instance)
     local seenIdentity = {}
     for _, slot in ipairs(instance.routeSlots or {}) do
         local cost = configuredSlotCost(instance, slot)
@@ -55,4 +55,4 @@ function slotTimeline.applyRouteSlots(instance)
     end
 end
 
-return slotTimeline
+return slots

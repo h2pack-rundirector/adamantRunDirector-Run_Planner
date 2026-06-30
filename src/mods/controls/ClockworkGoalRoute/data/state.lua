@@ -13,7 +13,6 @@ local NON_GOAL_KIND = "NonGoal"
 local GOAL_COMBAT_ROLE_KEY = "GoalCombat"
 
 local optionListForRole = common.optionListForRole
-local invalidStatus = common.invalidStatus
 
 local state = {
     INACTIVE_ROLE_KEY = INACTIVE_ROLE_KEY,
@@ -393,37 +392,6 @@ function state.optionIsAllowed(instance, rows, rowIndex, role, option, slot)
         return false
     end
     return true
-end
-
-function state.roleDisallowedStatus(instance, rows, rowIndex, roleKey, role)
-    local slot = slots.slotForRow(instance, rowIndex)
-    local _, option = rawOptionForRole(role, rows, rowIndex)
-    if rowRequiresPreviousExtensionChoice(instance, rows, rowIndex, role, option, slot)
-        and not previousRouteSupportsExtensionChoice(instance, rows, rowIndex)
-    then
-        return invalidStatus(
-            "clockwork_previous_extension_choice",
-            tostring(role.label or roleKey) .. " requires a previous planned room with an extension choice"
-        )
-    end
-    if rowGoalIncrement(instance, rows, rowIndex, role, option, slot) > 0 then
-        return invalidStatus(
-            "clockwork_goal_limit",
-            "Clockwork Goal is already planned " .. tostring(state.requiredGoals(instance)) .. " times"
-        )
-    end
-    if rowNonGoalIncrement(instance, rows, rowIndex, role, option, slot) > 0 then
-        return invalidStatus(
-            "clockwork_extension_budget",
-            "Clockwork non-goal rewards are already planned "
-                .. tostring(state.maxNonGoalRewards(instance))
-                .. " times"
-        )
-    end
-    return invalidStatus(
-        "clockwork_route_complete",
-        "Clockwork route is complete after the fifth goal"
-    )
 end
 
 function state.roleDisallowedFailureCode(instance, rows, rowIndex, _roleKey, role)

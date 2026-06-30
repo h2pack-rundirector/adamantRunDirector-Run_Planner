@@ -189,18 +189,9 @@ local adapter = {
         return state.optionIsAllowed(instance, rows, rowIndex, role, option, slot)
     end,
 
-    roleDisallowedStatus = function(instance, rows, rowIndex, roleKey, role)
-        return state.roleDisallowedStatus(instance, rows, rowIndex, roleKey, role)
-    end,
-
     roleDisallowedFailureCode = function(instance, rows, rowIndex, roleKey, role)
         return state.roleDisallowedFailureCode(instance, rows, rowIndex, roleKey, role)
     end,
-
-    optionUnavailableMessage = function(_, _, _, _, role)
-        return tostring(role.label or role.key) .. " is not valid at this step"
-    end,
-
 }
 
 data = rowData.create(adapter)

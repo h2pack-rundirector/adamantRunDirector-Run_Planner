@@ -4,6 +4,9 @@ local valueStates = deps.valueStates
 
 local form = {}
 local common = import("mods/controls/form/common.lua")
+local feedback = import("mods/controls/form/feedback.lua", nil, {
+    valueStates = valueStates,
+})
 local locations = import("mods/controls/form/locations.lua")
 local readCache = import("mods/controls/form/read_cache.lua")
 local rowData = import("mods/controls/form/row_data.lua", nil, {
@@ -12,6 +15,7 @@ local rowData = import("mods/controls/form/row_data.lua", nil, {
     rewards = rewards,
     valueStates = valueStates,
 })
+local slots = import("mods/controls/form/slots.lua")
 
 local VALID_STATUS = {
     valid = true,
@@ -205,9 +209,11 @@ local function optionForKey(role, optionKey)
 end
 
 form.common = common
+form.feedback = feedback
 form.locations = locations
 form.readCache = readCache
 form.rowData = rowData
+form.slots = slots
 form.valueStates = valueStates
 
 function form.resetRewardsIfRoomContextChanged(control, resetRewardDetails, rowIndex, previousOptionKey)
