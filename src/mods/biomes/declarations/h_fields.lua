@@ -38,7 +38,7 @@ return {
                     isBiomeEntry = true,
                     room = layout.introRoom,
                     reward = rewards.none(),
-                    biomeDepthCacheCost = 0,
+                    biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 0,
                     roomHistoryCost = 1,
                     locked = true,

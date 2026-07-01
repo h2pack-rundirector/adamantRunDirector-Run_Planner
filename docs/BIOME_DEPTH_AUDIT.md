@@ -1,58 +1,16 @@
 # Biome Depth Audit
 
-Run Planner needs three different counters. They are related, but they are not
-the same thing:
+This audit is a per-biome data reference. It lists room groups, counter costs,
+and room-specific exceptions found in vanilla data.
 
-- `roomHistoryCost`: planner approximation of vanilla `SumPrevRooms` spacing.
-  NPCs, Chaos gates, Hermes shrines, Stygian wells, and post-biome blockers use
-  this axis.
-- `biomeDepthCache`: vanilla `CurrentRun.BiomeDepthCache`, derived from room
-  history by `GetBiomeDepth(...)`.
-- `biomeEncounterDepth`: vanilla `CurrentRun.BiomeEncounterDepth`, advanced only
-  when the started encounter has `CountsForRoomEncounterDepth = true`.
+Timing semantics live in `ROUTE_TIMING_MODEL.md`. In particular:
 
-The data model should keep these axes separate. A room availability requirement
-that comes from `CurrentRun.BiomeDepthCache` should be declared as
-`biomeDepthCache`. A requirement that comes from
-`CurrentRun.BiomeEncounterDepth` should be declared as `biomeEncounterDepth`.
-`roomHistoryCost` should stay scoped to route spacing and should not be reused
-as encounter depth.
+- `biomeEncounterDepth` advances during room entry/start-encounter.
+- `biomeDepthCache` and `roomHistoryCost` are committed on room leave.
+- next-room and next-reward eligibility are evaluated between those phases.
 
-## Vanilla Anchors
-
-- `RunLogic.lua:GetBiomeDepth(...)` walks `CurrentRun.RoomHistory` backwards
-  until a room with `NextRoomSet` is found. This is the source of
-  `BiomeDepthCache`.
-- `RoomLogic.lua:StartRoom(...)` initializes `RunDepthCache` and
-  `BiomeDepthCache` at room start.
-- `RoomLogic.lua:StartEncounter(...)` increments `BiomeEncounterDepth` only
-  when the encounter has `CountsForRoomEncounterDepth`.
-- `RunLogic.lua:IsRoomEligible(...)` checks `ForceAtBiomeDepth`,
-  `ForceAtBiomeDepthMin`, `ForceAtBiomeDepthMax`, and game-state requirements
-  against current run state.
-- Encounter difficulty and type-count logic can use either `BiomeDepthCache` or
-  `BiomeEncounterDepth` depending on encounter flags such as
-  `UseEncounterDepth` and `UseEncounterDepthForTypes`.
-
-## Modeling Rules
-
-- Keep raw vanilla requirement values in declarations. Do not pre-shift Arachne
-  from `4..8` to `5..9` in layout data.
-- Declarations store per-row or per-option counter costs. They do not store a
-  final absolute `biomeEncounterDepth` for each row.
-- A route row exposes computed context with separate `biomeDepthCache` and
-  `biomeEncounterDepth` values. The encounter-depth value is the counter before
-  the selected row advances it.
-- Availability checks compare explicit requirements to explicit context axes:
-  `availability.biomeDepthCache` reads `context.biomeDepthCache`, and
-  `availability.biomeEncounterDepth` reads `context.biomeEncounterDepth`.
-- If a biome has inconsistent coordinate behavior, fix that in the biome
-  adapter/context builder, not in every room declaration.
-- Mixed legal encounter pools are normal. F/G/N/P combat rooms include field
-  NPC or special replacement encounters; route defaults should still model the
-  normal combat path unless the planner explicitly selects the replacement.
-- First-run/tutorial-only alternatives are treated as provenance unless the
-  route planner explicitly models first-run routing.
+Do not use this audit as the timing source of truth. Use it to check which room
+or encounter contributes to each axis.
 
 ## Counter Audit Summary
 
@@ -61,6 +19,14 @@ This audit groups room keys when the keys share the same vanilla behavior.
 `biomeDepthCache` requirements should be copied from vanilla room/depth
 requirements. `biomeEncounterDepth` should follow the encounter selected by the
 room or encounter policy.
+
+When this audit says a room "does not count", it means the selected encounter
+does not count for `biomeEncounterDepth`. It does not mean the room is free for
+`biomeDepthCache` or room-history spacing. Intro, preboss, boss, and postboss
+rooms can still count for BDC/history according to the timing model.
+
+`biomeDepthCache = 1` means the room is entered/observed at BDC `1`. If that
+room has normal BDC cost, leaving it advances the following room to BDC `2`.
 
 ### F - Erebus
 
@@ -233,12 +199,14 @@ Route surface:
 
 Depth facts:
 
-- `G_Intro` and `G_PreBoss01` do not count.
+- `G_Intro` and `G_PreBoss01` do not count for `BiomeEncounterDepth`.
 - G combat rooms are mixed because the legal pool can include field NPC and
   Arachne combat replacements. The normal generated combat path counts.
-- `G_Story01`, `G_Reprieve01`, and `G_Shop01` do not count.
+- `G_Story01`, `G_Reprieve01`, and `G_Shop01` do not count for
+  `BiomeEncounterDepth`.
 - `G_MiniBoss01` and `G_MiniBoss03` count.
-- `G_MiniBoss02` (`MiniBossCrawler`) does not count.
+- `G_MiniBoss02` (`MiniBossCrawler`) does not count for
+  `BiomeEncounterDepth`.
 - G combat map gates use `BiomeEncounterDepth`.
 - G story/fountain/shop/miniboss/preboss gates use `BiomeDepthCache`.
 
@@ -257,7 +225,8 @@ Depth facts:
 - H passive cage combat uses `GeneratedH_Passive` or
   `GeneratedH_PassiveSmall`, both non-counting.
 - H minibosses count.
-- `H_Intro`, `H_Bridge01`, and `H_PreBoss01` do not count.
+- `H_Intro`, `H_Bridge01`, and `H_PreBoss01` do not count for
+  `BiomeEncounterDepth`.
 - H route eligibility mostly uses route-pick position and `BiomeDepthCache`
   windows; cage reward count is a separate room-template concept.
 
@@ -277,7 +246,8 @@ Depth facts:
 - I generated combat and smaller generated combat count.
 - `ClockworkIntro` counts, but it is first-time/intro provenance rather than a
   normal route decision.
-- `I_Story01`, `I_Reprieve01`, and shop/preboss rooms do not count.
+- `I_Story01`, `I_Reprieve01`, and shop/preboss rooms do not count for
+  `BiomeEncounterDepth`.
 - I minibosses count.
 - `I_Combat24` is gated by `BiomeDepthCache < 6`.
 - Tartarus routing has its own clockwork-goal axis; do not collapse it into
@@ -298,11 +268,12 @@ Depth facts:
 
 - `N_Opening01` is mixed because `OpeningEmpty` can be selected, but normal
   surface opening generated combat counts.
-- `N_PreHub01` does not count.
-- `N_Hub` does not count and should have `roomHistoryCost = 0`.
+- `N_PreHub01` does not count for `BiomeEncounterDepth`.
+- `N_Hub` does not count for `BiomeEncounterDepth` and should have
+  `roomHistoryCost = 0`.
 - N pylon combat rooms count.
 - `N_MiniBoss01` and `N_MiniBoss02` count.
-- `N_Story01` does not count.
+- `N_Story01` does not count for `BiomeEncounterDepth`.
 - N side rooms inherit `GeneratedNSubRoom` behavior and do not count for
   `BiomeEncounterDepth`.
 - Route spacing currently approximates each pylon pick as cost `2` to account
@@ -323,13 +294,15 @@ Route surface:
 
 Depth facts:
 
-- `O_Intro` and `O_PreBoss01` do not count.
+- `O_Intro` and `O_PreBoss01` do not count for `BiomeEncounterDepth`.
 - O combat rooms are multi-encounter rooms. The intro leg can be mixed because
   Heracles can replace it; the main combat leg counts; the optional third leg
   counts when present.
-- `O_Story01`, `O_Reprieve01`, and `O_Shop01` do not count.
+- `O_Story01`, `O_Reprieve01`, and `O_Shop01` do not count for
+  `BiomeEncounterDepth`.
 - `O_Devotion01` counts.
-- `O_MiniBoss01` (`MiniBossCharybdis`) does not count.
+- `O_MiniBoss01` (`MiniBossCharybdis`) does not count for
+  `BiomeEncounterDepth`.
 - `O_MiniBoss02` counts.
 - O special-room gates use both `BiomeDepthCache` and `BiomeEncounterDepth`.
 
@@ -347,12 +320,13 @@ Route surface:
 
 Depth facts:
 
-- `P_Intro` does not count.
+- `P_Intro` does not count for `BiomeEncounterDepth`.
 - P combat rooms are multi-encounter rooms. The pre-combat leg is usually
   non-counting, but Heracles can replace it with a counting encounter. The main
   generated combat leg counts.
-- `P_Story01`, `P_Reprieve01`, `P_Shop01`, and `P_PreBoss01` do not count.
-- `P_MiniBoss01` (`MiniBossTalos`) does not count.
+- `P_Story01`, `P_Reprieve01`, `P_Shop01`, and `P_PreBoss01` do not count for
+  `BiomeEncounterDepth`.
+- `P_MiniBoss01` (`MiniBossTalos`) does not count for `BiomeEncounterDepth`.
 - `P_MiniBoss02` counts.
 - P special-room gates use both `BiomeDepthCache` and `BiomeEncounterDepth`.
 
@@ -367,10 +341,11 @@ Route surface:
 
 Depth facts:
 
-- `Q_Intro` and `Q_PreBoss01` do not count.
+- `Q_Intro` and `Q_PreBoss01` do not count for `BiomeEncounterDepth`.
 - Q normal combat and island combat rooms count.
 - `Q_MiniBoss02`, `Q_MiniBoss03`, and `Q_MiniBoss05` count.
-- `Q_MiniBoss04` (`BossTyphonEye01`) does not count.
+- `Q_MiniBoss04` (`BossTyphonEye01`) does not count for
+  `BiomeEncounterDepth`.
 - Q room gates use `BiomeDepthCache`.
 
 ## Implemented Data Split

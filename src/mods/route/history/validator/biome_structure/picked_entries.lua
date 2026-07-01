@@ -91,6 +91,10 @@ local function optionByRoomKey(role, roomKey)
     return nil
 end
 
+local function generatedContext(entry)
+    return entry and entry.phases and entry.phases.generated or entry
+end
+
 function pickedEntries.declarationForEntry(biome, entry)
     local role = biome
         and biome.rolesByKey
@@ -132,7 +136,7 @@ function pickedEntries.validate(history, biome)
             end
         end
         if option ~= nil then
-            local failure = common.availabilityFailure(option, entry)
+            local failure = common.availabilityFailure(option, generatedContext(entry))
             if failure ~= nil then
                 return common.invalidAt(entry, failure, "Room is not valid at this generated depth")
             end

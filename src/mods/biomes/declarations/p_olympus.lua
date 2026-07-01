@@ -47,7 +47,7 @@ return {
                 isBiomeEntry = true,
                 room = layout.introRoom,
                 tags = layout.introRoom.tags,
-                biomeDepthCacheCost = 0,
+                biomeDepthCacheCost = 1,
                 biomeEncounterDepthCost = 0,
                 roomHistoryCost = 1,
                 locked = true,

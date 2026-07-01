@@ -82,8 +82,8 @@ function TestRunPlannerRouteHistoryValidator.testThessalyRequiresStoryOrShopByDe
 
     lu.assertFalse(result.valid)
     lu.assertEquals(result.invalids[1].code, "thessaly_story_or_shop_deadline")
-    lu.assertEquals(result.invalids[1].rowIndex, 6)
-    lu.assertEquals(result.invalids[1].routeOrdinal, 5)
+    lu.assertEquals(result.invalids[1].rowIndex, 5)
+    lu.assertEquals(result.invalids[1].routeOrdinal, 4)
 end
 
 function TestRunPlannerRouteHistoryValidator.testThessalyThreeCombatVariantUsesHistoryFeedback()
@@ -450,6 +450,87 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRoomFind
     lu.assertEquals(states.F_Story01, valueStates.HIDDEN)
 end
 
+function TestRunPlannerRouteHistoryValidator.testFixedLinearPickedDoorRoleUsesNextChoiceDepth()
+    local route = {
+        key = "Underworld",
+        biomes = { "F" },
+    }
+    local history, catalog = buildHistory(route, "F", h.loadFixedLinearTemplate(), {
+        {
+            OptionKey = "F_Opening01",
+            Reward1Key = "SpellDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat01",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat02",
+            Reward1Key = "Major",
+            Reward2Key = "MaxManaDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat03",
+            Reward1Key = "Major",
+            Reward2Key = "RoomMoneyDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat04",
+            Reward1Key = "Major",
+            Reward2Key = "StackUpgrade",
+        },
+    })
+
+    local result = historyValidator.validate({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+    local feedback = historyFeedback.fromFindings(result.findings)
+
+    local depthThreePickedRoleStates = historyFeedback.valueStatesForControl(feedback, "F", 5, "RoleKey")
+    lu.assertEquals(depthThreePickedRoleStates.Story, valueStates.HIDDEN)
+end
+
+function TestRunPlannerRouteHistoryValidator.testFixedLinearPickedDoorUsesGeneratedDepthAtMaxBoundary()
+    local route = {
+        key = "Underworld",
+        biomes = { "F" },
+    }
+    local rows = {
+        {
+            OptionKey = "F_Opening01",
+            Reward1Key = "SpellDrop",
+        },
+    }
+    for rowIndex = 2, 11 do
+        rows[rowIndex] = {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat" .. string.format("%02d", rowIndex - 1),
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+        }
+    end
+    local history, catalog = buildHistory(route, "F", h.loadFixedLinearTemplate(), rows)
+
+    local result = historyValidator.validate({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+    local feedback = historyFeedback.fromFindings(result.findings)
+
+    local generatedAtMaxRoleStates = historyFeedback.valueStatesForControl(feedback, "F", 10, "RoleKey")
+    local generatedAfterMaxRoleStates = historyFeedback.valueStatesForControl(feedback, "F", 11, "RoleKey")
+    lu.assertNil(generatedAtMaxRoleStates and generatedAtMaxRoleStates.Fountain)
+    lu.assertEquals(generatedAfterMaxRoleStates.Fountain, valueStates.HIDDEN)
+end
+
 function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsEncounterDepthRoomFindings()
     local history = routeHistory.create()
     emitRoom(history, 3, {
@@ -785,7 +866,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMissingFieldsBr
     lu.assertFalse(result.valid)
     lu.assertEquals(result.invalids[1].code, "forced_topology_pressure_unresolved")
     lu.assertEquals(result.invalids[1].biomeKey, "H")
-    lu.assertEquals(result.invalids[1].roomKey, "H_Combat13")
+    lu.assertEquals(result.invalids[1].roomKey, "H_Combat09")
 end
 
 function TestRunPlannerRouteHistoryValidator.testValidatorAcceptsGeneratedFieldsBridge()
@@ -807,14 +888,17 @@ function TestRunPlannerRouteHistoryValidator.testValidatorAcceptsGeneratedFields
             RoleKey = "Combat",
             OptionKey = "H_Combat09",
             VariantKey = "TwoRewards",
-            SiblingStructureKey = "CombatCage2",
+            SiblingStructureKey = "Bridge",
             Reward1Key = "Boon",
             Reward1LootKey = "HestiaUpgrade",
             Reward2Key = "WeaponUpgrade",
         },
         {
-            RoleKey = "Bridge",
+            RoleKey = "Miniboss",
+            OptionKey = "H_MiniBoss01",
             SiblingStructureKey = "H_MiniBoss02",
+            Reward1Key = "Boon",
+            Reward1LootKey = "DemeterUpgrade",
         },
     })
 
@@ -831,20 +915,28 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMismatchedField
         {
             RoleKey = "Combat",
             OptionKey = "H_Combat04",
-            VariantKey = "TwoRewards",
+            VariantKey = "ThreeRewards",
+            SiblingStructureKey = "CombatCage2",
             Reward1Key = "Boon",
             Reward1LootKey = "PoseidonUpgrade",
             Reward2Key = "StackUpgrade",
+            Reward3Key = "MaxHealthDrop",
         },
         {
             RoleKey = "Combat",
             OptionKey = "H_Combat09",
-            VariantKey = "ThreeRewards",
-            SiblingStructureKey = "CombatCage2",
+            VariantKey = "TwoRewards",
+            SiblingStructureKey = "Bridge",
             Reward1Key = "Boon",
             Reward1LootKey = "HestiaUpgrade",
             Reward2Key = "WeaponUpgrade",
-            Reward3Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "H_MiniBoss01",
+            SiblingStructureKey = "H_MiniBoss02",
+            Reward1Key = "Boon",
+            Reward1LootKey = "DemeterUpgrade",
         },
     })
 
@@ -853,7 +945,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMismatchedField
     lu.assertEquals(result.invalids[1].targetFinding.structureKey, "CombatCage2")
 
     local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
-    local states = historyFeedback.valueStatesForControl(feedback, "H", 3, "SiblingStructureKey")
+    local states = historyFeedback.valueStatesForControl(feedback, "H", 2, "SiblingStructureKey")
     lu.assertEquals(states.CombatCage2, valueStates.INVALID)
     lu.assertNil(states.CombatCage3)
 end
@@ -1005,12 +1097,12 @@ function TestRunPlannerRouteHistoryValidator.testClockworkRequiresPrebossAfterGo
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat10",
-            SiblingStructureKey = "CombatReward",
+            SiblingStructureKey = "I_MiniBoss01",
         },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat11",
-            SiblingStructureKey = "CombatReward",
+            SiblingStructureKey = "I_MiniBoss02",
         },
         {
             RouteKindKey = "Goal",

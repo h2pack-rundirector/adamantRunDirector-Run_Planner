@@ -38,7 +38,7 @@ return {
                 kind = "intro",
                 isBiomeEntry = true,
                 room = layout.introRoom,
-                biomeDepthCacheCost = 0,
+                biomeDepthCacheCost = 1,
                 biomeEncounterDepthCost = 0,
                 roomHistoryCost = 1,
                 locked = true,

@@ -33,6 +33,16 @@ local function remainingEncounterCost(resolved)
     return encounterCost(resolved) - entryEncounterCost(resolved)
 end
 
+local function entryPhase(context)
+    return {
+        biomeDepthCache = context.biomeState.biomeDepthCache,
+        biomeEncounterDepth = context.biomeState.biomeEncounterDepth,
+        runEncounterDepth = context.routeState.runEncounterDepth,
+        runDepthCache = 1 + context.routeState.roomHistoryOrdinal,
+        roomHistoryOrdinal = context.routeState.roomHistoryOrdinal,
+    }
+end
+
 function routeStep.enterRoom(context, resolved)
     local entryCost = entryEncounterCost(resolved)
     context.routeState.runEncounterDepth =
@@ -76,11 +86,15 @@ function routeStep.emitRoom(context, selectedRow, resolved, fields)
         source = selectedRow,
     }, fields))
 
-    entry.nextChoiceContext = routeStep.nextChoiceContext(context, entry, resolved)
+    entry.phases = {
+        generated = context.nextGeneratedPhase,
+        entry = entryPhase(context),
+        offer = routeStep.offerPhase(context, entry, resolved),
+    }
     return entry
 end
 
-function routeStep.nextChoiceContext(context, entry, resolved)
+function routeStep.offerPhase(context, entry, resolved)
     local remainingCost = remainingEncounterCost(resolved)
     return {
         biomeDepthCache = entry and entry.biomeDepthCache or nil,
@@ -95,7 +109,9 @@ function routeStep.attachCurrentRoomCandidates(context, entry, selectedRow, reso
     if entry == nil then
         return
     end
-    entry.roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, resolved)
+    entry.roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, resolved, {
+        availabilityContext = entry.phases.generated or entry.phases.entry,
+    })
 end
 
 function routeStep.attachPickedDoorCandidates(context, entry, nextRow, nextResolved)
@@ -103,7 +119,7 @@ function routeStep.attachPickedDoorCandidates(context, entry, nextRow, nextResol
         return
     end
     local candidates = roomCandidates.forBiomeRow(context.biome, nextRow, nextResolved, {
-        availabilityContext = entry.nextChoiceContext,
+        availabilityContext = entry.phases.offer,
         targetRowIndex = nextRow.rowIndex,
     })
     for _, candidate in ipairs(candidates) do
@@ -116,7 +132,7 @@ function routeStep.attachSiblingCandidates(context, entry, selectedRow)
         return
     end
     entry.siblingCandidates = siblingCandidates.forBiomeRow(context.biome, selectedRow, {
-        availabilityContext = entry.nextChoiceContext,
+        availabilityContext = entry.phases.offer,
     })
 end
 
@@ -156,6 +172,7 @@ function routeStep.stepRoom(context, selectedRow, resolved, opts)
     if opts.attachTopology ~= nil then
         opts.attachTopology(entry)
     end
+    context.nextGeneratedPhase = entry.phases.offer
     routeStep.advanceAfterRoom(context, resolved)
     return entry
 end

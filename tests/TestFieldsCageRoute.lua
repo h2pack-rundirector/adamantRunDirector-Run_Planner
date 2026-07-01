@@ -511,7 +511,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkUnres
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02)
 end
 
-function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesHidePlannedTopologyRooms()
+function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkPlannedTopologyRoomsInvalid()
     local catalog = loadCatalog()
     local data = loadFieldsCageData()
     local instance = data.prepare({
@@ -529,7 +529,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesHidePlann
     })
 
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss01)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss02, valueStates.HIDDEN)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss01, valueStates.HIDDEN)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02, valueStates.HIDDEN)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss02, valueStates.INVALID)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss01, valueStates.INVALID)
+    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02, valueStates.INVALID)
 end

@@ -446,7 +446,7 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearBuilderResolvesRoomFac
     lu.assertEquals(rooms[1].routeOrdinal, 0)
     lu.assertEquals(rooms[1].roomHistoryOrdinal, 1)
     lu.assertEquals(rooms[1].runDepthCache, 2)
-    lu.assertEquals(rooms[1].biomeDepthCache, 1)
+    lu.assertEquals(rooms[1].biomeDepthCache, 0)
     lu.assertEquals(rooms[1].biomeEncounterDepth, 1)
     lu.assertEquals(rooms[2].eventKey, "F_Combat02")
     lu.assertEquals(rooms[2].roleKey, "Combat")
@@ -533,8 +533,8 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearRoomEntriesCarryNextCh
     lu.assertEquals(rooms[1].topology.exits[1].reward.rewardStore, "RunProgress")
     lu.assertEquals(rooms[1].topology.exits[1].reward.rewardType, "MaxHealthDrop")
     lu.assertEquals(rooms[1].roomHistoryOrdinal, 1)
-    lu.assertEquals(rooms[1].nextChoiceContext.roomHistoryOrdinal, 0)
-    lu.assertEquals(rooms[1].nextChoiceContext.runDepthCache, 1)
+    lu.assertEquals(rooms[1].phases.offer.roomHistoryOrdinal, 0)
+    lu.assertEquals(rooms[1].phases.offer.runDepthCache, 1)
 
     lu.assertEquals(rooms[5].topology.exits[1].branch, "picked")
     lu.assertEquals(rooms[5].topology.exits[1].roomKey, "F_Combat05")
@@ -841,15 +841,15 @@ function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedTracksShipEnco
     })
 
     local rooms = roomEvents(history)
-    lu.assertEquals(rooms[2].biomeDepthCache, 1)
+    lu.assertEquals(rooms[2].biomeDepthCache, 2)
     lu.assertEquals(rooms[2].biomeEncounterDepth, 1)
-    lu.assertEquals(rooms[3].biomeDepthCache, 2)
+    lu.assertEquals(rooms[3].biomeDepthCache, 3)
     lu.assertEquals(rooms[3].biomeEncounterDepth, 2)
-    lu.assertEquals(rooms[4].biomeDepthCache, 3)
+    lu.assertEquals(rooms[4].biomeDepthCache, 4)
     lu.assertEquals(rooms[4].biomeEncounterDepth, 3)
-    lu.assertEquals(rooms[7].biomeDepthCache, 6)
+    lu.assertEquals(rooms[7].biomeDepthCache, 7)
     lu.assertEquals(rooms[7].biomeEncounterDepth, 5)
-    lu.assertEquals(rooms[8].biomeDepthCache, 7)
+    lu.assertEquals(rooms[8].biomeDepthCache, 8)
     lu.assertEquals(rooms[8].biomeEncounterDepth, 5)
 end
 
@@ -897,7 +897,7 @@ function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedEntriesCarryEn
     lu.assertEquals(rooms[3].reward.encounters[2].reward.rewardType, "GiftDrop")
     lu.assertEquals(rooms[3].reward.encounters[2].biomeEncounterDepth, 3)
     lu.assertEquals(rooms[3].biomeEncounterDepth, 2)
-    lu.assertEquals(rooms[3].nextChoiceContext.biomeEncounterDepth, 3)
+    lu.assertEquals(rooms[3].phases.offer.biomeEncounterDepth, 3)
     lu.assertEquals(rooms[3].rewardCandidates[1].address, "encounter:1")
     lu.assertEquals(rooms[3].rewardCandidates[1].rewardClass, "Major")
     lu.assertTrue(hasValue(rooms[3].rewardCandidates[1].rewardTypes, "Boon"))
@@ -992,7 +992,7 @@ function TestRunPlannerRouteHistoryBuilder.testClockworkGoalSkipsInactiveRowsAnd
     lu.assertEquals(rooms[11].roomHistoryOrdinal, 11)
     lu.assertEquals(rooms[12].rowIndex, 12)
     lu.assertEquals(rooms[12].roomHistoryOrdinal, 12)
-    lu.assertEquals(rooms[12].biomeDepthCache, 11)
+    lu.assertEquals(rooms[12].biomeDepthCache, 12)
     lu.assertEquals(rooms[12].biomeEncounterDepth, 8)
 end
 

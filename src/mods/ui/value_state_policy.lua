@@ -11,11 +11,6 @@ local FAILURE_CODE_REASONS = {
 }
 
 local TOPOLOGY_STRUCTURAL_SUFFIXES = {
-    sibling_same_room = true,
-    sibling_room_planned = true,
-    sibling_miniboss_after_selected = true,
-    sibling_same_sibling_room = true,
-    sibling_room_generated = true,
 }
 
 local function topologySuffix(namespace, code)

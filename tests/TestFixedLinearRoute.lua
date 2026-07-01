@@ -162,6 +162,33 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyDefaultsControlsA
     lu.assertNil(data.roomTopology(instance, rows, 3))
 end
 
+function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingKeepsPlannedRoomsVisibleInvalid()
+    local catalog = loadCatalog()
+    local data = loadFixedLinearData()
+    local instance = data.prepare({
+        name = "RouteG",
+        biome = catalog.lookup.G,
+    })
+    local rows = fakeRows({
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat01",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "G_Combat02",
+        },
+        {
+            RoleKey = "Midshop",
+            OptionKey = "G_Shop01",
+        },
+    })
+
+    local states = data.siblingStructureValueStatesForRow(instance, rows, 3, 1)
+    lu.assertEquals(states.G_Shop01, valueStates.INVALID)
+end
+
 
 
 
@@ -463,8 +490,86 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearNextChoicesUseSourceRoomD
     lu.assertEquals(row4RoleVisibleValues.Story, false)
     lu.assertNotNil(row4SiblingVisibleValues)
     lu.assertEquals(row4SiblingVisibleValues.F_Story01, false)
-    lu.assertNil(row5RoleVisibleValues)
+    lu.assertNotNil(row5RoleVisibleValues)
+    lu.assertEquals(row5RoleVisibleValues.Story, false)
     lu.assertNil(row5SiblingVisibleValues)
+end
+
+function TestRunPlannerFixedLinearRoute.testOceanusDepthTwoNextChoiceAllowsShop()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteG",
+        biome = catalog.lookup.G,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(2, "RoleKey"):write("Combat")
+    fields.Rooms:get(2, "OptionKey"):write("G_Combat01")
+    fields.Rooms:get(3, "RoleKey"):write("Combat")
+    fields.Rooms:get(3, "OptionKey"):write("G_Combat02")
+    fields.Rooms:get(4, "RoleKey"):write("Combat")
+    fields.Rooms:get(4, "OptionKey"):write("G_Combat03")
+    fields.Rewards:get(2, "Reward1Key"):write("Major")
+    fields.Rewards:get(2, "Reward2Key"):write("MaxHealthDrop")
+    fields.Rewards:get(3, "Reward1Key"):write("Major")
+    fields.Rewards:get(3, "Reward2Key"):write("MaxManaDrop")
+    fields.Rewards:get(4, "Reward1Key"):write("Major")
+    fields.Rewards:get(4, "Reward2Key"):write("RoomMoneyDrop")
+
+    local control = template.createUi(fields, instance)
+    local route = {
+        key = "Underworld",
+        biomes = { "G" },
+    }
+    local history = historySystem.builder.build({
+        route = route,
+        biomeLookup = catalog.lookup,
+        snapshotForBiome = function()
+            return control:read("selectedRowsSnapshot")
+        end,
+    })
+    local result = historySystem.validator.validate({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+    local feedback = historySystem.feedback.fromResult({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+        findings = result.findings,
+        invalids = result.invalids,
+    })
+    control:applyRouteFeedback(historySystem.feedback.forBiome(feedback, "G"), 1)
+    control:setRouteContext({
+        routeGeneration = function()
+            return 1
+        end,
+        blockingHorizon = function()
+            return nil
+        end,
+    }, "Underworld")
+
+    local row4RoleField = fields.Rooms:get(4, "RoleKey")
+    local row3SiblingField = fields.Rooms:get(3, "SiblingStructureKey")
+    local row4RoleVisibleValues
+    local row3SiblingVisibleValues
+    local draw = noOpDraw()
+    draw.widgets.dropdown = function(field, opts)
+        if field == row4RoleField then
+            row4RoleVisibleValues = opts.visibleValues
+        elseif field == row3SiblingField then
+            row3SiblingVisibleValues = opts.visibleValues
+        end
+        return false
+    end
+
+    template.views.rooms(draw, control, instance)
+
+    lu.assertNotNil(row4RoleVisibleValues)
+    lu.assertNil(row4RoleVisibleValues.Midshop)
+    lu.assertNotNil(row3SiblingVisibleValues)
+    lu.assertNil(row3SiblingVisibleValues.G_Shop01)
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRewardRatioSummaryCountsMajorMinorChoices()

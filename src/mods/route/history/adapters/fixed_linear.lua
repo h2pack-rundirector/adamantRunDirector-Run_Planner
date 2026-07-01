@@ -92,6 +92,11 @@ local function roleForRow(biome, selectedRow)
         return role
     end
 
+    local entry = biome.slotLayout and biome.slotLayout.entry or nil
+    if entry ~= nil and selectedRow.roleKey == (entry.key or "Intro") then
+        return entry
+    end
+
     local special = fixedSpecialByKind(biome.slotLayout, selectedRow.roleKey)
     if special ~= nil then
         return special

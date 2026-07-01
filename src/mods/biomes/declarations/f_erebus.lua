@@ -33,7 +33,7 @@ return {
         },
         slotLayout = {
             routeRowLabelPrefix = "Depth",
-            biomeDepthCacheStart = 1,
+            biomeDepthCacheStart = 0,
             routeRow = {
                 biomeDepthCacheCost = 1,
                 roomHistoryCost = 1,
@@ -56,7 +56,7 @@ return {
                             "MaxManaDrop",
                         },
                     }),
-                    biomeDepthCacheCost = 0,
+                    biomeDepthCacheCost = 1,
                     biomeEncounterDepthCost = 1,
                     roomHistoryCost = 1,
                     locked = true,

@@ -142,15 +142,17 @@ local function roleAvailabilitySummaries(candidates, entry)
     for _, candidate in ipairs(candidates or EMPTY_LIST) do
         local roleKey = candidate.roleKey
         if roleKey ~= nil and roleKey ~= "" and candidate.optionKey ~= nil and candidate.optionKey ~= "" then
-            local summary = summaries[roleKey]
+            local targetRowIndex = candidate.targetRowIndex
+            local summaryKey = tostring(roleKey) .. ":" .. tostring(targetRowIndex or entry and entry.rowIndex or "")
+            local summary = summaries[summaryKey]
             if summary == nil then
                 summary = {
                     roleKey = roleKey,
                     total = 0,
                     invalid = 0,
-                    targetRowIndex = candidate.targetRowIndex,
+                    targetRowIndex = targetRowIndex,
                 }
-                summaries[roleKey] = summary
+                summaries[summaryKey] = summary
             end
             summary.total = summary.total + 1
 
