@@ -46,11 +46,13 @@ function runContext.create(opts)
     feedback.install(context, {
         EMPTY_LIST = EMPTY_LIST,
         historySystem = historySystem,
+        routeControlName = routeControls.routeControlName,
         routeNpcsControlName = routeControls.routeNpcsControlName,
         state = state,
     })
     overview.install(context, {
         EMPTY_LIST = EMPTY_LIST,
+        historySystem = historySystem,
         horizon = routeHorizon,
         routeControlName = routeControls.routeControlName,
         state = state,

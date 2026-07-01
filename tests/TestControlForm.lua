@@ -24,7 +24,7 @@ function TestRunPlannerControlForm.testInvalidBuildsSelectedCompletionTarget()
     lu.assertEquals(invalid.controlTargets[1], {
         tabKey = "rooms",
         controlAlias = "OptionKey",
-        state = 2,
+        state = 3,
         mode = "selected",
     })
 end

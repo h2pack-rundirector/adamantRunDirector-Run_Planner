@@ -207,6 +207,9 @@ local function resolveRow(context, selectedRow, slot)
 end
 
 local function selectedTopology(selectedRow, resolved)
+    if selectedRow == nil or resolved == nil then
+        return nil
+    end
     if selectedRow.roleKey == "GoalCombat" then
         return {
             structure = "GoalCombat",
@@ -305,15 +308,12 @@ local function siblingTopology(context, selectedRow)
     }
 end
 
-local function attachClockworkTopology(context, roomEntry, selectedRow, resolved)
+local function attachClockworkTopology(context, roomEntry, selectedRow, pickedRow, pickedResolved)
     if roomEntry == nil then
         return
     end
     local sibling = siblingTopology(context, selectedRow)
-    if sibling == nil then
-        return
-    end
-    local selected = selectedTopology(selectedRow, resolved)
+    local selected = selectedTopology(pickedRow, pickedResolved)
     if selected == nil then
         return
     end
@@ -321,12 +321,20 @@ local function attachClockworkTopology(context, roomEntry, selectedRow, resolved
         kind = "clockworkSiblingChoice",
         selected = selected,
         sibling = sibling,
+        siblings = sibling ~= nil and { sibling } or nil,
     }
 end
 
 local function shouldEmit(selectedRow)
     return selectedRow.roleKey ~= nil
         and selectedRow.roleKey ~= ""
+end
+
+local function rowActive(snapshot, rowIndex)
+    local inactiveAfterRowIndex = snapshot and snapshot.inactiveAfterRowIndex or nil
+    return inactiveAfterRowIndex == nil
+        or rowIndex == nil
+        or rowIndex <= inactiveAfterRowIndex
 end
 
 function clockworkGoal.build(args)
@@ -350,16 +358,22 @@ function clockworkGoal.build(args)
     local slots = buildSlots(args.biome)
     local resolvedRows = {}
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
-        resolvedRows[index] = resolveRow(context, selectedRow, slots[index])
+        if rowActive(args.snapshot, index) then
+            resolvedRows[index] = resolveRow(context, selectedRow, slots[index])
+        end
     end
 
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
         local resolved = resolvedRows[index]
-        if shouldEmit(selectedRow) then
+        if rowActive(args.snapshot, index) and shouldEmit(selectedRow) then
+            local nextRow = args.snapshot.rows[index + 1]
+            local nextResolved = resolvedRows[index + 1]
             routeStep.stepRoom(context, selectedRow, resolved, {
+                nextRow = nextRow,
+                nextResolved = nextResolved,
                 reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards),
                 attachTopology = function(roomEntry)
-                    attachClockworkTopology(context, roomEntry, selectedRow, resolved)
+                    attachClockworkTopology(context, roomEntry, selectedRow, nextRow, nextResolved)
                 end,
             })
         end

@@ -142,7 +142,9 @@ end
 function common.biomeRoomEntries(history, biomeKey)
     local entries = {}
     for _, entry in ipairs(routeHistory.byKind(history, "room")) do
-        if entry.biomeKey == biomeKey and entry.eventSourceKind ~= "afterBiome" then
+        if entry.biomeKey == biomeKey
+            and entry.eventSourceKind ~= "afterBiome"
+        then
             entries[#entries + 1] = entry
         end
     end

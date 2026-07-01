@@ -44,8 +44,10 @@ local function loadRouteStatus()
 end
 
 local function fakeHistorySystem(result)
-    local function fakeRouteFeedback()
-        local primary = result and result.invalids and result.invalids[1] or nil
+    local calls = result and result.calls or nil
+    local function fakeRouteFeedback(args)
+        local invalids = args and args.invalids or result and result.invalids or nil
+        local primary = invalids and invalids[1] or nil
         return {
             route = {
                 valid = primary == nil,
@@ -58,20 +60,42 @@ local function fakeHistorySystem(result)
     return {
         builder = {
             build = function()
+                if calls ~= nil then
+                    calls.build = (calls.build or 0) + 1
+                end
+                return {}
+            end,
+        },
+        npcCandidates = {
+            build = function()
+                if calls ~= nil then
+                    calls.npcCandidates = (calls.npcCandidates or 0) + 1
+                end
                 return {}
             end,
         },
         validator = {
             validate = function()
+                if calls ~= nil then
+                    calls.validate = (calls.validate or 0) + 1
+                end
                 return result
             end,
         },
-        feedback = {
+        npcFeedback = {
             fromResult = function()
-                return fakeRouteFeedback()
+                return {}
+            end,
+        },
+        feedback = {
+            fromResult = function(args)
+                return fakeRouteFeedback(args)
             end,
             fromFindings = function()
                 return fakeRouteFeedback()
+            end,
+            forBiome = function(feedbackState, biomeKey)
+                return feedbackState and feedbackState.byBiome and feedbackState.byBiome[biomeKey] or nil
             end,
             valueStatesForControl = function()
                 return nil
@@ -251,6 +275,46 @@ function TestRunPlannerRouteUi.testRouteStatusDrawsFirstInvalidMessage()
         "<same-line>",
         "<x:165>",
         "Oceanus Depth 5 Rewards: Trial requires 15 rooms since the previous Trial",
+    })
+end
+
+function TestRunPlannerRouteUi.testRouteStatusDrawsIncompletePrimaryFeedback()
+    local routeStatus = loadRouteStatus()
+    local rendered = {}
+    local draw = {
+        imgui = {
+            Text = function(text)
+                rendered[#rendered + 1] = text
+            end,
+            TextColored = function(_, _, _, _, text)
+                rendered[#rendered + 1] = text
+            end,
+            SameLine = function()
+                rendered[#rendered + 1] = "<same-line>"
+            end,
+            SetCursorPosX = function(x)
+                rendered[#rendered + 1] = "<x:" .. tostring(x) .. ">"
+            end,
+        },
+    }
+
+    routeStatus.drawRouteStatus(draw, {
+        label = "Underworld",
+        valid = false,
+        incomplete = true,
+        routeFeedback = invalidRouteFeedback({
+            {
+                locationLabel = "Erebus Row 4",
+                message = "Choose a room type",
+            },
+        }),
+    })
+
+    lu.assertEquals(rendered, {
+        "Underworld Incomplete:",
+        "<same-line>",
+        "<x:165>",
+        "Erebus Row 4: Choose a room type",
     })
 end
 
@@ -515,6 +579,57 @@ function TestRunPlannerRouteUi.testRouteContextValidatesOnlyConfiguredBiomePrefi
     lu.assertFalse(routeContext:isControlConfigured("Underworld", "RouteG"))
     lu.assertTrue(routeContext:isBiomeInConfiguredScope("Underworld", "F"))
     lu.assertFalse(routeContext:isBiomeInConfiguredScope("Underworld", "G"))
+end
+
+function TestRunPlannerRouteUi.testTartarusCompletionIgnoresRowsAfterClockworkRouteComplete()
+    local catalog = loadCatalog()
+    local template = loadClockworkGoalTemplate()
+    local control = createUiControl(template, catalog.lookup.I, "RouteI")
+    local fields = control:fields()
+    local rows = {
+        { rowIndex = 2, optionKey = "I_Combat03", siblingKey = "CombatReward" },
+        { rowIndex = 3, optionKey = "I_Combat04", siblingKey = "CombatReward" },
+        { rowIndex = 4, optionKey = "I_Combat09", siblingKey = "I_Story01" },
+        { rowIndex = 5, optionKey = "I_Combat10", siblingKey = "I_MiniBoss01" },
+        { rowIndex = 6, optionKey = "I_Combat11", siblingKey = "I_MiniBoss02" },
+    }
+    for _, row in ipairs(rows) do
+        fields.Rooms:get(row.rowIndex, "RouteKindKey"):write("Goal")
+        fields.Rooms:get(row.rowIndex, "OptionKey"):write(row.optionKey)
+        fields.Rooms:get(row.rowIndex, "SiblingStructureKey"):write(row.siblingKey)
+    end
+    fields.Rooms:get(7, "RouteKindKey"):write("Preboss")
+    fields.Rooms:get(13, "RouteKindKey"):write("NonGoal")
+    fields.Rooms:get(13, "NonGoalKindKey"):write("Story")
+    fields.Rooms:get(13, "OptionKey"):write("I_Story01")
+
+    local controls = {
+        RouteGlobalUnderworld = fakeLayerConfig(),
+        RouteI = control,
+    }
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "I" },
+            },
+        }),
+        biomes = catalog.lookup,
+        controlResolver = function(controlName)
+            return controls[controlName]
+        end,
+    })
+
+    routeContext:beginPass()
+    local snapshot = routeContext:overview("Underworld")
+
+    lu.assertTrue(snapshot.valid)
+    lu.assertFalse(snapshot.incomplete)
+    lu.assertNil(snapshot.routeFeedback.primary)
+    lu.assertFalse(routeContext:historyRowInactive("Underworld", "I", 7))
+    lu.assertTrue(routeContext:historyRowInactive("Underworld", "I", 8))
+    lu.assertTrue(routeContext:historyRowInactive("Underworld", "I", 13))
 end
 
 function TestRunPlannerRouteUi.testRouteHorizonOrdersBiomeTabAndRow()
@@ -1346,6 +1461,127 @@ function TestRunPlannerRouteUi.testRouteOverviewRebuildsOnlyWhenDirty()
     lu.assertTrue(routeContext:overview("RouteB").valid)
     lu.assertEquals(readsByControl.RouteF, 3)
     lu.assertEquals(readsByControl.RouteG, 5)
+end
+
+function TestRunPlannerRouteUi.testCompletionInvalidsApplyBiomeFeedback()
+    local appliedFeedback
+    local controls = {
+        RouteF = {
+            read = function(_, path)
+                if path == "completion" then
+                    return {
+                        controlName = "RouteF",
+                        valid = false,
+                        completionInvalidRows = {
+                            {
+                                biomeKey = "F",
+                                rowIndex = 2,
+                                routeOrdinal = 2,
+                                tabKey = "rooms",
+                                code = "option_required",
+                                message = "Choose a room",
+                                completion = true,
+                                controlTargets = {
+                                    {
+                                        tabKey = "rooms",
+                                        controlAlias = "OptionKey",
+                                        mode = "selected",
+                                        state = loadValueStates().WARNING,
+                                    },
+                                },
+                            },
+                        },
+                    }
+                end
+                return nil
+            end,
+            applyRouteFeedback = function(_, feedback)
+                appliedFeedback = feedback
+            end,
+        },
+    }
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        controlResolver = function(controlName)
+            return controls[controlName]
+        end,
+    })
+
+    routeContext:beginPass()
+    local snapshot = routeContext:overview("Underworld")
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.incomplete)
+    lu.assertEquals(snapshot.routeFeedback.primary.message, "Choose a room")
+    lu.assertEquals(
+        appliedFeedback[2].valueStates.OptionKey[""],
+        loadValueStates().WARNING
+    )
+end
+
+function TestRunPlannerRouteUi.testCompletionInvalidsSkipHistoryBuild()
+    local calls = {}
+    local controls = {
+        RouteGlobalUnderworld = fakeLayerConfig(),
+        RouteF = {
+            read = function(_, path)
+                if path == "completion" then
+                    return {
+                        controlName = "RouteF",
+                        valid = false,
+                        completionInvalidRows = {
+                            {
+                                biomeKey = "F",
+                                rowIndex = 2,
+                                routeOrdinal = 2,
+                                code = "option_required",
+                                message = "Choose a room",
+                                completion = true,
+                            },
+                        },
+                    }
+                end
+                return nil
+            end,
+            applyRouteFeedback = function() end,
+        },
+    }
+    local routeContext = loadRunContext({
+        historySystem = fakeHistorySystem({
+            valid = true,
+            findings = {},
+            invalids = {},
+            calls = calls,
+        }),
+    }).create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        controlResolver = function(controlName)
+            return controls[controlName]
+        end,
+    })
+
+    routeContext:beginPass()
+    local snapshot = routeContext:overview("Underworld")
+    routeContext:historyFeedback("Underworld")
+
+    lu.assertFalse(snapshot.valid)
+    lu.assertTrue(snapshot.incomplete)
+    lu.assertEquals(snapshot.routeFeedback.primary.message, "Choose a room")
+    lu.assertNil(calls.build)
+    lu.assertNil(calls.npcCandidates)
+    lu.assertNil(calls.validate)
 end
 
 function TestRunPlannerRouteUi.testRouteDirtyGenerationTracksRouteInvalidation()

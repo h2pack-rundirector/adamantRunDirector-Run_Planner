@@ -336,9 +336,66 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRequiresWheelOfferC
             VariantKey = "TwoCombats",
         },
     }), instance)
-    local snapshot = control:buildSelectedRowsSnapshot()
+    local completion = control:read("completion")
 
-    lu.assertEquals(snapshot.rows[2].rewards.encounter[1].wheelOfferKey, "")
+    lu.assertFalse(completion.valid)
+    lu.assertEquals(completion.completionInvalidRows[1].rowIndex, 2)
+    lu.assertEquals(completion.completionInvalidRows[1].code, "ship_wheel_offer_count_required")
+    lu.assertEquals(completion.completionInvalidRows[1].tabKey, "rewards")
+    lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].address, "encounter:1")
+    lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].controlAlias, "WheelOffer1Key")
+end
+
+function TestRunPlannerMultiEncounterRoute.testMultiEncounterRequiresWheelOfferCountForEachActiveLeg()
+    local catalog = loadCatalog()
+    local template = loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local control = template.createRuntime(thessalyRouteFields({
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat01",
+            VariantKey = "ThreeCombats",
+            WheelOffer1Key = "OneChoice",
+        },
+    }), instance)
+    local completion = control:read("completion")
+
+    lu.assertFalse(completion.valid)
+    lu.assertEquals(completion.completionInvalidRows[1].rowIndex, 2)
+    lu.assertEquals(completion.completionInvalidRows[1].code, "ship_wheel_offer_count_required")
+    lu.assertEquals(completion.completionInvalidRows[1].tabKey, "rewards")
+    lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].address, "encounter:2")
+    lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].controlAlias, "WheelOffer2Key")
+end
+
+function TestRunPlannerMultiEncounterRoute.testMultiEncounterRejectsUnknownWheelOfferCount()
+    local catalog = loadCatalog()
+    local template = loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local control = template.createRuntime(thessalyRouteFields({
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat01",
+            VariantKey = "TwoCombats",
+            WheelOffer1Key = "BadWheel",
+        },
+    }), instance)
+    local completion = control:read("completion")
+
+    lu.assertFalse(completion.valid)
+    lu.assertEquals(completion.completionInvalidRows[1].rowIndex, 2)
+    lu.assertEquals(completion.completionInvalidRows[1].code, "unknown_wheel_offer_count")
+    lu.assertEquals(completion.completionInvalidRows[1].tabKey, "rewards")
+    lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].address, "encounter:1")
+    lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].controlAlias, "WheelOffer1Key")
 end
 
 

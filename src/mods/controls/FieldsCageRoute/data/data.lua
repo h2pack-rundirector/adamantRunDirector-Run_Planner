@@ -289,6 +289,10 @@ function data.validateRoomTopology(instance, rows, rowIndex)
     return topology.validateRoomTopology(instance, rows, rowIndex)
 end
 
+function data.validateSelectedRoomTopology(instance, rows, rowIndex)
+    return topology.validateSelectedTopology(instance, rows, rowIndex)
+end
+
 function data.roomTopology(instance, rows, rowIndex)
     return topology.roomTopology(instance, rows, rowIndex)
 end

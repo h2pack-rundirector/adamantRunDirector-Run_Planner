@@ -27,16 +27,39 @@ local function missingControlInvalid(context, routeControlName, routeBiomeIndex,
     }
 end
 
-local function firstCompletionInvalid(routeControlName, routeBiomeIndex, biomeKey, completion)
-    local invalid = completion and completion.completionInvalidRows and completion.completionInvalidRows[1] or nil
-    if invalid == nil then
-        return nil
+local function appendCompletionInvalids(target, routeControlName, routeBiomeIndex, biomeKey, completion)
+    for _, invalid in ipairs(completion and completion.completionInvalidRows or {}) do
+        target[#target + 1] = copyInvalidRow(invalid, {
+            biomeKey = biomeKey,
+            routeBiomeIndex = routeBiomeIndex,
+            controlName = completion.controlName or routeControlName(biomeKey),
+        })
     end
-    return copyInvalidRow(invalid, {
-        biomeKey = biomeKey,
-        routeBiomeIndex = routeBiomeIndex,
-        controlName = completion.controlName or routeControlName(biomeKey),
+end
+
+local function feedbackFromInvalids(context, historySystem, route, invalids)
+    return historySystem.feedback.fromResult({
+        route = route,
+        biomeLookup = context.biomeLookup,
+        findings = {},
+        invalids = invalids,
     })
+end
+
+local function applyBiomeFeedback(context, historySystem, route, feedbackState, EMPTY_LIST)
+    local generation = context:routeGeneration(route.key)
+    for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
+        if routeBiomeIndex > context:configuredBiomeCount(route.key) then
+            break
+        end
+        local control = context:controlForBiome(route.key, biomeKey)
+        if control ~= nil and control.applyRouteFeedback ~= nil then
+            control:applyRouteFeedback(
+                historySystem.feedback.forBiome(feedbackState, biomeKey),
+                generation
+            )
+        end
+    end
 end
 
 local function layerForInvalid(invalid)
@@ -66,6 +89,7 @@ function overview.install(context, deps)
     local state = deps.state
     local routeHorizon = deps.horizon
     local routeControlName = deps.routeControlName
+    local historySystem = deps.historySystem
     local EMPTY_LIST = deps.EMPTY_LIST
 
     function context:snapshot(routeKey)
@@ -108,7 +132,7 @@ function overview.install(context, deps)
         local previousCompletionBuilding = self.completionBuilding
         self.completionBuilding = true
         local configuredBiomeCount = self:configuredBiomeCount(route.key)
-        local completionInvalid = nil
+        local completionInvalids = {}
         for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
             if routeBiomeIndex > configuredBiomeCount then
                 break
@@ -118,30 +142,25 @@ function overview.install(context, deps)
             if missingInvalid == nil and not completion then
                 missingInvalid = missingControlInvalid(self, routeControlName, routeBiomeIndex, biomeKey)
             end
-            if completionInvalid == nil and completion then
-                completionInvalid = firstCompletionInvalid(routeControlName, routeBiomeIndex, biomeKey, completion)
+            if completion then
+                appendCompletionInvalids(completionInvalids, routeControlName, routeBiomeIndex, biomeKey, completion)
             end
         end
         self.completionBuilding = previousCompletionBuilding
 
         local routeFeedback
+        local feedbackState
         if missingInvalid ~= nil then
-            routeFeedback = {
-                valid = false,
-                primary = missingInvalid,
-                related = {},
-                markers = { missingInvalid },
-            }
-        elseif completionInvalid == nil then
-            local historyFeedback = self:historyFeedback(route.key)
-            routeFeedback = historyFeedback and historyFeedback.route or nil
+            feedbackState = feedbackFromInvalids(self, historySystem, route, { missingInvalid })
+            routeFeedback = feedbackState.route
+        elseif completionInvalids[1] ~= nil then
+            feedbackState = feedbackFromInvalids(self, historySystem, route, completionInvalids)
+            routeFeedback = feedbackState.route
+            applyBiomeFeedback(self, historySystem, route, feedbackState, EMPTY_LIST)
         else
-            routeFeedback = {
-                valid = false,
-                primary = completionInvalid,
-                related = {},
-                markers = { completionInvalid },
-            }
+            local historyFeedback = self:historyFeedback(route.key)
+            local historyRouteFeedback = historyFeedback and historyFeedback.route or nil
+            routeFeedback = historyRouteFeedback
         end
 
         routeFeedback = routeFeedback or {
@@ -165,12 +184,9 @@ function overview.install(context, deps)
             configuredBiomeCount = configuredBiomeCount,
             valid = routeValid,
             disabled = not routeValid,
-            incomplete = completionInvalid ~= nil,
-            incompleteBiomeKey = completionInvalid and completionInvalid.biomeKey or nil,
-            incompleteControlName = completionInvalid and completionInvalid.controlName or nil,
-            incompleteMessage = completionInvalid
-                    and ("Data entry incomplete: finish " .. biomeLabel(self, completionInvalid.biomeKey))
-                or nil,
+            incomplete = routeFeedback.primary ~= nil and routeFeedback.primary.completion == true,
+            incompleteBiomeKey = completionInvalids[1] and completionInvalids[1].biomeKey or nil,
+            incompleteControlName = completionInvalids[1] and completionInvalids[1].controlName or nil,
             invalidRows = invalidRows,
             routeFeedback = routeFeedback,
             blockingHorizon = blockingHorizon(self, route, routeFeedback.primary),

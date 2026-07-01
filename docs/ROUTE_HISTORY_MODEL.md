@@ -21,6 +21,10 @@ biome declarations + selected row snapshots
   -> validators / UI markers / execution plan / runtime hooks
 ```
 
+For the row-coordinate contract between current rooms, picked next rooms,
+siblings/other doors, validators, and feedback decoration, see
+`ROUTE_HISTORY_COORDINATE_CONTRACT.md`.
+
 ## Ownership
 
 ### Biome Declarations

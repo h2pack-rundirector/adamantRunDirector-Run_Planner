@@ -11,15 +11,11 @@ local function defaultSelectable()
     return true
 end
 
-local function siblingTopologies(shared, data, provider, instance, rows, rowIndex)
+local function siblingTopologies(data, provider, instance, rows, rowIndex)
     local siblings = {}
     local count = data.activeSiblingStructureCount(instance, rows, rowIndex)
     for siblingIndex = 1, count do
         local _, sibling = data.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
-        if not shared.siblingAvailabilityStatus(instance, rows, rowIndex, siblingIndex, sibling).valid then
-            return nil
-        end
-
         local siblingTopology = provider.siblingTopology(instance, rows, rowIndex, siblingIndex, count, sibling)
         if siblingTopology == nil then
             return nil
@@ -40,7 +36,6 @@ function topologyControls.create(data, provider)
         indexedAliases = provider.indexedAliases,
         topologyForInstance = provider.topologyForInstance or defaultTopologyForInstance,
         hasSelectableSiblingStructure = provider.hasSelectableSiblingStructure or defaultSelectable,
-        extraRuleStatus = provider.extraRuleStatus,
     })
 
     local api = {}
@@ -102,16 +97,25 @@ function topologyControls.create(data, provider)
         return shared.siblingStructureValueStatesForRow(instance, rows, rowIndex, siblingIndex)
     end
 
-    function api.validateRoomTopology(instance, rows, rowIndex)
+    function api.validateSelectedTopology(instance, rows, rowIndex)
         if provider.shouldValidateRow ~= nil and not provider.shouldValidateRow(instance, rows, rowIndex) then
             return nil
         end
 
         if provider.validateSelected ~= nil then
-            local invalid = provider.validateSelected(instance, rows, rowIndex)
-            if invalid ~= nil then
-                return invalid
-            end
+            return provider.validateSelected(instance, rows, rowIndex)
+        end
+        return nil
+    end
+
+    function api.validateRoomTopology(instance, rows, rowIndex)
+        if provider.shouldValidateRow ~= nil and not provider.shouldValidateRow(instance, rows, rowIndex) then
+            return nil
+        end
+
+        local selectedInvalid = api.validateSelectedTopology(instance, rows, rowIndex)
+        if selectedInvalid ~= nil then
+            return selectedInvalid
         end
 
         if provider.skipSiblingValidation ~= nil and provider.skipSiblingValidation(instance, rows, rowIndex) then
@@ -155,7 +159,7 @@ function topologyControls.create(data, provider)
         end
 
         local selected = provider.selectedTopology(instance, rows, rowIndex)
-        local siblings = siblingTopologies(shared, data, provider, instance, rows, rowIndex)
+        local siblings = siblingTopologies(data, provider, instance, rows, rowIndex)
         if selected == nil or siblings == nil then
             return nil
         end

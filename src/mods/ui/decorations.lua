@@ -229,15 +229,6 @@ function decorations.warningColor()
     return WARNING_VALUE_COLOR
 end
 
-function decorations.drawPlannerCompletionStatus(draw, instance)
-    local message = instance.completionInvalidMessage
-    if message == nil or message == "" then
-        return
-    end
-    decorations.drawColoredText(draw.imgui, WARNING_VALUE_COLOR, message)
-    draw.imgui.Spacing()
-end
-
 function decorations.beginTabItem(imgui, label, invalid, inactive)
     local color
     if invalid then

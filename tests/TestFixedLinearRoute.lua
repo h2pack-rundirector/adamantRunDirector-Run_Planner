@@ -162,7 +162,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyDefaultsControlsA
     lu.assertNil(data.roomTopology(instance, rows, 3))
 end
 
-function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingKeepsPlannedRoomsVisibleInvalid()
+function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingValueStatesDoNotOwnPlannedRooms()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
     local instance = data.prepare({
@@ -178,6 +178,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingKeepsPlannedRoomsV
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat02",
+            SiblingStructureKey = "G_Shop01",
+            SiblingStructure2Key = "Combat",
         },
         {
             RoleKey = "Midshop",
@@ -186,7 +188,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingKeepsPlannedRoomsV
     })
 
     local states = data.siblingStructureValueStatesForRow(instance, rows, 3, 1)
-    lu.assertEquals(states.G_Shop01, valueStates.INVALID)
+    lu.assertNil(states.G_Shop01)
+    lu.assertNil(data.validateRoomTopology(instance, rows, 3))
 end
 
 
@@ -652,6 +655,68 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearEntryMetadataRendersIntro
     end
 end
 
+function TestRunPlannerFixedLinearRoute.testCompletionIgnoresHiddenPrebossSlot()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(routeFields({
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major", "Combat"),
+        fCombatRow("F_Combat03", "Major", "Combat"),
+        fCombatRow("F_Combat04", "Major", "Combat"),
+        fCombatRow("F_Combat05", "Major", "Combat"),
+        fCombatRow("F_Combat06", "Major", "Combat"),
+        fCombatRow("F_Combat07", "Major", "Combat"),
+        fCombatRow("F_Combat08", "Major", "Combat"),
+        fCombatRow("F_Combat11", "Major", "Combat"),
+        fCombatRow("F_Combat12", "Major", "Combat"),
+        fCombatRow("F_Combat13", "Major", "Combat"),
+        {},
+    }), instance)
+
+    local completion = control:read("completion")
+
+    lu.assertTrue(completion.valid)
+    lu.assertEquals(completion.completionInvalidRows, {})
+end
+
+function TestRunPlannerFixedLinearRoute.testCompletionIgnoresTerminalSiblingBeforePreboss()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteG",
+        biome = catalog.lookup.G,
+    })
+    local function gCombat(optionKey, siblingKey)
+        return {
+            RoleKey = "Combat",
+            OptionKey = optionKey,
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+            SiblingStructureKey = siblingKey,
+        }
+    end
+    local control = template.createRuntime(routeFields({
+        {},
+        gCombat("G_Combat01", "Combat"),
+        gCombat("G_Combat04", "Combat"),
+        gCombat("G_Combat06", "Combat"),
+        gCombat("G_Combat07", "Combat"),
+        gCombat("G_Combat08", "Combat"),
+        gCombat("G_Combat10", "Combat"),
+        gCombat("G_Combat11", ""),
+        {},
+    }), instance)
+
+    local completion = control:read("completion")
+
+    lu.assertTrue(completion.valid)
+    lu.assertEquals(completion.completionInvalidRows, {})
+end
+
 
 
 
@@ -1107,7 +1172,7 @@ function TestRunPlannerFixedLinearRoute.testMinibossRequiresConcreteOption()
         {
             tabKey = "rooms",
             controlAlias = "OptionKey",
-            state = valueStates.INVALID,
+            state = valueStates.WARNING,
             mode = "selected",
         },
     })

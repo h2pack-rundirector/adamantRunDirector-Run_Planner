@@ -107,6 +107,42 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalStorageMatchesTartaru
 end
 
 
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalIntroKeepsFixedRouteKind()
+    local catalog = loadCatalog()
+    local data = loadClockworkGoalData()
+    local instance = data.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local rows = fakeRows({
+        {},
+        { RouteKindKey = "Goal", OptionKey = "I_Combat01" },
+    })
+
+    lu.assertEquals(data.readRoleKey(instance, rows, 1), "Intro")
+    lu.assertEquals(data.readRouteKind(instance, rows, 1), "Intro")
+    lu.assertEquals(data.readRouteKind(instance, rows, 2), "Goal")
+end
+
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalSnapshotIgnoresHiddenSiblingStorage()
+    local catalog = loadCatalog()
+    local template = loadClockworkGoalTemplate()
+    local instance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(2, "RouteKindKey"):write("Goal")
+    fields.Rooms:get(2, "OptionKey"):write("I_Combat02")
+    fields.Rooms:get(2, "SiblingStructureKey"):write("Preboss")
+
+    local control = template.createUi(fields, instance)
+    local snapshot = control:buildSelectedRowsSnapshot()
+
+    lu.assertNil(snapshot.rows[2].topology.siblings[1])
+end
+
+
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalForcePressureUsesNonGoalDoorCapacity()
     local catalog = loadCatalog()
@@ -438,6 +474,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalEmitsDumbSelectedRows
     lu.assertNil(snapshot.rows[1].roomTopology)
     lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
     lu.assertEquals(snapshot.rows[1].optionKey, "I_Intro")
+    lu.assertEquals(snapshot.rows[1].routeKindKey, "Intro")
     lu.assertEquals(snapshot.rows[2].roleKey, "GoalCombat")
     lu.assertEquals(snapshot.rows[2].optionKey, "I_Combat01")
     lu.assertEquals(snapshot.rows[2].routeKindKey, "Goal")

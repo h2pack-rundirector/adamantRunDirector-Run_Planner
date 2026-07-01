@@ -8,7 +8,6 @@ local fakeRows = h.fakeRows
 local routeFields = h.routeFields
 local routeUiFields = h.routeUiFields
 local noOpDraw = h.noOpDraw
-local valueStates = dofile("src/mods/ui/value_states.lua")
 
 -- luacheck: globals TestRunPlannerFieldsCageRoute
 TestRunPlannerFieldsCageRoute = {}
@@ -256,6 +255,64 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingCountUsesPhysicalExi
 
     lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 2), 1)
     lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 3), 1)
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageTerminalCombatRequiresCageCount()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            hCombatTwoRewardRow("H_Combat04"),
+            hCombatTwoRewardRow("H_Combat05"),
+            hCombatTwoRewardRow("H_Combat06"),
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat07",
+                Reward1Key = "Boon",
+                Reward1LootKey = "DemeterUpgrade",
+            },
+        }), instance)
+
+    local completion = control:read("completion")
+
+    lu.assertFalse(completion.valid)
+    lu.assertEquals(completion.completionInvalidRows[1].rowIndex, 5)
+    lu.assertEquals(completion.completionInvalidRows[1].code, "fields_cage_count_required")
+    lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].controlAlias, "VariantKey")
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageTerminalRowDoesNotExportHiddenSibling()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            hCombatTwoRewardRow("H_Combat04"),
+            hCombatTwoRewardRow("H_Combat05"),
+            hCombatTwoRewardRow("H_Combat06"),
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat07",
+                VariantKey = "TwoRewards",
+                SiblingStructureKey = "CombatCage3",
+                Reward1Key = "Boon",
+                Reward1LootKey = "DemeterUpgrade",
+                Reward2Key = "StackUpgrade",
+            },
+        }), instance)
+
+    local completion = control:read("completion")
+    local snapshot = control:buildSelectedRowsSnapshot()
+
+    lu.assertTrue(completion.valid)
+    lu.assertNil(snapshot.rows[5].topology.siblings[1])
 end
 
 
@@ -511,7 +568,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkUnres
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02)
 end
 
-function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkPlannedTopologyRoomsInvalid()
+function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesDoNotOwnPlannedTopologyRooms()
     local catalog = loadCatalog()
     local data = loadFieldsCageData()
     local instance = data.prepare({
@@ -529,7 +586,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkPlann
     })
 
     lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss01)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss02, valueStates.INVALID)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss01, valueStates.INVALID)
-    lu.assertEquals(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02, valueStates.INVALID)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss02)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss01)
+    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02)
 end

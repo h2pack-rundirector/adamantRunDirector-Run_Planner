@@ -55,7 +55,9 @@ local function selectedRoomKey(slot, option)
 end
 
 local function formValidation(instance, routeRows, rowIndex)
-    if data.readRouteKind(instance, routeRows, rowIndex) == "NonGoal"
+    local slot = data.slotForRow(instance, rowIndex)
+    if data.isRouteSlot(slot)
+        and data.readRouteKind(instance, routeRows, rowIndex) == "NonGoal"
         and data.readNonGoalKind(instance, routeRows, rowIndex) == ""
     then
         return form.invalid({
@@ -76,9 +78,27 @@ local function formValidation(instance, routeRows, rowIndex)
     })
 end
 
+local function rowInactiveAfter(inactiveAfterRowIndex, rowIndex)
+    return inactiveAfterRowIndex ~= nil
+        and rowIndex ~= nil
+        and rowIndex > inactiveAfterRowIndex
+end
+
 function runtime.create(fields, instance)
     prewarmRewardSurfaces(instance)
     local routeRows = createRouteRows(fields)
+    local localInactiveAfterDirty = true
+    local localInactiveAfterRowIndex = nil
+    local function localInactiveAfter()
+        if localInactiveAfterDirty then
+            localInactiveAfterRowIndex = data.inactiveAfterRowIndex(instance, routeRows)
+            localInactiveAfterDirty = false
+        end
+        return localInactiveAfterRowIndex
+    end
+    instance.localRowInactive = function(rowIndex)
+        return rowInactiveAfter(localInactiveAfter(), rowIndex)
+    end
 
     local control = {}
 
@@ -157,25 +177,39 @@ function runtime.create(fields, instance)
         return common == nil or common.rewardsConfigured(instance)
     end
 
+    function control:localInactiveAfterRowIndex()
+        return localInactiveAfter()
+    end
+
+    function control:rowInactive(rowIndex)
+        return rowInactiveAfter(self:localInactiveAfterRowIndex(), rowIndex)
+    end
+
     function control:rowValidation(rowIndex)
         local validation = formValidation(instance, routeRows, rowIndex)
         if not validation.valid then
             return validation
         end
 
-        local topologyInvalid = data.validateRoomTopology(instance, routeRows, rowIndex)
-        if topologyInvalid ~= nil and not topologyInvalid.valid then
-            return topologyInvalid
+        if data.readRouteKind(instance, routeRows, rowIndex) ~= "Preboss"
+            and form.shouldValidateCompletionTopology(self:slot(rowIndex), self:slot(rowIndex + 1))
+        then
+            local topologyInvalid = data.validateRoomTopology(instance, routeRows, rowIndex)
+            if topologyInvalid ~= nil and not topologyInvalid.valid then
+                return topologyInvalid
+            end
         end
 
         return validation
     end
 
     function control:beginReadPass()
+        localInactiveAfter()
         data.beginReadPass(instance)
     end
 
     function control:invalidateReadPass()
+        localInactiveAfterDirty = true
         data.invalidateReadPass(instance)
         if instance.routeContext ~= nil and instance.routeContext.markDirty ~= nil then
             instance.routeContext:markDirty(instance.routeKey, instance.biomeKey)
@@ -201,9 +235,11 @@ function runtime.create(fields, instance)
 
         local siblings = {}
         for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
-            siblings[siblingIndex] = {
-                structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance, siblingIndex)) or "",
-            }
+            if data.shouldDrawSiblingStructure(instance, routeRows, rowIndex, siblingIndex) then
+                siblings[siblingIndex] = {
+                    structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance, siblingIndex)) or "",
+                }
+            end
         end
 
         return {
@@ -230,6 +266,7 @@ function runtime.create(fields, instance)
     function control:buildSelectedRowsSnapshot()
         local rows = {}
         self:beginReadPass()
+        local inactiveAfterRowIndex = self:localInactiveAfterRowIndex()
         for rowIndex = 1, self:rowCount() do
             rows[#rows + 1] = self:selectedRowSnapshot(rowIndex)
         end
@@ -240,6 +277,7 @@ function runtime.create(fields, instance)
             controlName = instance.name,
             biomeKey = instance.biomeKey,
             adapter = instance.biome.adapter,
+            inactiveAfterRowIndex = inactiveAfterRowIndex,
             rows = rows,
         }
     end
@@ -247,40 +285,44 @@ function runtime.create(fields, instance)
     local function buildCompletionReport(self)
         local completionInvalidRows = {}
         self:beginReadPass()
+        local inactiveAfterRowIndex = self:localInactiveAfterRowIndex()
         for rowIndex = 1, self:rowCount() do
-            local validation = self:rowValidation(rowIndex)
-            if form.isCompletionInvalid(validation) then
-                local slot = self:slot(rowIndex)
-                local row = {
-                    rowIndex = rowIndex,
-                    routeOrdinal = slot and slot.routeOrdinal or nil,
-                    slotLabel = slot and slot.label or nil,
-                    invalidCode = validation.code,
-                    invalidReason = validation.message,
-                }
-                local invalidRow = {
-                    rowIndex = rowIndex,
-                    routeOrdinal = row.routeOrdinal,
-                    locationLabel = form.locations.biomeRow(instance, row),
-                    code = validation.code,
-                    message = validation.message,
-                    tabKey = validation.tabKey,
-                    controlTargets = validation.controlTargets,
-                    valueTargets = validation.valueTargets,
-                }
-                completionInvalidRows[#completionInvalidRows + 1] = invalidRow
+            local slot = self:slot(rowIndex)
+            if not rowInactiveAfter(inactiveAfterRowIndex, rowIndex)
+                and form.shouldValidateCompletionSlot(slot)
+            then
+                local validation = self:rowValidation(rowIndex)
+                if form.isCompletionInvalid(validation) then
+                    local row = {
+                        rowIndex = rowIndex,
+                        routeOrdinal = slot and slot.routeOrdinal or nil,
+                        slotLabel = slot and slot.label or nil,
+                        invalidCode = validation.code,
+                        invalidReason = validation.message,
+                    }
+                    local invalidRow = {
+                        rowIndex = rowIndex,
+                        routeOrdinal = row.routeOrdinal,
+                        locationLabel = form.locations.biomeRow(instance, row),
+                        code = validation.code,
+                        message = validation.message,
+                        completion = true,
+                        tabKey = validation.tabKey,
+                        controlTargets = validation.controlTargets,
+                        valueTargets = validation.valueTargets,
+                    }
+                    completionInvalidRows[#completionInvalidRows + 1] = invalidRow
+                end
             end
         end
         self:endReadPass()
-        instance.completionInvalidMessage = completionInvalidRows[1] ~= nil
-                and ("Data incomplete: " .. tostring(completionInvalidRows[1].message or completionInvalidRows[1].code))
-            or nil
         return {
             controlName = instance.name,
             biomeKey = instance.biomeKey,
             adapter = instance.biome.adapter,
             valid = completionInvalidRows[1] == nil,
             disabled = completionInvalidRows[1] ~= nil,
+            inactiveAfterRowIndex = inactiveAfterRowIndex,
             completionInvalidRows = completionInvalidRows,
         }
     end

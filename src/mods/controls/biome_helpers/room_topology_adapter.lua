@@ -9,7 +9,7 @@ local form = deps.form
 local adapter = {}
 
 local validStatus = common.validStatus
-local INVALID_STATE = valueStates and valueStates.INVALID or 2
+local WARNING_STATE = valueStates and valueStates.WARNING or 3
 local activeReadCache = readCache.active
 local rowRecord = readCache.rowRecord
 local nestedRecord = readCache.nestedRecord
@@ -71,15 +71,6 @@ function adapter.create(data, opts)
     local api = {}
     local slots = opts.slots
 
-    local function rowRoomKey(instance, rows, rowIndex)
-        return data.rowRoomKey(instance, rows, rowIndex)
-    end
-
-    local function siblingCandidateRoomKey(instance, rows, rowIndex, siblingIndex)
-        local _, sibling = data.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
-        return roomTopology.roomKey(sibling)
-    end
-
     function api.prepareSiblingStructurePolicy(instance)
         instance.siblingStructurePolicy = roomTopology.prepareSiblingPolicy(opts.topologyForInstance(instance), {
             namespace = opts.namespace,
@@ -119,7 +110,7 @@ function adapter.create(data, opts)
         return form.selectedTargets({
             tabKey = "rooms",
             controlAlias = api.siblingStructureAlias(instance, siblingIndex),
-            state = INVALID_STATE,
+            state = WARNING_STATE,
         })
     end
 
@@ -160,33 +151,11 @@ function adapter.create(data, opts)
                 role,
                 option
             ),
-            selectedRoomKey = rowRoomKey(instance, rows, rowIndex),
             structuralCountAt = function(index, field)
                 return structuralCountForRow(data, slots, instance, rows, index, field)
             end,
-            roomKeyAt = function(index)
-                return rowRoomKey(instance, rows, index)
-            end,
             siblingAt = function(currentSiblingIndex)
                 return data.resolveSiblingStructure(instance, rows, rowIndex, currentSiblingIndex)
-            end,
-            siblingCountAt = function(index)
-                return data.activeSiblingStructureCount(instance, rows, index)
-            end,
-            siblingRoomKeyAt = function(index, currentSiblingIndex)
-                return siblingCandidateRoomKey(instance, rows, index, currentSiblingIndex)
-            end,
-            extraRuleStatus = function(sibling, currentSiblingIndex)
-                if opts.extraRuleStatus == nil then
-                    return validStatus()
-                end
-                return opts.extraRuleStatus(
-                    instance,
-                    rows,
-                    rowIndex,
-                    currentSiblingIndex or siblingIndex,
-                    sibling
-                )
             end,
         }
     end
@@ -244,14 +213,6 @@ function adapter.create(data, opts)
         )
     end
 
-    function api.siblingAvailabilityStatus(instance, rows, rowIndex, siblingIndex, sibling)
-        return roomTopology.siblingCandidateStatus(
-            instance.siblingStructurePolicy,
-            api.siblingPolicyContext(instance, rows, rowIndex, siblingIndex),
-            sibling
-        )
-    end
-
     function api.siblingStructureValueStatesForRow(instance, rows, rowIndex, siblingIndex)
         local cache = activeReadCache(instance)
         if cache == nil then
@@ -282,7 +243,7 @@ function adapter.create(data, opts)
     end
 
     function api.validateSiblingStructures(instance, rows, rowIndex, validateOpts)
-        local invalid, siblingIndex = roomTopology.validateSiblingStructures(
+        local invalid, siblingIndex = roomTopology.validateRequiredSiblingStructures(
             instance.siblingStructurePolicy,
             api.siblingPolicyContext(instance, rows, rowIndex),
             validateOpts

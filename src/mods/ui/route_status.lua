@@ -32,7 +32,10 @@ local function drawMessageLine(imgui, color, message, firstLine)
     if firstLine then
         imgui.SameLine()
     end
-    imgui.SetCursorPosX(ROUTE_MESSAGE_COLUMN_X)
+    local cursorX = imgui.GetCursorPosX and imgui.GetCursorPosX() or nil
+    if cursorX == nil or cursorX < ROUTE_MESSAGE_COLUMN_X then
+        imgui.SetCursorPosX(ROUTE_MESSAGE_COLUMN_X)
+    end
     decorations.drawColoredText(imgui, color, message)
 end
 
@@ -40,12 +43,9 @@ function routeStatus.drawRouteStatus(draw, routeSnapshot)
     local label = tostring((routeSnapshot and routeSnapshot.label) or (routeSnapshot and routeSnapshot.routeKey) or "Route")
     local valid = routeSnapshot ~= nil and routeSnapshot.valid
     local incomplete = routeSnapshot ~= nil and routeSnapshot.incomplete == true
-    local feedback, primaryInvalid
-    if not valid and not incomplete then
-        feedback = feedbackForRoute(routeSnapshot)
-        primaryInvalid = feedback and feedback.primary or nil
-    end
-    local primaryMessage = incomplete and routeSnapshot.incompleteMessage or invalidText(primaryInvalid)
+    local feedback = feedbackForRoute(routeSnapshot)
+    local primaryInvalid = feedback and feedback.primary or nil
+    local primaryMessage = invalidText(primaryInvalid)
     local status = valid and "Valid" or (incomplete and "Incomplete" or "Invalid")
     local text = label .. " " .. status .. (primaryMessage ~= nil and ":" or "")
     local imgui = draw.imgui
@@ -58,9 +58,6 @@ function routeStatus.drawRouteStatus(draw, routeSnapshot)
     end
 
     drawMessageLine(imgui, statusColor, primaryMessage, true)
-    if incomplete then
-        return
-    end
     for _, related in ipairs((feedback and feedback.related) or EMPTY_LIST) do
         local relatedMessage = relatedInvalidText(related)
         if relatedMessage ~= nil then

@@ -45,10 +45,55 @@ local function applyNpcFeedback(context, routeKey, npcFeedback, generation)
     end
 end
 
+local function copyInvalidRow(invalidRow, extras)
+    local copied = {}
+    for key, value in pairs(invalidRow or {}) do
+        copied[key] = value
+    end
+    for key, value in pairs(extras or {}) do
+        copied[key] = value
+    end
+    return copied
+end
+
+local function completionInvalids(context, route, routeControlName, EMPTY_LIST)
+    local invalids = {}
+    local configuredBiomeCount = context:configuredBiomeCount(route.key)
+    for routeBiomeIndex, biomeKey in ipairs(route.biomes or EMPTY_LIST) do
+        if routeBiomeIndex > configuredBiomeCount then
+            break
+        end
+
+        local completion = context:controlCompletionReport(route.key, biomeKey)
+        if not completion then
+            invalids[#invalids + 1] = {
+                biomeKey = biomeKey,
+                routeBiomeIndex = routeBiomeIndex,
+                controlName = routeControlName(biomeKey),
+                code = "missing_control",
+                message = "Missing route control: " .. tostring(biomeKey),
+                completion = true,
+            }
+            break
+        end
+
+        for _, invalid in ipairs(completion.completionInvalidRows or EMPTY_LIST) do
+            invalids[#invalids + 1] = copyInvalidRow(invalid, {
+                biomeKey = biomeKey,
+                routeBiomeIndex = routeBiomeIndex,
+                controlName = completion.controlName or routeControlName(biomeKey),
+                completion = true,
+            })
+        end
+    end
+    return invalids
+end
+
 function feedback.install(context, deps)
     local state = deps.state
     local historySystem = deps.historySystem
     local EMPTY_LIST = deps.EMPTY_LIST
+    local routeControlName = deps.routeControlName
 
     function context:controlCompletionReport(routeKey, biomeKey)
         local reports = state.routeCompletionCache(self, routeKey)
@@ -75,42 +120,59 @@ function feedback.install(context, deps)
             }
             local routeFeedback
             if route ~= nil then
-                local history = historySystem.builder.build({
-                    route = route,
-                    biomeLookup = self.biomeLookup,
-                    snapshotForBiome = function(_, biomeKey)
-                        return selectedRowsSnapshot(self, route.key, biomeKey)
-                    end,
-                })
-                local npcTargets = historySystem.npcCandidates.build({
-                    route = route,
-                    history = history,
-                    npcs = self.npcs,
-                    biomeLookup = self.biomeLookup,
-                })
-                local npcSnapshot = self:isLayerConfigured(route.key, "npcs")
-                    and selectedNpcSnapshot(self, route.key)
-                    or nil
-                result = historySystem.validator.validate({
-                    route = route,
-                    history = history,
-                    biomeLookup = self.biomeLookup,
-                    npcSnapshot = npcSnapshot,
-                    npcTargets = npcTargets,
-                    npcs = self.npcs,
-                })
-                routeFeedback = historySystem.feedback.fromResult({
-                    route = route,
-                    history = history,
-                    biomeLookup = self.biomeLookup,
-                    findings = result.findings,
-                    invalids = result.invalids,
-                })
-                feedbackState.npcTargets = npcTargets
-                feedbackState.npcFeedback = historySystem.npcFeedback.fromResult({
-                    findings = result.findings,
-                    invalids = result.invalids,
-                })
+                local incompleteInvalids = completionInvalids(self, route, routeControlName, EMPTY_LIST)
+                if incompleteInvalids[1] ~= nil then
+                    result = {
+                        valid = false,
+                        findings = {},
+                        invalids = incompleteInvalids,
+                    }
+                    routeFeedback = historySystem.feedback.fromResult({
+                        route = route,
+                        biomeLookup = self.biomeLookup,
+                        findings = result.findings,
+                        invalids = result.invalids,
+                    })
+                    feedbackState.npcTargets = {}
+                    feedbackState.npcFeedback = {}
+                else
+                    local history = historySystem.builder.build({
+                        route = route,
+                        biomeLookup = self.biomeLookup,
+                        snapshotForBiome = function(_, biomeKey)
+                            return selectedRowsSnapshot(self, route.key, biomeKey)
+                        end,
+                    })
+                    local npcTargets = historySystem.npcCandidates.build({
+                        route = route,
+                        history = history,
+                        npcs = self.npcs,
+                        biomeLookup = self.biomeLookup,
+                    })
+                    local npcSnapshot = self:isLayerConfigured(route.key, "npcs")
+                        and selectedNpcSnapshot(self, route.key)
+                        or nil
+                    result = historySystem.validator.validate({
+                        route = route,
+                        history = history,
+                        biomeLookup = self.biomeLookup,
+                        npcSnapshot = npcSnapshot,
+                        npcTargets = npcTargets,
+                        npcs = self.npcs,
+                    })
+                    routeFeedback = historySystem.feedback.fromResult({
+                        route = route,
+                        history = history,
+                        biomeLookup = self.biomeLookup,
+                        findings = result.findings,
+                        invalids = result.invalids,
+                    })
+                    feedbackState.npcTargets = npcTargets
+                    feedbackState.npcFeedback = historySystem.npcFeedback.fromResult({
+                        findings = result.findings,
+                        invalids = result.invalids,
+                    })
+                end
                 local generation = self:routeGeneration(route.key)
                 applyRouteFeedback(self, historySystem, route, routeFeedback, EMPTY_LIST)
                 applyNpcFeedback(self, route.key, feedbackState.npcFeedback, generation)
@@ -151,6 +213,14 @@ function feedback.install(context, deps)
     end
 
     function context:historyRowInactive(routeKey, biomeKey, rowIndex)
+        local completion = self:controlCompletionReport(routeKey, biomeKey)
+        if completion ~= nil
+            and completion.inactiveAfterRowIndex ~= nil
+            and rowIndex ~= nil
+            and rowIndex > completion.inactiveAfterRowIndex
+        then
+            return true
+        end
         local routeFeedback = self:historyFeedback(routeKey)
         return historySystem.feedback.rowInactive(routeFeedback, biomeKey, rowIndex)
     end

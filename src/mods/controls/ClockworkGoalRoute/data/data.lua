@@ -182,6 +182,10 @@ local adapter = {
 data = rowData.create(adapter)
 topology = topologyFactory.create(data)
 
+function data.slotForRow(instance, rowIndex)
+    return slots.slotForRow(instance, rowIndex)
+end
+
 function data.prepare(instance)
     instance.biome = instance.biome or {}
     instance.clockwork = instance.biome.clockwork or {}
@@ -251,6 +255,10 @@ function data.nonGoalKindLabels(instance)
 end
 
 function data.readRouteKind(instance, rows, rowIndex)
+    local slot = slots.slotForRow(instance, rowIndex)
+    if slots.isFixedSlot(slot) and not slots.isRouteSlot(slot) then
+        return data.readRoleKey(instance, rows, rowIndex)
+    end
     local routeKind = rows and rows:read(rowIndex, ROUTE_KIND_ALIAS) or ""
     if routeKind == GOAL_KIND or routeKind == NON_GOAL_KIND or routeKind == PREBOSS_KIND then
         return routeKind
@@ -260,6 +268,17 @@ end
 
 function data.readNonGoalKind(_instance, rows, rowIndex)
     return rows and rows:read(rowIndex, NON_GOAL_KIND_ALIAS) or ""
+end
+
+function data.inactiveAfterRowIndex(instance, rows)
+    for rowIndex = 1, #(instance.routeSlots or {}) do
+        if slots.isRouteSlot(slots.slotForRow(instance, rowIndex))
+            and data.readRouteKind(instance, rows, rowIndex) == PREBOSS_KIND
+        then
+            return rowIndex
+        end
+    end
+    return nil
 end
 
 function data.routeKindValuesForRow(instance, rows, rowIndex)

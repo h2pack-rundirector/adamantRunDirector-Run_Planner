@@ -12,8 +12,9 @@ local function locationLabel(args, record)
         return nil
     end
     local label = biomeLabel(args, record.biomeKey)
-    if record.rowIndex ~= nil then
-        return label .. " Row " .. tostring(record.rowIndex)
+    local rowIndex = record.renderRowIndex or record.rowIndex
+    if rowIndex ~= nil then
+        return label .. " Row " .. tostring(rowIndex)
     end
     return label
 end

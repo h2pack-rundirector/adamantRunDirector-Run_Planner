@@ -167,9 +167,16 @@ function runtime.create(fields, instance)
             return validation
         end
 
-        local topologyInvalid = data.validateRoomTopology(instance, routeRows, rowIndex)
-        if topologyInvalid ~= nil and not topologyInvalid.valid then
-            return topologyInvalid
+        local selectedTopologyInvalid = data.validateSelectedRoomTopology(instance, routeRows, rowIndex)
+        if selectedTopologyInvalid ~= nil and not selectedTopologyInvalid.valid then
+            return selectedTopologyInvalid
+        end
+
+        if form.shouldValidateCompletionTopology(self:slot(rowIndex), self:slot(rowIndex + 1)) then
+            local topologyInvalid = data.validateRoomTopology(instance, routeRows, rowIndex)
+            if topologyInvalid ~= nil and not topologyInvalid.valid then
+                return topologyInvalid
+            end
         end
 
         return validation
@@ -204,17 +211,22 @@ function runtime.create(fields, instance)
             optionKey = selectedRoomKey(slot, option) or optionKey
         end
 
+        local siblings = {}
+        if form.shouldValidateCompletionTopology(slot, self:slot(rowIndex + 1))
+            and data.shouldDrawSiblingStructure(instance, routeRows, rowIndex)
+        then
+            siblings[1] = {
+                structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance)) or "",
+            }
+        end
+
         return {
             rowIndex = rowIndex,
             roleKey = roleKey,
             optionKey = optionKey,
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
             topology = {
-                siblings = {
-                    [1] = {
-                        structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance)) or "",
-                    },
-                },
+                siblings = siblings,
             },
             rewards = {
                 row = {
@@ -246,33 +258,33 @@ function runtime.create(fields, instance)
         local completionInvalidRows = {}
         self:beginReadPass()
         for rowIndex = 1, self:rowCount() do
-            local validation = self:rowValidation(rowIndex)
-            if form.isCompletionInvalid(validation) then
-                local slot = self:slot(rowIndex)
-                local row = {
-                    rowIndex = rowIndex,
-                    routeOrdinal = slot and slot.routeOrdinal or nil,
-                    slotLabel = slot and slot.label or nil,
-                    invalidCode = validation.code,
-                    invalidReason = validation.message,
-                }
-                local invalidRow = {
-                    rowIndex = rowIndex,
-                    routeOrdinal = row.routeOrdinal,
-                    locationLabel = form.locations.biomeRow(instance, row),
-                    code = validation.code,
-                    message = validation.message,
-                    tabKey = validation.tabKey,
-                    controlTargets = validation.controlTargets,
-                    valueTargets = validation.valueTargets,
-                }
-                completionInvalidRows[#completionInvalidRows + 1] = invalidRow
+            local slot = self:slot(rowIndex)
+            if form.shouldValidateCompletionSlot(slot) then
+                local validation = self:rowValidation(rowIndex)
+                if form.isCompletionInvalid(validation) then
+                    local row = {
+                        rowIndex = rowIndex,
+                        routeOrdinal = slot and slot.routeOrdinal or nil,
+                        slotLabel = slot and slot.label or nil,
+                        invalidCode = validation.code,
+                        invalidReason = validation.message,
+                    }
+                    local invalidRow = {
+                        rowIndex = rowIndex,
+                        routeOrdinal = row.routeOrdinal,
+                        locationLabel = form.locations.biomeRow(instance, row),
+                        code = validation.code,
+                        message = validation.message,
+                        completion = true,
+                        tabKey = validation.tabKey,
+                        controlTargets = validation.controlTargets,
+                        valueTargets = validation.valueTargets,
+                    }
+                    completionInvalidRows[#completionInvalidRows + 1] = invalidRow
+                end
             end
         end
         self:endReadPass()
-        instance.completionInvalidMessage = completionInvalidRows[1] ~= nil
-                and ("Data incomplete: " .. tostring(completionInvalidRows[1].message or completionInvalidRows[1].code))
-            or nil
         return {
             controlName = instance.name,
             biomeKey = instance.biomeKey,

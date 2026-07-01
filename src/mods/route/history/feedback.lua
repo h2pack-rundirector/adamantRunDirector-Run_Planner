@@ -138,6 +138,9 @@ end
 
 local function applyRenderRecord(args, record)
     local targetRecord = record and (record.targetFinding or record) or nil
+    if targetRecord ~= nil and targetRecord.completion == true then
+        return record
+    end
     local biomeKey = targetRecord and targetRecord.biomeKey or record and record.biomeKey or nil
     local biome = args and args.biomeLookup and args.biomeLookup[biomeKey] or nil
     if biome == nil then

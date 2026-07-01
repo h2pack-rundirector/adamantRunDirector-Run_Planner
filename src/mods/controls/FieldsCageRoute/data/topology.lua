@@ -7,6 +7,21 @@ local slots = deps.slots
 local topology = {}
 
 local invalidStatus = common.invalidStatus
+local WARNING_STATE = 3
+
+local function selectedControlInvalid(code, message, controlAlias)
+    local invalid = invalidStatus(code, message)
+    invalid.tabKey = "rooms"
+    invalid.controlTargets = {
+        {
+            tabKey = "rooms",
+            controlAlias = controlAlias,
+            state = WARNING_STATE,
+            mode = "selected",
+        },
+    }
+    return invalid
+end
 
 local function rewardAddresses(count)
     local addresses = {}
@@ -85,7 +100,11 @@ function topology.create(data)
             local roleKey = data.resolveRole(instance, rows, rowIndex)
             local _, cageCount = data.resolveCageCount(instance, rows, rowIndex, roleKey)
             if roleKey == "Combat" and (cageCount == nil or (cageCount.cageRewardCount or 0) <= 0) then
-                return invalidStatus("fields_cage_count_required", "Fields topology needs picked cage reward count")
+                return selectedControlInvalid(
+                    "fields_cage_count_required",
+                    "Fields topology needs picked cage reward count",
+                    "VariantKey"
+                )
             end
             return nil
         end,

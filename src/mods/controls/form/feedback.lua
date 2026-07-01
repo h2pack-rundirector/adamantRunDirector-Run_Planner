@@ -34,6 +34,10 @@ function feedback.history(instance, rowIndex, controlAlias)
 end
 
 function feedback.rowInactive(instance, rowIndex)
+    if instance.localRowInactive ~= nil and instance.localRowInactive(rowIndex) then
+        return true
+    end
+
     local applied = appliedFeedback(instance)
     if applied ~= nil then
         return applied.inactiveAfterRowIndex ~= nil

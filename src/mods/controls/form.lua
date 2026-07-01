@@ -21,6 +21,7 @@ local VALID_STATUS = {
     valid = true,
 }
 local INVALID_STATE = valueStates and valueStates.INVALID or 2
+local WARNING_STATE = valueStates and valueStates.WARNING or 3
 local COMPLETION_INVALID_CODES = {
     role_required = true,
     option_required = true,
@@ -68,12 +69,17 @@ end
 function form.invalid(opts)
     opts = opts or {}
     local label = nonEmpty(opts.label) or "Selection"
+    local targetOpts = {}
+    for key, value in pairs(opts) do
+        targetOpts[key] = value
+    end
+    targetOpts.state = targetOpts.state or WARNING_STATE
     return {
         valid = false,
         code = opts.code or "selection_required",
         message = opts.message or (label .. " needs a concrete selection"),
         tabKey = opts.tabKey,
-        controlTargets = form.selectedTargets(opts),
+        controlTargets = form.selectedTargets(targetOpts),
         valueTargets = opts.valueTargets,
         completion = true,
     }
@@ -87,6 +93,14 @@ function form.isCompletionInvalid(invalid)
         return true
     end
     return COMPLETION_INVALID_CODES[invalid.code or invalid.invalidCode] == true
+end
+
+function form.shouldValidateCompletionSlot(slot)
+    return slot == nil or slot.kind ~= "preboss"
+end
+
+function form.shouldValidateCompletionTopology(_slot, nextSlot)
+    return nextSlot == nil or nextSlot.kind ~= "preboss"
 end
 
 function form.validateRoomChoice(opts)
@@ -115,6 +129,7 @@ function form.validateRoomChoice(opts)
             tabKey = "rooms",
             controlAlias = roleAlias,
             label = roleLabel,
+            state = INVALID_STATE,
         })
     end
 
@@ -132,6 +147,7 @@ function form.validateRoomChoice(opts)
             tabKey = "rooms",
             controlAlias = optionAlias,
             label = tostring(role.label or roleKey),
+            state = INVALID_STATE,
         })
     end
     if optionKey == "" and (role.requiresConcreteOption or #options > 1) then

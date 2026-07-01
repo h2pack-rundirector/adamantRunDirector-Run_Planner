@@ -274,7 +274,7 @@ local function fullITartarusRows()
             Reward1Key = "ZeusUpgrade",
         },
         iGoal("I_Combat11", "CombatReward"),
-        iRewardCombat("I_Combat12", "Preboss", "RoomMoneyDrop"),
+        iRewardCombat("I_Combat12", "CombatReward", "RoomMoneyDrop"),
         {
             RouteKindKey = "Preboss",
         },
@@ -742,8 +742,7 @@ function TestRunPlannerRouteHistoryBuilder.testFieldsCageEntriesCarryTopologyAnd
     lu.assertEquals(rooms[4].topology.sibling.roomKey, "H_MiniBoss02")
     lu.assertEquals(rooms[4].topology.sibling.eligibleRewardTypes[1], "Boon")
 
-    lu.assertEquals(rooms[5].topology.selected.structure, "Miniboss")
-    lu.assertEquals(rooms[5].topology.selected.roomKey, "H_MiniBoss01")
+    lu.assertNil(rooms[5].topology)
     lu.assertEquals(rooms[5].reward.kind, "roomStore")
     lu.assertEquals(rooms[5].reward.rewardType, "Boon")
     lu.assertEquals(rooms[5].reward.boonSource, "ZeusUpgrade")
@@ -1024,8 +1023,11 @@ function TestRunPlannerRouteHistoryBuilder.testClockworkGoalEntriesCarryTopology
     lu.assertEquals(rooms[3].reward.kind, "roomStore")
     lu.assertEquals(rooms[3].reward.rewardStore, "TartarusRewards")
     lu.assertEquals(rooms[3].reward.rewardType, "MaxHealthDrop")
+    lu.assertEquals(rooms[2].topology.kind, "clockworkSiblingChoice")
+    lu.assertEquals(rooms[2].topology.selected.structure, "RewardCombat")
+    lu.assertNil(rooms[2].topology.sibling)
     lu.assertEquals(rooms[3].topology.kind, "clockworkSiblingChoice")
-    lu.assertEquals(rooms[3].topology.selected.structure, "RewardCombat")
+    lu.assertEquals(rooms[3].topology.selected.structure, "GoalCombat")
     lu.assertEquals(rooms[3].topology.sibling.structure, "GoalCombat")
     lu.assertTrue(rooms[3].topology.sibling.isClockworkGoal)
 
@@ -1036,8 +1038,8 @@ function TestRunPlannerRouteHistoryBuilder.testClockworkGoalEntriesCarryTopology
     lu.assertEquals(rooms[9].reward.rewardStore, "RunProgress")
     lu.assertEquals(rooms[9].reward.rewardType, "Boon")
     lu.assertEquals(rooms[9].reward.boonSource, "ZeusUpgrade")
-    lu.assertEquals(rooms[11].topology.sibling.structure, "Preboss")
-    lu.assertTrue(rooms[11].topology.sibling.isPreboss)
+    lu.assertEquals(rooms[11].topology.selected.structure, "Preboss")
+    lu.assertEquals(rooms[11].topology.sibling.structure, "RewardCombat")
     lu.assertEquals(rooms[12].reward.kind, "shop")
     lu.assertEquals(rooms[12].reward.shopProfile, "I_WorldShop")
 end

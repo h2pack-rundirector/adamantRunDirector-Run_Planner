@@ -106,6 +106,45 @@ function TestRunPlannerRouteHistoryValidator.testThessalyThreeCombatVariantUsesH
     lu.assertEquals(states.ThreeCombats, valueStates.INVALID)
 end
 
+function TestRunPlannerRouteHistoryValidator.testFeedbackColorsSelectedBlankControlTargets()
+    local feedback = historyFeedback.fromResult({
+        route = {
+            key = "Underworld",
+            biomes = { "F" },
+        },
+        biomeLookup = {
+            F = {
+                key = "F",
+                label = "Erebus",
+            },
+        },
+        findings = {},
+        invalids = {
+            {
+                biomeKey = "F",
+                rowIndex = 2,
+                routeOrdinal = 2,
+                tabKey = "rooms",
+                code = "option_required",
+                message = "Choose a room",
+                completion = true,
+                controlTargets = {
+                    {
+                        tabKey = "rooms",
+                        controlAlias = "OptionKey",
+                        mode = "selected",
+                        state = valueStates.WARNING,
+                    },
+                },
+            },
+        },
+    })
+
+    local states = historyFeedback.valueStatesForControl(feedback, "F", 2, "OptionKey")
+    lu.assertEquals(states[""], valueStates.WARNING)
+    lu.assertEquals(feedback.route.primary.locationLabel, "Erebus Row 2")
+end
+
 local function emitRoom(history, roomHistoryOrdinal, fields)
     return routeHistory.emitAt(history, {
         routeKey = "Underworld",
@@ -130,6 +169,7 @@ local function emitRoom(history, roomHistoryOrdinal, fields)
         rewardCandidates = fields and fields.rewardCandidates or nil,
         nextRoomTags = fields and fields.nextRoomTags or nil,
         tags = fields and fields.tags or nil,
+        source = fields and fields.source or nil,
     })
 end
 
@@ -271,6 +311,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateConcre
     lu.assertEquals(feedback.route.primary.routeOrdinal, 2)
     lu.assertEquals(feedback.route.primary.renderRowIndex, 2)
     lu.assertEquals(feedback.route.primary.renderRouteOrdinal, 1)
+    lu.assertEquals(feedback.route.primary.locationLabel, "Erebus Row 2")
 end
 
 function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateCappedRole()
@@ -427,7 +468,7 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRoomFind
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat01",
+            OptionKey = "F_Combat02",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -462,7 +503,7 @@ function TestRunPlannerRouteHistoryValidator.testFixedLinearPickedDoorRoleUsesNe
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat01",
+            OptionKey = "F_Combat02",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -569,6 +610,74 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsEncounte
     local feedback = historyFeedback.fromFindings(result.findings)
     local states = historyFeedback.valueStatesForControl(feedback, "F", 3, "OptionKey")
     lu.assertEquals(states.F_Combat05, valueStates.INVALID)
+end
+
+function TestRunPlannerRouteHistoryValidator.testSelectedRoomCandidateInvalidBlocksRoute()
+    local history = routeHistory.create()
+    emitRoom(history, 3, {
+        biomeKey = "F",
+        rowIndex = 3,
+        roomKey = "F_Story01",
+        roleKey = "Story",
+        optionKey = "F_Story01",
+        biomeDepthCache = 3,
+        roomCandidates = {
+            {
+                roleKey = "Story",
+                optionKey = "F_Story01",
+                roomKey = "F_Story01",
+                optionAvailability = {
+                    biomeDepthCache = { min = 4 },
+                },
+                targetRowIndex = 3,
+            },
+        },
+    })
+
+    local result = validateHistory(history)
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "biome_depth_unavailable")
+    lu.assertEquals(result.invalids[1].rowIndex, 3)
+    lu.assertEquals(result.invalids[1].targetFinding.kind, "roomCandidateInvalid")
+    lu.assertEquals(result.invalids[1].targetFinding.roomKey, "F_Story01")
+end
+
+function TestRunPlannerRouteHistoryValidator.testEarlierSelectedCandidateInvalidBeatsLaterRewardInvalid()
+    local history = routeHistory.create()
+    emitRoom(history, 3, {
+        biomeKey = "F",
+        rowIndex = 3,
+        roomKey = "F_Story01",
+        roleKey = "Story",
+        optionKey = "F_Story01",
+        biomeDepthCache = 3,
+        roomCandidates = {
+            {
+                roleKey = "Story",
+                optionKey = "F_Story01",
+                roomKey = "F_Story01",
+                optionAvailability = {
+                    biomeDepthCache = { min = 4 },
+                },
+                targetRowIndex = 3,
+            },
+        },
+    })
+    local lateRoom = emitRoom(history, 9, {
+        biomeKey = "F",
+        rowIndex = 9,
+        roomKey = "F_Combat09",
+        roleKey = "Combat",
+        optionKey = "F_Combat09",
+    })
+    emitLoot(history, lateRoom, "TalentDrop")
+
+    local result = validateHistory(history)
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "biome_depth_unavailable")
+    lu.assertEquals(result.invalids[1].rowIndex, 3)
 end
 
 function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRoleCapFindings()
@@ -706,7 +815,7 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsSiblingF
         },
         {
             RoleKey = "Combat",
-            OptionKey = "F_Combat01",
+            OptionKey = "F_Combat02",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
         },
@@ -726,6 +835,83 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsSiblingF
     local feedback = historyFeedback.fromFindings(result.findings)
     local states = historyFeedback.valueStatesForControl(feedback, "F", finding.rowIndex, "SiblingStructureKey")
     lu.assertEquals(states.F_Story01, valueStates.HIDDEN)
+end
+
+function TestRunPlannerRouteHistoryValidator.testSelectedSiblingCannotUsePickedNextRoom()
+    local history = routeHistory.create()
+    emitRoom(history, 1, {
+        rowIndex = 1,
+        roomKey = "F_Opening01",
+        roleKey = "Opening",
+        optionKey = "F_Opening01",
+        topology = {
+            exits = {
+                {
+                    branch = "picked",
+                    roomKey = "F_Combat01",
+                },
+            },
+        },
+    })
+    emitRoom(history, 2, {
+        rowIndex = 2,
+        roomKey = "F_Combat01",
+        roleKey = "Combat",
+        optionKey = "F_Combat01",
+        source = {
+            topology = {
+                siblings = {
+                    {
+                        structureKey = "F_Combat02",
+                    },
+                },
+            },
+        },
+        topology = {
+            exits = {
+                {
+                    branch = "picked",
+                    roomKey = "F_Combat02",
+                },
+                {
+                    branch = "sibling",
+                    siblingIndex = 1,
+                    structureKey = "F_Combat02",
+                    roomKey = "F_Combat02",
+                },
+            },
+        },
+        siblingCandidates = {
+            {
+                siblingIndex = 1,
+                structureKey = "F_Combat02",
+                roomKey = "F_Combat02",
+            },
+        },
+    })
+    emitRoom(history, 3, {
+        rowIndex = 3,
+        roomKey = "F_Combat02",
+        roleKey = "Combat",
+        optionKey = "F_Combat02",
+    })
+
+    local result = historyValidator.validate({
+        route = {
+            key = "Underworld",
+            biomes = { "F" },
+        },
+        history = history,
+        biomeLookup = {},
+    })
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "sibling_room_planned")
+    lu.assertEquals(result.invalids[1].rowIndex, 2)
+
+    local feedback = historyFeedback.fromFindings(result.findings)
+    local states = historyFeedback.valueStatesForControl(feedback, "F", 2, "SiblingStructureKey")
+    lu.assertEquals(states.F_Combat02, valueStates.INVALID)
 end
 
 function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRewardFindings()
@@ -962,6 +1148,10 @@ function TestRunPlannerRouteHistoryValidator.testClockworkRejectsPrebossBeforeGo
             OptionKey = "I_Combat03",
             SiblingStructureKey = "Preboss",
         },
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat04",
+        },
     })
 
     lu.assertFalse(result.valid)
@@ -1004,7 +1194,7 @@ function TestRunPlannerRouteHistoryValidator.testClockworkRejectsPickedPrebossBe
         findings = result.findings,
         invalids = result.invalids,
     })
-    local states = historyFeedback.valueStatesForControl(feedback, "I", 3, "RouteKindKey")
+    local states = historyFeedback.valueStatesForControl(feedback, "I", 2, "RouteKindKey")
     lu.assertEquals(states.Preboss, valueStates.INVALID)
 end
 
@@ -1060,7 +1250,7 @@ function TestRunPlannerRouteHistoryValidator.testClockworkFeedbackMapsNonGoalKin
     })
 
     lu.assertFalse(result.valid)
-    lu.assertEquals(result.invalids[1].code, "clockwork_single_door_goal_required")
+    lu.assertEquals(result.invalids[1].code, "clockwork_goal_door_count")
 
     local feedback = historyFeedback.fromResult({
         route = route,
@@ -1068,7 +1258,7 @@ function TestRunPlannerRouteHistoryValidator.testClockworkFeedbackMapsNonGoalKin
         findings = result.findings,
         invalids = result.invalids,
     })
-    local states = historyFeedback.valueStatesForControl(feedback, "I", 3, "NonGoalKindKey")
+    local states = historyFeedback.valueStatesForControl(feedback, "I", 2, "NonGoalKindKey")
     lu.assertEquals(states.Story, valueStates.INVALID)
 end
 
@@ -1114,12 +1304,12 @@ function TestRunPlannerRouteHistoryValidator.testClockworkRequiresPrebossAfterGo
     lu.assertFalse(result.valid)
     lu.assertEquals(result.invalids[1].code, "clockwork_preboss_required")
 
-    local finding = firstFinding(result, "siblingCandidateInvalid", "structureKey", "CombatReward")
+    local finding = firstFinding(result, "roomCandidateInvalid", "clockworkValue", "Goal")
     lu.assertNotNil(finding)
     lu.assertEquals(finding.reason, "clockwork_preboss_required")
 end
 
-function TestRunPlannerRouteHistoryValidator.testClockworkEmitsInactiveBoundaryAfterFinalSingleDoorGoal()
+function TestRunPlannerRouteHistoryValidator.testClockworkNeedsPickedPrebossAfterFinalSingleDoorGoal()
     local route = {
         key = "Underworld",
         biomes = { "I" },
@@ -1128,39 +1318,36 @@ function TestRunPlannerRouteHistoryValidator.testClockworkEmitsInactiveBoundaryA
         {},
         {
             RouteKindKey = "Goal",
-            OptionKey = "I_Combat02",
+            OptionKey = "I_Combat03",
+            SiblingStructureKey = "I_Story01",
         },
         {
             RouteKindKey = "Goal",
-            OptionKey = "I_Combat05",
+            OptionKey = "I_Combat04",
+            SiblingStructureKey = "I_MiniBoss01",
         },
         {
             RouteKindKey = "Goal",
-            OptionKey = "I_Combat06",
+            OptionKey = "I_Combat09",
+            SiblingStructureKey = "I_MiniBoss02",
         },
         {
             RouteKindKey = "Goal",
-            OptionKey = "I_Combat07",
+            OptionKey = "I_Combat10",
         },
         {
             RouteKindKey = "Goal",
-            OptionKey = "I_Combat08",
+            OptionKey = "I_Combat11",
         },
         {
             RouteKindKey = "Goal",
-            OptionKey = "I_Combat13",
+            OptionKey = "I_Combat12",
         },
     })
 
-    lu.assertTrue(result.valid)
-
-    local finding = firstFinding(result, "rowInactiveBoundary", "rowIndex", 6)
-    lu.assertNotNil(finding)
-    lu.assertEquals(finding.reason, "clockwork_route_complete")
-
-    local feedback = historyFeedback.fromFindings(result.findings)
-    lu.assertFalse(historyFeedback.rowInactive(feedback, "I", 6))
-    lu.assertTrue(historyFeedback.rowInactive(feedback, "I", 7))
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "clockwork_preboss_required")
+    lu.assertEquals(result.invalids[1].rowIndex, 6)
 end
 
 function TestRunPlannerRouteHistoryValidator.testClockworkPickedPrebossEndsRoute()
@@ -1206,14 +1393,84 @@ function TestRunPlannerRouteHistoryValidator.testClockworkPickedPrebossEndsRoute
     })
 
     lu.assertTrue(result.valid)
+    lu.assertNil(firstFinding(result, "rowInactiveBoundary", "rowIndex", 7))
+end
 
-    local finding = firstFinding(result, "rowInactiveBoundary", "rowIndex", 7)
-    lu.assertNotNil(finding)
-    lu.assertEquals(finding.reason, "clockwork_route_complete")
+function TestRunPlannerRouteHistoryValidator.testClockworkAllowsNonGoalGoalThenGoalRewardBeforePreboss()
+    local route = {
+        key = "Underworld",
+        biomes = { "I" },
+    }
+    local result = validate(route, "I", h.loadClockworkGoalTemplate(), {
+        {},
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat03",
+        },
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat04",
+            SiblingStructureKey = "I_Story01",
+        },
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat09",
+        },
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat10",
+            SiblingStructureKey = "CombatGoal",
+        },
+        {
+            RouteKindKey = "NonGoal",
+            NonGoalKindKey = "Miniboss",
+            OptionKey = "I_MiniBoss02",
+        },
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat11",
+            SiblingStructureKey = "CombatReward",
+        },
+        {
+            RouteKindKey = "Preboss",
+        },
+    })
 
-    local feedback = historyFeedback.fromFindings(result.findings)
-    lu.assertFalse(historyFeedback.rowInactive(feedback, "I", 7))
-    lu.assertTrue(historyFeedback.rowInactive(feedback, "I", 8))
+    lu.assertTrue(result.valid)
+end
+
+function TestRunPlannerRouteHistoryValidator.testClockworkTopologyUsesPickedNextRoomAsSelectedDoor()
+    local route = {
+        key = "Underworld",
+        biomes = { "I" },
+    }
+    local history = buildHistory(route, "I", h.loadClockworkGoalTemplate(), {
+        {},
+        {
+            RouteKindKey = "Goal",
+            OptionKey = "I_Combat03",
+            SiblingStructureKey = "CombatGoal",
+        },
+        {
+            RouteKindKey = "NonGoal",
+            NonGoalKindKey = "Story",
+            OptionKey = "I_Story01",
+        },
+    })
+
+    local rowTwo
+    for _, entry in ipairs(routeHistory.byKind(history, "room")) do
+        if entry.biomeKey == "I" and entry.rowIndex == 2 then
+            rowTwo = entry
+            break
+        end
+    end
+
+    lu.assertNotNil(rowTwo)
+    lu.assertEquals(rowTwo.topology.selected.structure, "Story")
+    lu.assertEquals(rowTwo.topology.selected.roomKey, "I_Story01")
+    lu.assertEquals(rowTwo.topology.sibling.structure, "GoalCombat")
+    lu.assertTrue(rowTwo.topology.sibling.isClockworkGoal)
 end
 
 function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsTalentBeforeSpell()

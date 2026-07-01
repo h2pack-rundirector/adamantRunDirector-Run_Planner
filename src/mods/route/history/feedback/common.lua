@@ -116,14 +116,18 @@ end
 function common.setValueState(feedbackState, record, target, state)
     if target == nil
         or target.controlAlias == nil
-        or target.value == nil
-        or target.value == ""
+        or (target.value == nil and target.mode ~= "selected")
+        or (target.value == "" and target.mode ~= "selected")
     then
         return
     end
+    local value = target.value
+    if value == nil then
+        value = ""
+    end
 
     local biomeKey = record and record.biomeKey or ""
-    local rowIndex = record and record.rowIndex or 0
+    local rowIndex = record and (record.renderRowIndex or record.rowIndex) or 0
     local biome = feedbackState.byBiome[biomeKey]
     if biome == nil then
         biome = {}
@@ -153,7 +157,7 @@ function common.setValueState(feedbackState, record, target, state)
         control = {}
         controls[target.controlAlias] = control
     end
-    valueStates.set(control, target.value, target.state or state)
+    valueStates.set(control, value, target.state or state)
 end
 
 function common.setInactiveBoundary(feedbackState, record)
@@ -213,9 +217,15 @@ function common.translateRecord(feedbackState, record, opts)
         return
     end
     local targetRecord = record.targetFinding or record
+    if targetRecord.controlTargets ~= nil then
+        for _, target in ipairs(targetRecord.controlTargets) do
+            common.setValueState(feedbackState, targetRecord, target, common.stateFor(record))
+        end
+        return
+    end
     local target = opts and opts.targetFor and opts.targetFor(targetRecord, record)
         or common.targetFor(targetRecord)
-    common.setValueState(feedbackState, record, target, common.stateFor(record))
+    common.setValueState(feedbackState, targetRecord, target, common.stateFor(record))
 end
 
 function common.translateAll(feedbackState, records, opts)
