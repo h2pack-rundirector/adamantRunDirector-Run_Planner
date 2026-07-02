@@ -1,9 +1,8 @@
 local deps = ... or {}
 
 local hubPylon = {}
-local roomCandidates = deps.roomCandidates
-local rewardCandidates = deps.rewardCandidates
 local routeStep = deps.step
+local formAddress = import("mods/route/history/form_address.lua")
 
 local EMPTY_LIST = {}
 local BIOME_ENCOUNTER_DEPTH_START = 0
@@ -152,6 +151,7 @@ local function sideRoomRewardSummary(sideRoom)
     local rewardType = sideRoom and sideRoom.rewards and sideRoom.rewards[1] or nil
     return {
         kind = "roomStore",
+        address = "side:" .. tostring(sideRoom.sideIndex),
         rewardStore = sideRoom.rewardStore,
         controlAlias = "Reward1Key",
         rewardType = rewardType ~= "" and rewardType or nil,
@@ -165,7 +165,11 @@ local function traversalCost(context, key, field, fallback)
     return numericCost(node[field], fallback)
 end
 
-local function hubTopologySummary(hub)
+local function shouldEmitPylon(selectedRow)
+    return selectedRow.roleKey ~= nil and selectedRow.roleKey ~= ""
+end
+
+local function hubTopologySummary(hub, generatedDoors)
     return {
         kind = "hubDoorBatch",
         hub = {
@@ -177,6 +181,7 @@ local function hubTopologySummary(hub)
             effectTiming = hub.effectTiming,
             minibossAvailability = hub.minibossAvailability,
         },
+        generatedDoors = generatedDoors,
     }
 end
 
@@ -197,9 +202,41 @@ local function pylonTopologySummary(context, selectedRow, rewardContextValue)
     }
 end
 
+local function generatedDoorSummary(context, selectedRow, slot)
+    local role = roleForRow(context.biome, slot, selectedRow)
+    local option = optionForRow(role, selectedRow, slot)
+    local rewardContextValue = rewardContext(role, option)
+    return {
+        targetRowIndex = selectedRow.rowIndex,
+        targetFormAddress = formAddress.withRowFallback(selectedRow.formAddress, selectedRow.rowIndex),
+        targetRouteOrdinal = selectedRow.routeOrdinal,
+        structure = selectedRow.roleKey,
+        roomKey = selectedRow.roomKey,
+        hubDoorId = selectedRow.hubDoorId,
+        roleKey = selectedRow.roleKey,
+        optionKey = selectedRow.optionKey,
+        reward = selectedRewardSummary(rewardContextValue, selectedRow.rewards),
+    }
+end
+
+local function generatedHubDoors(context, slots)
+    local generatedDoors = {}
+    for index, selectedRow in ipairs(context.snapshot.rows or EMPTY_LIST) do
+        local slot = slots[index]
+        if slot ~= nil and slot.kind == "biomeRow" and shouldEmitPylon(selectedRow) then
+            generatedDoors[#generatedDoors + 1] = generatedDoorSummary(context, selectedRow, slot)
+        end
+    end
+    return generatedDoors
+end
+
 local function emitPhysical(context, args)
     local selectedRow = {
         rowIndex = args.rowIndex,
+        formAddress = formAddress.withRowFallback(
+            args.formAddress or args.source and args.source.formAddress or nil,
+            args.rowIndex
+        ),
         roleKey = args.roleKey,
         optionKey = args.optionKey,
         variantKey = args.variantKey,
@@ -208,31 +245,36 @@ local function emitPhysical(context, args)
         routeOrdinal = args.routeOrdinal,
         eventKey = args.eventKey,
         roomKey = args.roomKey,
+        role = args.role,
+        option = args.option,
+        rewardContext = args.rewardContext,
         biomeDepthCacheCost = numericCost(args.biomeDepthCacheCost, 0),
         biomeEncounterDepthCost = numericCost(args.biomeEncounterDepthCost, 0),
         roomHistoryCost = numericCost(args.roomHistoryCost, 0),
     }
-    routeStep.enterRoom(context, resolved)
-    local entry = routeStep.emitRoom(context, selectedRow, resolved, {
-        groupKey = args.groupKey,
-        eventSourceKind = args.eventSourceKind,
-        nextRoomTags = args.nextRoomTags,
-        tags = args.tags,
-        entryKey = args.entryKey,
-        entryLabel = args.entryLabel,
-        sideIndex = args.sideIndex,
-        doorId = args.doorId,
-        encounterClassKey = args.encounterClassKey,
-        source = args.source,
+    return routeStep.stepRoom(context, selectedRow, resolved, {
+        fields = {
+            groupKey = args.groupKey,
+            eventSourceKind = args.eventSourceKind,
+            nextRoomTags = args.nextRoomTags,
+            tags = args.tags,
+            entryKey = args.entryKey,
+            entryLabel = args.entryLabel,
+            sideIndex = args.sideIndex,
+            doorId = args.doorId,
+            encounterClassKey = args.encounterClassKey,
+            source = args.source,
+        },
+        reward = args.reward,
+        rewardCandidateOpts = args.rewardCandidateOpts,
+        attachReward = args.attachReward,
+        attachCurrentRoomCandidates = args.attachCurrentRoomCandidates,
+        attachPickedDoorCandidates = false,
+        attachSiblingCandidates = false,
+        attachTopology = args.topology ~= nil and function(entry)
+            entry.topology = args.topology
+        end or nil,
     })
-    entry.roomCandidates = args.roomCandidates
-    entry.siblingCandidates = args.siblingCandidates
-    entry.reward = args.reward
-    entry.rewardCandidates = args.rewardCandidates
-    entry.topology = args.topology
-
-    routeStep.advanceAfterRoom(context, resolved)
-    return entry
 end
 
 local function emitFixed(context, selectedRow, slot)
@@ -244,7 +286,9 @@ local function emitFixed(context, selectedRow, slot)
         or selectedRow.roleKey == "Preboss" and "preboss"
         or nil
     local reward = selectedRewardSummary(rewardContext(role, option), selectedRow.rewards)
-    local topology = selectedRow.roleKey == "Hub" and hubTopologySummary(context.hub) or nil
+    local topology = selectedRow.roleKey == "Hub"
+        and hubTopologySummary(context.hub, context.generatedHubDoors)
+        or nil
     emitPhysical(context, {
         rowIndex = selectedRow.rowIndex,
         routeOrdinal = selectedRow.routeOrdinal,
@@ -255,14 +299,11 @@ local function emitFixed(context, selectedRow, slot)
         roleKey = selectedRow.roleKey,
         optionKey = selectedRow.optionKey,
         variantKey = selectedRow.variantKey,
+        role = role,
+        option = option,
+        rewardContext = rewardContext(role, option),
         source = selectedRow,
-        roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, {
-            role = role,
-            option = option,
-        }),
-        siblingCandidates = {},
         reward = reward,
-        rewardCandidates = rewardCandidates.forContext(rewardContext(role, option)),
         topology = topology,
         biomeDepthCacheCost = traversalCost(context, key, "biomeDepthCacheCost", 1),
         biomeEncounterDepthCost = traversalCost(context, key, "biomeEncounterDepthCost", 0),
@@ -282,6 +323,9 @@ local function emitPylonRestore(context, selectedRow, sideRoom)
         optionKey = selectedRow.optionKey,
         sideIndex = sideRoom.sideIndex,
         source = sideRoom,
+        formAddress = formAddress.child(selectedRow.rowIndex, "pylonRestore", sideRoom.sideIndex),
+        attachReward = false,
+        attachCurrentRoomCandidates = false,
         biomeDepthCacheCost = traversalCost(context, "pylonRestore", "biomeDepthCacheCost", 1),
         biomeEncounterDepthCost = traversalCost(context, "pylonRestore", "biomeEncounterDepthCost", 0),
         roomHistoryCost = traversalCost(context, "pylonRestore", "roomHistoryCost", 0),
@@ -302,11 +346,14 @@ local function emitSideRoom(context, selectedRow, sideRoom)
         doorId = sideRoom.doorId,
         encounterClassKey = sideRoom.encounterClassKey,
         source = sideRoom,
+        formAddress = formAddress.withRowFallback(sideRoom.formAddress, selectedRow.rowIndex),
         reward = sideRoomRewardSummary(sideRoom),
-        rewardCandidates = rewardCandidates.forContext({
+        rewardContext = {
             kind = "roomStore",
+            address = "side:" .. tostring(sideRoom.sideIndex),
             rewardStore = sideRoom.rewardStore,
-        }),
+        },
+        attachCurrentRoomCandidates = false,
         biomeDepthCacheCost = traversalCost(context, "sideRoom", "biomeDepthCacheCost", 1),
         biomeEncounterDepthCost = traversalCost(context, "sideRoom", "biomeEncounterDepthCost", 0),
         roomHistoryCost = traversalCost(context, "sideRoom", "roomHistoryCost", 0),
@@ -324,7 +371,10 @@ local function emitHubReturn(context, selectedRow)
         roomKey = context.hub.roomKey,
         roleKey = "Hub",
         source = selectedRow,
+        formAddress = formAddress.child(selectedRow.rowIndex, "hubReturn"),
         topology = hubTopologySummary(context.hub),
+        attachReward = false,
+        attachCurrentRoomCandidates = false,
         biomeDepthCacheCost = traversalCost(context, "hubReturn", "biomeDepthCacheCost", 1),
         biomeEncounterDepthCost = traversalCost(context, "hubReturn", "biomeEncounterDepthCost", 0),
         roomHistoryCost = traversalCost(context, "hubReturn", "roomHistoryCost", 0),
@@ -345,14 +395,11 @@ local function emitPylon(context, selectedRow, slot)
         roleKey = selectedRow.roleKey,
         optionKey = selectedRow.optionKey,
         variantKey = selectedRow.variantKey,
+        role = role,
+        option = option,
+        rewardContext = rewardContextValue,
         source = selectedRow,
-        roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, {
-            role = role,
-            option = option,
-        }),
-        siblingCandidates = {},
         reward = selectedRewardSummary(rewardContextValue, selectedRow.rewards),
-        rewardCandidates = rewardCandidates.forContext(rewardContextValue),
         topology = pylonTopologySummary(context, selectedRow, rewardContextValue),
         biomeDepthCacheCost = traversalCost(context, "pylonEntry", "biomeDepthCacheCost", 1),
         roomHistoryCost = traversalCost(context, "pylonEntry", "roomHistoryCost", 0),
@@ -367,10 +414,6 @@ local function emitPylon(context, selectedRow, slot)
         end
     end
     emitHubReturn(context, selectedRow)
-end
-
-local function shouldEmitPylon(selectedRow)
-    return selectedRow.roleKey ~= nil and selectedRow.roleKey ~= ""
 end
 
 function hubPylon.build(args)
@@ -393,6 +436,7 @@ function hubPylon.build(args)
     }
 
     local slots = buildSlots(args.biome)
+    context.generatedHubDoors = generatedHubDoors(context, slots)
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
         local slot = slots[index]
         if slot ~= nil and slot.kind == "biomeRow" then

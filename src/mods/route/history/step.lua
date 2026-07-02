@@ -1,6 +1,7 @@
 local deps = ... or {}
 
 local routeStep = {}
+local formAddress = import("mods/route/history/form_address.lua")
 
 local roomCandidates = deps.roomCandidates
 local rewardCandidates = deps.rewardCandidates
@@ -63,6 +64,7 @@ function routeStep.emitRoom(context, selectedRow, resolved, fields)
         biomeKey = context.biome.key,
         routeBiomeIndex = context.routeBiomeIndex,
         rowIndex = selectedRow.rowIndex,
+        formAddress = formAddress.withRowFallback(selectedRow.formAddress, selectedRow.rowIndex),
         routeOrdinal = resolved.routeOrdinal,
         roomHistoryOrdinal = committedRoomHistoryOrdinal,
         runDepthCache = 1 + committedRoomHistoryOrdinal,
@@ -121,6 +123,8 @@ function routeStep.attachPickedDoorCandidates(context, entry, nextRow, nextResol
     local candidates = roomCandidates.forBiomeRow(context.biome, nextRow, nextResolved, {
         availabilityContext = entry.phases.offer,
         targetRowIndex = nextRow.rowIndex,
+        targetRouteOrdinal = nextResolved.routeOrdinal,
+        targetFormAddress = formAddress.withRowFallback(nextRow.formAddress, nextRow.rowIndex),
     })
     for _, candidate in ipairs(candidates) do
         entry.roomCandidates[#entry.roomCandidates + 1] = candidate
@@ -162,9 +166,15 @@ function routeStep.stepRoom(context, selectedRow, resolved, opts)
         routeStep.advanceAfterRoom(context, resolved)
         return nil
     end
-    routeStep.attachCurrentRoomCandidates(context, entry, selectedRow, resolved)
-    routeStep.attachPickedDoorCandidates(context, entry, opts.nextRow, opts.nextResolved)
-    routeStep.attachSiblingCandidates(context, entry, selectedRow)
+    if opts.attachCurrentRoomCandidates ~= false then
+        routeStep.attachCurrentRoomCandidates(context, entry, selectedRow, resolved)
+    end
+    if opts.attachPickedDoorCandidates ~= false then
+        routeStep.attachPickedDoorCandidates(context, entry, opts.nextRow, opts.nextResolved)
+    end
+    if opts.attachSiblingCandidates ~= false then
+        routeStep.attachSiblingCandidates(context, entry, selectedRow)
+    end
     if opts.attachReward ~= false then
         entry.reward = opts.reward
         routeStep.attachRewardCandidates(entry, resolved.rewardContext, opts.rewardCandidateOpts)

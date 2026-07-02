@@ -104,12 +104,8 @@ local function roleForRow(biome, selectedRow)
     return nil
 end
 
-local function defaultOption(role)
-    return roleOptionList(role)[1]
-end
-
 local function optionForRow(role, selectedRow)
-    return optionByKey(role, selectedRow.optionKey) or defaultOption(role)
+    return optionByKey(role, selectedRow.optionKey)
 end
 
 local function roomKeyFor(role, option)
@@ -119,10 +115,15 @@ local function roomKeyFor(role, option)
         or nil
 end
 
-local function eventKeyFor(selectedRow, role, option)
-    return roomKeyFor(role, option)
-        or role and role.key
-        or selectedRow.roleKey
+local function eventKeyFor(_selectedRow, role, option)
+    local roomKey = roomKeyFor(role, option)
+    if roomKey ~= nil and roomKey ~= "" then
+        return roomKey
+    end
+    if role ~= nil and roleOptionList(role)[1] == nil then
+        return role.key
+    end
+    return nil
 end
 
 local function rewardContext(role, option)

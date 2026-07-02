@@ -47,13 +47,6 @@ local function prewarmRewardSurfaces(instance)
     end
 end
 
-local function selectedRoomKey(slot, option)
-    if option ~= nil and option.key ~= nil and option.key ~= "" then
-        return option.key
-    end
-    return slot and slot.roomKey or nil
-end
-
 local function formValidation(instance, routeRows, rowIndex)
     local slot = data.slotForRow(instance, rowIndex)
     if data.isRouteSlot(slot)
@@ -226,12 +219,13 @@ function runtime.create(fields, instance)
             return nil
         end
 
-        local roleKey = data.resolveRole(instance, routeRows, rowIndex)
-        local optionKey, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
-        if slot.roleKey ~= nil then
-            roleKey = slot.roleKey
-            optionKey = selectedRoomKey(slot, option) or optionKey
-        end
+        local selection = form.selectedRoomSnapshotChoice({
+            data = data,
+            instance = instance,
+            rows = routeRows,
+            rowIndex = rowIndex,
+            slot = slot,
+        })
 
         local siblings = {}
         for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
@@ -244,8 +238,8 @@ function runtime.create(fields, instance)
 
         return {
             rowIndex = rowIndex,
-            roleKey = roleKey,
-            optionKey = optionKey,
+            roleKey = selection.roleKey,
+            optionKey = selection.optionKey,
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
             routeKindKey = data.readRouteKind(instance, routeRows, rowIndex),
             nonGoalKindKey = data.readNonGoalKind(instance, routeRows, rowIndex),

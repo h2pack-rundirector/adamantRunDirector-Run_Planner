@@ -176,38 +176,52 @@ local function buildOptionEnrichmentColors(instance)
     end
 end
 
-local function buildSideRoomRows()
-    return {
-        {
-            key = "ModeKey",
+local function prefixedSideAlias(sideIndex, alias)
+    return "Side" .. tostring(math.floor(tonumber(sideIndex) or 0)) .. tostring(alias or "")
+end
+
+local function appendCopy(rows, source, key)
+    local copy = {}
+    for fieldKey, value in pairs(source) do
+        copy[fieldKey] = value
+    end
+    copy.key = key or source.key
+    rows[#rows + 1] = copy
+end
+
+local function buildHubRoomRows(instance)
+    local rows = shallowCopyList(data.buildRoomRows())
+    for sideIndex = 1, data.maxSideDoorCount(instance) do
+        rows[#rows + 1] = {
+            key = data.sideRoomModeAlias(sideIndex),
             type = "string",
             default = DISABLED_SIDE_ROOM_MODE,
             maxLen = 16,
-        },
-        {
-            key = SIDE_ROOM_ENTERED_ALIAS,
+        }
+        rows[#rows + 1] = {
+            key = data.sideRoomEnteredAlias(sideIndex),
             type = "bool",
             default = false,
-        },
-        {
-            key = SIDE_ROOM_ENCOUNTER_CLASS_ALIAS,
+        }
+        rows[#rows + 1] = {
+            key = data.sideRoomEncounterClassAlias(sideIndex),
             type = "string",
             default = "",
             maxLen = 16,
-        },
-    }
+        }
+    end
+    return rows
 end
 
-local function prepareSideRoomRows(instance)
-    instance.sideRoomRowOffsetByRouteRow = {}
-    local rowCount = 0
-    for _, slot in ipairs(instance.routeSlots or {}) do
-        if slot.kind == "biomeRow" then
-            instance.sideRoomRowOffsetByRouteRow[slot.rowIndex] = rowCount
-            rowCount = rowCount + (instance.maxSideDoorCount or 0)
+local function buildHubRewardRows(instance)
+    local rows = shallowCopyList(data.buildRewardRows())
+    local baseRewardRows = data.buildRewardRows()
+    for sideIndex = 1, data.maxSideDoorCount(instance) do
+        for _, row in ipairs(baseRewardRows) do
+            appendCopy(rows, row, data.sideRoomRewardAlias(sideIndex, row.key))
         end
     end
-    instance.sideRoomRowCount = rowCount
+    return rows
 end
 
 local adapter = {
@@ -267,7 +281,6 @@ function data.prepare(instance)
     addSideRoomEncounterClassChoices(instance)
     buildRouteSlots(instance)
     slotTimeline.applyRouteSlots(instance)
-    prepareSideRoomRows(instance)
     data.buildRoleChoices(instance)
     buildOptionEnrichmentColors(instance)
     addFixedRoleLabels(instance)
@@ -283,7 +296,7 @@ function data.storage(instance)
             minRows = instance.routeRowCount,
             defaultRows = instance.routeRowCount,
             maxRows = instance.routeRowCount,
-            row = data.buildRoomRows(),
+            row = buildHubRoomRows(instance),
         },
         {
             key = "Rewards",
@@ -291,41 +304,25 @@ function data.storage(instance)
             minRows = instance.routeRowCount,
             defaultRows = instance.routeRowCount,
             maxRows = instance.routeRowCount,
-            row = data.buildRewardRows(),
-        },
-        {
-            key = "SideRooms",
-            type = "table",
-            minRows = instance.sideRoomRowCount,
-            defaultRows = instance.sideRoomRowCount,
-            maxRows = instance.sideRoomRowCount,
-            row = buildSideRoomRows(),
-        },
-        {
-            key = "SideRewards",
-            type = "table",
-            minRows = instance.sideRoomRowCount,
-            defaultRows = instance.sideRoomRowCount,
-            maxRows = instance.sideRoomRowCount,
-            row = data.buildRewardRows(),
+            row = buildHubRewardRows(instance),
         },
     }
 end
 
-function data.sideRoomModeAlias()
-    return "ModeKey"
+function data.sideRoomModeAlias(sideIndex)
+    return prefixedSideAlias(sideIndex, "ModeKey")
 end
 
-function data.sideRoomEnteredAlias()
-    return SIDE_ROOM_ENTERED_ALIAS
+function data.sideRoomEnteredAlias(sideIndex)
+    return prefixedSideAlias(sideIndex, SIDE_ROOM_ENTERED_ALIAS)
 end
 
-function data.sideRoomEncounterClassAlias()
-    return SIDE_ROOM_ENCOUNTER_CLASS_ALIAS
+function data.sideRoomEncounterClassAlias(sideIndex)
+    return prefixedSideAlias(sideIndex, SIDE_ROOM_ENCOUNTER_CLASS_ALIAS)
 end
 
-function data.sideRoomRewardAlias(_, rewardAlias)
-    return rewardAlias or ""
+function data.sideRoomRewardAlias(sideIndex, rewardAlias)
+    return prefixedSideAlias(sideIndex, rewardAlias)
 end
 
 function data.sideRoomModeValues(instance)
@@ -359,8 +356,8 @@ function data.defaultSideRoomEncounterClassKey(instance, sideDoor)
     return data.sideRoomEncounterClassValues(instance, sideDoor)[1] or ""
 end
 
-function data.resolveSideRoomEncounterClass(instance, sideRows, sideRowIndex, sideDoor)
-    local storedKey = sideRows:read(sideRowIndex, SIDE_ROOM_ENCOUNTER_CLASS_ALIAS) or ""
+function data.resolveSideRoomEncounterClass(instance, rows, rowIndex, sideIndex, sideDoor)
+    local storedKey = rows:read(rowIndex, data.sideRoomEncounterClassAlias(sideIndex)) or ""
     if storedKey ~= "" then
         return storedKey, storedKey
     end
@@ -369,17 +366,6 @@ end
 
 function data.maxSideDoorCount(instance)
     return instance.maxSideDoorCount or 0
-end
-
-function data.sideRoomRowIndex(instance, rowIndex, sideIndex)
-    local offset = instance.sideRoomRowOffsetByRouteRow
-        and instance.sideRoomRowOffsetByRouteRow[math.floor(tonumber(rowIndex) or 0)]
-        or nil
-    sideIndex = math.floor(tonumber(sideIndex) or 0)
-    if offset == nil or sideIndex < 1 or sideIndex > data.maxSideDoorCount(instance) then
-        return nil
-    end
-    return offset + sideIndex
 end
 
 function data.sideDoorForRow(instance, rows, rowIndex, sideIndex)

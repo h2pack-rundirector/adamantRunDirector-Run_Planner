@@ -43,6 +43,9 @@ local function indexLoot(history, entry)
         appendIndexed(loot.pendingByLootType, entry.lootType, entry)
         return
     end
+    if entry.timing == "generatedOffer" then
+        return
+    end
 
     appendIndexed(loot.byLootType, entry.lootType, entry)
     appendNestedIndexed(loot.byBiomeLootType, entry.biomeKey, entry.lootType, entry)

@@ -262,12 +262,10 @@ local function fakeRows(rows)
     }
 end
 
-local function routeFields(rows, sideRows, sideRewardRows, encounterRewardRows)
+local function routeFields(rows, encounterRewardRows)
     return {
         Rooms = fakeRows(rows or {}),
         Rewards = fakeRows(rows or {}),
-        SideRooms = fakeRows(sideRows or {}),
-        SideRewards = fakeRows(sideRewardRows or {}),
         EncounterRewards = fakeRows(encounterRewardRows or {}),
     }
 end

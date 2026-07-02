@@ -151,15 +151,21 @@ local function roleAvailabilitySummaries(candidates, entry)
                     total = 0,
                     invalid = 0,
                     targetRowIndex = targetRowIndex,
+                    targetRouteOrdinal = candidate.targetRouteOrdinal,
+                    targetFormAddress = candidate.targetFormAddress,
                 }
                 summaries[summaryKey] = summary
             end
             summary.total = summary.total + 1
 
-            local failure, axis, expected, actual = common.availabilityFailure(
-                candidate.optionAvailability or candidate.roleAvailability,
-                candidate.availabilityContext or entry
-            )
+            local availability = candidate.optionAvailability or candidate.roleAvailability
+            local failure, axis, expected, actual = nil, nil, nil, nil
+            if availability ~= nil then
+                failure, axis, expected, actual = common.availabilityFailure(
+                    availability,
+                    common.candidateAvailabilityContext(candidate)
+                )
+            end
             if failure == nil then
                 summary.hasAvailable = true
             else
@@ -190,6 +196,8 @@ local function appendRoleAvailabilityFindings(target, entry, candidates)
                     controlAlias = "RoleKey",
                     controlValue = summary.roleKey,
                     rowIndex = summary.targetRowIndex,
+                    routeOrdinal = summary.targetRouteOrdinal,
+                    formAddress = summary.targetFormAddress,
                     axis = summary.axis,
                     expected = summary.expected,
                     actual = summary.actual,

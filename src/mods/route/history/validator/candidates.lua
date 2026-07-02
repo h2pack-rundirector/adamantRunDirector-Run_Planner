@@ -3,6 +3,7 @@ local deps = ... or {}
 local routeHistory = deps.history
 local rewardValidator = deps.rewards
 local selectedLegalityRules = deps.selectedLegalityRules
+local formAddress = import("mods/route/history/form_address.lua")
 
 local common = import("mods/route/history/validator/candidates/common.lua")
 local candidateValidators = {
@@ -28,25 +29,30 @@ local candidateValidators = {
 
 local candidates = {}
 
-local function entriesByBiomeRow(history)
-    local byBiomeRow = {}
+local function entriesByFormAddress(history)
+    local byAddress = {}
     for _, entry in ipairs(routeHistory.byKind(history, "room")) do
-        if entry.rowIndex ~= nil then
+        local key = formAddress.key(entry.formAddress)
+        if key ~= nil then
             local biomeKey = entry.biomeKey or ""
-            local byRow = byBiomeRow[biomeKey]
-            if byRow == nil then
-                byRow = {}
-                byBiomeRow[biomeKey] = byRow
+            local biomeEntries = byAddress[biomeKey]
+            if biomeEntries == nil then
+                biomeEntries = {}
+                byAddress[biomeKey] = biomeEntries
             end
-            byRow[entry.rowIndex] = entry
+            biomeEntries[key] = biomeEntries[key] or entry
         end
     end
-    return byBiomeRow
+    return byAddress
 end
 
-local function entryForFinding(byBiomeRow, finding)
-    local byRow = byBiomeRow[finding and finding.biomeKey or ""]
-    return byRow and byRow[finding.rowIndex] or nil
+local function entryForFinding(byAddress, finding)
+    local key = formAddress.key(finding and finding.formAddress or nil)
+    if key == nil then
+        return nil
+    end
+    local biomeEntries = byAddress[finding and finding.biomeKey or ""]
+    return biomeEntries and biomeEntries[key] or nil
 end
 
 local function selectedSiblingStructure(entry, finding)
@@ -61,11 +67,18 @@ local function selectedSiblingStructure(entry, finding)
 end
 
 local function selectedLoot(history, finding)
+    local findingAddressKey = formAddress.key(finding and finding.formAddress or nil)
     for _, loot in ipairs(routeHistory.byKind(history, "loot")) do
         if loot.biomeKey == finding.biomeKey
-            and loot.rowIndex == finding.rowIndex
             and loot.address == finding.address
             and loot.lootType == finding.rewardType
+            and (
+                loot.parentEntry == finding.entry
+                or (
+                    findingAddressKey ~= nil
+                    and formAddress.key(loot.formAddress) == findingAddressKey
+                )
+            )
         then
             return loot
         end
@@ -89,19 +102,19 @@ local function roomFindingIsSelected(entry, finding)
     return false
 end
 
-local function selectedEntryForFinding(history, byBiomeRow, finding)
+local function selectedEntryForFinding(history, byAddress, finding)
     if finding.kind == "roomCandidateInvalid" then
-        local entry = entryForFinding(byBiomeRow, finding)
+        local entry = entryForFinding(byAddress, finding) or finding.entry
         if roomFindingIsSelected(entry, finding) then
             return entry
         end
     elseif finding.kind == "siblingCandidateInvalid" then
-        local entry = entryForFinding(byBiomeRow, finding)
+        local entry = finding.entry or entryForFinding(byAddress, finding)
         if selectedSiblingStructure(entry, finding) == finding.structureKey then
             return entry
         end
     elseif finding.kind == "variantCandidateInvalid" then
-        local entry = entryForFinding(byBiomeRow, finding)
+        local entry = finding.entry or entryForFinding(byAddress, finding)
         if entry ~= nil and entry.variantKey == finding.variantKey then
             return entry
         end
@@ -130,8 +143,8 @@ local function candidateMessage(finding)
     return reason
 end
 
-local function invalidFromFinding(history, byBiomeRow, finding)
-    local entry = selectedEntryForFinding(history, byBiomeRow, finding)
+local function invalidFromFinding(history, byAddress, finding)
+    local entry = selectedEntryForFinding(history, byAddress, finding)
     if entry == nil then
         return nil
     end
@@ -142,6 +155,7 @@ local function invalidFromFinding(history, byBiomeRow, finding)
         biomeKey = finding.biomeKey,
         routeBiomeIndex = finding.routeBiomeIndex,
         rowIndex = finding.rowIndex,
+        formAddress = finding.formAddress,
         routeOrdinal = finding.routeOrdinal,
         roomHistoryOrdinal = finding.roomHistoryOrdinal,
         roomKey = entry.roomKey or finding.roomKey,
@@ -156,9 +170,9 @@ local function invalidFromFinding(history, byBiomeRow, finding)
 end
 
 local function appendSelectedInvalids(target, history, findings)
-    local byBiomeRow = entriesByBiomeRow(history)
+    local byAddress = entriesByFormAddress(history)
     for _, finding in ipairs(findings or common.EMPTY_LIST) do
-        local invalid = invalidFromFinding(history, byBiomeRow, finding)
+        local invalid = invalidFromFinding(history, byAddress, finding)
         if invalid ~= nil then
             target[#target + 1] = invalid
         end

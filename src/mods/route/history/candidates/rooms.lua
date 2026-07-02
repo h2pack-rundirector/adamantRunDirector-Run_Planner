@@ -1,4 +1,5 @@
 local roomCandidates = {}
+local formAddress = import("mods/route/history/form_address.lua")
 
 local EMPTY_LIST = {}
 
@@ -61,6 +62,11 @@ local function appendCandidate(candidates, role, option, opts)
         tags = copyValue(option and option.tags),
         availabilityContext = copyValue(opts and opts.availabilityContext),
         targetRowIndex = opts and opts.targetRowIndex or nil,
+        targetRouteOrdinal = opts and opts.targetRouteOrdinal or nil,
+        targetFormAddress = formAddress.withRowFallback(
+            opts and opts.targetFormAddress or nil,
+            opts and opts.targetRowIndex or nil
+        ),
     }
 end
 

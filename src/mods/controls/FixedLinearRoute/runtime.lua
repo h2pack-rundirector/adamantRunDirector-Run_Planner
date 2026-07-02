@@ -228,13 +228,13 @@ function runtime.create(fields, instance)
             return nil
         end
 
-        local roleKey = fields.Rooms:read(rowIndex, "RoleKey") or ""
-        local optionKey = fields.Rooms:read(rowIndex, "OptionKey") or ""
-        if slot.roleKey ~= nil then
-            roleKey = slot.roleKey
-            local _, option = data.resolveOption(instance, routeRows, rowIndex, roleKey)
-            optionKey = option and option.key or optionKey
-        end
+        local selection = form.selectedRoomSnapshotChoice({
+            data = data,
+            instance = instance,
+            rows = routeRows,
+            rowIndex = rowIndex,
+            slot = slot,
+        })
 
         local siblings = {}
         for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
@@ -256,8 +256,8 @@ function runtime.create(fields, instance)
 
         return {
             rowIndex = rowIndex,
-            roleKey = roleKey,
-            optionKey = optionKey,
+            roleKey = selection.roleKey,
+            optionKey = selection.optionKey,
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
             topology = {
                 siblings = siblings,

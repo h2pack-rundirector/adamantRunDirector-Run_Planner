@@ -268,21 +268,27 @@ local function invalidAt(entry, invalid)
     }
 end
 
+local function shouldValidateLoot(loot)
+    return loot ~= nil and loot.legalityValidatedBy == nil
+end
+
 function rewardValidator.validate(args)
     local history = args and args.history or nil
     local rulesByTarget = buildRulesByTarget(args and args.selectedLegalityRules)
     for _, loot in ipairs(routeHistory.byKind(history, "loot")) do
-        local invalid = rewardValidator.invalidForLootType(
-            history,
-            loot,
-            loot.lootType,
-            rulesByTarget
-        )
-        if invalid ~= nil then
-            return {
-                valid = false,
-                invalids = { invalidAt(loot, invalid) },
-            }
+        if shouldValidateLoot(loot) then
+            local invalid = rewardValidator.invalidForLootType(
+                history,
+                loot,
+                loot.lootType,
+                rulesByTarget
+            )
+            if invalid ~= nil then
+                return {
+                    valid = false,
+                    invalids = { invalidAt(loot, invalid) },
+                }
+            end
         end
     end
     return validResult()

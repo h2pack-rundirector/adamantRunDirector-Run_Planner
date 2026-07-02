@@ -5,6 +5,7 @@ local data = deps.data
 local resetSideRewardDetails = deps.resetSideRewardDetails
 local rewardSystem = deps.rewards
 local decorations = deps.decorations
+local valueStateHelpers = deps.valueStateHelpers
 local sideRoomProbability = deps.sideRoomProbability
 
 local sideRooms = {}
@@ -22,7 +23,7 @@ local SIDE_ENTERED_SEPARATOR_X = 250
 local SIDE_ENTERED_COLUMN_X = 275
 local SIDE_AFTER_ENTERED_SEPARATOR_X = 390
 local SIDE_ENCOUNTER_COLUMN_X = 415
-local SIDE_REWARD_COLUMN_X = 530
+local SIDE_REWARD_COLUMN_X = 260
 local REWARD_DRAW_OPTS = {
     hideGenericRewardLabel = true,
 }
@@ -57,7 +58,7 @@ local function getSideModeOpts(control, instance)
     return control._sideModeOpts
 end
 
-local function getSideEncounterOpts(control, instance, sideDoor)
+local function getSideEncounterOpts(control, instance, rowIndex, sideIndex, sideDoor)
     control._sideEncounterOptsByRoomKey = control._sideEncounterOptsByRoomKey or {}
     local opts = control._sideEncounterOptsByRoomKey[sideDoor.roomKey]
     if opts == nil then
@@ -66,7 +67,11 @@ local function getSideEncounterOpts(control, instance, sideDoor)
         opts.displayValues = data.sideRoomEncounterClassLabels(instance)
         control._sideEncounterOptsByRoomKey[sideDoor.roomKey] = opts
     end
-    return opts
+    return decorations.decorateDropdown(
+        opts,
+        opts,
+        valueStateHelpers.history(instance, rowIndex, data.sideRoomEncounterClassAlias(sideIndex))
+    )
 end
 
 local function sideRoomLabel(control, rowIndex, sideIndex)
@@ -78,25 +83,27 @@ local function sideRoomLabel(control, rowIndex, sideIndex)
     end
     local label = rowLabels[sideIndex]
     if label == nil then
-        label = tostring(control:slot(rowIndex).label or "Pylon") .. " / Side " .. tostring(sideIndex)
+        label = "Side " .. tostring(sideIndex)
         rowLabels[sideIndex] = label
     end
     return label
 end
 
-local function sideEnteredLabel(control, sideRowIndex)
+local function sideEnteredLabel(control, rowIndex, sideIndex)
     control._sideEnteredLabels = control._sideEnteredLabels or {}
-    local label = control._sideEnteredLabels[sideRowIndex]
+    local key = tostring(rowIndex) .. ":" .. tostring(sideIndex)
+    local label = control._sideEnteredLabels[key]
     if label == nil then
-        label = "Entered##side-room:" .. tostring(sideRowIndex)
-        control._sideEnteredLabels[sideRowIndex] = label
+        label = "Entered##side-room:" .. key
+        control._sideEnteredLabels[key] = label
     end
     return label
 end
 
-local function sideRewardFields(control, sideRowIndex, rowIndex, sideIndex)
+local function sideRewardFields(control, rowIndex, sideIndex)
     control._sideRewardFieldsByRow = control._sideRewardFieldsByRow or {}
-    local fields = control._sideRewardFieldsByRow[sideRowIndex]
+    local key = tostring(rowIndex) .. ":" .. tostring(sideIndex)
+    local fields = control._sideRewardFieldsByRow[key]
     if fields == nil then
         fields = {
             rewardContext = {
@@ -104,48 +111,47 @@ local function sideRewardFields(control, sideRowIndex, rowIndex, sideIndex)
                 address = "side:" .. tostring(sideIndex),
                 eventSourceKind = "side",
                 sameExitRewardIndex = sideIndex,
-                storageRowIndex = sideRowIndex,
+                storageSideIndex = sideIndex,
             },
             get = function(_, alias)
-                return control:sideRewardField(sideRowIndex, data.sideRoomRewardAlias(nil, alias))
+                return control:sideRewardField(rowIndex, data.sideRoomRewardAlias(sideIndex, alias))
             end,
             read = function(_, alias)
-                return control:fields().SideRewards:read(sideRowIndex, data.sideRoomRewardAlias(nil, alias))
+                return control:fields().Rewards:read(rowIndex, data.sideRoomRewardAlias(sideIndex, alias))
             end,
         }
-        control._sideRewardFieldsByRow[sideRowIndex] = fields
+        control._sideRewardFieldsByRow[key] = fields
     end
     return fields
 end
 
 local function drawSideRoomMode(draw, control, instance, rowIndex, sideIndex)
     local sideDoor = data.sideDoorForRow(instance, control:routeRows(), rowIndex, sideIndex)
-    local sideRowIndex = data.sideRoomRowIndex(instance, rowIndex, sideIndex)
-    if sideDoor == nil or sideRowIndex == nil then
+    if sideDoor == nil then
         return nil
     end
 
     local imgui = draw.imgui
-    local modeAlias = data.sideRoomModeAlias()
+    local modeAlias = data.sideRoomModeAlias(sideIndex)
     imgui.AlignTextToFramePadding()
     imgui.Text(sideRoomLabel(control, rowIndex, sideIndex))
     imgui.SameLine()
     imgui.SetCursorPosX(SIDE_MODE_COLUMN_X)
-    if draw.widgets.dropdown(control:sideRoomField(sideRowIndex, modeAlias), getSideModeOpts(control, instance)) then
-        if (control:fields().SideRooms:read(sideRowIndex, modeAlias) or "") ~= data.sideRoomEnabledMode() then
-            control:sideRoomField(sideRowIndex, data.sideRoomEnteredAlias()):write(false)
-            resetSideRewardDetails(control:fields(), sideRowIndex)
+    if draw.widgets.dropdown(control:sideRoomField(rowIndex, modeAlias), getSideModeOpts(control, instance)) then
+        if (control:fields().Rooms:read(rowIndex, modeAlias) or "") ~= data.sideRoomEnabledMode() then
+            control:sideRoomField(rowIndex, data.sideRoomEnteredAlias(sideIndex)):write(false)
+            resetSideRewardDetails(control:fields(), rowIndex, sideIndex)
         end
         control:invalidateReadPass()
     end
-    return sideRowIndex, sideDoor
+    return sideDoor
 end
 
-local function drawSideRoomEntered(draw, control, sideRowIndex)
+local function drawSideRoomEntered(draw, control, rowIndex, sideIndex)
     local imgui = draw.imgui
-    local enteredAlias = data.sideRoomEnteredAlias()
-    local entered = control:fields().SideRooms:read(sideRowIndex, enteredAlias) == true
-    local label = sideEnteredLabel(control, sideRowIndex)
+    local enteredAlias = data.sideRoomEnteredAlias(sideIndex)
+    local entered = control:fields().Rooms:read(rowIndex, enteredAlias) == true
+    local label = sideEnteredLabel(control, rowIndex, sideIndex)
     imgui.SameLine()
     imgui.SetCursorPosX(SIDE_ENTERED_SEPARATOR_X)
     imgui.AlignTextToFramePadding()
@@ -158,9 +164,9 @@ local function drawSideRoomEntered(draw, control, sideRowIndex)
     imgui.AlignTextToFramePadding()
     imgui.Text("||")
     if changed then
-        control:sideRoomField(sideRowIndex, enteredAlias):write(nextEntered == true)
+        control:sideRoomField(rowIndex, enteredAlias):write(nextEntered == true)
         if nextEntered ~= true then
-            resetSideRewardDetails(control:fields(), sideRowIndex)
+            resetSideRewardDetails(control:fields(), rowIndex, sideIndex)
         end
         control:invalidateReadPass()
     end
@@ -179,7 +185,7 @@ local function drawFixedSideRoomEncounterClass(draw, instance, sideDoor)
     draw.imgui.Text(tostring(data.sideRoomEncounterClassLabels(instance)[encounterClassKey] or encounterClassKey))
 end
 
-local function drawSideRoomEncounterClass(draw, control, instance, sideRowIndex, sideDoor)
+local function drawSideRoomEncounterClass(draw, control, instance, rowIndex, sideIndex, sideDoor)
     local values = data.sideRoomEncounterClassValues(instance, sideDoor)
     if values[1] == nil then
         return
@@ -192,75 +198,96 @@ local function drawSideRoomEncounterClass(draw, control, instance, sideRowIndex,
     draw.imgui.SameLine()
     draw.imgui.SetCursorPosX(SIDE_ENCOUNTER_COLUMN_X)
     if draw.widgets.dropdown(
-        control:sideRoomField(sideRowIndex, data.sideRoomEncounterClassAlias()),
-        getSideEncounterOpts(control, instance, sideDoor)
+        control:sideRoomField(rowIndex, data.sideRoomEncounterClassAlias(sideIndex)),
+        getSideEncounterOpts(control, instance, rowIndex, sideIndex, sideDoor)
     ) then
         control:invalidateReadPass()
     end
 end
 
-local function drawSideRoomRow(draw, control, instance, rowIndex)
-    for sideIndex = 1, data.sideDoorCountForRow(instance, control:routeRows(), rowIndex) do
-        if sideIndex > 1 then
-            draw.imgui.Spacing()
-        end
-        local sideRowIndex, sideDoor = drawSideRoomMode(draw, control, instance, rowIndex, sideIndex)
-        local enabled = sideRowIndex
-            and control:fields().SideRooms:read(sideRowIndex, data.sideRoomModeAlias()) == data.sideRoomEnabledMode()
-            or false
-        local entered = false
-        local surface = sideDoor ~= nil and rewardSystem and rewardSystem.surfaceFor(sideDoor.reward) or nil
-        if enabled then
-            entered = drawSideRoomEntered(draw, control, sideRowIndex)
-            if entered then
-                drawSideRoomEncounterClass(draw, control, instance, sideRowIndex, sideDoor)
-            end
-        end
-        if entered and control:rewardsConfigured() and rewardSystem ~= nil and rewardSystem.hasDisplay(surface) then
-            draw.imgui.SameLine()
-            draw.imgui.SetCursorPosX(SIDE_REWARD_COLUMN_X)
-            drawRewardSurface(
-                draw,
-                control,
-                surface,
-                sideRewardFields(control, sideRowIndex, rowIndex, sideIndex),
-                rewardDrawOpts(control)
-            )
+local function sideRoomState(control, instance, rowIndex, sideIndex)
+    local sideDoor = data.sideDoorForRow(instance, control:routeRows(), rowIndex, sideIndex)
+    if sideDoor == nil then
+        return nil, false, false
+    end
+    local enabled = control:fields().Rooms:read(rowIndex, data.sideRoomModeAlias(sideIndex))
+        == data.sideRoomEnabledMode()
+    local entered = enabled
+        and control:fields().Rooms:read(rowIndex, data.sideRoomEnteredAlias(sideIndex)) == true
+    return sideDoor, enabled, entered
+end
+
+local function drawSideRoomStructureRow(draw, control, instance, rowIndex, sideIndex)
+    local sideDoor, enabled = sideRoomState(control, instance, rowIndex, sideIndex)
+    if sideDoor == nil then
+        return
+    end
+
+    if sideIndex > 1 then
+        draw.imgui.Spacing()
+    end
+    sideDoor = drawSideRoomMode(draw, control, instance, rowIndex, sideIndex)
+    if enabled then
+        local entered = drawSideRoomEntered(draw, control, rowIndex, sideIndex)
+        if entered then
+            drawSideRoomEncounterClass(draw, control, instance, rowIndex, sideIndex, sideDoor)
         end
     end
 end
 
-local function drawRouteRowSeparator(imgui)
-    imgui.Spacing()
-    imgui.Separator()
-    imgui.Spacing()
+local function drawSideRewardRow(draw, control, instance, rowIndex, sideIndex)
+    local sideDoor, _, entered = sideRoomState(control, instance, rowIndex, sideIndex)
+    if not entered or not control:rewardsConfigured() or rewardSystem == nil then
+        return false
+    end
+
+    local surface = sideDoor ~= nil and rewardSystem.surfaceFor(sideDoor.reward) or nil
+    if not rewardSystem.hasDisplay(surface) then
+        return false
+    end
+
+    local imgui = draw.imgui
+    imgui.AlignTextToFramePadding()
+    imgui.Text(sideRoomLabel(control, rowIndex, sideIndex))
+    imgui.SameLine()
+    imgui.SetCursorPosX(SIDE_REWARD_COLUMN_X)
+    drawRewardSurface(
+        draw,
+        control,
+        surface,
+        sideRewardFields(control, rowIndex, sideIndex),
+        rewardDrawOpts(control)
+    )
+    return true
 end
 
-local function hasSideRoomRows(control, instance, rowIndex)
+function sideRooms.hasRows(control, instance, rowIndex)
     return data.sideDoorCountForRow(instance, control:routeRows(), rowIndex) > 0
 end
 
-function sideRooms.draw(draw, control, instance)
-    local rowCount = control:rowCount()
-    local drewRow = false
-    local allRowsInactive, inactiveBoundary = decorations.routeInactiveBoundary(instance)
+function sideRooms.drawInfoLine(draw, control)
     sideRoomProbability.drawInfoLine(draw.imgui, decorations, control:sideRoomProbabilitySummary())
-    control:beginReadPass()
-    for rowIndex = 1, rowCount do
-        if hasSideRoomRows(control, instance, rowIndex) then
-            if drewRow then
-                drawRouteRowSeparator(draw.imgui)
-            end
-            local inactive = decorations.pushInactive(
-                draw.imgui,
-                decorations.routeRowInactive(allRowsInactive, inactiveBoundary, control:slot(rowIndex), "sideRooms")
-            )
-            drawSideRoomRow(draw, control, instance, rowIndex)
-            decorations.popInactive(draw.imgui, inactive)
+end
+
+function sideRooms.drawStructureRowsForRouteRow(draw, control, instance, rowIndex)
+    if not sideRooms.hasRows(control, instance, rowIndex) then
+        return
+    end
+    draw.imgui.Indent()
+    for sideIndex = 1, data.sideDoorCountForRow(instance, control:routeRows(), rowIndex) do
+        drawSideRoomStructureRow(draw, control, instance, rowIndex, sideIndex)
+    end
+    draw.imgui.Unindent()
+end
+
+function sideRooms.drawRewardRowsForRouteRow(draw, control, instance, rowIndex)
+    local drewRow = false
+    for sideIndex = 1, data.sideDoorCountForRow(instance, control:routeRows(), rowIndex) do
+        if drawSideRewardRow(draw, control, instance, rowIndex, sideIndex) then
             drewRow = true
         end
     end
-    control:endReadPass()
+    return drewRow
 end
 
 return sideRooms

@@ -7,6 +7,9 @@ local fakeRows = h.fakeRows
 local routeFields = h.routeFields
 local routeUiFields = h.routeUiFields
 local noOpDraw = h.noOpDraw
+local valueStates = h.withTestImport(function()
+    return h.testImport("mods/ui/value_states.lua")
+end)
 
 -- luacheck: globals TestRunPlannerHubPylonRoute
 TestRunPlannerHubPylonRoute = {}
@@ -82,9 +85,7 @@ function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
         instance.biome.hub.combatRoomsByKey.N_Combat12.sideDoors[3]
     ), { "Easy", "Hard" })
 
-    lu.assertEquals(instance.sideRoomRowCount, 18)
-
-    lu.assertEquals(#storage, 4)
+    lu.assertEquals(#storage, 2)
     lu.assertEquals(storage[1].key, "Rooms")
     lu.assertEquals(storage[1].type, "table")
     lu.assertEquals(storage[1].minRows, 10)
@@ -93,29 +94,22 @@ function TestRunPlannerHubPylonRoute.testHubPylonStorageMatchesEphyraRouteRows()
     lu.assertEquals(storage[1].row[1].key, "RoleKey")
     lu.assertEquals(storage[1].row[2].key, "OptionKey")
     lu.assertEquals(storage[1].row[3].key, "VariantKey")
+    lu.assertEquals(storage[1].row[4].key, "Side1ModeKey")
+    lu.assertEquals(storage[1].row[4].default, "Disabled")
+    lu.assertEquals(storage[1].row[5].key, "Side1Entered")
+    lu.assertEquals(storage[1].row[5].type, "bool")
+    lu.assertEquals(storage[1].row[5].default, false)
+    lu.assertEquals(storage[1].row[6].key, "Side1EncounterClassKey")
+    lu.assertEquals(storage[1].row[6].default, "")
+    lu.assertEquals(storage[1].row[12].key, "Side3EncounterClassKey")
     lu.assertEquals(storage[2].key, "Rewards")
     lu.assertEquals(storage[2].minRows, 10)
     lu.assertEquals(storage[2].row[1].key, "Reward1Key")
     lu.assertEquals(storage[2].row[12].key, "Reward6LootKey")
-    lu.assertEquals(storage[3].key, "SideRooms")
-    lu.assertEquals(storage[3].minRows, 18)
-    lu.assertEquals(storage[3].defaultRows, 18)
-    lu.assertEquals(storage[3].maxRows, 18)
-    lu.assertEquals(storage[3].row[1].key, "ModeKey")
-    lu.assertEquals(storage[3].row[1].default, "Disabled")
-    lu.assertEquals(storage[3].row[2].key, "Entered")
-    lu.assertEquals(storage[3].row[2].type, "bool")
-    lu.assertEquals(storage[3].row[2].default, false)
-    lu.assertEquals(storage[3].row[3].key, "EncounterClassKey")
-    lu.assertEquals(storage[3].row[3].default, "")
-    lu.assertEquals(storage[4].key, "SideRewards")
-    lu.assertEquals(storage[4].minRows, 18)
-    lu.assertEquals(storage[4].row[1].key, "Reward1Key")
-    lu.assertEquals(storage[4].row[12].key, "Reward6LootKey")
-    lu.assertEquals(routeData.sideRoomRowIndex(instance, 4, 1), 1)
-    lu.assertEquals(routeData.sideRoomRowIndex(instance, 4, 3), 3)
-    lu.assertEquals(routeData.sideRoomRowIndex(instance, 9, 1), 16)
-    lu.assertNil(routeData.sideRoomRowIndex(instance, 1, 1))
+    lu.assertEquals(storage[2].row[20].key, "Side1Reward1Key")
+    lu.assertEquals(storage[2].row[31].key, "Side1Reward6LootKey")
+    lu.assertEquals(storage[2].row[57].key, "Side2PrebossBranchKey")
+    lu.assertEquals(storage[2].row[76].key, "Side3PrebossBranchKey")
 end
 
 function TestRunPlannerHubPylonRoute.testHubPylonFixedRowsUseImplicitRooms()
@@ -162,6 +156,11 @@ function TestRunPlannerHubPylonRoute.testHubPylonEmitsDumbSelectedRowsSnapshot()
                 OptionKey = "N_Combat12",
                 Reward1Key = "Boon",
                 Reward2Key = "ZeusUpgrade",
+                Side1ModeKey = "Enabled",
+                Side1Entered = true,
+                Side1Reward1Key = "MaxHealthDrop",
+                Side2ModeKey = "Enabled",
+                Side2Entered = false,
             },
             {
                 RoleKey = "Story",
@@ -170,14 +169,6 @@ function TestRunPlannerHubPylonRoute.testHubPylonEmitsDumbSelectedRowsSnapshot()
             {},
             {},
             {},
-            {},
-            {},
-        }, {
-            { ModeKey = "Enabled", Entered = true },
-            { ModeKey = "Enabled", Entered = false },
-            {},
-        }, {
-            { Reward1Key = "MaxHealthDrop" },
             {},
             {},
         }), instance)
@@ -201,6 +192,9 @@ function TestRunPlannerHubPylonRoute.testHubPylonEmitsDumbSelectedRowsSnapshot()
     local pylon = snapshot.rows[4]
     lu.assertEquals(pylon.slotKind, "biomeRow")
     lu.assertEquals(pylon.routeOrdinal, 1)
+    lu.assertEquals(pylon.formAddress, {
+        rowIndex = 4,
+    })
     lu.assertEquals(pylon.roleKey, "Combat")
     lu.assertEquals(pylon.optionKey, "N_Combat12")
     lu.assertEquals(pylon.roomKey, "N_Combat12")
@@ -210,10 +204,18 @@ function TestRunPlannerHubPylonRoute.testHubPylonEmitsDumbSelectedRowsSnapshot()
     lu.assertEquals(pylon.rewards.row.values[2], "ZeusUpgrade")
     lu.assertEquals(#pylon.sideRooms, 3)
     lu.assertEquals(pylon.sideRooms[1].roomKey, "N_Sub09")
+    lu.assertEquals(pylon.sideRooms[1].formAddress, {
+        rowIndex = 4,
+        childKind = "sideRoom",
+        childIndex = 1,
+    })
     lu.assertEquals(pylon.sideRooms[1].modeKey, "Enabled")
     lu.assertTrue(pylon.sideRooms[1].entered)
     lu.assertEquals(pylon.sideRooms[1].encounterClassKey, "Hard")
     lu.assertEquals(pylon.sideRooms[1].rewards[1], "MaxHealthDrop")
+    lu.assertNil(pylon.sideRooms[1].rewardKind)
+    lu.assertNil(pylon.sideRooms[1].rewardPicks)
+    lu.assertNil(pylon.sideRooms[1].selectionRequirements)
     lu.assertEquals(pylon.sideRooms[2].roomKey, "N_Sub10")
     lu.assertTrue(pylon.sideRooms[2].enabled)
     lu.assertFalse(pylon.sideRooms[2].entered)
@@ -258,6 +260,96 @@ function TestRunPlannerHubPylonRoute.testHubPylonReadSelectedRowsSnapshot()
     lu.assertEquals(snapshot.rows[4].optionKey, "N_Combat05")
 end
 
+function TestRunPlannerHubPylonRoute.testHubPylonCompletionRequiresEnteredSideEncounterClass()
+    local catalog = loadCatalog()
+    local template = loadHubPylonTemplate()
+    local instance = template.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local control = template.createRuntime(routeFields({
+        { Reward1Key = "SpellDrop" },
+        { Reward1Key = "WeaponUpgrade" },
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat12",
+            Reward1Key = "Boon",
+            Reward2Key = "ZeusUpgrade",
+            Side3ModeKey = "Enabled",
+            Side3Entered = true,
+            Side3Reward1Key = "MaxHealthDrop",
+        },
+    }), instance)
+
+    local completion = control:read("completion")
+    local invalid = completion.completionInvalidRows[1]
+
+    lu.assertFalse(completion.valid)
+    lu.assertEquals(invalid.rowIndex, 4)
+    lu.assertEquals(invalid.code, "side_room_encounter_class_required")
+    lu.assertEquals(invalid.tabKey, "rooms")
+    lu.assertEquals(invalid.controlTargets[1].controlAlias, "Side3EncounterClassKey")
+end
+
+function TestRunPlannerHubPylonRoute.testHubPylonCompletionRequiresEnteredSideReward()
+    local catalog = loadCatalog()
+    local template = loadHubPylonTemplate()
+    local instance = template.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local control = template.createRuntime(routeFields({
+        { Reward1Key = "SpellDrop" },
+        { Reward1Key = "WeaponUpgrade" },
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat12",
+            Reward1Key = "Boon",
+            Reward2Key = "ZeusUpgrade",
+            Side1ModeKey = "Enabled",
+            Side1Entered = true,
+        },
+    }), instance)
+
+    local completion = control:read("completion")
+    local invalid = completion.completionInvalidRows[1]
+
+    lu.assertFalse(completion.valid)
+    lu.assertEquals(invalid.rowIndex, 4)
+    lu.assertEquals(invalid.code, "side_room_reward_required")
+    lu.assertEquals(invalid.tabKey, "rewards")
+    lu.assertEquals(invalid.controlTargets[1].address, "side:1")
+    lu.assertEquals(invalid.controlTargets[1].controlAlias, "Reward1Key")
+end
+
+function TestRunPlannerHubPylonRoute.testHubPylonRoomOptionChangeResetsSideRoomFields()
+    local catalog = loadCatalog()
+    local template = loadHubPylonTemplate()
+    local instance = template.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    local control = template.createUi(fields, instance)
+
+    fields.Rooms:get(4, "RoleKey"):write("Combat")
+    fields.Rooms:get(4, "OptionKey"):write("N_Combat12")
+    fields.Rooms:get(4, "Side1ModeKey"):write("Enabled")
+    fields.Rooms:get(4, "Side1Entered"):write(true)
+    fields.Rooms:get(4, "Side1EncounterClassKey"):write("Hard")
+    fields.Rewards:get(4, "Side1Reward1Key"):write("MaxHealthDrop")
+
+    fields.Rooms:get(4, "OptionKey"):write("N_Combat05")
+    control:onRoomOptionChanged(4, "N_Combat12")
+
+    lu.assertNil(fields.Rooms:read(4, "Side1ModeKey"))
+    lu.assertNil(fields.Rooms:read(4, "Side1Entered"))
+    lu.assertNil(fields.Rooms:read(4, "Side1EncounterClassKey"))
+    lu.assertNil(fields.Rewards:read(4, "Side1Reward1Key"))
+end
+
 function TestRunPlannerHubPylonRoute.testHubPylonSideRoomProbabilitySummary()
     local catalog = loadCatalog()
     local template = loadHubPylonTemplate()
@@ -272,17 +364,17 @@ function TestRunPlannerHubPylonRoute.testHubPylonSideRoomProbabilitySummary()
             {
                 RoleKey = "Combat",
                 OptionKey = "N_Combat12",
+                Side1ModeKey = "Enabled",
+                Side1Entered = true,
+                Side2ModeKey = "Enabled",
+                Side2Entered = false,
             },
             {
                 RoleKey = "Combat",
                 OptionKey = "N_Combat06",
+                Side2ModeKey = "Enabled",
+                Side2Entered = true,
             },
-        }, {
-            { ModeKey = "Enabled", Entered = true },
-            { ModeKey = "Enabled", Entered = false },
-            {},
-            {},
-            { ModeKey = "Enabled", Entered = true },
         }), instance)
     local summary = control:sideRoomProbabilitySummary()
 
@@ -319,6 +411,22 @@ local function findDropdownWithValue(dropdowns, value)
     return nil
 end
 
+local function findDropdownWithValues(dropdowns, values)
+    for _, opts in ipairs(dropdowns or {}) do
+        local matches = true
+        for index, value in ipairs(values or {}) do
+            if opts.values == nil or opts.values[index] ~= value then
+                matches = false
+                break
+            end
+        end
+        if matches then
+            return opts
+        end
+    end
+    return nil
+end
+
 local function routeContextWithEnrichment(enabled)
     return {
         canUseEnrichmentColors = function()
@@ -329,6 +437,9 @@ local function routeContextWithEnrichment(enabled)
         end,
         isRouteBiomeInactive = function()
             return false
+        end,
+        routeGeneration = function()
+            return 1
         end,
     }
 end
@@ -360,4 +471,37 @@ function TestRunPlannerHubPylonRoute.testHubPylonRoomDropdownUsesEphyraEnrichmen
 
     lu.assertNotNil(disabledCombatOpts)
     lu.assertNil(disabledCombatOpts.valueColors)
+end
+
+function TestRunPlannerHubPylonRoute.testHubPylonSideEncounterDropdownUsesCompletionFeedback()
+    local catalog = loadCatalog()
+    local template = loadHubPylonTemplate()
+    local instance = template.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local fields = routeUiFields(template.storage(instance))
+    fields.Rooms:get(4, "RoleKey"):write("Combat")
+    fields.Rooms:get(4, "OptionKey"):write("N_Combat12")
+    fields.Rooms:get(4, "Side3ModeKey"):write("Enabled")
+    fields.Rooms:get(4, "Side3Entered"):write(true)
+
+    local control = template.createUi(fields, instance)
+    control:setRouteContext(routeContextWithEnrichment(false), "Surface")
+    control:applyRouteFeedback({
+        [4] = {
+            valueStates = {
+                Side3EncounterClassKey = {
+                    [""] = valueStates.WARNING,
+                },
+            },
+            rewardValueStates = {},
+        },
+    }, 1)
+
+    local dropdowns = renderHubPylonRoomDropdowns(control, instance, template)
+    local sideEncounterOpts = findDropdownWithValues(dropdowns, { "Easy", "Hard" })
+
+    lu.assertNotNil(sideEncounterOpts)
+    lu.assertEquals(sideEncounterOpts.valueColors[""], { 1.0, 0.78, 0.18, 1.0 })
 end

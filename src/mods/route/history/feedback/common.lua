@@ -1,6 +1,7 @@
 local deps = ... or {}
 
 local valueStates = deps.valueStates
+local formAddress = import("mods/route/history/form_address.lua")
 
 local common = {}
 
@@ -126,8 +127,10 @@ function common.setValueState(feedbackState, record, target, state)
         value = ""
     end
 
+    local targetAddress = target.formAddress or record and record.formAddress or nil
     local biomeKey = record and record.biomeKey or ""
-    local rowIndex = record and (record.renderRowIndex or record.rowIndex) or 0
+    local rowIndex = record and record.renderRowIndex
+        or formAddress.rowIndex(targetAddress, record and record.rowIndex or 0)
     local biome = feedbackState.byBiome[biomeKey]
     if biome == nil then
         biome = {}

@@ -5,6 +5,7 @@ local data = deps.data
 local resetRowDetails = deps.resetRowDetails
 local decorations = deps.decorations
 local valueStateHelpers = deps.valueStateHelpers
+local sideRooms = deps.sideRooms
 
 local rooms = {}
 
@@ -205,6 +206,7 @@ function rooms.draw(draw, control, instance)
     local rowCount = control:rowCount()
     local drewRow = false
     local allRowsInactive, inactiveBoundary = decorations.routeInactiveBoundary(instance)
+    sideRooms.drawInfoLine(draw, control, instance)
     control:beginReadPass()
     for rowIndex = 1, rowCount do
         if isRoomTabRow(control, rowIndex) then
@@ -216,6 +218,7 @@ function rooms.draw(draw, control, instance)
                 decorations.routeRowInactive(allRowsInactive, inactiveBoundary, control:slot(rowIndex), "rooms")
             )
             drawRoomRow(draw, control, instance, rowIndex)
+            sideRooms.drawStructureRowsForRouteRow(draw, control, instance, rowIndex)
             decorations.popInactive(draw.imgui, inactive)
             drewRow = true
         end

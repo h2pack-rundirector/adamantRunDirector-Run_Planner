@@ -38,8 +38,11 @@ local function emitLoot(history, roomEntry, summary, opts)
         eventKey = lootType,
         groupKey = roomEntry.groupKey,
         eventSourceKind = opts.eventSourceKind or summary.kind,
+        rowIndex = opts.rowIndex,
+        formAddress = opts.formAddress,
+        routeOrdinal = opts.routeOrdinal,
         parentEntry = roomEntry,
-        parentRoomKey = roomEntry.roomKey or roomEntry.eventKey,
+        parentRoomKey = opts.parentRoomKey or roomEntry.roomKey or roomEntry.eventKey,
         address = opts.address or summary.address,
         controlAlias = summary.controlAlias or opts.controlAlias,
         lootKind = summary.kind,
@@ -56,6 +59,11 @@ local function emitLoot(history, roomEntry, summary, opts)
             or opts.pendingUntilRoomHistoryOrdinal,
         acquiredAfterRoomHistoryOrdinal = summary.acquiredAfterRoomHistoryOrdinal
             or opts.acquiredAfterRoomHistoryOrdinal,
+        legalityValidatedBy = summary.legalityValidatedBy or opts.legalityValidatedBy,
+        targetRoomKey = opts.targetRoomKey,
+        targetHubDoorId = opts.targetHubDoorId,
+        targetRoleKey = opts.targetRoleKey,
+        targetOptionKey = opts.targetOptionKey,
     })
 end
 
@@ -152,8 +160,43 @@ local function emitPrebossLoot(history, roomEntry, reward, nextRoomEntry)
     end
 end
 
+local function emitHubGeneratedDoorOffers(history, roomEntry, topology)
+    for _, door in ipairs(topology.generatedDoors or EMPTY_LIST) do
+        if door.reward ~= nil then
+            emitLoot(history, roomEntry, door.reward, {
+                eventSourceKind = "hubGeneratedDoor",
+                timing = "generatedOffer",
+                rowIndex = door.targetRowIndex,
+                formAddress = door.targetFormAddress,
+                routeOrdinal = door.targetRouteOrdinal,
+                parentRoomKey = door.roomKey,
+                targetRoomKey = door.roomKey,
+                targetHubDoorId = door.hubDoorId,
+                targetRoleKey = door.roleKey,
+                targetOptionKey = door.optionKey,
+                address = door.reward.address or "row",
+            })
+        end
+    end
+end
+
+local function emitDefaultRoomLoot(history, roomEntry, reward)
+    local opts = {
+        address = reward.address or "row",
+    }
+    if roomEntry.topology ~= nil and roomEntry.topology.kind == "hubDoorBatchPick" then
+        opts.legalityValidatedBy = "hubGeneratedOffer"
+    end
+    emitLoot(history, roomEntry, reward, opts)
+end
+
 function routeLoot.emitForRoomEntry(history, roomEntry, nextRoomEntry)
     local reward = roomEntry and roomEntry.reward or nil
+    local topology = roomEntry and roomEntry.topology or nil
+    if topology ~= nil and topology.kind == "hubDoorBatch" then
+        emitHubGeneratedDoorOffers(history, roomEntry, topology)
+    end
+
     if reward == nil then
         return
     elseif reward.kind == "fieldsCages" then
@@ -163,9 +206,7 @@ function routeLoot.emitForRoomEntry(history, roomEntry, nextRoomEntry)
     elseif reward.kind == "preboss" then
         emitPrebossLoot(history, roomEntry, reward, nextRoomEntry)
     else
-        emitLoot(history, roomEntry, reward, {
-            address = reward.address or "row",
-        })
+        emitDefaultRoomLoot(history, roomEntry, reward)
     end
 end
 

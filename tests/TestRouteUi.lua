@@ -204,12 +204,12 @@ local function createEnteredSideRoomFixture(catalog)
     fields.Rooms:get(4, "RoleKey"):write("Combat")
     fields.Rooms:get(4, "OptionKey"):write("N_Combat12")
 
-    fields.SideRooms:get(1, "ModeKey"):write("Enabled")
-    fields.SideRooms:get(1, "Entered"):write(true)
-    fields.SideRewards:get(1, "Reward1Key"):write("MaxHealthDrop")
+    fields.Rooms:get(4, "Side1ModeKey"):write("Enabled")
+    fields.Rooms:get(4, "Side1Entered"):write(true)
+    fields.Rewards:get(4, "Side1Reward1Key"):write("MaxHealthDrop")
 
-    fields.SideRooms:get(2, "ModeKey"):write("Enabled")
-    fields.SideRooms:get(2, "Entered"):write(false)
+    fields.Rooms:get(4, "Side2ModeKey"):write("Enabled")
+    fields.Rooms:get(4, "Side2Entered"):write(false)
 
     return template, control, instance
 end
@@ -654,15 +654,15 @@ function TestRunPlannerRouteUi.testRouteHorizonOrdersBiomeTabAndRow()
         tabKey = "rewards",
         routeOrdinal = 2,
     })
-    local sideRow = horizon.key({
-        routeBiomeIndex = 3,
-        tabKey = "sideRooms",
-        routeOrdinal = 0,
-    })
 
     lu.assertTrue(horizon.after(firstGRoom, latestFReward))
     lu.assertFalse(horizon.after(roomRowAfterRewardRow, rewardRow))
-    lu.assertTrue(horizon.after(sideRow, rewardRow))
+    lu.assertEquals(horizon.tabKeyForInvalid({
+        address = "side:1",
+    }), "rewards")
+    lu.assertEquals(horizon.tabKeyForInvalid({
+        tabKey = "sideRooms",
+    }), "rooms")
 end
 
 function TestRunPlannerRouteUi.testRouteContextDoesNotApplyLaterBiomeRowHorizonToEarlierBiomes()
@@ -801,7 +801,6 @@ function TestRunPlannerRouteUi.testDecorationsGreyPlannerTabsAfterFirstInvalidTa
     lu.assertTrue(decorations.plannerTabInvalid(control, "rooms", instance))
     lu.assertFalse(decorations.plannerTabInactive(control, "rooms", instance))
     lu.assertTrue(decorations.plannerTabInactive(control, "rewards", instance))
-    lu.assertTrue(decorations.plannerTabInactive(control, "sideRooms", instance))
 end
 
 function TestRunPlannerRouteUi.testDecorationsRouteInactiveBoundaryPrefersDownstreamBiome()
@@ -1077,7 +1076,6 @@ function TestRunPlannerRouteUi.testDecorationsClassifyAllPlannerInvalids()
 
     lu.assertFalse(decorations.plannerTabInvalid(control, "rooms", instance))
     lu.assertTrue(decorations.plannerTabInvalid(control, "rewards", instance))
-    lu.assertTrue(decorations.plannerTabInvalid(control, "sideRooms", instance))
 end
 
 function TestRunPlannerRouteUi.testRouteTemplateViewsSupportNoOpUiTraversal()
@@ -1093,7 +1091,7 @@ function TestRunPlannerRouteUi.testRouteTemplateViewsSupportNoOpUiTraversal()
         { key = "Q", template = loadFixedLinearTemplate() },
     }
     local draw = noOpDraw()
-    local viewNames = { "rooms", "rewards", "sideRooms" }
+    local viewNames = { "rooms", "rewards" }
 
     for _, case in ipairs(cases) do
         local control, instance = createUiControl(case.template, catalog.lookup[case.key], "Route" .. case.key)
@@ -1144,7 +1142,7 @@ function TestRunPlannerRouteUi.testRouteTemplateViewAllocationsStayBounded()
         {
             key = "N",
             template = loadHubPylonTemplate(),
-            budgets = { rooms = 128, rewards = 128, sideRooms = 96 },
+            budgets = { rooms = 192, rewards = 160 },
         },
         {
             key = "O",
@@ -1215,17 +1213,29 @@ function TestRunPlannerRouteUi.testHubPylonEnteredSideRoomDrawAllocationsStayBou
     local iterations = 100
     local template, control, instance = createEnteredSideRoomFixture(catalog)
 
-    local allocatedKb = measureAllocKb(iterations, function()
-        template.views.sideRooms(draw, control, instance)
+    local roomsAllocatedKb = measureAllocKb(iterations, function()
+        template.views.rooms(draw, control, instance)
+    end)
+    local rewardsAllocatedKb = measureAllocKb(iterations, function()
+        template.views.rewards(draw, control, instance)
     end)
 
     lu.assertTrue(
-        allocatedKb < 128,
+        roomsAllocatedKb < 192,
         string.format(
-            "RouteN entered side-room traversal allocated %.1f KB across %d no-op draws; budget %.1f KB",
-            allocatedKb,
+            "RouteN entered side-room room traversal allocated %.1f KB across %d no-op draws; budget %.1f KB",
+            roomsAllocatedKb,
             iterations,
-            128
+            192
+        )
+    )
+    lu.assertTrue(
+        rewardsAllocatedKb < 192,
+        string.format(
+            "RouteN entered side-room reward traversal allocated %.1f KB across %d no-op draws; budget %.1f KB",
+            rewardsAllocatedKb,
+            iterations,
+            192
         )
     )
 end
@@ -1258,7 +1268,7 @@ function TestRunPlannerRouteUi.testRouteTemplateViewCpuStaysBounded()
         {
             key = "N",
             template = loadHubPylonTemplate(),
-            budgets = { rooms = 600, rewards = 500, sideRooms = 250 },
+            budgets = { rooms = 700, rewards = 600 },
         },
         {
             key = "O",
@@ -1329,17 +1339,29 @@ function TestRunPlannerRouteUi.testHubPylonEnteredSideRoomDrawCpuStaysBounded()
     local iterations = 1000
     local template, control, instance = createEnteredSideRoomFixture(catalog)
 
-    local elapsedMs = measureCpuMs(iterations, function()
-        template.views.sideRooms(draw, control, instance)
+    local roomsElapsedMs = measureCpuMs(iterations, function()
+        template.views.rooms(draw, control, instance)
+    end)
+    local rewardsElapsedMs = measureCpuMs(iterations, function()
+        template.views.rewards(draw, control, instance)
     end)
 
     lu.assertTrue(
-        elapsedMs < 350,
+        roomsElapsedMs < 700,
         string.format(
-            "RouteN entered side-room traversal took %.1f ms across %d no-op draws; budget %.1f ms",
-            elapsedMs,
+            "RouteN entered side-room room traversal took %.1f ms across %d no-op draws; budget %.1f ms",
+            roomsElapsedMs,
             iterations,
-            350
+            700
+        )
+    )
+    lu.assertTrue(
+        rewardsElapsedMs < 700,
+        string.format(
+            "RouteN entered side-room reward traversal took %.1f ms across %d no-op draws; budget %.1f ms",
+            rewardsElapsedMs,
+            iterations,
+            700
         )
     )
 end

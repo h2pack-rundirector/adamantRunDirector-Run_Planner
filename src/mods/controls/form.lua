@@ -163,6 +163,33 @@ function form.validateRoomChoice(opts)
     return VALID_STATUS
 end
 
+function form.selectedRoomSnapshotChoice(opts)
+    opts = opts or {}
+    local data = opts.data
+    local instance = opts.instance
+    local rows = opts.rows
+    local rowIndex = opts.rowIndex
+    local slot = opts.slot
+
+    local roleKey, role = data.resolveRole(instance, rows, rowIndex)
+    local optionKey, option = data.resolveOption(instance, rows, rowIndex, roleKey)
+    if slot ~= nil and slot.roleKey ~= nil then
+        roleKey = slot.roleKey
+        if option ~= nil and option.key ~= nil then
+            optionKey = option.key
+        elseif optionKey == "" and opts.useFixedRoomKey ~= false then
+            optionKey = slot.roomKey or optionKey
+        end
+    end
+
+    return {
+        roleKey = roleKey or "",
+        optionKey = optionKey or "",
+        role = role,
+        option = option,
+    }
+end
+
 function form.clampedCount(value, maxValue)
     local count = positiveInteger(value)
     if maxValue == nil then

@@ -1,4 +1,5 @@
 local common = {}
+local formAddress = import("mods/route/history/form_address.lua")
 
 common.EMPTY_LIST = {}
 
@@ -45,16 +46,34 @@ function common.availabilityFailure(availability, entry)
     return nil
 end
 
+function common.candidateAvailabilityContext(candidate, availabilityEntry)
+    if availabilityEntry ~= nil then
+        return availabilityEntry
+    end
+    if candidate ~= nil and candidate.availabilityContext ~= nil then
+        return candidate.availabilityContext
+    end
+    error("candidate availabilityContext is required when availability rules are present")
+end
+
 function common.appendAvailabilityFinding(target, createFinding, entry, candidate, availability, availabilityEntry)
+    if availability == nil then
+        return
+    end
     local failure, axis, expected, actual = common.availabilityFailure(
         availability,
-        availabilityEntry or candidate and candidate.availabilityContext or entry
+        common.candidateAvailabilityContext(candidate, availabilityEntry)
     )
     if failure == nil then
         return
     end
     target[#target + 1] = createFinding(entry, candidate, failure, {
         rowIndex = candidate and candidate.targetRowIndex or nil,
+        routeOrdinal = candidate and candidate.targetRouteOrdinal or nil,
+        formAddress = formAddress.withRowFallback(
+            candidate and candidate.targetFormAddress or nil,
+            candidate and candidate.targetRowIndex or nil
+        ),
         axis = axis,
         expected = expected,
         actual = actual,

@@ -756,6 +756,26 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearOpeningRowUsesFixedRoomCh
     lu.assertEquals(option.label, "Opening 2")
 end
 
+function TestRunPlannerFixedLinearRoute.testSelectedRowsSnapshotPreservesUnknownFixedRoomOption()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(routeFields({
+        {
+            OptionKey = "F_Opening99",
+            Reward1Key = "SpellDrop",
+        },
+    }), instance)
+
+    local snapshot = control:buildSelectedRowsSnapshot()
+
+    lu.assertEquals(snapshot.rows[1].roleKey, "Opening")
+    lu.assertEquals(snapshot.rows[1].optionKey, "F_Opening99")
+end
+
 function TestRunPlannerFixedLinearRoute.testFixedLinearPrebossRowUsesFixedRoomChoice()
     local catalog = loadCatalog()
     local data = loadFixedLinearData()
@@ -852,6 +872,56 @@ function TestRunPlannerFixedLinearRoute.testSingleRoomRolesDefaultToConcreteOpti
     lu.assertEquals(roleKey, "Story")
     lu.assertEquals(optionKey, "F_Story01")
     lu.assertEquals(option.label, "Arachne")
+end
+
+function TestRunPlannerFixedLinearRoute.testSelectedRowsSnapshotNormalizesImplicitSingleRoomOption()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(routeFields({
+        fOpeningRow(),
+        fCombatRow("F_Combat02", "Major", "Combat"),
+        fCombatRow("F_Combat03", "Major", "Combat"),
+        fCombatRow("F_Combat04", "Major", "Combat"),
+        fCombatRow("F_Combat08", "Major", "Combat"),
+        {
+            RoleKey = "Story",
+            OptionKey = "",
+            SiblingStructureKey = "Combat",
+        },
+    }), instance)
+
+    local snapshot = control:buildSelectedRowsSnapshot()
+
+    lu.assertEquals(snapshot.rows[6].roleKey, "Story")
+    lu.assertEquals(snapshot.rows[6].optionKey, "F_Story01")
+end
+
+function TestRunPlannerFixedLinearRoute.testSelectedRowsSnapshotPreservesRequiredBlankRoomOption()
+    local catalog = loadCatalog()
+    local template = loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(routeFields({
+        fOpeningRow(),
+        {
+            RoleKey = "Combat",
+            OptionKey = "",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+            SiblingStructureKey = "Combat",
+        },
+    }), instance)
+
+    local snapshot = control:buildSelectedRowsSnapshot()
+
+    lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
+    lu.assertEquals(snapshot.rows[2].optionKey, "")
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesRolesByRouteRow()

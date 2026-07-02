@@ -88,10 +88,6 @@ local function optionByKey(role, optionKey)
     return nil
 end
 
-local function defaultOption(role)
-    return roleOptionList(role)[1]
-end
-
 local function roleForRow(biome, slot, selectedRow)
     if slot ~= nil and slot.role ~= nil then
         return slot.role
@@ -107,7 +103,7 @@ local function optionForRow(role, selectedRow, slot)
     if slot ~= nil and slot.entry ~= nil then
         return slot.entry.room or { key = fixedRoomKey(slot.entry) }
     end
-    return defaultOption(role)
+    return nil
 end
 
 local function roomKeyFor(role, option)
@@ -117,10 +113,15 @@ local function roomKeyFor(role, option)
         or nil
 end
 
-local function eventKeyFor(selectedRow, role, option)
-    return roomKeyFor(role, option)
-        or role and role.key
-        or selectedRow.roleKey
+local function eventKeyFor(_selectedRow, role, option)
+    local roomKey = roomKeyFor(role, option)
+    if roomKey ~= nil and roomKey ~= "" then
+        return roomKey
+    end
+    if role ~= nil and roleOptionList(role)[1] == nil then
+        return role.key
+    end
+    return nil
 end
 
 local function rewardContext(role, option)

@@ -1,4 +1,5 @@
 local findings = {}
+local formAddress = import("mods/route/history/form_address.lua")
 
 local function copyFields(target, fields)
     for key, value in pairs(fields or {}) do
@@ -15,6 +16,7 @@ local function base(kind, entry, reason, fields)
         biomeKey = entry and entry.biomeKey or nil,
         routeBiomeIndex = entry and entry.routeBiomeIndex or nil,
         rowIndex = entry and entry.rowIndex or nil,
+        formAddress = formAddress.withRowFallback(entry and entry.formAddress or nil, entry and entry.rowIndex or nil),
         routeOrdinal = entry and entry.routeOrdinal or nil,
         roomHistoryOrdinal = entry and entry.roomHistoryOrdinal or nil,
         entry = entry,

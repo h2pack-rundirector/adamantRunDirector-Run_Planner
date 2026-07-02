@@ -6,7 +6,6 @@ horizon.TAB_CAPACITY = 4
 local TAB_ORDER = {
     rooms = 1,
     rewards = 2,
-    sideRooms = 3,
 }
 
 local BIOME_STRIDE = horizon.TAB_CAPACITY * horizon.ROW_CAPACITY
@@ -34,13 +33,19 @@ function horizon.tabKeyForInvalid(invalid)
         return invalid.renderTabKey
     end
     if invalid ~= nil and invalid.tabKey ~= nil then
+        if invalid.tabKey == "sideRooms" then
+            if isRewardInvalid(invalid) then
+                return "rewards"
+            end
+            return "rooms"
+        end
         return invalid.tabKey
-    end
-    if isSideInvalid(invalid) then
-        return "sideRooms"
     end
     if isRewardInvalid(invalid) then
         return "rewards"
+    end
+    if isSideInvalid(invalid) then
+        return "rooms"
     end
     return "rooms"
 end

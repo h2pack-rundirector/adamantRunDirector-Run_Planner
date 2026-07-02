@@ -9,6 +9,7 @@ local historySystem = h.withTestImport(function()
 end)
 local routeHistory = historySystem.history
 local routeLoot = historySystem.loot
+local formAddress = historySystem.formAddress
 local historyFeedback = historySystem.feedback
 local historyBuilder = historySystem.builder
 local historyValidator = historySystem.validator
@@ -53,6 +54,49 @@ local function thessalyCombat(optionKey, variantKey)
         RoleKey = "Combat",
         OptionKey = optionKey,
         VariantKey = variantKey or "TwoCombats",
+    }
+end
+
+local function ephyraRows()
+    return {
+        { Reward1Key = "SpellDrop" },
+        { Reward1Key = "WeaponUpgrade" },
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat12",
+            Reward1Key = "Boon",
+            Reward2Key = "ZeusUpgrade",
+        },
+        {
+            RoleKey = "Story",
+            OptionKey = "N_Story01",
+        },
+        {
+            RoleKey = "Miniboss",
+            OptionKey = "N_MiniBoss02",
+            Reward1Key = "AphroditeUpgrade",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat05",
+            Reward1Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat06",
+            Reward1Key = "RoomMoneyDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "N_Combat13",
+            Reward1Key = "MaxManaDrop",
+        },
+        {
+            Reward1Key = "RandomLoot",
+            Reward1LootKey = "ApolloUpgrade",
+            Reward1StateKey = "Bought",
+        },
     }
 end
 
@@ -589,6 +633,9 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsEncounte
                 optionAvailability = {
                     biomeEncounterDepth = { min = 4 },
                 },
+                availabilityContext = {
+                    biomeEncounterDepth = 3,
+                },
             },
         },
     })
@@ -612,6 +659,32 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsEncounte
     lu.assertEquals(states.F_Combat05, valueStates.INVALID)
 end
 
+function TestRunPlannerRouteHistoryValidator.testCandidateAvailabilityRequiresExplicitContext()
+    local history = routeHistory.create()
+    emitRoom(history, 3, {
+        biomeKey = "F",
+        rowIndex = 3,
+        roomKey = "F_Story01",
+        roleKey = "Story",
+        optionKey = "F_Story01",
+        biomeDepthCache = 3,
+        roomCandidates = {
+            {
+                roleKey = "Story",
+                optionKey = "F_Story01",
+                roomKey = "F_Story01",
+                optionAvailability = {
+                    biomeDepthCache = { min = 4 },
+                },
+            },
+        },
+    })
+
+    lu.assertErrorMsgContains("candidate availabilityContext is required", function()
+        validateHistory(history)
+    end)
+end
+
 function TestRunPlannerRouteHistoryValidator.testSelectedRoomCandidateInvalidBlocksRoute()
     local history = routeHistory.create()
     emitRoom(history, 3, {
@@ -629,6 +702,9 @@ function TestRunPlannerRouteHistoryValidator.testSelectedRoomCandidateInvalidBlo
                 optionAvailability = {
                     biomeDepthCache = { min = 4 },
                 },
+                availabilityContext = {
+                    biomeDepthCache = 3,
+                },
                 targetRowIndex = 3,
             },
         },
@@ -641,6 +717,120 @@ function TestRunPlannerRouteHistoryValidator.testSelectedRoomCandidateInvalidBlo
     lu.assertEquals(result.invalids[1].rowIndex, 3)
     lu.assertEquals(result.invalids[1].targetFinding.kind, "roomCandidateInvalid")
     lu.assertEquals(result.invalids[1].targetFinding.roomKey, "F_Story01")
+end
+
+function TestRunPlannerRouteHistoryValidator.testSelectedCandidateUsesFormAddressNotLastRowEntry()
+    local history = routeHistory.create()
+    routeHistory.emitAt(history, {
+        routeKey = "Surface",
+        biomeKey = "N",
+        routeBiomeIndex = 1,
+        rowIndex = 4,
+        formAddress = formAddress.row(4),
+        roomHistoryOrdinal = 4,
+        biomeDepthCache = 3,
+    }, {
+        kind = "room",
+        eventKey = "N_Combat12",
+        roomKey = "N_Combat12",
+        roleKey = "Combat",
+        optionKey = "N_Combat12",
+        roomCandidates = {
+            {
+                roleKey = "Combat",
+                optionKey = "N_Combat12",
+                roomKey = "N_Combat12",
+                optionAvailability = {
+                    biomeDepthCache = { min = 4 },
+                },
+                availabilityContext = {
+                    biomeDepthCache = 3,
+                },
+            },
+        },
+    })
+    routeHistory.emitAt(history, {
+        routeKey = "Surface",
+        biomeKey = "N",
+        routeBiomeIndex = 1,
+        rowIndex = 4,
+        formAddress = formAddress.child(4, "sideRoom", 1),
+        roomHistoryOrdinal = 5,
+        biomeDepthCache = 4,
+    }, {
+        kind = "room",
+        eventKey = "N_Sub09",
+        roomKey = "N_Sub09",
+        roleKey = "SideRoom",
+    })
+    routeHistory.emitAt(history, {
+        routeKey = "Surface",
+        biomeKey = "N",
+        routeBiomeIndex = 1,
+        rowIndex = 4,
+        formAddress = formAddress.child(4, "hubReturn"),
+        roomHistoryOrdinal = 6,
+        biomeDepthCache = 5,
+    }, {
+        kind = "room",
+        eventKey = "N_Hub",
+        roomKey = "N_Hub",
+        roleKey = "Hub",
+    })
+
+    local result = validateHistory(history)
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "biome_depth_unavailable")
+    lu.assertEquals(result.invalids[1].roomKey, "N_Combat12")
+    lu.assertEquals(result.invalids[1].formAddress, formAddress.row(4))
+end
+
+function TestRunPlannerRouteHistoryValidator.testHubGeneratedDoorOfferUsesHubTimingForRewardLegality()
+    local rows = ephyraRows()
+    rows[4].Reward1Key = "SpellDrop"
+    local route = {
+        key = "Surface",
+        biomes = { "N" },
+    }
+    local history, catalog = buildHistory(route, "N", h.loadHubPylonTemplate(), rows)
+
+    local result = historyValidator.validate({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "spell_drop_limit")
+    lu.assertEquals(result.invalids[1].rowIndex, 4)
+    lu.assertEquals(result.invalids[1].roomHistoryOrdinal, 3)
+    lu.assertEquals(result.invalids[1].entry.timing, "generatedOffer")
+    lu.assertEquals(result.invalids[1].entry.eventSourceKind, "hubGeneratedDoor")
+    lu.assertEquals(result.invalids[1].entry.parentEntry.roomKey, "N_Hub")
+    lu.assertEquals(result.invalids[1].entry.parentRoomKey, "N_Combat12")
+end
+
+function TestRunPlannerRouteHistoryValidator.testHubGeneratedDoorAcquisitionDoesNotRevalidateRewardLegality()
+    local rows = ephyraRows()
+    rows[1].Reward1Key = "MaxHealthDrop"
+    rows[4].Reward1Key = "SpellDrop"
+    rows[7].Reward1Key = "SpellDrop"
+    local route = {
+        key = "Surface",
+        biomes = { "N" },
+    }
+    local history, catalog = buildHistory(route, "N", h.loadHubPylonTemplate(), rows)
+
+    local result = historyValidator.validate({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+    })
+
+    lu.assertTrue(result.valid)
+    lu.assertEquals(routeHistory.lootEntries(history, "SpellDrop")[1].legalityValidatedBy, "hubGeneratedOffer")
+    lu.assertEquals(routeHistory.lootEntries(history, "SpellDrop")[2].legalityValidatedBy, "hubGeneratedOffer")
 end
 
 function TestRunPlannerRouteHistoryValidator.testEarlierSelectedCandidateInvalidBeatsLaterRewardInvalid()
@@ -659,6 +849,9 @@ function TestRunPlannerRouteHistoryValidator.testEarlierSelectedCandidateInvalid
                 roomKey = "F_Story01",
                 optionAvailability = {
                     biomeDepthCache = { min = 4 },
+                },
+                availabilityContext = {
+                    biomeDepthCache = 3,
                 },
                 targetRowIndex = 3,
             },

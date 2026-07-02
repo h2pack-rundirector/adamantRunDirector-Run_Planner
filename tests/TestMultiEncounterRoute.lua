@@ -53,8 +53,8 @@ local function thessalyEncounterRewardRows(rows)
     return encounterRows
 end
 
-local function thessalyRouteFields(rows, sideRows, sideRewardRows, encounterRewardRows)
-    return routeFields(rows, sideRows, sideRewardRows, encounterRewardRows or thessalyEncounterRewardRows(rows))
+local function thessalyRouteFields(rows, encounterRewardRows)
+    return routeFields(rows, encounterRewardRows or thessalyEncounterRewardRows(rows))
 end
 
 local function buildThessalyControlWithEncounterRewards(rows)
@@ -240,7 +240,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRewardRatioSummaryC
             OptionKey = "O_Combat03",
             VariantKey = "ThreeCombats",
         },
-    }, nil, nil, {
+    }, {
         {},
         {},
         {},

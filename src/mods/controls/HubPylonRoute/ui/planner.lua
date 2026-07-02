@@ -3,7 +3,6 @@
 local deps = ...
 local rooms = deps.rooms
 local rewards = deps.rewards
-local sideRooms = deps.sideRooms
 local decorations = deps.decorations
 
 local planner = {}
@@ -29,10 +28,6 @@ function planner.draw(draw, control, instance)
     end
     if rewardsConfigured(control) and beginTabItem(imgui, "Rewards", control, instance, "rewards") then
         rewards.draw(draw, control, instance)
-        imgui.EndTabItem()
-    end
-    if beginTabItem(imgui, "Side Rooms", control, instance, "sideRooms") then
-        sideRooms.draw(draw, control, instance)
         imgui.EndTabItem()
     end
     imgui.EndTabBar()

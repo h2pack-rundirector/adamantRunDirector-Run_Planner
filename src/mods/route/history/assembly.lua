@@ -3,6 +3,7 @@ local historyAssembly = {}
 function historyAssembly.create(opts)
     opts = opts or {}
     local events = import("mods/route/history/events.lua")
+    local formAddress = import("mods/route/history/form_address.lua")
     local history = import("mods/route/history/history.lua", nil, {
         events = events,
     })
@@ -124,6 +125,7 @@ function historyAssembly.create(opts)
         events = events,
         feedback = feedback,
         feedbackAdapters = feedbackAdapters,
+        formAddress = formAddress,
         findings = findings,
         history = history,
         loot = loot,
