@@ -98,7 +98,7 @@ function topology.create(data)
             return hasSelectableSiblingStructure(roleKey, option)
         end,
         requiredCode = "clockwork_sibling_structure_required",
-        requiredMessage = "Tartarus topology needs sibling door structure",
+        requiredMessage = "Choose Other Door",
         unavailableCode = "clockwork_sibling_structure_unavailable",
         unavailableMessage = function(sibling, siblingKey)
             return "Other Door " .. tostring(sibling.label or siblingKey) .. " is not valid at this step"

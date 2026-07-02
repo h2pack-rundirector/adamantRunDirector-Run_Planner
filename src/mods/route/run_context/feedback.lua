@@ -1,5 +1,16 @@
 local feedback = {}
 
+local function routeControlInvariantMessage(routeControlName, routeKey, biomeKey, reason)
+    return "Route control invariant failed: "
+        .. tostring(routeControlName(biomeKey))
+        .. " for "
+        .. tostring(routeKey)
+        .. "/"
+        .. tostring(biomeKey)
+        .. " "
+        .. reason
+end
+
 local function selectedRowsSnapshot(context, routeKey, biomeKey)
     local control = context:controlForBiome(routeKey, biomeKey)
     if control == nil or control.read == nil then
@@ -65,18 +76,6 @@ local function completionInvalids(context, route, routeControlName, EMPTY_LIST)
         end
 
         local completion = context:controlCompletionReport(route.key, biomeKey)
-        if not completion then
-            invalids[#invalids + 1] = {
-                biomeKey = biomeKey,
-                routeBiomeIndex = routeBiomeIndex,
-                controlName = routeControlName(biomeKey),
-                code = "missing_control",
-                message = "Missing route control: " .. tostring(biomeKey),
-                completion = true,
-            }
-            break
-        end
-
         for _, invalid in ipairs(completion.completionInvalidRows or EMPTY_LIST) do
             invalids[#invalids + 1] = copyInvalidRow(invalid, {
                 biomeKey = biomeKey,
@@ -102,8 +101,19 @@ function feedback.install(context, deps)
         end
 
         local control = self:controlForBiome(routeKey, biomeKey)
-        local report = control ~= nil and control.read ~= nil and control:read("completion") or nil
-        reports[biomeKey] = report or false
+        if control == nil or control.read == nil then
+            error(routeControlInvariantMessage(routeControlName, routeKey, biomeKey, "is missing"), 0)
+        end
+
+        local report = control:read("completion")
+        if report == nil then
+            error(routeControlInvariantMessage(routeControlName, routeKey, biomeKey, "did not provide completion"), 0)
+        end
+        if report.valid == true and report.biomeKey == nil then
+            error(routeControlInvariantMessage(routeControlName, routeKey, biomeKey, "completed without biomeKey"), 0)
+        end
+
+        reports[biomeKey] = report
         return report
     end
 

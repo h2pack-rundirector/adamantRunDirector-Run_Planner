@@ -106,6 +106,24 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalStorageMatchesTartaru
     lu.assertEquals(storage[2].maxRows, 13)
 end
 
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalRequiresOtherDoorWithUiMessage()
+    local catalog = loadCatalog()
+    local data = loadClockworkGoalData()
+    local instance = data.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local rows = fakeRows({
+        {},
+        { RouteKindKey = "Goal", OptionKey = "I_Combat01" },
+    })
+    local invalid = data.validateRoomTopology(instance, rows, 2)
+
+    lu.assertFalse(invalid.valid)
+    lu.assertEquals(invalid.code, "clockwork_sibling_structure_required")
+    lu.assertEquals(invalid.message, "Choose Other Door")
+end
+
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalIntroKeepsFixedRouteKind()
     local catalog = loadCatalog()

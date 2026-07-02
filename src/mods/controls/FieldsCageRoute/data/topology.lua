@@ -102,14 +102,14 @@ function topology.create(data)
             if roleKey == "Combat" and (cageCount == nil or (cageCount.cageRewardCount or 0) <= 0) then
                 return selectedControlInvalid(
                     "fields_cage_count_required",
-                    "Fields topology needs picked cage reward count",
+                    "Choose Picked Door reward count",
                     "VariantKey"
                 )
             end
             return nil
         end,
         requiredCode = "fields_sibling_structure_required",
-        requiredMessage = "Fields topology needs sibling door structure",
+        requiredMessage = "Choose Other Door",
         unavailableCode = "fields_sibling_structure_unavailable",
         unavailableMessage = function(sibling, siblingKey)
             return "Other Door " .. tostring(sibling.label or siblingKey) .. " is not valid at this pick"

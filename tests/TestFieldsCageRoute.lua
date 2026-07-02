@@ -282,6 +282,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageTerminalCombatRequiresCageC
     lu.assertFalse(completion.valid)
     lu.assertEquals(completion.completionInvalidRows[1].rowIndex, 5)
     lu.assertEquals(completion.completionInvalidRows[1].code, "fields_cage_count_required")
+    lu.assertEquals(completion.completionInvalidRows[1].message, "Choose Picked Door reward count")
     lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].controlAlias, "VariantKey")
 end
 

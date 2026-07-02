@@ -76,6 +76,10 @@ end
 
 layout.chaosFeatures = CHAOS_FEATURES
 layout.surfaceShopFeatures = CHAOS_SURFACE_FEATURES
+layout.tagLabels = {
+    Indoor = "Indoor rooms",
+    Outdoor = "Outdoor rooms",
+}
 
 layout.introRoom = option("P_Intro", "Intro", {
     exitCount = 2,

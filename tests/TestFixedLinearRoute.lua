@@ -159,6 +159,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyDefaultsControlsA
     lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 2, 1))
     lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 3, 1))
     lu.assertFalse(data.shouldDrawSiblingRewardClass(instance, rows, 3, 1))
+    lu.assertEquals(data.validateRoomTopology(instance, rows, 3).message, "Choose Other Door")
     lu.assertNil(data.roomTopology(instance, rows, 3))
 end
 
@@ -1238,6 +1239,7 @@ function TestRunPlannerFixedLinearRoute.testMinibossRequiresConcreteOption()
     })
     lu.assertFalse(validation.valid)
     lu.assertEquals(validation.code, "option_required")
+    lu.assertEquals(validation.message, "Choose a Miniboss")
     lu.assertEquals(validation.controlTargets, {
         {
             tabKey = "rooms",

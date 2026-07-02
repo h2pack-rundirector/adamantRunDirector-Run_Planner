@@ -125,7 +125,7 @@ function form.validateRoomChoice(opts)
     if role == nil then
         return form.invalid({
             code = "unknown_role",
-            message = "Unknown route role: " .. tostring(roleKey),
+            message = "Unknown room type: " .. tostring(roleKey),
             tabKey = "rooms",
             controlAlias = roleAlias,
             label = roleLabel,
@@ -143,7 +143,7 @@ function form.validateRoomChoice(opts)
     if optionKey ~= "" and option == nil then
         return form.invalid({
             code = "unknown_option",
-            message = "Unknown route option: " .. tostring(optionKey),
+            message = "Unknown room option: " .. tostring(optionKey),
             tabKey = "rooms",
             controlAlias = optionAlias,
             label = tostring(role.label or roleKey),

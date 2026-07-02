@@ -24,7 +24,6 @@ local function validateRouteRequirement(history, entry, requirement)
         return common.invalidAt(
             entry,
             "previous_room_exit_count",
-            nil,
             {
                 requiredExitCount = requirement.minCount,
                 actualExitCount = actualExitCount or 0,

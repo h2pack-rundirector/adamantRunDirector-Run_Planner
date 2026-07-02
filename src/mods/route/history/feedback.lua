@@ -114,7 +114,6 @@ local function recordsByBiome(args)
             for _, related in ipairs(record.relatedEvents or EMPTY_LIST) do
                 append(routeFeedback.marker(args, related, {
                     markerKind = "related",
-                    message = related.message or record.message,
                     code = related.code or record.code,
                 }))
             end

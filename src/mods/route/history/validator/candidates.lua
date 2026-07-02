@@ -131,7 +131,6 @@ local function invalidFromFinding(history, byAddress, finding)
     end
     return {
         code = finding.reason,
-        message = finding.message,
         routeKey = finding.routeKey,
         biomeKey = finding.biomeKey,
         routeBiomeIndex = finding.routeBiomeIndex,

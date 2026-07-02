@@ -134,7 +134,6 @@ end
 local function failure(requirement, context)
     return {
         code = requirement.code,
-        message = requirement.message,
         requirement = requirement,
         relatedEvents = context and context.relatedEvents or nil,
     }
@@ -229,6 +228,8 @@ function evaluateRequirement(history, entry, requirement, opts)
         if not currentLootSourcesSeen(history, entry) then
             return failure(requirement)
         end
+    else
+        error("Unknown selected-legality requirement kind: " .. tostring(kind), 0)
     end
     return nil
 end
@@ -250,7 +251,6 @@ end
 local function invalidAt(entry, invalid)
     return {
         code = invalid.code,
-        message = invalid.message,
         routeKey = entry.routeKey,
         biomeKey = entry.biomeKey,
         routeBiomeIndex = entry.routeBiomeIndex,

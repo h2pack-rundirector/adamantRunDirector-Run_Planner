@@ -124,6 +124,12 @@ local function npcLocationLabel(record)
     then
         return nil
     end
+    if record.npcLabel ~= nil and record.npcLabel ~= "" then
+        if record.rowIndex ~= nil then
+            return "NPC " .. tostring(record.npcLabel) .. " Row " .. tostring(record.rowIndex)
+        end
+        return "NPC " .. tostring(record.npcLabel)
+    end
     if record.rowIndex ~= nil then
         return "NPC Row " .. tostring(record.rowIndex)
     end
@@ -188,7 +194,6 @@ function routeFeedback.fromResult(args)
             for _, relatedRecord in ipairs(invalid.relatedEvents or EMPTY_LIST) do
                 local relatedMarker = routeFeedback.marker(args, relatedRecord, {
                     markerKind = "related",
-                    message = relatedRecord.message or invalid.message,
                     code = relatedRecord.code or invalid.code,
                 })
                 related[#related + 1] = relatedMarker

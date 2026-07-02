@@ -164,16 +164,18 @@ local function validateUngroupedForce(topology, entries, index, optionsByRoomKey
     if missingForceOption == nil then
         return nil
     end
-    if generatedForceWindowCandidateCount(entries, index, optionsByRoomKey) >= capacity then
+    local generatedCount = generatedForceWindowCandidateCount(entries, index, optionsByRoomKey)
+    if generatedCount >= capacity then
         return nil
     end
     return common.invalidAt(
         entry,
         "forced_topology_pressure_unresolved",
-        nil,
         {
             topologyForceLabel = missingForceOption.label,
             deadlineBiomeDepthCache = forceDeadlineDepth(missingForceOption.force),
+            generatedCount = generatedCount,
+            requiredGeneratedCount = capacity,
         }
     )
 end
@@ -207,7 +209,6 @@ local function validateForcedGroup(entries, index, group)
     return common.invalidAt(
         entry,
         "forced_topology_group_unresolved",
-        nil,
         {
             topologyGroupKey = group.key,
             topologyGroupLabel = group.label,

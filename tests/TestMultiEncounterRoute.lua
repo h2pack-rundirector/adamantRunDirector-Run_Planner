@@ -181,6 +181,30 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterStorageMatchesThess
     lu.assertEquals(routeData.variantValuesForRow(instance, rows, 3, "Story"), {})
 end
 
+function TestRunPlannerMultiEncounterRoute.testMultiEncounterCombatRequiresCombatCount()
+    local catalog = loadCatalog()
+    local template = loadMultiEncounterTemplate()
+    local instance = template.prepare({
+        name = "RouteO",
+        biome = catalog.lookup.O,
+    })
+    local control = template.createRuntime(thessalyRouteFields({
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "O_Combat01",
+        },
+    }), instance)
+    local completion = control:read("completion")
+
+    lu.assertFalse(completion.valid)
+    lu.assertEquals(completion.completionInvalidRows[1].rowIndex, 2)
+    lu.assertEquals(completion.completionInvalidRows[1].code, "selection_required")
+    lu.assertEquals(completion.completionInvalidRows[1].message, "Choose combat count")
+    lu.assertEquals(completion.completionInvalidRows[1].tabKey, "rooms")
+    lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].controlAlias, "VariantKey")
+end
+
 function TestRunPlannerMultiEncounterRoute.testMultiEncounterEmitsDumbSelectedRowsSnapshot()
     local control = buildThessalyControlWithEncounterRewards({
         {},
@@ -341,6 +365,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRequiresWheelOfferC
     lu.assertFalse(completion.valid)
     lu.assertEquals(completion.completionInvalidRows[1].rowIndex, 2)
     lu.assertEquals(completion.completionInvalidRows[1].code, "ship_wheel_offer_count_required")
+    lu.assertEquals(completion.completionInvalidRows[1].message, "Choose wheel choices for 1st Encounter")
     lu.assertEquals(completion.completionInvalidRows[1].tabKey, "rewards")
     lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].address, "encounter:1")
     lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].controlAlias, "WheelOffer1Key")
@@ -367,6 +392,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRequiresWheelOfferC
     lu.assertFalse(completion.valid)
     lu.assertEquals(completion.completionInvalidRows[1].rowIndex, 2)
     lu.assertEquals(completion.completionInvalidRows[1].code, "ship_wheel_offer_count_required")
+    lu.assertEquals(completion.completionInvalidRows[1].message, "Choose wheel choices for 2nd Encounter")
     lu.assertEquals(completion.completionInvalidRows[1].tabKey, "rewards")
     lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].address, "encounter:2")
     lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].controlAlias, "WheelOffer2Key")
@@ -393,6 +419,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRejectsUnknownWheel
     lu.assertFalse(completion.valid)
     lu.assertEquals(completion.completionInvalidRows[1].rowIndex, 2)
     lu.assertEquals(completion.completionInvalidRows[1].code, "unknown_wheel_offer_count")
+    lu.assertEquals(completion.completionInvalidRows[1].message, "Unknown wheel choices: BadWheel")
     lu.assertEquals(completion.completionInvalidRows[1].tabKey, "rewards")
     lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].address, "encounter:1")
     lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].controlAlias, "WheelOffer1Key")

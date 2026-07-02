@@ -103,7 +103,7 @@ local function formValidation(instance, routeRows, rowIndex)
     if variantKey == "" then
         return form.invalid({
             code = "selection_required",
-            message = "Choose a combat count",
+            message = "Choose combat count",
             tabKey = "rooms",
             controlAlias = "VariantKey",
             label = "Combat count",
@@ -112,7 +112,7 @@ local function formValidation(instance, routeRows, rowIndex)
     if policy.optionsByKey[variantKey] == nil then
         return form.invalid({
             code = "unknown_variant",
-            message = "Unknown encounter count: " .. tostring(variantKey),
+            message = "Unknown combat count: " .. tostring(variantKey),
             tabKey = "rooms",
             controlAlias = "VariantKey",
             label = "Combat count",

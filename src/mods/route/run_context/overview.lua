@@ -1,10 +1,5 @@
 local overview = {}
 
-local function biomeLabel(context, biomeKey)
-    local biome = context and context.biomeLookup and context.biomeLookup[biomeKey] or nil
-    return tostring(biome and (biome.label or biome.key) or biomeKey or "Route")
-end
-
 local function copyInvalidRow(invalidRow, extras)
     local copied = {}
     for key, value in pairs(invalidRow or {}) do
@@ -14,17 +9,6 @@ local function copyInvalidRow(invalidRow, extras)
         copied[key] = value
     end
     return copied
-end
-
-local function missingControlInvalid(context, routeControlName, routeBiomeIndex, biomeKey)
-    return {
-        biomeKey = biomeKey,
-        routeBiomeIndex = routeBiomeIndex,
-        controlName = routeControlName(biomeKey),
-        locationLabel = biomeLabel(context, biomeKey),
-        code = "missing_control",
-        message = "Missing route control: " .. tostring(biomeKey),
-    }
 end
 
 local function appendCompletionInvalids(target, routeControlName, routeBiomeIndex, biomeKey, completion)
@@ -96,7 +80,6 @@ function overview.install(context, deps)
         local route = self.routes.lookup and self.routes.lookup[routeKey] or nil
         local snapshots = {}
         local invalidRows = {}
-        local missingInvalid
         local layerStatus = {
             route = {
                 canDecorate = true,
@@ -105,28 +88,7 @@ function overview.install(context, deps)
             },
         }
         if route == nil then
-            local invalid = { code = "unknown_route", message = "Unknown route: " .. tostring(routeKey) }
-            local routeFeedback = {
-                valid = false,
-                primary = invalid,
-                related = {},
-                markers = { invalid },
-            }
-            return {
-                routeKey = routeKey,
-                valid = false,
-                disabled = true,
-                invalidRows = { invalid },
-                routeFeedback = routeFeedback,
-                blockingHorizon = {
-                    layer = "route",
-                    routeKey = routeKey,
-                    code = invalid.code,
-                    message = invalid.message,
-                },
-                layerStatus = layerStatus,
-                biomes = snapshots,
-            }
+            error("Route context invariant failed: unknown route " .. tostring(routeKey), 0)
         end
 
         local previousCompletionBuilding = self.completionBuilding
@@ -139,21 +101,13 @@ function overview.install(context, deps)
             end
             local completion = self:controlCompletionReport(route.key, biomeKey)
             snapshots[#snapshots + 1] = completion
-            if missingInvalid == nil and not completion then
-                missingInvalid = missingControlInvalid(self, routeControlName, routeBiomeIndex, biomeKey)
-            end
-            if completion then
-                appendCompletionInvalids(completionInvalids, routeControlName, routeBiomeIndex, biomeKey, completion)
-            end
+            appendCompletionInvalids(completionInvalids, routeControlName, routeBiomeIndex, biomeKey, completion)
         end
         self.completionBuilding = previousCompletionBuilding
 
         local routeFeedback
         local feedbackState
-        if missingInvalid ~= nil then
-            feedbackState = feedbackFromInvalids(self, historySystem, route, { missingInvalid })
-            routeFeedback = feedbackState.route
-        elseif completionInvalids[1] ~= nil then
+        if completionInvalids[1] ~= nil then
             feedbackState = feedbackFromInvalids(self, historySystem, route, completionInvalids)
             routeFeedback = feedbackState.route
             applyBiomeFeedback(self, historySystem, route, feedbackState, EMPTY_LIST)

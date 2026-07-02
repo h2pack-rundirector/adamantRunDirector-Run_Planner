@@ -22,18 +22,18 @@ local function targetForRow(targets, row)
     return bucket and bucket.lookup and bucket.lookup[selectedKey(row)] or nil
 end
 
-local function npcInvalid(row, code, message, fields)
+local function npcInvalid(row, code, fields)
     local invalid = {
         kind = "npcSelectionInvalid",
         layer = "npcs",
         tabKey = "npcs",
         code = code,
         reason = code,
-        message = message,
         routeKey = row and row.routeKey or nil,
         controlName = row and row.controlName or nil,
         rowIndex = row and row.rowIndex or nil,
         npcKey = row and row.npcKey or nil,
+        npcLabel = row and row.npcLabel or nil,
         groupKey = row and row.groupKey or nil,
         biomeKey = row and row.biomeKey or nil,
         targetRowIndex = row and row.targetRowIndex or nil,
@@ -107,7 +107,7 @@ function npcValidator.validate(args)
             local target = targetForRow(targets, row)
             targetsByRow[row.rowIndex] = target
             if row.biomeKey == nil or row.biomeKey == "" then
-                local invalid = npcInvalid(row, "npc_biome_required", tostring(row.npcKey) .. " needs Disabled or a target biome", {
+                local invalid = npcInvalid(row, "npc_biome_required", {
                     controlAlias = "BiomeKey",
                 })
                 return {
@@ -116,7 +116,7 @@ function npcValidator.validate(args)
                     findings = findings,
                 }
             elseif row.targetRowIndex == nil or row.targetRowIndex == "" then
-                local invalid = npcInvalid(row, "npc_room_required", tostring(row.npcKey) .. " needs a target room", {
+                local invalid = npcInvalid(row, "npc_room_required", {
                     controlAlias = "RowIndex",
                 })
                 return {
@@ -125,7 +125,7 @@ function npcValidator.validate(args)
                     findings = findings,
                 }
             elseif target == nil then
-                local invalid = npcInvalid(row, "npc_target_unavailable", "Selected NPC target is no longer valid", {
+                local invalid = npcInvalid(row, "npc_target_unavailable", {
                     controlAlias = "RowIndex",
                     controlValue = tostring(row.targetRowIndex or ""),
                 })
@@ -142,11 +142,11 @@ function npcValidator.validate(args)
         if row.disabled ~= true then
             local occupied = occupiedConflict(snapshot.rows, targetsByRow, row)
             if occupied ~= nil then
-                local invalid = npcInvalid(row, "npc_room_occupied", "Only one NPC encounter can use the same room", {
+                local invalid = npcInvalid(row, "npc_room_occupied", {
                     controlAlias = "RowIndex",
                     controlValue = tostring(row.targetRowIndex or ""),
                     relatedEvents = {
-                        npcInvalid(occupied, "npc_room_occupied", "Only one NPC encounter can use the same room", {
+                        npcInvalid(occupied, "npc_room_occupied", {
                             controlAlias = "RowIndex",
                             controlValue = tostring(occupied.targetRowIndex or ""),
                             markerKind = "related",
@@ -161,11 +161,11 @@ function npcValidator.validate(args)
             end
             local spacing = spacingConflict(snapshot.rows, targetsByRow, npcs.groups, row)
             if spacing ~= nil then
-                local invalid = npcInvalid(row, "npc_spacing", tostring(row.npcKey) .. " is too close to another planned NPC", {
+                local invalid = npcInvalid(row, "npc_spacing", {
                     controlAlias = "RowIndex",
                     controlValue = tostring(row.targetRowIndex or ""),
                     relatedEvents = {
-                        npcInvalid(spacing, "npc_spacing", tostring(spacing.npcKey) .. " is too close to another planned NPC", {
+                        npcInvalid(spacing, "npc_spacing", {
                             controlAlias = "RowIndex",
                             controlValue = tostring(spacing.targetRowIndex or ""),
                             markerKind = "related",

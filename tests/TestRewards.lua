@@ -323,7 +323,6 @@ function TestRunPlannerRewards.testSelectedLegalityGroupsTalentVariantsBehindSpe
         kind = "RequiredNotInStore",
         name = "TalentDrop",
         code = "talent_shop_conflict",
-        message = "Path of Stars cannot be planned after a shop Path of Stars offer",
         related = {
             {
                 kind = "pendingOffer",
@@ -339,7 +338,6 @@ function TestRunPlannerRewards.testSelectedLegalityGroupsTalentVariantsBehindSpe
         comparison = ">=",
         value = 1,
         code = "talent_requires_spell",
-        message = "Path of Stars rewards require an earlier Selene's Gift",
     })
 end
 
@@ -355,7 +353,6 @@ function TestRunPlannerRewards.testSelectedLegalityAppliesDevotionWithThessalyEx
             "O",
         },
         code = "previous_room_exit_count",
-        message = "Previous planned room must have at least 2 exits",
     })
 end
 
@@ -373,7 +370,6 @@ function TestRunPlannerRewards.testSelectedLegalityBlocksTalentAfterShopTalent()
         kind = "RequiredNotInStore",
         name = "TalentDrop",
         code = "talent_shop_conflict",
-        message = "Path of Stars cannot be planned after a shop Path of Stars offer",
         related = {
             {
                 kind = "pendingOffer",
@@ -395,7 +391,6 @@ function TestRunPlannerRewards.testSelectedLegalityBlocksRoomHammerAfterShopHamm
         kind = "RequiredNotInStore",
         name = "WeaponUpgradeDrop",
         code = "weapon_upgrade_shop_conflict",
-        message = "Hammer cannot be planned after a shop Hammer offer",
         related = {
             {
                 kind = "pendingOffer",
@@ -818,7 +813,6 @@ function TestRunPlannerRewards.testCatalogOptInDevotionForMajorMinorSurface()
     lu.assertEquals(surface.rewardConstraints[1], {
         kind = "uniqueBoonSource",
         code = "duplicate_devotion_god",
-        message = "Trial gods must be different",
     })
 end
 
@@ -866,7 +860,6 @@ function TestRunPlannerRewards.testCatalogSplitsDevotionPairAcrossRows()
     lu.assertEquals(surface.rewardConstraints[1], {
         kind = "uniqueBoonSource",
         code = "duplicate_devotion_god",
-        message = "Trial gods must be different",
     })
 end
 
@@ -1122,7 +1115,6 @@ function TestRunPlannerRewards.testCatalogDeclaresLinkedShopOfferConstraints()
             2,
         },
         code = "duplicate_shop_group_option",
-        message = "Offers 1 and 2 share one vanilla shop group and cannot duplicate the same reward",
     })
 end
 

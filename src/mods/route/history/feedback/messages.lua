@@ -83,10 +83,16 @@ local function variantDisplayLabel(_, record)
         or nonEmpty(target and target.variantKey)
 end
 
-local function requiredNextRoomTagLabel(_, record)
+local function requiredNextRoomTagLabel(args, record)
     local target = targetRecord(record)
     local tags = target and target.requiredTags or record and record.requiredTags or nil
-    return nonEmpty(tags and tags[1])
+    local tag = nonEmpty(tags and tags[1])
+    if tag == nil then
+        return nil
+    end
+    local biomeKey = target and target.biomeKey or record and record.biomeKey or nil
+    local biome = args and args.biomeLookup and args.biomeLookup[biomeKey] or nil
+    return nonEmpty(biome and biome.tagLabels and biome.tagLabels[tag]) or tag
 end
 
 local function recordFieldResolver(field)
@@ -108,10 +114,13 @@ local PAYLOAD_RESOLVERS = {
     currentEntryLabel = recordFieldResolver("currentEntryLabel"),
     actualExitCount = recordFieldResolver("actualExitCount"),
     requiredExitCount = recordFieldResolver("requiredExitCount"),
+    generatedCount = recordFieldResolver("generatedCount"),
+    requiredGeneratedCount = recordFieldResolver("requiredGeneratedCount"),
     clockworkBiomeLabel = recordFieldResolver("clockworkBiomeLabel"),
     clockworkGoalLabel = recordFieldResolver("clockworkGoalLabel"),
     clockworkPrebossLabel = recordFieldResolver("clockworkPrebossLabel"),
     clockworkProgressionLabel = recordFieldResolver("clockworkProgressionLabel"),
+    npcLabel = recordFieldResolver("npcLabel"),
 }
 
 function messages.code(record, extras)
@@ -125,9 +134,17 @@ end
 
 function messages.explicit(record, extras)
     local target = targetRecord(record)
-    return nonEmpty(extras and extras.message)
+    local message = nonEmpty(extras and extras.message)
         or nonEmpty(record and record.message)
         or nonEmpty(target and target.message)
+    if message == nil then
+        return nil
+    end
+    if (record and record.completion == true) or (target and target.completion == true) then
+        return message
+    end
+    error("Unexpected explicit route validation message for code: "
+        .. tostring(messages.code(record, extras) or "unknown"), 0)
 end
 
 local function payloadValue(args, record, payloadKey, payloadSpec)

@@ -55,17 +55,21 @@ Examples:
 
 - `Choose a room type`
 - `Choose a <role label>`
-- `Unknown route role: <roleKey>`
-- `Unknown route option: <optionKey>`
+- `Choose Other Door`
+- `Choose Picked Door reward count`
+- `Choose combat count`
 - `Choose Side 1 encounter difficulty`
 - `Choose wheel choices for 1st Encounter`
+- `Unknown room type: <stored key>`
+- `Unknown room option: <stored key>`
 
 Status:
 
-- Mostly acceptable as local form UX.
-- Unknown-value messages still expose raw stored keys. That is probably fine
-  for corrupted state, but the route-status path should mark them as form
-  completion warnings rather than route validity errors.
+- Normal incomplete state now uses local UI vocabulary rather than route,
+  topology, or sibling implementation terms.
+- Unknown-value messages still expose raw stored keys. That is intentional for
+  corrupted/debug state, but the route-status path should keep marking them as
+  form-completion warnings rather than route validity errors.
 - Completion locations already use `form.locations.biomeRow(...)`, so they are
   usually richer than validator locations.
 
@@ -112,7 +116,8 @@ Current messages are translated at the route-feedback boundary:
 - `<role label> is already planned`
 - `<option label> is already generated`
 - `Selection is not valid` for unknown generic candidate codes
-- rule-specific messages from sibling/variant/reward validators
+- rule-specific messages from variant/reward validators through catalog codes
+- sibling structural messages, rendered by the feedback message catalog
 
 Status:
 
@@ -120,15 +125,16 @@ Status:
   the validator.
 - `role_limit` and `option_limit` use candidate/declaration labels when
   available and fall back to generic `Room type` / `Room`, not raw keys.
+- Sibling structural failures emit code-only findings and render text through
+  the route feedback message catalog.
 - Unknown generic candidate codes fall back to `Selection is not valid`.
 
 Remaining gaps:
 
-- Some rule-specific sibling/variant/reward messages are still authored in the
-  validator layer. Most are readable, but they should be audited for current UI
-  vocabulary and raw-key leakage.
-- Reward primitive and NPC labels still need broader translation support as
-  those layers are ported.
+- Keep newly added rule-specific candidate validators on the same catalog-code
+  path.
+- Reward primitive labels need broader translation support if reward messages
+  start carrying concrete reward names.
 
 ### Picked Room Structure Validation
 
@@ -140,7 +146,7 @@ Source:
 Previous messages:
 
 - `Room is not valid at this generated depth`
-- `Previous planned room only leads to <required next-room tag> rooms`
+- `Previous planned room only leads to <required next-room tag label>`
 - `<variant label> is not valid at this encounter depth`
 - `<role label> is already planned`
 - `<option label> is already generated`
@@ -165,11 +171,8 @@ Status:
   `currentEntryLabel`.
 - Unknown route requirement kinds now raise a contract failure instead of
   producing a user-facing route-status marker.
-
-Remaining fix:
-
-- `previous_room_next_tags` still renders tag text directly. If tags ever stop
-  being user-facing labels, add a tag-label resolver or declaration label map.
+- `previous_room_next_tags` resolves declaration-owned tag labels through the
+  biome declaration, with the raw tag retained only as a fallback.
 
 ### Force Pressure And Deadline Validation
 
@@ -200,15 +203,10 @@ Status:
 - Route feedback renders the message from the catalog using declaration-owned
   labels such as `topologyForceLabel`, `topologyGroupLabel`, and
   `deadlineRequirementLabel`.
-- Validators also carry structured payloads such as `generatedCount`,
-  `requiredGeneratedCount`, and `deadlineBiomeDepthCache` so future route
-  status can explain the pressure without changing validator output.
-
-Remaining fix:
-
-- The current message text does not yet render the count payloads. They are
-  preserved so future route status can explain how many generated doors were
-  missing without changing validator output.
+- Validators carry structured payloads such as `generatedCount`,
+  `requiredGeneratedCount`, and `deadlineBiomeDepthCache`.
+- Route feedback renders those counts in force/deadline messages so the status
+  explains how much generated pressure was missing.
 
 ### Clockwork-Specific Validation
 
@@ -278,16 +276,15 @@ Status:
 
 - This is the best current shape: rules carry user-facing messages near their
   domain declaration.
+- Unknown selected-legality requirement kinds now raise a contract failure
+  instead of silently passing validation.
 
 Current gaps:
 
-- Requirement evaluation silently ignores unknown `kind` by returning valid.
-  That is a contract problem, not a message problem.
 - Related-event labels still depend on route-feedback location formatting.
 
 Recommended fix:
 
-- Add loud failure for unknown selected-legality requirement kinds.
 - Keep these rule messages, but route feedback should translate related
   locations and reward labels consistently.
 
@@ -300,43 +297,47 @@ Source:
 
 Current messages:
 
-- `<npcKey> needs Disabled or a target biome`
-- `<npcKey> needs a target room`
-- `Selected NPC target is no longer valid`
+- `<NPC label> needs Disabled or a target biome`
+- `<NPC label> needs a target room`
+- `<NPC label> target is no longer valid`
 - `Only one NPC encounter can use the same room`
-- `<npcKey> is too close to another planned NPC`
+- `<NPC label> is too close to another planned NPC`
 
-Current leaks:
+Status:
 
-- `npcKey` is user-visible in required and spacing messages.
-- Location labels are route-level generic unless NPC feedback handles the
-  marker locally.
+- NPC snapshots carry `npcLabel`, and NPC validators emit code + payload
+  instead of authored raw-key messages.
+- Route feedback renders NPC message text from the shared message catalog.
+- NPC route-status locations use `NPC <label> Row N` when a label is present,
+  with `NPC Row N` as the fallback.
 
-Recommended fix:
+Remaining fix:
 
-- NPC snapshot should carry `npcLabel`, or validator should receive NPC
-  declaration lookup and add labels to findings.
-- Route feedback should support non-biome locations such as `NPC Row 2` or
-  `<NPC label>`.
+- NPC labels are currently slot labels from the control. If per-biome NPC slot
+  labels become more specific later, route status will pick them up from the
+  snapshot without changing the validator.
 
 ### Missing Control / Assembly Boundary
 
 Source:
 
 - `src/mods/route/run_context/feedback.lua`
+- `src/mods/route/run_context/overview.lua`
 
-Current message:
+Previous message:
 
 - `Missing route control: <biomeKey>`
 
 Status:
 
 - This is a boundary failure, not a normal planner error.
-
-Recommended fix:
-
-- Treat as a dev/invariant failure where possible.
-- If it must be user-visible, translate `biomeKey` through biome labels.
+- Missing route controls now raise a route-control invariant failure instead of
+  producing a user-facing route-status marker.
+- A completed biome completion report with no `biomeKey` also raises an
+  invariant failure. Incomplete reports remain user feedback and are routed
+  through the completion marker path.
+- Unknown route keys now raise a route-context invariant failure instead of
+  constructing a synthetic route-status marker.
 
 ## Cleanup Plan
 
@@ -365,8 +366,9 @@ This should fix most `Biome Row N` messages without touching validation logic.
 
 ### Pass 2: Centralize Message Translation
 
-Status: implemented for generic candidate messages and picked-entry structure
-messages.
+Status: implemented for generic candidate messages, picked-entry structure
+messages, NPC messages, sibling candidate messages, and selected-legality /
+reward constraint messages.
 
 Move generic candidate messages from validators into a message translator.
 
@@ -379,6 +381,11 @@ Translator inputs:
 
 This pass should remove raw `roleKey`, `optionKey`, `roomKey`, and `npcKey`
 from ordinary user-facing messages as each validator path is migrated.
+
+Route/history validators should emit `code` plus structured payload. The
+feedback catalog owns normal route-status prose. Template completion records
+remain the one explicit-message exception because incomplete form copy is local
+to the control template.
 
 ### Pass 3: Add Missing Display Metadata
 
@@ -397,14 +404,14 @@ validator wiring.
 
 Targets:
 
-- unknown selected-legality requirement kinds
 - any message path that currently returns raw `reason`
 
 These should become load/test failures or explicit invariant failures, not
 normal route-status text.
 
-## Next Slice
+## Remaining Slices
 
-Handle selected-legality/reward messages next. That path still carries
-declaration-authored strings and should be moved toward the same code + payload
-catalog shape.
+- Continue migrating any newly added route/history validators to catalog codes
+  instead of authored messages.
+- Keep form-completion copy local, but do not let non-completion route
+  validation records carry `message`.

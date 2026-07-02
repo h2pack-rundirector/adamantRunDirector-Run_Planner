@@ -126,7 +126,7 @@ function pickedEntries.validate(history, biome)
             local requiredTags = previousOption.nextRoomTags
             local failure = nextRoomTagsFailure(requiredTags, option and option.tags)
             if failure ~= nil then
-                return common.invalidAt(entry, failure, nil, {
+                return common.invalidAt(entry, failure, {
                     requiredTags = requiredTags,
                 })
             end
@@ -142,7 +142,6 @@ function pickedEntries.validate(history, biome)
             return common.invalidWithFindings(
                 entry,
                 variantInvalid,
-                nil,
                 {
                     variantFinding(entry, variantInvalid),
                 }
@@ -151,7 +150,7 @@ function pickedEntries.validate(history, biome)
 
         local roleCap = capFor(role)
         if roleCap ~= nil and appendCount(roleCounts, role.key) > roleCap then
-            return common.invalidAt(entry, "role_limit", nil, {
+            return common.invalidAt(entry, "role_limit", {
                 roleKey = role.key,
                 roleLabel = role.label,
             })
@@ -162,7 +161,6 @@ function pickedEntries.validate(history, biome)
             return common.invalidAt(
                 entry,
                 "option_limit",
-                nil,
                 {
                     roleKey = role and role.key or nil,
                     optionKey = option.key,

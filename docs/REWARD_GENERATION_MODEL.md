@@ -127,8 +127,8 @@ Current policy:
   is deterministic or safely implicit,
 - unresolved or inactive sentinel values should not be accepted for topology
   fields that determine generated offers,
-- invalid messages should point at the unresolved topology, for example
-  "Fields topology needs sibling door structure for Row 3."
+- invalid messages should point at the unresolved topology with UI vocabulary,
+  for example "Choose Other Door."
 
 This keeps `Configure Rooms` honest: it means "force and describe the picked
 route structure." `Configure Rewards` means "force selected reward values on

@@ -136,7 +136,7 @@ function TestRunPlannerRouteHistoryValidator.testThessalyRequiresStoryOrShopByDe
         findings = result.findings,
         invalids = result.invalids,
     })
-    lu.assertEquals(feedback.route.primary.message, "Thessaly requires Circe or Shop by depth 5")
+    lu.assertEquals(feedback.route.primary.message, "Thessaly requires Circe or Shop by depth 5 (0/1 generated)")
 end
 
 function TestRunPlannerRouteHistoryValidator.testThessalyThreeCombatVariantUsesHistoryFeedback()
@@ -209,27 +209,51 @@ function TestRunPlannerRouteHistoryValidator.testRouteFeedbackLabelsChildAndRewa
                 formAddress = formAddress.child(4, "sideRoom", 1),
                 tabKey = "rewards",
                 address = "side:1",
-                message = "Side reward invalid",
+                code = "talent_requires_spell",
             },
             {
                 biomeKey = "H",
                 rowIndex = 1,
                 tabKey = "rewards",
                 address = "cage:2",
-                message = "Cage reward invalid",
+                code = "talent_requires_spell",
             },
             {
                 layer = "npcs",
                 kind = "npcSelectionInvalid",
                 rowIndex = 2,
-                message = "NPC target invalid",
+                npcLabel = "Artemis",
+                code = "npc_target_unavailable",
             },
         },
     })
 
     lu.assertEquals(feedback.route.markers[1].locationLabel, "Ephyra Row 4 Side 1 Reward")
     lu.assertEquals(feedback.route.markers[2].locationLabel, "Fields Row 1 Cage Reward 2")
-    lu.assertEquals(feedback.route.markers[3].locationLabel, "NPC Row 2")
+    lu.assertEquals(feedback.route.markers[3].locationLabel, "NPC Artemis Row 2")
+    lu.assertEquals(feedback.route.markers[3].message, "Artemis target is no longer valid")
+end
+
+function TestRunPlannerRouteHistoryValidator.testRouteNpcsSnapshotCarriesNpcLabels()
+    local catalog = h.loadCatalog()
+    local template = h.loadControlTemplates().RouteNpcs
+    local instance = template.prepare({
+        name = "RouteNpcsUnderworld",
+        route = catalog.routes.lookup.Underworld,
+        npcs = catalog.npcs,
+        biomeLookup = catalog.lookup,
+    })
+    local control = template.createRuntime(h.npcFields({
+        {
+            BiomeKey = "F",
+            RowIndex = "4",
+            VariantKey = "ArtemisCombatF",
+        },
+    }), instance)
+    local snapshot = control:read("selectedNpcSnapshot")
+
+    lu.assertEquals(snapshot.rows[1].npcKey, "Artemis")
+    lu.assertEquals(snapshot.rows[1].npcLabel, "Artemis")
 end
 
 function TestRunPlannerRouteHistoryValidator.testRouteFeedbackTranslatesCandidateMessages()
@@ -285,41 +309,30 @@ function TestRunPlannerRouteHistoryValidator.testRouteFeedbackTranslatesCandidat
     lu.assertEquals(feedback.route.markers[4].message, "Selection is not valid")
 end
 
-function TestRunPlannerRouteHistoryValidator.testRouteFeedbackPreservesExplicitMessages()
-    local feedback = historyFeedback.fromResult({
-        invalids = {
-            {
-                biomeKey = "F",
-                rowIndex = 2,
-                code = "option_limit",
-                message = "Custom rule message",
-                targetFinding = {
-                    kind = "roomCandidateInvalid",
-                    reason = "option_limit",
-                    optionKey = "F_Shop01",
-                    candidate = {
-                        optionLabel = "Midshop",
+function TestRunPlannerRouteHistoryValidator.testRouteFeedbackRejectsExplicitRouteMessages()
+    lu.assertErrorMsgContains(
+        "Unexpected explicit route validation message for code: option_limit",
+        function()
+            historyFeedback.fromResult({
+                invalids = {
+                    {
+                        biomeKey = "F",
+                        rowIndex = 2,
+                        code = "option_limit",
+                        message = "Custom rule message",
+                        targetFinding = {
+                            kind = "roomCandidateInvalid",
+                            reason = "option_limit",
+                            optionKey = "F_Shop01",
+                            candidate = {
+                                optionLabel = "Midshop",
+                            },
+                        },
                     },
                 },
-            },
-            {
-                biomeKey = "F",
-                rowIndex = 3,
-                targetFinding = {
-                    kind = "roomCandidateInvalid",
-                    reason = "option_limit",
-                    message = "Nested custom rule message",
-                    optionKey = "F_Shop01",
-                    candidate = {
-                        optionLabel = "Midshop",
-                    },
-                },
-            },
-        },
-    })
-
-    lu.assertEquals(feedback.route.primary.message, "Custom rule message")
-    lu.assertEquals(feedback.route.markers[2].message, "Nested custom rule message")
+            })
+        end
+    )
 end
 
 local function emitRoom(history, roomHistoryOrdinal, fields)
@@ -431,6 +444,117 @@ function TestRunPlannerRouteHistoryValidator.testNpcTargetsComeFromRouteHistoryR
     })
 
     lu.assertTrue(result.valid)
+end
+
+function TestRunPlannerRouteHistoryValidator.testNpcRequiredMessagesUseNpcLabels()
+    local catalog = h.loadCatalog()
+    local history = routeHistory.create()
+    local result = historyValidator.validate({
+        route = {
+            key = "Underworld",
+            biomes = { "F" },
+        },
+        history = history,
+        biomeLookup = catalog.lookup,
+        npcSnapshot = {
+            controlName = "RouteNpcsUnderworld",
+            routeKey = "Underworld",
+            rows = {
+                {
+                    rowIndex = 1,
+                    npcKey = "Artemis",
+                    npcLabel = "Artemis",
+                    groupKey = "FieldNpc",
+                    mode = "Target",
+                },
+            },
+        },
+        npcTargets = {
+            byNpc = {},
+        },
+        npcs = catalog.npcs,
+    })
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "npc_biome_required")
+    lu.assertNil(result.invalids[1].message)
+
+    local feedback = historyFeedback.fromResult({
+        invalids = result.invalids,
+    })
+    lu.assertEquals(feedback.route.primary.locationLabel, "NPC Artemis Row 1")
+    lu.assertEquals(feedback.route.primary.message, "Artemis needs Disabled or a target biome")
+end
+
+function TestRunPlannerRouteHistoryValidator.testNpcSpacingMessagesUseNpcLabels()
+    local catalog = h.loadCatalog()
+    local history = routeHistory.create()
+    emitRoom(history, 4, {
+        biomeKey = "F",
+        rowIndex = 4,
+        roomKey = "F_Combat04",
+        roleKey = "Combat",
+        biomeDepthCache = 4,
+    })
+    emitRoom(history, 5, {
+        biomeKey = "F",
+        rowIndex = 5,
+        roomKey = "F_Combat05",
+        roleKey = "Combat",
+        biomeDepthCache = 5,
+    })
+    local npcTargets = buildNpcTargets(history, catalog)
+    lu.assertNotNil(npcTargets.byNpc.Artemis.lookup["F:4:ArtemisCombatF"])
+    lu.assertNotNil(npcTargets.byNpc.Nemesis.lookup["F:5:Combat"])
+
+    local result = historyValidator.validate({
+        route = {
+            key = "Underworld",
+            biomes = { "F" },
+        },
+        history = history,
+        biomeLookup = catalog.lookup,
+        npcSnapshot = {
+            controlName = "RouteNpcsUnderworld",
+            routeKey = "Underworld",
+            rows = {
+                {
+                    rowIndex = 1,
+                    npcKey = "Artemis",
+                    npcLabel = "Artemis",
+                    groupKey = "FieldNpc",
+                    mode = "Target",
+                    biomeKey = "F",
+                    targetRowIndex = "4",
+                    variantKey = "ArtemisCombatF",
+                },
+                {
+                    rowIndex = 2,
+                    npcKey = "Nemesis",
+                    npcLabel = "Nemesis",
+                    groupKey = "FieldNpc",
+                    mode = "Target",
+                    biomeKey = "F",
+                    targetRowIndex = "5",
+                    variantKey = "Combat",
+                },
+            },
+        },
+        npcTargets = npcTargets,
+        npcs = catalog.npcs,
+    })
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "npc_spacing")
+    lu.assertNil(result.invalids[1].message)
+
+    local feedback = historyFeedback.fromResult({
+        invalids = result.invalids,
+    })
+    lu.assertEquals(feedback.route.primary.locationLabel, "NPC Nemesis Row 2")
+    lu.assertEquals(feedback.route.primary.message, "Nemesis is too close to another planned NPC")
+    lu.assertEquals(feedback.route.related[1].locationLabel, "NPC Artemis Row 1")
+    lu.assertEquals(feedback.route.related[1].message, "Artemis is too close to another planned NPC")
 end
 
 function TestRunPlannerRouteHistoryValidator.testNpcTargetsRejectBannedRoomLoot()
@@ -690,7 +814,11 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsRoomWithoutPrev
     lu.assertEquals(result.invalids[1].rowIndex, 6)
     lu.assertNil(result.invalids[1].message)
 
-    local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
+    local feedback = historyFeedback.fromResult({
+        biomeLookup = catalog.lookup,
+        findings = result.findings,
+        invalids = result.invalids,
+    })
     local states = historyFeedback.valueStatesForControl(feedback, "P", 6, "OptionKey")
     lu.assertEquals(states.P_Combat02, valueStates.INVALID)
     lu.assertEquals(feedback.route.primary.message, "Previous planned room only leads to Outdoor rooms")
@@ -1305,9 +1433,12 @@ function TestRunPlannerRouteHistoryValidator.testSelectedSiblingCannotUsePickedN
 
     lu.assertFalse(result.valid)
     lu.assertEquals(result.invalids[1].code, "sibling_room_planned")
+    lu.assertNil(result.invalids[1].message)
+    lu.assertNil(result.invalids[1].targetFinding.message)
     lu.assertEquals(result.invalids[1].rowIndex, 2)
 
-    local feedback = historyFeedback.fromFindings(result.findings)
+    local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
+    lu.assertEquals(feedback.route.primary.message, "Other Door room is already planned on this route")
     local states = historyFeedback.valueStatesForControl(feedback, "F", 2, "SiblingStructureKey")
     lu.assertEquals(states.F_Combat02, valueStates.INVALID)
 end
@@ -1331,6 +1462,7 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRewardFi
     local finding = firstFinding(result, "rewardCandidateInvalid", "rewardType", "TalentDrop")
     lu.assertNotNil(finding)
     lu.assertEquals(finding.reason, "talent_requires_spell")
+    lu.assertNil(finding.message)
     lu.assertEquals(finding.rewardClass, "Major")
 
     local feedback = historyFeedback.fromFindings(result.findings)
@@ -1490,6 +1622,8 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMissingFieldsBr
     lu.assertEquals(result.invalids[1].code, "forced_topology_pressure_unresolved")
     lu.assertNil(result.invalids[1].message)
     lu.assertEquals(result.invalids[1].topologyForceLabel, "Echo")
+    lu.assertEquals(result.invalids[1].generatedCount, 0)
+    lu.assertEquals(result.invalids[1].requiredGeneratedCount, 2)
     lu.assertEquals(result.invalids[1].biomeKey, "H")
     lu.assertEquals(result.invalids[1].roomKey, "H_Combat09")
 
@@ -1497,7 +1631,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMissingFieldsBr
         findings = result.findings,
         invalids = result.invalids,
     })
-    lu.assertEquals(feedback.route.primary.message, "Echo was not generated by its deadline")
+    lu.assertEquals(feedback.route.primary.message, "Echo was not generated by depth 3 (0/2 force-window doors generated)")
 end
 
 function TestRunPlannerRouteHistoryValidator.testForceGroupUsesDeclarationLabelMessage()
@@ -1541,13 +1675,15 @@ function TestRunPlannerRouteHistoryValidator.testForceGroupUsesDeclarationLabelM
     lu.assertEquals(result.invalids[1].topologyGroupKey, "F_Shop")
     lu.assertEquals(result.invalids[1].topologyGroupLabel, "Midshop")
     lu.assertEquals(result.invalids[1].deadlineBiomeDepthCache, 6)
+    lu.assertEquals(result.invalids[1].generatedCount, 0)
+    lu.assertEquals(result.invalids[1].requiredGeneratedCount, 1)
 
     local feedback = historyFeedback.fromResult({
         biomeLookup = catalog.lookup,
         findings = result.findings,
         invalids = result.invalids,
     })
-    lu.assertEquals(feedback.route.primary.message, "Midshop was not generated by its deadline")
+    lu.assertEquals(feedback.route.primary.message, "Midshop generated 0/1 required doors by depth 6")
 end
 
 function TestRunPlannerRouteHistoryValidator.testValidatorAcceptsGeneratedFieldsBridge()
@@ -2041,12 +2177,61 @@ function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsTalentBef
 
     lu.assertFalse(result.valid)
     lu.assertEquals(result.invalids[1].code, "talent_requires_spell")
+    lu.assertNil(result.invalids[1].message)
     lu.assertEquals(result.invalids[1].rewardType, "TalentDrop")
     lu.assertEquals(result.invalids[1].roomKey, "Room1")
 
     local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
+    lu.assertEquals(feedback.route.primary.message, "Path of Stars rewards require an earlier Selene's Gift")
     local states = historyFeedback.valueStatesForControl(feedback, "F", 1, "Reward1Key", "row")
     lu.assertEquals(states.TalentDrop, valueStates.INVALID)
+end
+
+function TestRunPlannerRouteHistoryValidator.testUnknownSelectedLegalityRequirementFailsContract()
+    local localHistorySystem = h.withTestImport(function()
+        return h.testImport("mods/route/history/assembly.lua").create({
+            selectedLegalityRules = {
+                {
+                    targets = { "TalentDrop" },
+                    requirements = {
+                        {
+                            kind = "unsupportedSelectedRequirement",
+                        },
+                    },
+                },
+            },
+        })
+    end)
+    local history = localHistorySystem.history.create()
+    local room = localHistorySystem.history.emit(history, {
+        kind = "room",
+        eventKey = "Room1",
+        roomKey = "Room1",
+        biomeKey = "F",
+        rowIndex = 1,
+    })
+    localHistorySystem.history.emitAt(history, room, {
+        kind = "loot",
+        eventKey = "TalentDrop",
+        lootType = "TalentDrop",
+        parentEntry = room,
+        parentRoomKey = room.roomKey,
+        address = "row",
+    })
+
+    lu.assertErrorMsgContains(
+        "Unknown selected-legality requirement kind: unsupportedSelectedRequirement",
+        function()
+            localHistorySystem.validator.validate({
+                route = {
+                    key = "Underworld",
+                    biomes = {},
+                },
+                history = history,
+                biomeLookup = {},
+            })
+        end
+    )
 end
 
 function TestRunPlannerRouteHistoryValidator.testRewardValidatorTreatsFieldsCageAsSameBatch()

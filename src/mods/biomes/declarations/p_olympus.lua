@@ -15,6 +15,7 @@ return {
         rewardRatio = {
             targetMetaProgress = 0.20,
         },
+        tagLabels = layout.tagLabels,
         roomTopology = topology,
         timeline = parser.standardTimeline("P", {
             bossRooms = {

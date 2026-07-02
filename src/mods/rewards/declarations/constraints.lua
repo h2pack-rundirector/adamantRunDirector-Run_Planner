@@ -6,7 +6,6 @@ local DEVOTION_PAIR = {
     {
         kind = "uniqueBoonSource",
         code = "duplicate_devotion_god",
-        message = "Trial gods must be different",
     },
 }
 
@@ -17,12 +16,10 @@ local FIELDS_CAGE_CONSTRAINTS = {
             Boon = true,
         },
         code = "duplicate_reward_type",
-        message = "Fields cage rewards cannot duplicate non-boon rewards",
     },
     {
         kind = "uniqueBoonSource",
         code = "duplicate_boon_source",
-        message = "Fields cage boon sources must be different",
     },
 }
 
@@ -32,7 +29,6 @@ local SHOP_PROFILE_CONSTRAINTS = {
             kind = "uniqueRewardTypes",
             slots = { "Group1Offer1", "Group1Offer2" },
             code = "duplicate_shop_group_option",
-            message = "Offers 1 and 2 share one vanilla shop group and cannot duplicate the same reward",
         },
     },
 }
@@ -64,7 +60,6 @@ local function copyConstraint(source)
     local copy = {
         kind = source.kind,
         code = source.code,
-        message = source.message,
     }
     if source.slots ~= nil then
         copy.slots = copyList(source.slots)

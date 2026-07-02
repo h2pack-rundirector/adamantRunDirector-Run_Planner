@@ -14,10 +14,9 @@ function common.validResult(resultFindings)
     }
 end
 
-function common.invalidAt(entry, code, message, fields)
+function common.invalidAt(entry, code, fields)
     local invalid = {
         code = code,
-        message = message,
         routeKey = entry and entry.routeKey or nil,
         biomeKey = entry and entry.biomeKey or nil,
         routeBiomeIndex = entry and entry.routeBiomeIndex or nil,
@@ -33,7 +32,7 @@ function common.invalidAt(entry, code, message, fields)
     return invalid
 end
 
-function common.invalidWithFindings(entry, code, message, findingList, fields)
+function common.invalidWithFindings(entry, code, findingList, fields)
     if findingList ~= nil
         and findingList[1] ~= nil
         and (fields == nil or fields.targetFinding == nil)
@@ -41,7 +40,7 @@ function common.invalidWithFindings(entry, code, message, findingList, fields)
         fields = fields or {}
         fields.targetFinding = findingList[1]
     end
-    local invalid = common.invalidAt(entry, code, message, fields)
+    local invalid = common.invalidAt(entry, code, fields)
     return invalid, findingList
 end
 

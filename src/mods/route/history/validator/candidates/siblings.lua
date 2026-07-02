@@ -151,28 +151,26 @@ local function pickedCandidateClosesGroup(history, entry, topology, roomKey)
     return false
 end
 
-local function appendFinding(target, entry, candidate, reason, message)
-    target[#target + 1] = findings.siblingCandidateInvalid(entry, candidate, reason, {
-        message = message,
-    })
+local function appendFinding(target, entry, candidate, reason)
+    target[#target + 1] = findings.siblingCandidateInvalid(entry, candidate, reason)
 end
 
 local function appendStructuralFindings(target, history, entry, biome, candidate)
     local roomKey = candidateRoomKey(candidate)
     if roomKey ~= nil and roomKey == entry.roomKey then
-        appendFinding(target, entry, candidate, "sibling_same_room", "Other Door cannot reuse current room")
+        appendFinding(target, entry, candidate, "sibling_same_room")
     end
     if selectedSiblingRoomAlreadySelected(entry, candidate) then
-        appendFinding(target, entry, candidate, "sibling_same_sibling_room", "Other Door cannot duplicate another door")
+        appendFinding(target, entry, candidate, "sibling_same_sibling_room")
     end
     if siblingRoomGeneratedBefore(history, entry, roomKey) then
-        appendFinding(target, entry, candidate, "sibling_room_generated", "Other Door room was already generated")
+        appendFinding(target, entry, candidate, "sibling_room_generated")
     end
     if pickedCandidateClosesGroup(history, entry, topologyForBiome(biome), roomKey) then
-        appendFinding(target, entry, candidate, "sibling_miniboss_after_selected", "Other Door miniboss cannot appear after a picked miniboss")
+        appendFinding(target, entry, candidate, "sibling_miniboss_after_selected")
     end
     if plannedRoomRowIndex(history, entry, roomKey) ~= nil then
-        appendFinding(target, entry, candidate, "sibling_room_planned", "Other Door room is already planned on this route")
+        appendFinding(target, entry, candidate, "sibling_room_planned")
     end
 end
 

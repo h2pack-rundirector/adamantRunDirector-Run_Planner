@@ -34,7 +34,6 @@ local function validateMatchingCombatCageRewardCount(entry)
     return common.invalidWithFindings(
         entry,
         "fields_sibling_combat_cage_count_mismatch",
-        nil,
         {
             findings.siblingCandidateInvalid(entry, {
                 siblingIndex = 1,

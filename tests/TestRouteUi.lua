@@ -217,6 +217,7 @@ end
 local function validRouteSnapshot(controlName)
     return {
         controlName = controlName,
+        biomeKey = string.match(controlName, "^Route(.+)$"),
         valid = true,
         invalidRows = {},
         routeFeedback = {
@@ -226,6 +227,86 @@ local function validRouteSnapshot(controlName)
         },
         rows = {},
     }
+end
+
+function TestRunPlannerRouteUi.testRouteContextFailsWhenBiomeControlIsMissing()
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        controlResolver = function()
+            return nil
+        end,
+    })
+
+    routeContext:beginPass()
+    lu.assertErrorMsgContains(
+        "Route control invariant failed: RouteF for Underworld/F is missing",
+        function()
+            routeContext:overview("Underworld")
+        end
+    )
+end
+
+function TestRunPlannerRouteUi.testRouteContextFailsWhenCompleteReportHasNoBiomeKey()
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = { "F" },
+            },
+        }),
+        controlResolver = function()
+            return {
+                read = function(_, path)
+                    if path == "completion" then
+                        return {
+                            controlName = "RouteF",
+                            valid = true,
+                            completionInvalidRows = {},
+                        }
+                    end
+                    return nil
+                end,
+            }
+        end,
+    })
+
+    routeContext:beginPass()
+    lu.assertErrorMsgContains(
+        "Route control invariant failed: RouteF for Underworld/F completed without biomeKey",
+        function()
+            routeContext:overview("Underworld")
+        end
+    )
+end
+
+function TestRunPlannerRouteUi.testRouteContextFailsWhenRouteKeyIsUnknown()
+    local routeContext = loadRunContext().create({
+        routes = routeDefinitions({
+            {
+                key = "Underworld",
+                label = "Underworld",
+                biomes = {},
+            },
+        }),
+        controlResolver = function()
+            return nil
+        end,
+    })
+
+    routeContext:beginPass()
+    lu.assertErrorMsgContains(
+        "Route context invariant failed: unknown route BadRoute",
+        function()
+            routeContext:overview("BadRoute")
+        end
+    )
 end
 
 local function invalidRouteFeedback(markers, related)
@@ -1446,6 +1527,7 @@ function TestRunPlannerRouteUi.testRouteOverviewRebuildsOnlyWhenDirty()
                         readsByControl[controlName] = (readsByControl[controlName] or 0) + 1
                         return {
                             controlName = controlName,
+                            biomeKey = string.match(controlName, "^Route(.+)$"),
                             valid = true,
                             completionInvalidRows = {},
                         }

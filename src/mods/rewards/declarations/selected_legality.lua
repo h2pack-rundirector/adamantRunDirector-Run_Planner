@@ -16,7 +16,6 @@ return {
                 comparison = "==",
                 value = 0,
                 code = "devotion_biome_limit",
-                message = "Trial can only be planned once per biome",
                 related = {
                     { kind = "lastMatchingLoot" },
                 },
@@ -27,21 +26,18 @@ return {
                 comparison = ">=",
                 value = 2,
                 code = "prior_distinct_god_loot",
-                message = "Trial requires at least two prior planned god rewards",
             },
             {
                 kind = "RequiredMinExits",
                 value = 2,
                 exceptBiomes = { "O" },
                 code = "previous_room_exit_count",
-                message = "Previous planned room must have at least 2 exits",
             },
             {
                 kind = "RunEncounterDepth",
                 comparison = ">=",
                 value = 7,
                 code = "devotion_run_encounter_depth",
-                message = "Trial requires at least 7 prior encounters in this route",
             },
             {
                 kind = "RequiredMinRoomsSinceEvent",
@@ -52,7 +48,6 @@ return {
                 axis = "runDepthCache",
                 count = 15,
                 code = "devotion_spacing",
-                message = "Trial requires 15 rooms since the previous Trial",
                 related = {
                     { kind = "lastMatchingLoot" },
                 },
@@ -60,7 +55,6 @@ return {
             {
                 kind = "CurrentLootSourcesSeen",
                 code = "devotion_sources_not_seen",
-                message = "Trial gods must be planned earlier in the route",
             },
         },
     },
@@ -71,7 +65,6 @@ return {
                 kind = "RequiredNotInStore",
                 name = "SpellDrop",
                 code = "spell_shop_conflict",
-                message = "Selene's Gift cannot be planned after a shop Selene's Gift offer",
                 related = {
                     { kind = "pendingOffer", name = "SpellDrop" },
                 },
@@ -82,7 +75,6 @@ return {
                 comparison = "==",
                 value = 0,
                 code = "spell_drop_limit",
-                message = "Selene's Gift is already planned earlier in this route",
                 related = {
                     { kind = "lastMatchingLoot" },
                 },
@@ -96,7 +88,6 @@ return {
                 kind = "RequiredNotInStore",
                 name = "TalentDrop",
                 code = "talent_shop_conflict",
-                message = "Path of Stars cannot be planned after a shop Path of Stars offer",
                 related = {
                     { kind = "pendingOffer", name = "TalentDrop" },
                 },
@@ -107,7 +98,6 @@ return {
                 comparison = ">=",
                 value = 1,
                 code = "talent_requires_spell",
-                message = "Path of Stars rewards require an earlier Selene's Gift",
             },
         },
     },
@@ -118,7 +108,6 @@ return {
                 kind = "RequiredNotInStore",
                 name = "ShopHermesUpgrade",
                 code = "hermes_shop_conflict",
-                message = "Hermes cannot be planned after a shop Hermes offer",
                 related = {
                     { kind = "pendingOffer", name = "ShopHermesUpgrade" },
                 },
@@ -129,7 +118,6 @@ return {
                 comparison = "==",
                 value = 0,
                 code = "hermes_biome_limit",
-                message = "Hermes can only be planned once per biome",
                 related = {
                     { kind = "lastMatchingLoot" },
                 },
@@ -140,7 +128,6 @@ return {
                 comparison = "<=",
                 value = 1,
                 code = "hermes_run_limit",
-                message = "Hermes can only be planned twice per route",
                 related = {
                     { kind = "lastMatchingLoot" },
                 },
@@ -154,7 +141,6 @@ return {
                 kind = "RequiredNotInStore",
                 name = "WeaponUpgradeDrop",
                 code = "weapon_upgrade_shop_conflict",
-                message = "Hammer cannot be planned after a shop Hammer offer",
                 related = {
                     { kind = "pendingOffer", name = "WeaponUpgradeDrop" },
                 },
@@ -165,7 +151,6 @@ return {
                 comparison = "<=",
                 value = 1,
                 code = "weapon_upgrade_run_limit",
-                message = "Only two Hammers can be planned in one route",
                 related = {
                     { kind = "lastMatchingLoot" },
                 },
@@ -173,7 +158,6 @@ return {
             {
                 kind = "Any",
                 code = "weapon_upgrade_late_requirement",
-                message = "The second Hammer cannot be planned before the third biome",
                 requirements = {
                     {
                         kind = "LootTypeHistory",

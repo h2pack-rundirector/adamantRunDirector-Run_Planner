@@ -166,7 +166,6 @@ function clockwork.validate(history, biome)
                     return common.invalidWithFindings(
                         entry,
                         "clockwork_preboss_too_early",
-                        nil,
                         {
                             clockworkFindingForEntry(
                                 entry,
@@ -200,7 +199,6 @@ function clockwork.validate(history, biome)
                     return common.invalidWithFindings(
                         entry,
                         "clockwork_preboss_too_early",
-                        nil,
                         { finding },
                         payload
                     )
@@ -213,7 +211,6 @@ function clockwork.validate(history, biome)
                     return common.invalidWithFindings(
                         entry,
                         "clockwork_single_door_goal_required",
-                        nil,
                         {
                             clockworkFindingForEntry(
                                 entry,
@@ -233,7 +230,6 @@ function clockwork.validate(history, biome)
                     return common.invalidWithFindings(
                         entry,
                         "clockwork_goal_door_count",
-                        nil,
                         {
                             generatedClockworkFinding(
                                 entry,
@@ -255,7 +251,6 @@ function clockwork.validate(history, biome)
                 return common.invalidWithFindings(
                     entry,
                     "clockwork_preboss_required",
-                    nil,
                     {
                         common.generatedExitCount(entry) > 0
                             and generatedClockworkFinding(

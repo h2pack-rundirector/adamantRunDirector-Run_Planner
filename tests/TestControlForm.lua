@@ -6,6 +6,7 @@ local form = h.withTestImport(function()
         valueStates = h.testImport("mods/ui/value_states.lua"),
     })
 end)
+local fakeRows = h.fakeRows
 
 -- luacheck: globals TestRunPlannerControlForm
 TestRunPlannerControlForm = {}
@@ -27,6 +28,56 @@ function TestRunPlannerControlForm.testInvalidBuildsSelectedCompletionTarget()
         state = 3,
         mode = "selected",
     })
+end
+
+function TestRunPlannerControlForm.testValidateRoomChoiceUsesRoomVocabularyForUnknownStoredKeys()
+    local data = {
+        resolveRole = function(_, rows, rowIndex)
+            local roleKey = rows:read(rowIndex, "RoleKey") or ""
+            if roleKey == "Combat" then
+                return roleKey, {
+                    key = "Combat",
+                    label = "Combat",
+                    roomOptions = {
+                        { key = "F_Combat01" },
+                    },
+                }
+            end
+            return roleKey, nil
+        end,
+        optionListForRole = function(role)
+            return role.roomOptions or {}
+        end,
+        resolveOption = function(_, rows, rowIndex)
+            local optionKey = rows:read(rowIndex, "OptionKey") or ""
+            if optionKey == "F_Combat01" then
+                return optionKey, { key = optionKey }
+            end
+            return optionKey, nil
+        end,
+    }
+
+    local unknownRole = form.validateRoomChoice({
+        data = data,
+        instance = {},
+        rows = fakeRows({
+            { RoleKey = "BadRole" },
+        }),
+        rowIndex = 1,
+    })
+    lu.assertFalse(unknownRole.valid)
+    lu.assertEquals(unknownRole.message, "Unknown room type: BadRole")
+
+    local unknownOption = form.validateRoomChoice({
+        data = data,
+        instance = {},
+        rows = fakeRows({
+            { RoleKey = "Combat", OptionKey = "BadRoom" },
+        }),
+        rowIndex = 1,
+    })
+    lu.assertFalse(unknownOption.valid)
+    lu.assertEquals(unknownOption.message, "Unknown room option: BadRoom")
 end
 
 function TestRunPlannerControlForm.testIndexedRenderHelpersClampCounts()
