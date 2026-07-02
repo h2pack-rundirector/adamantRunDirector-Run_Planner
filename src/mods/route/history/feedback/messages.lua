@@ -2,6 +2,7 @@ local deps = ... or {}
 
 local messages = {}
 local catalog = deps.catalog
+local rewardDomain = deps.rewardDomain or {}
 local EMPTY_LIST = {}
 
 local function nonEmpty(value)
@@ -83,6 +84,26 @@ local function variantDisplayLabel(_, record)
         or nonEmpty(target and target.variantKey)
 end
 
+local function rewardPrimitiveLabel(rewardType)
+    local primitive = rewardDomain.primitives and rewardDomain.primitives[rewardType] or nil
+    return nonEmpty(primitive and primitive.label)
+end
+
+local function rewardTypeForRecord(record)
+    local target = targetRecord(record)
+    local candidate = target and target.candidate or nil
+    return nonEmpty(target and target.rewardType)
+        or nonEmpty(record and record.rewardType)
+        or nonEmpty(target and target.lootType)
+        or nonEmpty(record and record.lootType)
+        or nonEmpty(candidate and candidate.rewardType)
+end
+
+local function rewardDisplayLabel(_, record)
+    local rewardType = rewardTypeForRecord(record)
+    return rewardPrimitiveLabel(rewardType) or rewardType
+end
+
 local function requiredNextRoomTagLabel(args, record)
     local target = targetRecord(record)
     local tags = target and target.requiredTags or record and record.requiredTags or nil
@@ -106,6 +127,7 @@ local PAYLOAD_RESOLVERS = {
     optionLabel = optionDisplayLabel,
     requiredNextRoomTag = requiredNextRoomTagLabel,
     variantLabel = variantDisplayLabel,
+    rewardLabel = rewardDisplayLabel,
     topologyForceLabel = recordFieldResolver("topologyForceLabel"),
     topologyGroupLabel = recordFieldResolver("topologyGroupLabel"),
     deadlineRequirementLabel = recordFieldResolver("deadlineRequirementLabel"),

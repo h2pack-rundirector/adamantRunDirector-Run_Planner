@@ -335,6 +335,29 @@ function TestRunPlannerRouteHistoryValidator.testRouteFeedbackRejectsExplicitRou
     )
 end
 
+function TestRunPlannerRouteHistoryValidator.testRouteFeedbackResolvesRewardPrimitiveLabels()
+    local localHistorySystem = h.withTestImport(function()
+        return h.testImport("mods/route/history/assembly.lua").create({
+            rewardDomain = importHarness.loadRewardDomain(),
+        })
+    end)
+
+    local feedback = localHistorySystem.feedback.fromResult({
+        invalids = {
+            {
+                biomeKey = "F",
+                rowIndex = 2,
+                tabKey = "rewards",
+                address = "row",
+                code = "spell_drop_limit",
+                rewardType = "SpellDrop",
+            },
+        },
+    })
+
+    lu.assertEquals(feedback.route.primary.message, "Selene's Gift is already planned earlier in this route")
+end
+
 local function emitRoom(history, roomHistoryOrdinal, fields)
     return routeHistory.emitAt(history, {
         routeKey = "Underworld",

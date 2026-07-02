@@ -262,8 +262,12 @@ return {
         payload = {},
     },
     spell_drop_limit = {
-        template = "Selene's Gift is already planned earlier in this route",
-        payload = {},
+        template = "{rewardLabel} is already planned earlier in this route",
+        payload = {
+            rewardLabel = {
+                fallback = "Reward",
+            },
+        },
     },
     talent_shop_conflict = {
         template = "Path of Stars cannot be planned after a shop Path of Stars offer",

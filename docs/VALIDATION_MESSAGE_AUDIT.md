@@ -127,14 +127,16 @@ Status:
   available and fall back to generic `Room type` / `Room`, not raw keys.
 - Sibling structural failures emit code-only findings and render text through
   the route feedback message catalog.
+- Reward-type payloads resolve labels through reward primitives when a catalog
+  template uses `{rewardLabel}`.
 - Unknown generic candidate codes fall back to `Selection is not valid`.
 
 Remaining gaps:
 
 - Keep newly added rule-specific candidate validators on the same catalog-code
   path.
-- Reward primitive labels need broader translation support if reward messages
-  start carrying concrete reward names.
+- Add new payload resolvers only when future candidate messages need labels for
+  reward-adjacent concepts beyond the reward type itself.
 
 ### Picked Room Structure Validation
 
@@ -280,20 +282,20 @@ Status:
   fields into findings/invalids.
 - Route feedback renders reward legality text through
   `src/mods/route/history/feedback/message_catalog.lua`.
+- Reward legality messages can use `{rewardLabel}` to display the selected
+  reward primitive label.
 - Unknown selected-legality requirement kinds now raise a contract failure
   instead of silently passing validation.
 
 Current gaps:
 
 - Related-event labels still depend on route-feedback location formatting.
-- Reward primitive labels need broader feedback resolver support if future
-  reward legality messages mention concrete reward names.
 
 Recommended fix:
 
 - Keep declarations focused on rule identity and game-domain requirement data.
-- Extend route feedback payload resolvers if reward messages need concrete
-  reward labels or richer related-event locations.
+- Extend route feedback payload resolvers if reward messages need richer
+  related-event locations or labels for concepts beyond reward type.
 
 ### NPC Validation
 

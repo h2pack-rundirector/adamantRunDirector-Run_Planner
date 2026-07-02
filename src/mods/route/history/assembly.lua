@@ -42,6 +42,7 @@ function historyAssembly.create(opts)
     local routeFeedbackMessageCatalog = import("mods/route/history/feedback/message_catalog.lua")
     local routeFeedbackMessages = import("mods/route/history/feedback/messages.lua", nil, {
         catalog = routeFeedbackMessageCatalog,
+        rewardDomain = opts.rewardDomain,
     })
     local routeFeedback = import("mods/route/history/feedback/route.lua", nil, {
         messages = routeFeedbackMessages,
