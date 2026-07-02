@@ -189,6 +189,130 @@ function TestRunPlannerRouteHistoryValidator.testFeedbackColorsSelectedBlankCont
     lu.assertEquals(feedback.route.primary.locationLabel, "Erebus Row 2")
 end
 
+function TestRunPlannerRouteHistoryValidator.testRouteFeedbackLabelsChildAndRewardAddresses()
+    local catalog = h.loadCatalog()
+    local feedback = historyFeedback.fromResult({
+        biomeLookup = catalog.lookup,
+        invalids = {
+            {
+                biomeKey = "N",
+                rowIndex = 4,
+                formAddress = formAddress.child(4, "sideRoom", 1),
+                tabKey = "rewards",
+                address = "side:1",
+                message = "Side reward invalid",
+            },
+            {
+                biomeKey = "H",
+                rowIndex = 1,
+                tabKey = "rewards",
+                address = "cage:2",
+                message = "Cage reward invalid",
+            },
+            {
+                layer = "npcs",
+                kind = "npcSelectionInvalid",
+                rowIndex = 2,
+                message = "NPC target invalid",
+            },
+        },
+    })
+
+    lu.assertEquals(feedback.route.markers[1].locationLabel, "Ephyra Row 4 Side 1 Reward")
+    lu.assertEquals(feedback.route.markers[2].locationLabel, "Fields Row 1 Cage Reward 2")
+    lu.assertEquals(feedback.route.markers[3].locationLabel, "NPC Row 2")
+end
+
+function TestRunPlannerRouteHistoryValidator.testRouteFeedbackTranslatesCandidateMessages()
+    local feedback = historyFeedback.fromResult({
+        invalids = {
+            {
+                biomeKey = "F",
+                rowIndex = 2,
+                code = "option_limit",
+                targetFinding = {
+                    kind = "roomCandidateInvalid",
+                    reason = "option_limit",
+                    optionKey = "F_Shop01",
+                    candidate = {
+                        optionLabel = "Midshop",
+                    },
+                },
+            },
+            {
+                biomeKey = "F",
+                rowIndex = 3,
+                code = "role_limit",
+                targetFinding = {
+                    kind = "roomCandidateInvalid",
+                    reason = "role_limit",
+                    roleKey = "Story",
+                    candidate = {
+                        roleLabel = "Story",
+                    },
+                },
+            },
+            {
+                biomeKey = "F",
+                rowIndex = 4,
+                code = "option_limit",
+                targetFinding = {
+                    kind = "roomCandidateInvalid",
+                    reason = "option_limit",
+                    optionKey = "F_Shop01",
+                },
+            },
+            {
+                biomeKey = "F",
+                rowIndex = 5,
+                code = "unexpected_candidate_reason",
+            },
+        },
+    })
+
+    lu.assertEquals(feedback.route.markers[1].message, "Midshop is already generated")
+    lu.assertEquals(feedback.route.markers[2].message, "Story is already planned")
+    lu.assertEquals(feedback.route.markers[3].message, "Room is already generated")
+    lu.assertEquals(feedback.route.markers[4].message, "Selection is not valid")
+end
+
+function TestRunPlannerRouteHistoryValidator.testRouteFeedbackPreservesExplicitMessages()
+    local feedback = historyFeedback.fromResult({
+        invalids = {
+            {
+                biomeKey = "F",
+                rowIndex = 2,
+                code = "option_limit",
+                message = "Custom rule message",
+                targetFinding = {
+                    kind = "roomCandidateInvalid",
+                    reason = "option_limit",
+                    optionKey = "F_Shop01",
+                    candidate = {
+                        optionLabel = "Midshop",
+                    },
+                },
+            },
+            {
+                biomeKey = "F",
+                rowIndex = 3,
+                targetFinding = {
+                    kind = "roomCandidateInvalid",
+                    reason = "option_limit",
+                    message = "Nested custom rule message",
+                    optionKey = "F_Shop01",
+                    candidate = {
+                        optionLabel = "Midshop",
+                    },
+                },
+            },
+        },
+    })
+
+    lu.assertEquals(feedback.route.primary.message, "Custom rule message")
+    lu.assertEquals(feedback.route.markers[2].message, "Nested custom rule message")
+end
+
 local function emitRoom(history, roomHistoryOrdinal, fields)
     return routeHistory.emitAt(history, {
         routeKey = "Underworld",
@@ -355,7 +479,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateConcre
     lu.assertEquals(feedback.route.primary.routeOrdinal, 2)
     lu.assertEquals(feedback.route.primary.renderRowIndex, 2)
     lu.assertEquals(feedback.route.primary.renderRouteOrdinal, 1)
-    lu.assertEquals(feedback.route.primary.locationLabel, "Erebus Row 2")
+    lu.assertEquals(feedback.route.primary.locationLabel, "Erebus Depth 2")
 end
 
 function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateCappedRole()
@@ -809,6 +933,15 @@ function TestRunPlannerRouteHistoryValidator.testHubGeneratedDoorOfferUsesHubTim
     lu.assertEquals(result.invalids[1].entry.eventSourceKind, "hubGeneratedDoor")
     lu.assertEquals(result.invalids[1].entry.parentEntry.roomKey, "N_Hub")
     lu.assertEquals(result.invalids[1].entry.parentRoomKey, "N_Combat12")
+
+    local feedback = historyFeedback.fromResult({
+        route = route,
+        history = history,
+        biomeLookup = catalog.lookup,
+        findings = result.findings,
+        invalids = result.invalids,
+    })
+    lu.assertEquals(feedback.route.primary.locationLabel, "Ephyra Row 4 Generated Offer Rewards")
 end
 
 function TestRunPlannerRouteHistoryValidator.testHubGeneratedDoorAcquisitionDoesNotRevalidateRewardLegality()

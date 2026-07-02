@@ -39,7 +39,13 @@ function historyAssembly.create(opts)
             common = feedbackCommon,
         }),
     }
-    local routeFeedback = import("mods/route/history/feedback/route.lua")
+    local routeFeedbackMessageCatalog = import("mods/route/history/feedback/message_catalog.lua")
+    local routeFeedbackMessages = import("mods/route/history/feedback/messages.lua", nil, {
+        catalog = routeFeedbackMessageCatalog,
+    })
+    local routeFeedback = import("mods/route/history/feedback/route.lua", nil, {
+        messages = routeFeedbackMessages,
+    })
     local feedback = import("mods/route/history/feedback.lua", nil, {
         adapters = feedbackAdapters,
         history = history,

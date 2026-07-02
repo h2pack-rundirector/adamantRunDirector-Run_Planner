@@ -215,6 +215,8 @@ function runtime.create(fields, instance)
 
         return {
             rowIndex = rowIndex,
+            routeOrdinal = slot.routeOrdinal,
+            slotLabel = slot.label,
             roleKey = selection.roleKey,
             optionKey = selection.optionKey,
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",

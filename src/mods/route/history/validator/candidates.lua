@@ -124,25 +124,6 @@ local function selectedEntryForFinding(history, byAddress, finding)
     return nil
 end
 
-local function candidateMessage(finding)
-    if finding.message ~= nil and finding.message ~= "" then
-        return finding.message
-    end
-    local reason = finding.reason
-    if reason == "biome_depth_unavailable" then
-        return "Room is not valid at this generated depth"
-    elseif reason == "encounter_depth_unavailable" then
-        return "Room is not valid at this encounter depth"
-    elseif reason == "previous_room_next_tags" then
-        return "Previous planned room does not lead to this room"
-    elseif reason == "role_limit" then
-        return tostring(finding.roleKey or "Room type") .. " is already planned"
-    elseif reason == "option_limit" then
-        return tostring(finding.optionKey or finding.roomKey or "Room") .. " is already generated"
-    end
-    return reason
-end
-
 local function invalidFromFinding(history, byAddress, finding)
     local entry = selectedEntryForFinding(history, byAddress, finding)
     if entry == nil then
@@ -150,7 +131,7 @@ local function invalidFromFinding(history, byAddress, finding)
     end
     return {
         code = finding.reason,
-        message = candidateMessage(finding),
+        message = finding.message,
         routeKey = finding.routeKey,
         biomeKey = finding.biomeKey,
         routeBiomeIndex = finding.routeBiomeIndex,
