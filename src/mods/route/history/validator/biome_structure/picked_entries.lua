@@ -18,17 +18,16 @@ local function variantFailure(entry)
     if common.rangeContains(entry.variantAvailability, entry.biomeEncounterDepth) then
         return nil
     end
-    return "encounter_depth_unavailable"
+    return "variant_encounter_depth_unavailable"
 end
 
-local function variantFinding(entry, reason, message)
+local function variantFinding(entry, reason)
     return findings.variantCandidateInvalid(entry, {
         key = entry and entry.variantKey or nil,
         label = entry and entry.variantLabel or nil,
         availableAtBiomeEncounterDepth = entry and entry.variantAvailability or nil,
         controlAlias = "VariantKey",
     }, reason, {
-        message = message,
         expected = entry and entry.variantAvailability or nil,
         actual = entry and entry.biomeEncounterDepth or nil,
     })
@@ -53,11 +52,6 @@ local function nextRoomTagsFailure(requiredTags, tags)
         end
     end
     return "previous_room_next_tags"
-end
-
-local function nextRoomTagsMessage(requiredTags)
-    local requiredTag = requiredTags and requiredTags[1] or "required"
-    return "Previous planned room only leads to " .. tostring(requiredTag) .. " rooms"
 end
 
 local function optionList(role)
@@ -132,31 +126,35 @@ function pickedEntries.validate(history, biome)
             local requiredTags = previousOption.nextRoomTags
             local failure = nextRoomTagsFailure(requiredTags, option and option.tags)
             if failure ~= nil then
-                return common.invalidAt(entry, failure, nextRoomTagsMessage(requiredTags))
+                return common.invalidAt(entry, failure, nil, {
+                    requiredTags = requiredTags,
+                })
             end
         end
         if option ~= nil then
             local failure = common.availabilityFailure(option, generatedContext(entry))
             if failure ~= nil then
-                return common.invalidAt(entry, failure, "Room is not valid at this generated depth")
+                return common.invalidAt(entry, failure)
             end
         end
         local variantInvalid = variantFailure(entry)
         if variantInvalid ~= nil then
-            local message = tostring(entry.variantLabel or entry.variantKey) .. " is not valid at this encounter depth"
             return common.invalidWithFindings(
                 entry,
                 variantInvalid,
-                message,
+                nil,
                 {
-                    variantFinding(entry, variantInvalid, message),
+                    variantFinding(entry, variantInvalid),
                 }
             )
         end
 
         local roleCap = capFor(role)
         if roleCap ~= nil and appendCount(roleCounts, role.key) > roleCap then
-            return common.invalidAt(entry, "role_limit", tostring(role.label or role.key) .. " is already planned")
+            return common.invalidAt(entry, "role_limit", nil, {
+                roleKey = role.key,
+                roleLabel = role.label,
+            })
         end
 
         local optionCap = capFor(option)
@@ -164,7 +162,12 @@ function pickedEntries.validate(history, biome)
             return common.invalidAt(
                 entry,
                 "option_limit",
-                tostring(option.label or option.key) .. " is already generated"
+                nil,
+                {
+                    roleKey = role and role.key or nil,
+                    optionKey = option.key,
+                    optionLabel = option.label,
+                }
             )
         end
         previousOption = option

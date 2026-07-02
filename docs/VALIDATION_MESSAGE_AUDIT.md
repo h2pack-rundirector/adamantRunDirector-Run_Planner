@@ -137,30 +137,39 @@ Source:
 - `src/mods/route/history/validator/biome_structure/picked_entries.lua`
 - `src/mods/route/history/validator/biome_structure/route_requirements.lua`
 
-Current messages:
+Previous messages:
 
 - `Room is not valid at this generated depth`
-- `Previous planned room only leads to <tag> rooms`
-- `<variant label|variant key> is not valid at this encounter depth`
-- `<role label|role key> is already planned`
-- `<option label|option key> is already generated`
+- `Previous planned room only leads to <required next-room tag> rooms`
+- `<variant label> is not valid at this encounter depth`
+- `<role label> is already planned`
+- `<option label> is already generated`
 - `Previous planned room must have at least N exits`
 - `Unknown route requirement: <kind>`
 
-Current leaks:
+Previous leaks:
 
-- Tags, role keys, option keys, variant keys, and unknown requirement kinds can
-  reach route status.
+- Previous-room tags and route requirement kinds can still reach route status.
 - `Unknown route requirement` is a contract failure. It should be loud in dev,
   not a normal user-facing route error.
 
-Recommended fix:
+Status:
 
-- Keep exact failure codes in validator.
-- Route feedback translates labels from the biome declaration and topology
-  candidate metadata.
-- Unknown requirement kinds should fail at declaration validation or route
-  history assembly, not render as a user message.
+- Picked-entry generic failures now emit code + payload and use the route
+  feedback message catalog for display text.
+- Picked variant-depth failures use the dedicated
+  `variant_encounter_depth_unavailable` code so the catalog can use a variant
+  label payload.
+- `previousRoomExitCount` route requirements now emit structured payload:
+  `requiredExitCount`, `actualExitCount`, `previousEntryLabel`, and
+  `currentEntryLabel`.
+- Unknown route requirement kinds now raise a contract failure instead of
+  producing a user-facing route-status marker.
+
+Remaining fix:
+
+- `previous_room_next_tags` still renders tag text directly. If tags ever stop
+  being user-facing labels, add a tag-label resolver or declaration label map.
 
 ### Force Pressure And Deadline Validation
 
@@ -169,29 +178,37 @@ Source:
 - `src/mods/route/history/validator/biome_structure/force_pressure.lua`
 - `src/mods/route/history/validator/biome_structure/deadlines.lua`
 
-Current messages:
+Previous messages:
 
 - `Hard-forced topology needs generated force-window doors`
 - `Forced <group.key|topology> deadline needs generated forced doors`
 - `Required room missing by deadline`
 
-Current leaks:
+Previous leaks:
 
 - `group.key` can expose internal topology names. This is the clearest current
   example of implementation language leaking into route status.
 - Deadline requirements can also provide declaration-authored messages, but
   default text is generic and does not say which room or door pressure failed.
 
-Recommended fix:
+Status:
 
-- Add display metadata to topology force/deadline declarations:
-  `label`, `missingLabel`, or `message`.
-- Prefer structured payload from validator:
-  `topologyGroupKey`, `requiredRoomKeys`, `generatedCount`, `requiredCount`,
-  `deadlineBiomeDepthCache`.
-- Feedback can then say, for example:
-  `Oceanus Depth 6: Midshop or miniboss pressure was not satisfied`
-  instead of exposing `F_Shop01` or a group key.
+- Force groups and deadline requirements now carry declaration-owned display
+  labels.
+- Force/deadline validators emit code + payload and no authored prose for the
+  generic paths.
+- Route feedback renders the message from the catalog using declaration-owned
+  labels such as `topologyForceLabel`, `topologyGroupLabel`, and
+  `deadlineRequirementLabel`.
+- Validators also carry structured payloads such as `generatedCount`,
+  `requiredGeneratedCount`, and `deadlineBiomeDepthCache` so future route
+  status can explain the pressure without changing validator output.
+
+Remaining fix:
+
+- The current message text does not yet render the count payloads. They are
+  preserved so future route status can explain how many generated doors were
+  missing without changing validator output.
 
 ### Clockwork-Specific Validation
 
@@ -199,7 +216,7 @@ Source:
 
 - `src/mods/route/history/validator/biome_structure/rules/clockwork_goal.lua`
 
-Current messages:
+Previous messages:
 
 - `Tartarus Preboss cannot appear before Clockwork goals are complete`
 - `Tartarus single doors need Goal Room before Clockwork goals are complete`
@@ -209,14 +226,16 @@ Current messages:
 
 Status:
 
-- These are readable and domain-oriented.
-- They still hardcode `Tartarus`, `Goal Room`, `Clockwork`, and `Preboss`.
+- Clockwork rule failures now emit code + payload and use the route feedback
+  message catalog for display text.
+- Tartarus progression labels are declared in biome data and carried as payload:
+  `clockworkBiomeLabel`, `clockworkGoalLabel`, `clockworkPrebossLabel`, and
+  `clockworkProgressionLabel`.
 
-Recommended fix:
+Remaining fix:
 
-- Acceptable short term.
-- Longer term, use biome/progression labels from declaration so this rule is not
-  a special message island.
+- None for route-status text. The labels can still be tuned in the Tartarus
+  declaration if the UI language changes.
 
 ### Fields Cage Rule Validation
 
@@ -224,18 +243,19 @@ Source:
 
 - `src/mods/route/history/validator/biome_structure/rules/fields_cage.lua`
 
-Current message:
+Previous message:
 
 - `Sibling combat reward count must match selected combat reward count`
 
 Status:
 
-- User-readable but uses old `Sibling` language instead of `Other Door`.
+- Fields Cage rule failures now emit code + payload and use the route feedback
+  message catalog for display text.
+- The user-facing text now uses `Other Door` / `Picked Door` language.
 
-Recommended fix:
+Remaining fix:
 
-- Update to current UI vocabulary:
-  `Other Door combat reward count must match Picked Door`.
+- None for route-status text.
 
 ### Reward Legality Validation
 
@@ -345,7 +365,8 @@ This should fix most `Biome Row N` messages without touching validation logic.
 
 ### Pass 2: Centralize Message Translation
 
-Status: partially implemented for generic candidate messages.
+Status: implemented for generic candidate messages and picked-entry structure
+messages.
 
 Move generic candidate messages from validators into a message translator.
 
@@ -357,7 +378,7 @@ Translator inputs:
 - declaration lookup for room/reward/NPC labels
 
 This pass should remove raw `roleKey`, `optionKey`, `roomKey`, and `npcKey`
-from ordinary user-facing messages.
+from ordinary user-facing messages as each validator path is migrated.
 
 ### Pass 3: Add Missing Display Metadata
 
@@ -376,7 +397,6 @@ validator wiring.
 
 Targets:
 
-- `unknown_route_requirement`
 - unknown selected-legality requirement kinds
 - any message path that currently returns raw `reason`
 
@@ -385,6 +405,6 @@ normal route-status text.
 
 ## Next Slice
 
-Handle picked-room structure and force-pressure messages next. Those paths still
-author user-facing strings inside validators and can still leak internal
-topology or declaration vocabulary.
+Handle selected-legality/reward messages next. That path still carries
+declaration-authored strings and should be moved toward the same code + payload
+catalog shape.

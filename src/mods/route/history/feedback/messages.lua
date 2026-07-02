@@ -15,6 +15,12 @@ local function targetRecord(record)
     return record and (record.targetFinding or record) or nil
 end
 
+local function targetOrRecordField(record, key)
+    local target = targetRecord(record)
+    return nonEmpty(target and target[key])
+        or nonEmpty(record and record[key])
+end
+
 local function optionList(role)
     return role and (role.roomOptions or role.mapOptions) or EMPTY_LIST
 end
@@ -69,9 +75,43 @@ local function optionDisplayLabel(args, record)
         or nonEmpty(option and option.label)
 end
 
+local function variantDisplayLabel(_, record)
+    local target = targetRecord(record)
+    local candidate = target and target.candidate or nil
+    return nonEmpty(candidate and (candidate.label or candidate.variantLabel))
+        or nonEmpty(target and target.variantLabel)
+        or nonEmpty(target and target.variantKey)
+end
+
+local function requiredNextRoomTagLabel(_, record)
+    local target = targetRecord(record)
+    local tags = target and target.requiredTags or record and record.requiredTags or nil
+    return nonEmpty(tags and tags[1])
+end
+
+local function recordFieldResolver(field)
+    return function(_, record)
+        return targetOrRecordField(record, field)
+    end
+end
+
 local PAYLOAD_RESOLVERS = {
     roleLabel = roleDisplayLabel,
     optionLabel = optionDisplayLabel,
+    requiredNextRoomTag = requiredNextRoomTagLabel,
+    variantLabel = variantDisplayLabel,
+    topologyForceLabel = recordFieldResolver("topologyForceLabel"),
+    topologyGroupLabel = recordFieldResolver("topologyGroupLabel"),
+    deadlineRequirementLabel = recordFieldResolver("deadlineRequirementLabel"),
+    deadlineBiomeDepthCache = recordFieldResolver("deadlineBiomeDepthCache"),
+    previousEntryLabel = recordFieldResolver("previousEntryLabel"),
+    currentEntryLabel = recordFieldResolver("currentEntryLabel"),
+    actualExitCount = recordFieldResolver("actualExitCount"),
+    requiredExitCount = recordFieldResolver("requiredExitCount"),
+    clockworkBiomeLabel = recordFieldResolver("clockworkBiomeLabel"),
+    clockworkGoalLabel = recordFieldResolver("clockworkGoalLabel"),
+    clockworkPrebossLabel = recordFieldResolver("clockworkPrebossLabel"),
+    clockworkProgressionLabel = recordFieldResolver("clockworkProgressionLabel"),
 }
 
 function messages.code(record, extras)

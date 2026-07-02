@@ -27,20 +27,22 @@ local function validateMatchingCombatCageRewardCount(entry)
         return nil
     end
 
-    local message = "Sibling combat reward count must match selected combat reward count"
+    local payload = {
+        pickedDoorRewardCount = selectedCount,
+        otherDoorRewardCount = siblingCount,
+    }
     return common.invalidWithFindings(
         entry,
         "fields_sibling_combat_cage_count_mismatch",
-        message,
+        nil,
         {
             findings.siblingCandidateInvalid(entry, {
                 siblingIndex = 1,
                 structureKey = sibling.key or sibling.structure,
                 structure = sibling.structure,
-            }, "fields_sibling_combat_cage_count_mismatch", {
-                message = message,
-            }),
-        }
+            }, "fields_sibling_combat_cage_count_mismatch", payload),
+        },
+        payload
     )
 end
 
@@ -61,7 +63,8 @@ function fields.appendCandidateFindings(target, _history, entry)
                 candidate,
                 "fields_sibling_combat_cage_count_mismatch",
                 {
-                    message = "Sibling combat reward count must match selected combat reward count",
+                    pickedDoorRewardCount = math.floor(tonumber(selected.sameExitRewardCount) or 0),
+                    otherDoorRewardCount = math.floor(tonumber(candidate.sameExitRewardCount) or 0),
                 }
             )
         end

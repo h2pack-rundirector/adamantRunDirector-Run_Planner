@@ -58,8 +58,11 @@ return {
             forcedFirstRouteRole = goalCombatRole,
             progression = {
                 goalRole = goalCombatRole,
+                goalLabel = "Goal Room",
                 prebossRole = prebossRole,
+                prebossLabel = "Preboss",
                 prebossStructure = prebossRole,
+                progressionLabel = "Clockwork goals",
                 requiredGoals = 5,
                 exactlyOneGoalDoorBeforeComplete = true,
                 prebossRequiredAfterComplete = true,

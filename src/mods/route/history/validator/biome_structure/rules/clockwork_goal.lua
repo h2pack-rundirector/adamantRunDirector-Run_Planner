@@ -50,7 +50,7 @@ local function pickedClockworkPreboss(entry, progression)
     return entry ~= nil and entry.roleKey == progression.prebossRole
 end
 
-local function siblingClockworkFinding(entry, reason, message)
+local function siblingClockworkFinding(entry, reason, payload)
     local topology = entry and entry.topology or nil
     local sibling = topology and topology.sibling or nil
     return findings.siblingCandidateInvalid(entry, {
@@ -58,19 +58,17 @@ local function siblingClockworkFinding(entry, reason, message)
         structureKey = sibling and (
             sibling.key
                 or sibling.roomKey
-                or sibling.structure
+            or sibling.structure
         ) or "",
         roomKey = sibling and sibling.roomKey or nil,
-    }, reason, {
-        message = message,
-    })
+    }, reason, payload)
 end
 
 local clockworkFindingForEntry
 
-local function selectedClockworkFinding(entry, nextEntry, progression, reason, message)
+local function selectedClockworkFinding(entry, nextEntry, progression, reason, payload)
     if nextEntry ~= nil then
-        local finding = clockworkFindingForEntry(nextEntry, progression, reason, message)
+        local finding = clockworkFindingForEntry(nextEntry, progression, reason, payload)
         finding.renderRowIndex = entry and entry.rowIndex or nil
         finding.renderRouteOrdinal = entry and entry.routeOrdinal or nil
         finding.renderTabKey = "rooms"
@@ -83,23 +81,21 @@ local function selectedClockworkFinding(entry, nextEntry, progression, reason, m
         roleKey = selected and selected.structure or nil,
         optionKey = selected and selected.roomKey or nil,
         roomKey = selected and selected.roomKey or nil,
-    }, reason, {
-        message = message,
-    })
+    }, reason, payload)
 end
 
-local function generatedClockworkFinding(entry, nextEntry, progression, predicate, reason, message)
+local function generatedClockworkFinding(entry, nextEntry, progression, predicate, reason, payload)
     local topology = entry and entry.topology or nil
     if topology ~= nil
         and topology.sibling ~= nil
         and predicate(topology.sibling, progression)
     then
-        return siblingClockworkFinding(entry, reason, message)
+        return siblingClockworkFinding(entry, reason, payload)
     end
-    return selectedClockworkFinding(entry, nextEntry, progression, reason, message)
+    return selectedClockworkFinding(entry, nextEntry, progression, reason, payload)
 end
 
-local function routeKindFinding(entry, value, reason, message)
+local function routeKindFinding(entry, value, reason, payload)
     return findings.roomCandidateInvalid(entry, {
         roleKey = entry and entry.roleKey or nil,
         optionKey = entry and entry.optionKey or nil,
@@ -107,11 +103,14 @@ local function routeKindFinding(entry, value, reason, message)
     }, reason, {
         clockworkControl = "routeKind",
         clockworkValue = value,
-        message = message,
+        clockworkBiomeLabel = payload.clockworkBiomeLabel,
+        clockworkGoalLabel = payload.clockworkGoalLabel,
+        clockworkPrebossLabel = payload.clockworkPrebossLabel,
+        clockworkProgressionLabel = payload.clockworkProgressionLabel,
     })
 end
 
-local function nonGoalKindFinding(entry, value, reason, message)
+local function nonGoalKindFinding(entry, value, reason, payload)
     return findings.roomCandidateInvalid(entry, {
         roleKey = entry and entry.roleKey or nil,
         optionKey = entry and entry.optionKey or nil,
@@ -119,21 +118,33 @@ local function nonGoalKindFinding(entry, value, reason, message)
     }, reason, {
         clockworkControl = "nonGoalKind",
         clockworkValue = value,
-        message = message,
+        clockworkBiomeLabel = payload.clockworkBiomeLabel,
+        clockworkGoalLabel = payload.clockworkGoalLabel,
+        clockworkPrebossLabel = payload.clockworkPrebossLabel,
+        clockworkProgressionLabel = payload.clockworkProgressionLabel,
     })
 end
 
-function clockworkFindingForEntry(entry, progression, reason, message)
+function clockworkFindingForEntry(entry, progression, reason, payload)
     if entry and entry.roleKey == progression.goalRole then
-        return routeKindFinding(entry, "Goal", reason, message)
+        return routeKindFinding(entry, "Goal", reason, payload)
     end
     if entry and entry.roleKey == progression.prebossRole then
-        return routeKindFinding(entry, progression.prebossStructure or "Preboss", reason, message)
+        return routeKindFinding(entry, progression.prebossStructure or "Preboss", reason, payload)
     end
     if entry and entry.roleKey ~= nil and entry.roleKey ~= "" then
-        return nonGoalKindFinding(entry, entry.roleKey, reason, message)
+        return nonGoalKindFinding(entry, entry.roleKey, reason, payload)
     end
-    return routeKindFinding(entry, entry and entry.roleKey or "", reason, message)
+    return routeKindFinding(entry, entry and entry.roleKey or "", reason, payload)
+end
+
+local function clockworkPayload(biome, progression)
+    return {
+        clockworkBiomeLabel = biome and biome.label or nil,
+        clockworkGoalLabel = progression.goalLabel,
+        clockworkPrebossLabel = progression.prebossLabel,
+        clockworkProgressionLabel = progression.progressionLabel,
+    }
 end
 
 function clockwork.validate(history, biome)
@@ -145,25 +156,26 @@ function clockwork.validate(history, biome)
     local goalCount = 0
     local progressionFindings = {}
     local requiredGoals = tonumber(progression.requiredGoals) or 0
+    local payload = clockworkPayload(biome, progression)
     local entries = common.biomeRoomEntries(history, biome.key)
     for index, entry in ipairs(entries) do
         if entry.roleKey ~= "Intro" then
             local nextEntry = entries[index + 1]
             if pickedClockworkPreboss(entry, progression) then
                 if goalCount < requiredGoals then
-                    local message = "Tartarus Preboss cannot appear before Clockwork goals are complete"
                     return common.invalidWithFindings(
                         entry,
                         "clockwork_preboss_too_early",
-                        message,
+                        nil,
                         {
                             clockworkFindingForEntry(
                                 entry,
                                 progression,
                                 "clockwork_preboss_too_early",
-                                message
+                                payload
                             ),
-                        }
+                        },
+                        payload
                     )
                 end
                 break
@@ -177,20 +189,20 @@ function clockwork.validate(history, biome)
             local prebossDoorCount = clockworkPrebossDoorCount(entry, progression)
             if beforeComplete then
                 if prebossDoorCount > 0 then
-                    local message = "Tartarus Preboss cannot appear before Clockwork goals are complete"
                     local finding = generatedClockworkFinding(
                         entry,
                         nextEntry,
                         progression,
                         isClockworkPrebossExit,
                         "clockwork_preboss_too_early",
-                        message
+                        payload
                     )
                     return common.invalidWithFindings(
                         entry,
                         "clockwork_preboss_too_early",
-                        message,
-                        { finding }
+                        nil,
+                        { finding },
+                        payload
                     )
                 end
 
@@ -198,19 +210,19 @@ function clockwork.validate(history, biome)
                 if progression.singleDoorMustBeGoalBeforeComplete == true
                     and common.generatedExitCount(entry) == 0
                 then
-                    local message = "Tartarus single doors need Goal Room before Clockwork goals are complete"
                     return common.invalidWithFindings(
                         entry,
                         "clockwork_single_door_goal_required",
-                        message,
+                        nil,
                         {
                             clockworkFindingForEntry(
                                 entry,
                                 progression,
                                 "clockwork_single_door_goal_required",
-                                message
+                                payload
                             ),
-                        }
+                        },
+                        payload
                     )
                 end
 
@@ -218,11 +230,10 @@ function clockwork.validate(history, biome)
                     and common.generatedExitCount(entry) > 0
                     and goalDoorCount ~= 1
                 then
-                    local message = "Tartarus generated doors need exactly one Goal Room before Clockwork goals are complete"
                     return common.invalidWithFindings(
                         entry,
                         "clockwork_goal_door_count",
-                        message,
+                        nil,
                         {
                             generatedClockworkFinding(
                                 entry,
@@ -232,19 +243,19 @@ function clockwork.validate(history, biome)
                                     return not isClockworkGoalExit(exit, currentProgression)
                                 end,
                                 "clockwork_goal_door_count",
-                                message
+                                payload
                             ),
-                        }
+                        },
+                        payload
                     )
                 end
             elseif progression.prebossRequiredAfterComplete == true
                 and prebossDoorCount ~= 1
             then
-                local message = "Tartarus post-goal doors need Preboss"
                 return common.invalidWithFindings(
                     entry,
                     "clockwork_preboss_required",
-                    message,
+                    nil,
                     {
                         common.generatedExitCount(entry) > 0
                             and generatedClockworkFinding(
@@ -253,15 +264,16 @@ function clockwork.validate(history, biome)
                                 progression,
                                 isClockworkPrebossExit,
                                 "clockwork_preboss_required",
-                                message
+                                payload
                             )
                             or clockworkFindingForEntry(
                                 entry,
                                 progression,
                                 "clockwork_preboss_required",
-                                message
+                                payload
                             ),
-                    }
+                    },
+                    payload
                 )
             end
 

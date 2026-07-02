@@ -45,9 +45,12 @@ function deadlines.validate(history, biome)
                         return common.invalidAt(
                             entry,
                             requirement.code or "room_deadline_requirement",
-                            requirement.message or "Required room missing by deadline",
+                            nil,
                             {
                                 topologyRequirementKey = requirement.key,
+                                deadlineRequirementLabel = requirement.label,
+                                deadlineBiomeDepthCache = deadline,
+                                requiredRoomKeys = requirement.roomKeys,
                             }
                         )
                     end

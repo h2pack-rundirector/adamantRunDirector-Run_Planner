@@ -74,6 +74,7 @@ return function(deps)
         forcedGroups = {
             {
                 key = "P_Minibosses",
+                label = "Miniboss",
                 candidates = roomKeys(layout.minibossRooms),
                 generatedCapacityKind = "sourceExitCount",
                 forceAtBiomeDepthMax = 7,

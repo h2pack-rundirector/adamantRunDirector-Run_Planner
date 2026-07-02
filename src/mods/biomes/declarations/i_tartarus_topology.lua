@@ -101,6 +101,7 @@ return function(deps)
         forcedGroups = {
             {
                 key = "I_Story",
+                label = "Story",
                 candidates = { story.key },
                 generatedCapacityKind = "sourceSiblingCount",
                 forceAtBiomeDepthMax = 4,
@@ -108,6 +109,7 @@ return function(deps)
             },
             {
                 key = "I_Minibosses",
+                label = "Miniboss",
                 candidates = roomKeys(minibosses),
                 generatedCapacityKind = "sourceSiblingCount",
                 forceAtBiomeDepthMax = 7,

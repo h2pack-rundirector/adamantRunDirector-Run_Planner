@@ -17,6 +17,7 @@ return function(deps)
         forcedGroups = {
             {
                 key = "H_Minibosses",
+                label = "Miniboss",
                 candidates = { "H_MiniBoss01", "H_MiniBoss02" },
                 generatedCapacityKind = "sourceExitCount",
                 forceAtBiomeDepthMax = 4,

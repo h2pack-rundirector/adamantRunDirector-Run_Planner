@@ -296,7 +296,13 @@ function query.requiredNotInStore(history, entry, lootType)
 end
 
 function query.previousGeneratedExitCount(history, entry)
-    return generatedExitCount(previousRoomEntry(history, entry))
+    local count = query.previousGeneratedExitDetails(history, entry)
+    return count
+end
+
+function query.previousGeneratedExitDetails(history, entry)
+    local previous = previousRoomEntry(history, entry)
+    return generatedExitCount(previous), previous
 end
 
 function query.requiredMinExits(history, entry, count)

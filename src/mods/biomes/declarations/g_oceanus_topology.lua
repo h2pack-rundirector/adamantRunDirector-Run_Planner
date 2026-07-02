@@ -72,6 +72,7 @@ return function(deps)
         forcedGroups = {
             {
                 key = "G_Shop",
+                label = "Midshop",
                 candidates = { layout.shopRooms[1].key },
                 generatedCapacityKind = "sourceExitCount",
                 requiredGeneratedCount = 1,
@@ -80,6 +81,7 @@ return function(deps)
             },
             {
                 key = "G_Minibosses",
+                label = "Miniboss",
                 candidates = roomKeys(layout.minibossRooms),
                 generatedCapacityKind = "sourceExitCount",
                 forceAtBiomeDepthMax = 7,

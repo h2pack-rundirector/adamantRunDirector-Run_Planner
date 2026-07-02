@@ -58,6 +58,14 @@ local function forceDeadlineActive(force, depth)
     return range.max ~= nil and depth >= range.max
 end
 
+local function forceDeadlineDepth(force)
+    local range = force and force.biomeDepthCache or nil
+    if range == nil then
+        return nil
+    end
+    return range.exact or range.max
+end
+
 local function generatedCandidateAt(entry, candidate)
     for _, exit in ipairs(common.topologyExits(entry)) do
         if common.generatedRoomKey(exit) == candidate then
@@ -142,18 +150,18 @@ local function validateUngroupedForce(topology, entries, index, optionsByRoomKey
         return nil
     end
 
-    local hasMissingHardForce = false
+    local missingForceOption = nil
     for _, candidate in ipairs(preparedForceCandidates(topology)) do
         local option = optionsByRoomKey[candidate]
         if forceCandidateAvailable(option, entry)
             and forceDeadlineActive(option.force, entry and entry.biomeDepthCache)
             and not generatedCandidateAt(entry, candidate)
         then
-            hasMissingHardForce = true
+            missingForceOption = option
             break
         end
     end
-    if not hasMissingHardForce then
+    if missingForceOption == nil then
         return nil
     end
     if generatedForceWindowCandidateCount(entries, index, optionsByRoomKey) >= capacity then
@@ -162,7 +170,11 @@ local function validateUngroupedForce(topology, entries, index, optionsByRoomKey
     return common.invalidAt(
         entry,
         "forced_topology_pressure_unresolved",
-        "Hard-forced topology needs generated force-window doors"
+        nil,
+        {
+            topologyForceLabel = missingForceOption.label,
+            deadlineBiomeDepthCache = forceDeadlineDepth(missingForceOption.force),
+        }
     )
 end
 
@@ -188,15 +200,20 @@ local function validateForcedGroup(entries, index, group)
         return nil
     end
     local required = requiredGeneratedCount(group, entry)
-    if generatedCandidateCountThrough(entries, index, group.candidates) >= required then
+    local generatedCount = generatedCandidateCountThrough(entries, index, group.candidates)
+    if generatedCount >= required then
         return nil
     end
     return common.invalidAt(
         entry,
         "forced_topology_group_unresolved",
-        "Forced " .. tostring(group.key or "topology") .. " deadline needs generated forced doors",
+        nil,
         {
             topologyGroupKey = group.key,
+            topologyGroupLabel = group.label,
+            deadlineBiomeDepthCache = deadline,
+            generatedCount = generatedCount,
+            requiredGeneratedCount = required,
         }
     )
 end
