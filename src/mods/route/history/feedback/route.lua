@@ -195,6 +195,8 @@ function routeFeedback.fromResult(args)
                 local relatedMarker = routeFeedback.marker(args, relatedRecord, {
                     markerKind = "related",
                     code = relatedRecord.code or invalid.code,
+                    message = invalid.message,
+                    messageSource = invalid.messageSource,
                 })
                 related[#related + 1] = relatedMarker
                 markers[#markers + 1] = relatedMarker

@@ -6,6 +6,26 @@ local routeQuery = deps.query
 local rewardValidator = {}
 
 local EMPTY_LIST = {}
+local PAYLOAD_FIELD_KEYS = {
+    "previousEntryLabel",
+    "actualExitCount",
+    "currentEntryLabel",
+    "requiredExitCount",
+}
+
+local function copyPayloadFields(target, source)
+    for _, key in ipairs(PAYLOAD_FIELD_KEYS) do
+        target[key] = source and source[key] or nil
+    end
+    return target
+end
+
+local function entryLabel(entry)
+    local source = entry and entry.source or nil
+    return source and (source.slotLabel or source.label)
+        or entry and (entry.entryLabel or entry.slotLabel or entry.roleLabel or entry.optionLabel)
+        or entry and (entry.roleKey or entry.roomKey or entry.eventKey)
+end
 
 local function validResult()
     return {
@@ -132,11 +152,17 @@ local function relatedEvents(history, entry, requirement, context)
 end
 
 local function failure(requirement, context)
-    return {
+    local invalid = {
         code = requirement.code,
+        message = requirement.message,
+        messageSource = requirement.message ~= nil and "rewardLegality" or nil,
         requirement = requirement,
         relatedEvents = context and context.relatedEvents or nil,
     }
+    for key, value in pairs(context and context.payload or EMPTY_LIST) do
+        invalid[key] = value
+    end
+    return invalid
 end
 
 local evaluateRequirement
@@ -199,8 +225,16 @@ function evaluateRequirement(history, entry, requirement, opts)
             return failure(requirement)
         end
     elseif kind == "RequiredMinExits" then
-        if not routeQuery.requiredMinExits(history, entry, requirement.value) then
-            return failure(requirement)
+        local actualExitCount, previousEntry = routeQuery.previousGeneratedExitDetails(history, entry)
+        if actualExitCount == nil or actualExitCount < requirement.value then
+            return failure(requirement, {
+                payload = {
+                    requiredExitCount = requirement.value,
+                    actualExitCount = actualExitCount or 0,
+                    previousEntryLabel = entryLabel(previousEntry),
+                    currentEntryLabel = entryLabel(entry),
+                },
+            })
         end
     elseif kind == "RunEncounterDepth" then
         if not compare(routeQuery.runEncounterDepth(entry), requirement.comparison, requirement.value) then
@@ -249,7 +283,7 @@ function rewardValidator.invalidForLootType(history, entry, lootType, rulesByTar
 end
 
 local function invalidAt(entry, invalid)
-    return {
+    return copyPayloadFields({
         code = invalid.code,
         routeKey = entry.routeKey,
         biomeKey = entry.biomeKey,
@@ -263,9 +297,11 @@ local function invalidAt(entry, invalid)
         rewardClass = entry.rewardClass,
         rewardStore = entry.rewardStore,
         rewardType = entry.lootType,
+        message = invalid.message,
+        messageSource = invalid.messageSource,
         entry = entry,
         relatedEvents = invalid.relatedEvents,
-    }
+    }, invalid)
 end
 
 local function shouldValidateLoot(loot)

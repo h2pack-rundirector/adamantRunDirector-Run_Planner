@@ -323,6 +323,7 @@ function TestRunPlannerRewards.testSelectedLegalityGroupsTalentVariantsBehindSpe
         kind = "RequiredNotInStore",
         name = "TalentDrop",
         code = "talent_shop_conflict",
+        message = "Path of Stars cannot be planned after a shop Path of Stars offer",
         related = {
             {
                 kind = "pendingOffer",
@@ -338,6 +339,7 @@ function TestRunPlannerRewards.testSelectedLegalityGroupsTalentVariantsBehindSpe
         comparison = ">=",
         value = 1,
         code = "talent_requires_spell",
+        message = "Path of Stars rewards require an earlier Selene's Gift",
     })
 end
 
@@ -353,6 +355,7 @@ function TestRunPlannerRewards.testSelectedLegalityAppliesDevotionWithThessalyEx
             "O",
         },
         code = "previous_room_exit_count",
+        message = "Trial requires a two-exit previous room",
     })
 end
 
@@ -370,6 +373,7 @@ function TestRunPlannerRewards.testSelectedLegalityBlocksTalentAfterShopTalent()
         kind = "RequiredNotInStore",
         name = "TalentDrop",
         code = "talent_shop_conflict",
+        message = "Path of Stars cannot be planned after a shop Path of Stars offer",
         related = {
             {
                 kind = "pendingOffer",
@@ -391,6 +395,7 @@ function TestRunPlannerRewards.testSelectedLegalityBlocksRoomHammerAfterShopHamm
         kind = "RequiredNotInStore",
         name = "WeaponUpgradeDrop",
         code = "weapon_upgrade_shop_conflict",
+        message = "Hammer cannot be planned after a shop Hammer offer",
         related = {
             {
                 kind = "pendingOffer",

@@ -30,16 +30,23 @@ Feedback should translate those findings into UI language:
 - display labels for rooms, rewards, NPCs, gods, topology groups, and controls
 - route-status message text
 
-The route-feedback message catalog in
-`src/mods/route/history/feedback/message_catalog.lua` owns the dumb
+The default route-status policy is catalog-first. The route-feedback message
+catalog in `src/mods/route/history/feedback/message_catalog.lua` owns the dumb
 `code -> template + expected payload` mapping. The renderer in
 `src/mods/route/history/feedback/messages.lua` fills those payloads and renders
 the template. Route marker assembly should call that renderer instead of
 embedding message `if/else` chains.
 
+Only scoped producers can bypass the catalog with explicit messages:
+
+- form completion records with `completion = true`
+- reward legality records with `messageSource = "rewardLegality"`
+
 Templates can keep form-completion messages because they own local form
-requirements. Even there, they should use labels from declarations rather than
-raw keys.
+requirements. Reward legality can keep hand-authored messages because those
+rules are curated game-domain declarations. Everything else should be
+catalog-authored. Even for explicit messages, producers should use labels from
+declarations rather than raw keys.
 
 ## Current Message Pipeline
 
@@ -127,16 +134,14 @@ Status:
   available and fall back to generic `Room type` / `Room`, not raw keys.
 - Sibling structural failures emit code-only findings and render text through
   the route feedback message catalog.
-- Reward-type payloads resolve labels through reward primitives when a catalog
-  template uses `{rewardLabel}`.
 - Unknown generic candidate codes fall back to `Selection is not valid`.
 
 Remaining gaps:
 
 - Keep newly added rule-specific candidate validators on the same catalog-code
   path.
-- Add new payload resolvers only when future candidate messages need labels for
-  reward-adjacent concepts beyond the reward type itself.
+- Reward primitive labels need broader translation support if reward messages
+  start carrying concrete reward names.
 
 ### Picked Room Structure Validation
 
@@ -265,7 +270,8 @@ Source:
 - `src/mods/route/history/validator/rewards.lua`
 - `src/mods/route/history/validator/candidates/rewards.lua`
 
-Current route-status messages are catalog-authored:
+Current route-status messages are declaration-authored and explicitly scoped
+as reward legality copy:
 
 - `Trial requires at least two prior planned god rewards`
 - `Trial requires 15 rooms since the previous Trial`
@@ -276,14 +282,13 @@ Current route-status messages are catalog-authored:
 
 Status:
 
-- Selected-legality declarations carry stable rule identity via `code` and
-  structured requirement data.
-- Reward validators emit code + payload and do not copy authored `message`
-  fields into findings/invalids.
-- Route feedback renders reward legality text through
-  `src/mods/route/history/feedback/message_catalog.lua`.
-- Reward legality messages can use `{rewardLabel}` to display the selected
-  reward primitive label.
+- Selected-legality declarations carry stable rule identity via `code`,
+  structured requirement data, and hand-authored user-facing `message` text.
+- Reward validators pass authored reward-legality messages through findings and
+  invalids with `messageSource = "rewardLegality"`.
+- Route feedback accepts explicit messages only for scoped sources such as form
+  completion and reward legality. Generic route/structure findings still render
+  through `src/mods/route/history/feedback/message_catalog.lua`.
 - Unknown selected-legality requirement kinds now raise a contract failure
   instead of silently passing validation.
 
@@ -293,9 +298,9 @@ Current gaps:
 
 Recommended fix:
 
-- Keep declarations focused on rule identity and game-domain requirement data.
-- Extend route feedback payload resolvers if reward messages need richer
-  related-event locations or labels for concepts beyond reward type.
+- Keep reward legality messages close to their hand-authored reward rules.
+- Extend route feedback payload resolvers only for generic route-system
+  messages, not reward-legality prose.
 
 ### NPC Validation
 

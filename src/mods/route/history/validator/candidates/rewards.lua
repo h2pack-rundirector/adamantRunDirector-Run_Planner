@@ -46,7 +46,13 @@ local function appendRewardTypeCandidateFinding(target, history, entry, candidat
         invalid.code,
         {
             requirement = invalid.requirement,
+            message = invalid.message,
+            messageSource = invalid.messageSource,
             relatedEvents = invalid.relatedEvents,
+            previousEntryLabel = invalid.previousEntryLabel,
+            actualExitCount = invalid.actualExitCount,
+            currentEntryLabel = invalid.currentEntryLabel,
+            requiredExitCount = invalid.requiredExitCount,
         }
     )
 end

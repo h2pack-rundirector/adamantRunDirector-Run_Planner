@@ -196,6 +196,7 @@ function TestRunPlannerRouteHistoryValidator.testFeedbackColorsSelectedBlankCont
     local states = historyFeedback.valueStatesForControl(feedback, "F", 2, "OptionKey")
     lu.assertEquals(states[""], valueStates.WARNING)
     lu.assertEquals(feedback.route.primary.locationLabel, "Erebus Row 2")
+    lu.assertEquals(feedback.route.primary.message, "Choose a room")
 end
 
 function TestRunPlannerRouteHistoryValidator.testRouteFeedbackLabelsChildAndRewardAddresses()
@@ -335,14 +336,8 @@ function TestRunPlannerRouteHistoryValidator.testRouteFeedbackRejectsExplicitRou
     )
 end
 
-function TestRunPlannerRouteHistoryValidator.testRouteFeedbackResolvesRewardPrimitiveLabels()
-    local localHistorySystem = h.withTestImport(function()
-        return h.testImport("mods/route/history/assembly.lua").create({
-            rewardDomain = importHarness.loadRewardDomain(),
-        })
-    end)
-
-    local feedback = localHistorySystem.feedback.fromResult({
+function TestRunPlannerRouteHistoryValidator.testRouteFeedbackAllowsRewardLegalityMessages()
+    local feedback = historyFeedback.fromResult({
         invalids = {
             {
                 biomeKey = "F",
@@ -350,12 +345,16 @@ function TestRunPlannerRouteHistoryValidator.testRouteFeedbackResolvesRewardPrim
                 tabKey = "rewards",
                 address = "row",
                 code = "spell_drop_limit",
-                rewardType = "SpellDrop",
+                message = "Selene's Gift is already planned earlier in this route",
+                messageSource = "rewardLegality",
             },
         },
     })
 
-    lu.assertEquals(feedback.route.primary.message, "Selene's Gift is already planned earlier in this route")
+    lu.assertEquals(
+        feedback.route.primary.message,
+        "Selene's Gift is already planned earlier in this route"
+    )
 end
 
 local function emitRoom(history, roomHistoryOrdinal, fields)
@@ -1485,7 +1484,8 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsRewardFi
     local finding = firstFinding(result, "rewardCandidateInvalid", "rewardType", "TalentDrop")
     lu.assertNotNil(finding)
     lu.assertEquals(finding.reason, "talent_requires_spell")
-    lu.assertNil(finding.message)
+    lu.assertEquals(finding.message, "Path of Stars rewards require an earlier Selene's Gift")
+    lu.assertEquals(finding.messageSource, "rewardLegality")
     lu.assertEquals(finding.rewardClass, "Major")
 
     local feedback = historyFeedback.fromFindings(result.findings)
@@ -2200,7 +2200,8 @@ function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsTalentBef
 
     lu.assertFalse(result.valid)
     lu.assertEquals(result.invalids[1].code, "talent_requires_spell")
-    lu.assertNil(result.invalids[1].message)
+    lu.assertEquals(result.invalids[1].message, "Path of Stars rewards require an earlier Selene's Gift")
+    lu.assertEquals(result.invalids[1].messageSource, "rewardLegality")
     lu.assertEquals(result.invalids[1].rewardType, "TalentDrop")
     lu.assertEquals(result.invalids[1].roomKey, "Room1")
 
@@ -2327,7 +2328,11 @@ function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsDevotionA
 
     lu.assertFalse(result.valid)
     lu.assertEquals(result.invalids[1].code, "previous_room_exit_count")
+    lu.assertEquals(result.invalids[1].messageSource, "rewardLegality")
     lu.assertEquals(result.invalids[1].rewardType, "Devotion")
+
+    local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
+    lu.assertEquals(feedback.route.primary.message, "Trial requires a two-exit previous room")
 end
 
 function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsDevotionSpacing()
