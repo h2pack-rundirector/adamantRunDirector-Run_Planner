@@ -263,7 +263,7 @@ Source:
 - `src/mods/route/history/validator/rewards.lua`
 - `src/mods/route/history/validator/candidates/rewards.lua`
 
-Current messages are mostly declaration-authored and user-readable:
+Current route-status messages are catalog-authored:
 
 - `Trial requires at least two prior planned god rewards`
 - `Trial requires 15 rooms since the previous Trial`
@@ -274,19 +274,26 @@ Current messages are mostly declaration-authored and user-readable:
 
 Status:
 
-- This is the best current shape: rules carry user-facing messages near their
-  domain declaration.
+- Selected-legality declarations carry stable rule identity via `code` and
+  structured requirement data.
+- Reward validators emit code + payload and do not copy authored `message`
+  fields into findings/invalids.
+- Route feedback renders reward legality text through
+  `src/mods/route/history/feedback/message_catalog.lua`.
 - Unknown selected-legality requirement kinds now raise a contract failure
   instead of silently passing validation.
 
 Current gaps:
 
 - Related-event labels still depend on route-feedback location formatting.
+- Reward primitive labels need broader feedback resolver support if future
+  reward legality messages mention concrete reward names.
 
 Recommended fix:
 
-- Keep these rule messages, but route feedback should translate related
-  locations and reward labels consistently.
+- Keep declarations focused on rule identity and game-domain requirement data.
+- Extend route feedback payload resolvers if reward messages need concrete
+  reward labels or richer related-event locations.
 
 ### NPC Validation
 
