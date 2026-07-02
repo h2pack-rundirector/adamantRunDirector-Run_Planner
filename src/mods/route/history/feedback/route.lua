@@ -77,6 +77,10 @@ local function rewardAddressLabel(record)
     if address == nil or address == "" then
         return nil
     end
+    local shopIndex = string.match(tostring(address), "^shop:(%d+)$")
+    if shopIndex ~= nil then
+        return "Shop Offer " .. tostring(shopIndex)
+    end
     local cageIndex = string.match(tostring(address), "^cage:(%d+)$")
     if cageIndex ~= nil then
         return "Cage Reward " .. tostring(cageIndex)
@@ -95,6 +99,12 @@ local function rewardAddressLabel(record)
     local encounterIndex = string.match(tostring(address), "^encounter:(%d+)$")
     if encounterIndex ~= nil then
         return "Encounter " .. tostring(encounterIndex) .. " Reward"
+    end
+    if address == "row"
+        and record.markerKind == "related"
+        and (record.kind == "loot" or record.lootType ~= nil or record.rewardType ~= nil)
+    then
+        return "Reward"
     end
     if address == "row" or record and record.tabKey == "rewards" then
         return "Rewards"
@@ -166,11 +176,12 @@ local function copyRecord(record, extras)
 end
 
 function routeFeedback.marker(args, record, extras)
+    local locatedRecord = copyRecord(record, extras)
     local code = messages.code(record, extras)
     return copyRecord(record, {
         layer = record and record.layer or "route",
         routeKey = args and args.route and args.route.key or record and record.routeKey or nil,
-        locationLabel = record and record.locationLabel or locationLabel(args, record),
+        locationLabel = record and record.locationLabel or locationLabel(args, locatedRecord),
         message = messages.forRecord(args, record, extras, code),
         code = code,
         markerKind = extras and extras.markerKind or record and record.markerKind or nil,

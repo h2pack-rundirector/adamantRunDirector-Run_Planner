@@ -138,7 +138,7 @@ local function formValidation(instance, routeRows, rowIndex)
         if wheelOffer == nil then
             return form.invalid({
                 code = "unknown_wheel_offer_count",
-                message = "Unknown wheel choices: " .. tostring(wheelOfferKey),
+                message = "Unknown wheel choices for " .. label .. ": " .. tostring(wheelOfferKey),
                 tabKey = "rewards",
                 address = "encounter:" .. tostring(legIndex),
                 controlAlias = alias,

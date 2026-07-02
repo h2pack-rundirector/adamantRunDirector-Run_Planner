@@ -404,6 +404,25 @@ local function emitLoot(history, room, lootType, fields)
     })
 end
 
+local function emitPendingLoot(history, room, lootType, fields)
+    fields = fields or {}
+    return routeHistory.emitAt(history, room, {
+        kind = "loot",
+        eventKey = lootType,
+        lootType = lootType,
+        parentEntry = room,
+        parentRoomKey = room.roomKey,
+        address = fields.address or "shop:1",
+        controlAlias = fields.controlAlias or nil,
+        rewardClass = fields.rewardClass or nil,
+        rewardStore = fields.rewardStore or nil,
+        sourceValues = fields.sourceValues or nil,
+        lootName = fields.lootName or nil,
+        timing = "pendingOffer",
+        pendingUntilRoomHistoryOrdinal = fields.pendingUntilRoomHistoryOrdinal,
+    })
+end
+
 local function buildNpcTargets(history, catalog)
     return historySystem.npcCandidates.build({
         route = {
@@ -2399,6 +2418,7 @@ function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsDevotionS
             key = "Underworld",
             biomes = { "F", "G" },
         },
+        biomeLookup = h.loadCatalog().lookup,
         findings = result.findings,
         invalids = result.invalids,
     })
@@ -2406,8 +2426,44 @@ function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsDevotionS
     lu.assertEquals(feedback.route.primary.code, "devotion_spacing")
     lu.assertEquals(feedback.route.primary.markerKind, "primary")
     lu.assertEquals(feedback.route.related[1].lootType, "Devotion")
+    lu.assertEquals(feedback.route.related[1].locationLabel, "Erebus Row 3 Reward")
     lu.assertEquals(feedback.route.related[1].markerKind, "related")
     lu.assertEquals(#feedback.route.markers, 2)
+end
+
+function TestRunPlannerRouteHistoryValidator.testRewardRelatedPendingOfferUsesShopOfferLocation()
+    local history = routeHistory.create()
+    local shopRoom = emitRoom(history, 1, {
+        biomeKey = "F",
+        rowIndex = 1,
+    })
+    emitPendingLoot(history, shopRoom, "SpellDrop", {
+        address = "shop:2",
+        pendingUntilRoomHistoryOrdinal = 2,
+    })
+    local laterRoom = emitRoom(history, 2, {
+        biomeKey = "F",
+        rowIndex = 2,
+    })
+    emitLoot(history, laterRoom, "SpellDrop")
+
+    local result = validateHistory(history)
+
+    lu.assertFalse(result.valid)
+    lu.assertEquals(result.invalids[1].code, "spell_shop_conflict")
+    lu.assertEquals(result.invalids[1].relatedEvents[1].timing, "pendingOffer")
+
+    local feedback = historyFeedback.fromResult({
+        route = {
+            key = "Underworld",
+            biomes = { "F" },
+        },
+        biomeLookup = h.loadCatalog().lookup,
+        findings = result.findings,
+        invalids = result.invalids,
+    })
+    lu.assertEquals(feedback.route.related[1].locationLabel, "Erebus Row 1 Shop Offer 2")
+    lu.assertEquals(feedback.route.related[1].markerKind, "related")
 end
 
 function TestRunPlannerRouteHistoryValidator.testErebusTopologyControlsAreActiveAtFirstGeneratedRoom()

@@ -55,10 +55,10 @@ local function formValidation(instance, routeRows, rowIndex)
     then
         return form.invalid({
             code = "role_required",
-            message = "Choose a non-goal room",
+            message = "Choose a Non Goal room",
             tabKey = "rooms",
             controlAlias = data.nonGoalKindAlias(),
-            label = "Non-goal room",
+            label = "Non Goal room",
         })
     end
     return form.validateRoomChoice({

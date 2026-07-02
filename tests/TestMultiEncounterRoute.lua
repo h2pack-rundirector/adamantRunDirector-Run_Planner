@@ -419,7 +419,7 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterRejectsUnknownWheel
     lu.assertFalse(completion.valid)
     lu.assertEquals(completion.completionInvalidRows[1].rowIndex, 2)
     lu.assertEquals(completion.completionInvalidRows[1].code, "unknown_wheel_offer_count")
-    lu.assertEquals(completion.completionInvalidRows[1].message, "Unknown wheel choices: BadWheel")
+    lu.assertEquals(completion.completionInvalidRows[1].message, "Unknown wheel choices for 1st Encounter: BadWheel")
     lu.assertEquals(completion.completionInvalidRows[1].tabKey, "rewards")
     lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].address, "encounter:1")
     lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].controlAlias, "WheelOffer1Key")

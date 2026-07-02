@@ -167,7 +167,7 @@ function adapter.create(data, opts)
         end
         local feedback = topologyFeedback(instance, rowIndex)
         if feedback ~= nil and feedback.active == false then
-            return common.invalidStatus("biome_depth_unavailable", "Topology controls are not active at this biome depth")
+            return common.invalidStatus("biome_depth_unavailable", "Other Door is not active at this biome depth")
         end
         return validStatus()
     end
@@ -179,7 +179,7 @@ function adapter.create(data, opts)
         end
         local feedback = topologyFeedback(instance, rowIndex)
         if feedback ~= nil and feedback.controlsActive == false then
-            return common.invalidStatus("biome_depth_unavailable", "Topology controls are not active at this biome depth")
+            return common.invalidStatus("biome_depth_unavailable", "Other Door is not active at this biome depth")
         end
         return validStatus()
     end
