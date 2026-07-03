@@ -45,14 +45,15 @@ local function validateMatchingCombatCageRewardCount(entry)
     )
 end
 
-function fields.appendCandidateFindings(target, _history, entry)
+function fields.appendCandidateFindings(target, _history, step)
+    local entry = step and step.entry or nil
     local topology = entry and entry.topology or nil
     local selected = topology and topology.selected or nil
     if not isCombatCageStructure(selected and selected.structure) then
         return
     end
 
-    for _, candidate in ipairs(entry.siblingCandidates or EMPTY_LIST) do
+    for _, candidate in ipairs(step and step.candidates and step.candidates.siblings or EMPTY_LIST) do
         if isCombatCageStructure(candidate and candidate.structure)
             and math.floor(tonumber(selected.sameExitRewardCount) or 0)
                 ~= math.floor(tonumber(candidate.sameExitRewardCount) or 0)

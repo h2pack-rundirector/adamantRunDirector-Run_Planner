@@ -126,6 +126,7 @@ function historyAssembly.create(opts)
         ruleValidators = biomeStructureValidator.ruleValidators,
         rewards = rewardValidator,
         selectedLegalityRules = opts.selectedLegalityRules,
+        walker = validatorWalker,
     })
     local validator = import("mods/route/history/validator.lua", nil, {
         biomeStructure = biomeStructureValidator,

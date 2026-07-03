@@ -174,8 +174,10 @@ local function appendStructuralFindings(target, history, entry, biome, candidate
     end
 end
 
-function siblings.appendFindings(target, history, entry, biome)
-    for _, candidate in ipairs(entry.siblingCandidates or EMPTY_LIST) do
+function siblings.appendFindings(target, history, step)
+    local entry = step and step.entry or nil
+    local biome = step and step.biome or nil
+    for _, candidate in ipairs(step and step.candidates and step.candidates.siblings or EMPTY_LIST) do
         common.appendAvailabilityFinding(
             target,
             findings.siblingCandidateInvalid,

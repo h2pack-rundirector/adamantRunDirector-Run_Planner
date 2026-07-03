@@ -3,6 +3,7 @@ local deps = ... or {}
 local routeHistory = deps.history
 local rewardValidator = deps.rewards
 local selectedLegalityRules = deps.selectedLegalityRules
+local walker = deps.walker
 local formAddress = import("mods/route/history/form_address.lua")
 
 local common = import("mods/route/history/validator/candidates/common.lua")
@@ -176,10 +177,10 @@ local function firstByPosition(invalids)
     return first
 end
 
-local function appendRuleFindings(target, history, entry, ruleValidators)
+local function appendRuleFindings(target, history, step, ruleValidators)
     for _, ruleValidator in ipairs(ruleValidators or common.EMPTY_LIST) do
         if ruleValidator.appendCandidateFindings ~= nil then
-            ruleValidator.appendCandidateFindings(target, history, entry)
+            ruleValidator.appendCandidateFindings(target, history, step)
         end
     end
 end
@@ -188,17 +189,20 @@ function candidates.validate(args)
     local history = args and args.history or nil
     local rulesByTarget = rewardValidator.rulesByTarget(selectedLegalityRules)
     local candidateFindings = {}
-    for _, entry in ipairs(routeHistory.byKind(history, "room")) do
-        candidateValidators[1].appendFindings(candidateFindings, history, entry)
+    for _, step in ipairs(walker.forRoute({
+        history = history,
+        route = args and args.route or nil,
+        biomeLookup = args and args.biomeLookup or nil,
+    })) do
+        candidateValidators[1].appendFindings(candidateFindings, history, step)
         candidateValidators[2].appendFindings(
             candidateFindings,
             history,
-            entry,
-            args.biomeLookup and args.biomeLookup[entry.biomeKey] or nil
+            step
         )
-        candidateValidators[3].appendFindings(candidateFindings, entry)
-        candidateValidators[4].appendFindings(candidateFindings, history, entry, rulesByTarget)
-        appendRuleFindings(candidateFindings, history, entry, deps.ruleValidators)
+        candidateValidators[3].appendFindings(candidateFindings, step)
+        candidateValidators[4].appendFindings(candidateFindings, history, step, rulesByTarget)
+        appendRuleFindings(candidateFindings, history, step, deps.ruleValidators)
     end
     local invalids = {}
     appendSelectedInvalids(invalids, history, candidateFindings)

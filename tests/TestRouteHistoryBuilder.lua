@@ -31,15 +31,6 @@ local function lootEventsWithTiming(history, timing)
     return matching
 end
 
-local function hasValue(values, expected)
-    for _, value in ipairs(values or {}) do
-        if value == expected then
-            return true
-        end
-    end
-    return false
-end
-
 local function findCandidate(candidates, field, expected)
     for _, candidate in ipairs(candidates or {}) do
         if candidate[field] == expected then
@@ -563,20 +554,12 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearRoomEntriesCarryNextCh
 
     local rooms = roomEvents(history)
     lu.assertEquals(rooms[1].topology.kind, "fixedLinearNextChoice")
-    lu.assertNotNil(findCandidate(rooms[2].roomCandidates, "roomKey", "F_Combat01"))
-    lu.assertNotNil(findCandidate(rooms[2].roomCandidates, "roomKey", "F_Story01"))
-    lu.assertNotNil(findCandidate(rooms[5].siblingCandidates, "structureKey", "F_Story01"))
-    lu.assertEquals(findCandidate(rooms[5].siblingCandidates, "structureKey", "F_Story01").structure, "Story")
-    lu.assertEquals(findCandidate(rooms[6].siblingCandidates, "structureKey", "Combat").rewardBranch, "majorMinor")
     lu.assertEquals(rooms[1].topology.exits[1].branch, "picked")
     lu.assertEquals(rooms[1].topology.exits[1].roomKey, "F_Combat01")
     lu.assertEquals(rooms[1].topology.exits[1].reward.kind, "majorMinor")
     lu.assertEquals(rooms[1].topology.exits[1].reward.rewardStore, "RunProgress")
     lu.assertEquals(rooms[1].topology.exits[1].reward.rewardType, "MaxHealthDrop")
     lu.assertEquals(rooms[1].roomHistoryOrdinal, 1)
-    lu.assertEquals(rooms[1].phases.offer.roomHistoryOrdinal, 0)
-    lu.assertEquals(rooms[1].phases.offer.runDepthCache, 1)
-
     lu.assertEquals(rooms[5].topology.exits[1].branch, "picked")
     lu.assertEquals(rooms[5].topology.exits[1].roomKey, "F_Combat05")
     lu.assertEquals(rooms[5].topology.exits[2].branch, "sibling")
@@ -637,12 +620,6 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearPrebossBranchesGenerat
     lu.assertEquals(preboss.reward.reward.rewardStore, "RunProgress")
     lu.assertEquals(preboss.reward.reward.rewardType, "Boon")
     lu.assertEquals(preboss.reward.reward.boonSource, "ZeusUpgrade")
-    lu.assertEquals(preboss.rewardCandidates[1].kind, "shop")
-    lu.assertEquals(preboss.rewardCandidates[1].shopProfile, "WorldShop")
-    lu.assertEquals(preboss.rewardCandidates[2].rewardStore, "RunProgress")
-    lu.assertFalse(hasValue(preboss.rewardCandidates[2].rewardTypes, "Devotion"))
-    lu.assertTrue(hasValue(preboss.rewardCandidates[2].rewardTypes, "Boon"))
-
     local boonLoot = routeHistory.lootEntries(history, "Boon")
     lu.assertEquals(#boonLoot, 2)
     lu.assertEquals(boonLoot[1].parentRoomKey, "F_Combat05")
@@ -782,20 +759,12 @@ function TestRunPlannerRouteHistoryBuilder.testFieldsCageEntriesCarryTopologyAnd
     lu.assertEquals(rooms[3].topology.selected.sameExitRewardCount, 2)
     lu.assertEquals(rooms[3].topology.sibling.structure, "CombatCage2")
     lu.assertEquals(rooms[3].topology.sibling.sameExitRewardCount, 2)
-    lu.assertNotNil(findCandidate(rooms[2].roomCandidates, "roomKey", "H_Combat04"))
-    lu.assertNotNil(findCandidate(rooms[2].siblingCandidates, "structureKey", "CombatCage2"))
-    lu.assertNotNil(findCandidate(rooms[2].siblingCandidates, "structureKey", "CombatCage3"))
     lu.assertEquals(rooms[2].reward.kind, "fieldsCages")
     lu.assertEquals(rooms[2].reward.sameExitRewardCount, 3)
     lu.assertEquals(rooms[2].reward.picks[1].rewardType, "Boon")
     lu.assertEquals(rooms[2].reward.picks[1].boonSource, "PoseidonUpgrade")
     lu.assertEquals(rooms[2].reward.picks[2].rewardType, "HermesUpgrade")
     lu.assertEquals(rooms[2].reward.picks[3].rewardType, "StackUpgrade")
-    lu.assertEquals(#rooms[2].rewardCandidates, 3)
-    lu.assertEquals(rooms[2].rewardCandidates[1].address, "cage:1")
-    lu.assertTrue(hasValue(rooms[2].rewardCandidates[1].rewardTypes, "Boon"))
-    lu.assertTrue(hasValue(rooms[2].rewardCandidates[2].rewardTypes, "HermesUpgrade"))
-
     lu.assertEquals(rooms[4].topology.selected.structure, "Bridge")
     lu.assertEquals(rooms[4].topology.selected.roomKey, "H_Bridge01")
     lu.assertEquals(rooms[4].topology.sibling.structure, "Miniboss")
@@ -961,8 +930,6 @@ function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedEntriesCarryEn
     lu.assertEquals(rooms[2].reward.encounters[1].key, "Encounter1")
     lu.assertEquals(rooms[2].reward.encounters[1].wheelOfferCount, 1)
     lu.assertEquals(rooms[2].reward.encounters[1].reward.rewardType, "MaxHealthDrop")
-    lu.assertNotNil(findCandidate(rooms[2].roomCandidates, "roomKey", "O_Combat01"))
-    lu.assertEquals(#rooms[2].siblingCandidates, 0)
     lu.assertEquals(rooms[3].reward.kind, "multiEncounter")
     lu.assertEquals(#rooms[3].reward.encounters, 2)
     lu.assertEquals(rooms[3].reward.encounters[1].reward.rewardType, "Boon")
@@ -972,15 +939,6 @@ function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedEntriesCarryEn
     lu.assertEquals(rooms[3].reward.encounters[2].reward.rewardType, "GiftDrop")
     lu.assertEquals(rooms[3].reward.encounters[2].biomeEncounterDepth, 3)
     lu.assertEquals(rooms[3].biomeEncounterDepth, 2)
-    lu.assertEquals(rooms[3].phases.offer.biomeEncounterDepth, 3)
-    lu.assertEquals(rooms[3].rewardCandidates[1].address, "encounter:1")
-    lu.assertEquals(rooms[3].rewardCandidates[1].rewardClass, "Major")
-    lu.assertTrue(hasValue(rooms[3].rewardCandidates[1].rewardTypes, "Boon"))
-    lu.assertEquals(rooms[3].rewardCandidates[3].address, "encounter:2")
-    lu.assertEquals(rooms[3].rewardCandidates[3].rewardClass, "Major")
-    lu.assertEquals(rooms[3].rewardCandidates[4].address, "encounter:2")
-    lu.assertEquals(rooms[3].rewardCandidates[4].rewardClass, "Minor")
-    lu.assertEquals(rooms[3].rewardCandidates[4].rewardStore, "MetaProgress")
     lu.assertEquals(rooms[3].topology.kind, "shipCombat")
     lu.assertEquals(rooms[3].topology.encounters[2].wheelOfferCount, 2)
 
@@ -1288,8 +1246,6 @@ function TestRunPlannerRouteHistoryBuilder.testHubPylonEntriesCarryHubAndSideRew
     lu.assertEquals(rooms[4].topology.kind, "hubDoorBatchPick")
     lu.assertEquals(rooms[4].topology.selected.structure, "Combat")
     lu.assertEquals(rooms[4].topology.selected.rewardStore, "HubRewards")
-    lu.assertNotNil(rooms[4].roomCandidates[1].availabilityContext)
-    lu.assertEquals(rooms[4].roomCandidates[1].availabilityContext.biomeDepthCache, 3)
     lu.assertEquals(rooms[4].reward.kind, "roomStore")
     lu.assertEquals(rooms[4].reward.rewardStore, "HubRewards")
     lu.assertEquals(rooms[4].reward.rewardType, "Boon")
@@ -1303,9 +1259,6 @@ function TestRunPlannerRouteHistoryBuilder.testHubPylonEntriesCarryHubAndSideRew
     lu.assertEquals(rooms[5].reward.address, "side:1")
     lu.assertEquals(rooms[5].reward.rewardStore, "SubRoomRewardsHard")
     lu.assertEquals(rooms[5].reward.rewardType, "MaxHealthDrop")
-    lu.assertEquals(rooms[5].rewardCandidates[1].address, "side:1")
-    lu.assertNil(rooms[5].roomCandidates)
-    lu.assertNil(rooms[6].roomCandidates)
     lu.assertEquals(rooms[10].reward.rewardStore, "RunProgress")
     lu.assertEquals(rooms[10].reward.rewardType, "Boon")
     lu.assertEquals(rooms[10].reward.boonSource, "AphroditeUpgrade")

@@ -57,8 +57,9 @@ local function appendRewardTypeCandidateFinding(target, history, entry, candidat
     )
 end
 
-function rewards.appendFindings(target, history, entry, rulesByTarget)
-    for _, candidate in ipairs(entry.rewardCandidates or EMPTY_LIST) do
+function rewards.appendFindings(target, history, step, rulesByTarget)
+    local entry = step and step.entry or nil
+    for _, candidate in ipairs(step and step.candidates and step.candidates.rewards or EMPTY_LIST) do
         if candidate.kind == "rewardType" or candidate.kind == "fixedReward" then
             for _, rewardType in ipairs(candidate.rewardTypes or EMPTY_LIST) do
                 appendRewardTypeCandidateFinding(target, history, entry, candidate, rewardType, rulesByTarget)

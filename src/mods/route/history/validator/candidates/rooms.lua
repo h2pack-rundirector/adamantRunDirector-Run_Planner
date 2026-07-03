@@ -207,8 +207,9 @@ local function appendRoleAvailabilityFindings(target, entry, candidates)
     end
 end
 
-function rooms.appendFindings(target, history, entry)
-    local candidates = entry.roomCandidates or EMPTY_LIST
+function rooms.appendFindings(target, history, step)
+    local entry = step and step.entry or nil
+    local candidates = step and step.candidates and step.candidates.rooms or EMPTY_LIST
     for _, candidate in ipairs(candidates) do
         common.appendAvailabilityFinding(
             target,

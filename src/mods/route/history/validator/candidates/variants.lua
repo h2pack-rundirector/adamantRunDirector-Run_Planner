@@ -7,8 +7,9 @@ local variants = {}
 
 local EMPTY_LIST = common.EMPTY_LIST
 
-function variants.appendFindings(target, entry)
-    for _, candidate in ipairs(entry.variantCandidates or EMPTY_LIST) do
+function variants.appendFindings(target, step)
+    local entry = step and step.entry or nil
+    for _, candidate in ipairs(step and step.candidates and step.candidates.variants or EMPTY_LIST) do
         if not common.rangeContains(candidate.availableAtBiomeEncounterDepth, entry and entry.biomeEncounterDepth) then
             target[#target + 1] = findings.variantCandidateInvalid(
                 entry,
