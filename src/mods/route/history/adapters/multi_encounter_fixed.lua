@@ -1,7 +1,6 @@
 local deps = ... or {}
 
 local multiEncounterFixed = {}
-local rewardCandidates = deps.rewardCandidates
 local materializeRoom = deps.materializeRoom
 
 local EMPTY_LIST = {}
@@ -157,19 +156,6 @@ local function variantForRow(biome, role, selectedRow)
     return optionByControlKey(policy and policy.countControl or nil, selectedRow.variantKey)
 end
 
-local function variantCandidates(policy)
-    local candidates = {}
-    for _, option in ipairs(policy and policy.countControl and policy.countControl.options or EMPTY_LIST) do
-        candidates[#candidates + 1] = {
-            key = option.key,
-            label = option.label or option.key,
-            availableAtBiomeEncounterDepth = option.availableAtBiomeEncounterDepth,
-            controlAlias = "VariantKey",
-        }
-    end
-    return candidates
-end
-
 local function wheelOfferForKey(policy, key)
     return optionByControlKey(policy and policy.wheelOfferControl or nil, key)
 end
@@ -299,14 +285,6 @@ local function selectedEncounterRewardSummary(leg, encounterReward)
     return selectedRewardFromMajorMinor(leg.reward, encounterReward)
 end
 
-local function encounterRewardCandidates(leg, legIndex)
-    local candidates = rewardCandidates.forContext(leg.reward)
-    for _, candidate in ipairs(candidates) do
-        candidate.address = "encounter:" .. tostring(legIndex)
-    end
-    return candidates
-end
-
 local function encounterRewardAt(selectedRow, legIndex)
     for _, reward in ipairs(selectedRow and selectedRow.rewards and selectedRow.rewards.encounter or EMPTY_LIST) do
         if reward.legIndex == legIndex then
@@ -332,7 +310,6 @@ local function encounterSnapshots(context, selectedRow, resolved)
                 biomeEncounterDepth = context.biomeState.biomeEncounterDepth + legIndex - 1,
                 runEncounterDepth = context.routeState.runEncounterDepth + legIndex - 1,
                 reward = selectedEncounterRewardSummary(leg, encounterReward),
-                rewardCandidates = encounterRewardCandidates(leg, legIndex),
             }
         end
     end
@@ -363,12 +340,6 @@ local function attachShipCombat(context, roomEntry, selectedRow, resolved)
         kind = "multiEncounter",
         encounters = encounters,
     }
-    roomEntry.rewardCandidates = {}
-    for _, encounter in ipairs(encounters) do
-        for _, candidate in ipairs(encounter.rewardCandidates or EMPTY_LIST) do
-            roomEntry.rewardCandidates[#roomEntry.rewardCandidates + 1] = candidate
-        end
-    end
     roomEntry.topology = {
         kind = "shipCombat",
         encounters = topologyEncounters,
@@ -438,7 +409,6 @@ function multiEncounterFixed.build(args)
             fields = {
                 variantLabel = resolved.variant and resolved.variant.label or nil,
                 variantAvailability = resolved.variant and resolved.variant.availableAtBiomeEncounterDepth or nil,
-                variantCandidates = variantCandidates(resolved.policy),
             },
             attachReward = false,
             attachTopology = function(roomEntry)

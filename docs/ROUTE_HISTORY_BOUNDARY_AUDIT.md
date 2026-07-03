@@ -3,8 +3,7 @@
 ## Progress
 
 - Slice 1 complete: builder-side selected room materialization now lives in
-  `history/materialize_room.lua`; builder-time candidate stamping is isolated in
-  `history/migration_candidates.lua`.
+  `history/materialize_room.lua`.
 - `history/step.lua` has been removed so "step" can be reclaimed by the
   validator walker.
 - Slice 2 complete: `history/validator/walker.lua` reconstructs validation
@@ -14,11 +13,10 @@
 - Slice 3 complete: `validator/candidates.lua` and its room/sibling/variant/
   reward subvalidators now consume walker steps instead of raw history entries.
   Builder tests no longer assert candidate tables on materialized entries.
-- Slice 4 should remove builder-stamped `roomCandidates`, `siblingCandidates`,
-  `variantCandidates`, and `rewardCandidates` from history entries. O/Thessaly
-  multi-encounter reward candidates still use migration data inside
-  `reward.encounters`; slice 4 must replace that with walker-side derivation
-  before deleting the adapter-stamped data.
+- Slice 4 complete: builder-stamped `roomCandidates`, `siblingCandidates`,
+  `variantCandidates`, and `rewardCandidates` have been removed from history
+  entries. O/Thessaly multi-encounter reward candidates are now derived by the
+  walker from topology policy plus selected encounter facts.
 
 ## Contract
 

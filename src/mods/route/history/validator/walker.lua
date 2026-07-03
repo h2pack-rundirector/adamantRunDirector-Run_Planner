@@ -192,6 +192,44 @@ local function adapterUsesPickedDoorCandidates(adapter)
     return adapter == "fixedLinear" or adapter == "clockworkGoal"
 end
 
+local function variantPolicyForStep(step)
+    local policyKey = step.selected.role and step.selected.role.encounterPolicy or nil
+    local policy = step.biome
+        and step.biome.roomTopology
+        and step.biome.roomTopology.combatEncounterPolicy
+        or nil
+    if policyKey ~= nil and policy ~= nil and policy.key == policyKey then
+        return policy
+    end
+    return nil
+end
+
+local function rewardLegs(policy)
+    if policy == nil then
+        return EMPTY_LIST
+    end
+    if policy.rewardLegs ~= nil then
+        return policy.rewardLegs
+    end
+    local legs = {}
+    for _, leg in ipairs(policy.legs or EMPTY_LIST) do
+        if leg.hasReward == true then
+            legs[#legs + 1] = leg
+        end
+    end
+    return legs
+end
+
+local function rewardLegByIndex(policy, legIndex)
+    local expectedKey = legIndex ~= nil and "Encounter" .. tostring(legIndex) or nil
+    for _, leg in ipairs(rewardLegs(policy)) do
+        if leg.legIndex == legIndex or leg.key == expectedKey then
+            return leg
+        end
+    end
+    return nil
+end
+
 local function rewardCandidateOpts(entry)
     local reward = entry and entry.reward or nil
     if reward ~= nil and reward.kind == "fieldsCages" then
@@ -207,25 +245,15 @@ local function rewardCandidatesForStep(step)
     if reward ~= nil and reward.kind == "multiEncounter" then
         local candidates = {}
         for _, encounter in ipairs(reward.encounters or EMPTY_LIST) do
-            for _, candidate in ipairs(encounter.rewardCandidates or EMPTY_LIST) do
+            local leg = rewardLegByIndex(variantPolicyForStep(step), encounter.legIndex)
+            for _, candidate in ipairs(rewardCandidates.forContext(leg and leg.reward or nil)) do
+                candidate.address = "encounter:" .. tostring(encounter.legIndex)
                 candidates[#candidates + 1] = candidate
             end
         end
         return candidates
     end
     return rewardCandidates.forContext(step.rewardContext, rewardCandidateOpts(step.entry))
-end
-
-local function variantPolicyForStep(step)
-    local policyKey = step.selected.role and step.selected.role.encounterPolicy or nil
-    local policy = step.biome
-        and step.biome.roomTopology
-        and step.biome.roomTopology.combatEncounterPolicy
-        or nil
-    if policyKey ~= nil and policy ~= nil and policy.key == policyKey then
-        return policy
-    end
-    return nil
 end
 
 local function variantCandidatesForStep(step)

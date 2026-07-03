@@ -7,16 +7,11 @@ local historySystem = h.withTestImport(function()
         rewardDomain = importHarness.loadRewardDomain(),
     })
 end)
-local routeHistory = historySystem.history
 local historyBuilder = historySystem.builder
 local walker = historySystem.walker
 
 -- luacheck: globals TestRunPlannerRouteHistoryWalker
 TestRunPlannerRouteHistoryWalker = {}
-
-local function roomEvents(history)
-    return routeHistory.byKind(history, "room")
-end
 
 local function findCandidate(candidates, field, expected)
     for _, candidate in ipairs(candidates or {}) do
@@ -245,7 +240,7 @@ local function fullOThessalyEncounterRewardRows()
     }
 end
 
-function TestRunPlannerRouteHistoryWalker.testFixedLinearWalkerRebuildsMigrationCandidateState()
+function TestRunPlannerRouteHistoryWalker.testFixedLinearWalkerBuildsCandidateState()
     local catalog = h.loadCatalog()
     local history = buildTemplateHistory(
         catalog,
@@ -254,15 +249,20 @@ function TestRunPlannerRouteHistoryWalker.testFixedLinearWalkerRebuildsMigration
         h.loadFixedLinearTemplate(),
         fullFErebusRows()
     )
-    local rooms = roomEvents(history)
     local steps = walker.forBiome({
         history = history,
         biome = catalog.lookup.F,
     })
 
     lu.assertEquals(#steps, 12)
-    assertPhaseEquals(steps[1].phases.offer, rooms[1].phases.offer)
-    assertPhaseEquals(steps[2].phases.generated, rooms[1].phases.offer)
+    assertPhaseEquals(steps[1].phases.offer, {
+        biomeDepthCache = 0,
+        biomeEncounterDepth = 1,
+        runEncounterDepth = 1,
+        runDepthCache = 1,
+        roomHistoryOrdinal = 0,
+    })
+    assertPhaseEquals(steps[2].phases.generated, steps[1].phases.offer)
     lu.assertNotNil(findCandidate(steps[2].candidates.rooms, "roomKey", "F_Combat01"))
     lu.assertNotNil(findCandidate(steps[2].candidates.rooms, "roomKey", "F_Story01"))
     lu.assertNotNil(findCandidate(steps[5].candidates.siblings, "structureKey", "F_Story01"))
@@ -270,7 +270,7 @@ function TestRunPlannerRouteHistoryWalker.testFixedLinearWalkerRebuildsMigration
         findCandidate(steps[6].candidates.siblings, "structureKey", "Combat").rewardBranch,
         "majorMinor"
     )
-    lu.assertEquals(#steps[12].candidates.rewards, #rooms[12].rewardCandidates)
+    lu.assertEquals(#steps[12].candidates.rewards, 2)
     lu.assertEquals(steps[12].candidates.rewards[2].rewardStore, "RunProgress")
 end
 
@@ -283,7 +283,6 @@ function TestRunPlannerRouteHistoryWalker.testFieldsCageWalkerRebuildsSiblingAnd
         h.loadFieldsCageTemplate(),
         fullHFieldsRows()
     )
-    local rooms = roomEvents(history)
     local steps = walker.forBiome({
         history = history,
         biome = catalog.lookup.H,
@@ -293,7 +292,7 @@ function TestRunPlannerRouteHistoryWalker.testFieldsCageWalkerRebuildsSiblingAnd
     lu.assertNotNil(findCandidate(steps[2].candidates.rooms, "roomKey", "H_Combat04"))
     lu.assertNotNil(findCandidate(steps[2].candidates.siblings, "structureKey", "CombatCage2"))
     lu.assertNotNil(findCandidate(steps[2].candidates.siblings, "structureKey", "CombatCage3"))
-    lu.assertEquals(#steps[2].candidates.rewards, #rooms[2].rewardCandidates)
+    lu.assertEquals(#steps[2].candidates.rewards, 3)
     lu.assertEquals(steps[2].candidates.rewards[1].address, "cage:1")
     lu.assertEquals(steps[2].candidates.rewards[3].address, "cage:3")
 end
@@ -308,16 +307,21 @@ function TestRunPlannerRouteHistoryWalker.testMultiEncounterWalkerRebuildsEncoun
         fullOThessalyRows(),
         fullOThessalyEncounterRewardRows()
     )
-    local rooms = roomEvents(history)
     local steps = walker.forBiome({
         history = history,
         biome = catalog.lookup.O,
     })
 
     lu.assertEquals(#steps, 8)
-    assertPhaseEquals(steps[3].phases.offer, rooms[3].phases.offer)
-    lu.assertEquals(#steps[3].candidates.rewards, #rooms[3].rewardCandidates)
-    lu.assertEquals(#steps[3].candidates.variants, #rooms[3].variantCandidates)
+    assertPhaseEquals(steps[3].phases.offer, {
+        biomeDepthCache = 3,
+        biomeEncounterDepth = 3,
+        runEncounterDepth = 3,
+        runDepthCache = 3,
+        roomHistoryOrdinal = 2,
+    })
+    lu.assertEquals(#steps[3].candidates.rewards, 4)
+    lu.assertEquals(#steps[3].candidates.variants, 2)
     lu.assertEquals(steps[3].candidates.variants[1].key, "TwoCombats")
     lu.assertEquals(steps[3].candidates.variants[2].key, "ThreeCombats")
     lu.assertEquals(steps[3].candidates.variants[2].availableAtBiomeEncounterDepth.min, 2)

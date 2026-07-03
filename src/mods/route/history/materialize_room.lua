@@ -1,9 +1,5 @@
-local deps = ... or {}
-
 local materializeRoom = {}
 local formAddress = import("mods/route/history/form_address.lua")
-
-local migrationCandidates = deps.migrationCandidates
 
 local function copyFields(target, fields)
     for key, value in pairs(fields or {}) do
@@ -126,9 +122,6 @@ function materializeRoom.stepRoom(context, selectedRow, resolved, opts)
     end
     if opts.attachReward ~= false then
         entry.reward = opts.reward
-    end
-    if migrationCandidates ~= nil and opts.attachMigrationCandidates ~= false then
-        migrationCandidates.attachForRoom(context, entry, selectedRow, resolved, opts)
     end
     if opts.attachTopology ~= nil then
         opts.attachTopology(entry)

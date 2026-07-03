@@ -56,14 +56,7 @@ function historyAssembly.create(opts)
     })
     local roomCandidates = import("mods/route/history/candidates/rooms.lua")
     local siblingCandidates = import("mods/route/history/candidates/siblings.lua")
-    local migrationCandidates = import("mods/route/history/migration_candidates.lua", nil, {
-        rewardCandidates = rewardCandidates,
-        roomCandidates = roomCandidates,
-        siblingCandidates = siblingCandidates,
-    })
-    local materializeRoom = import("mods/route/history/materialize_room.lua", nil, {
-        migrationCandidates = migrationCandidates,
-    })
+    local materializeRoom = import("mods/route/history/materialize_room.lua")
     local validatorWalker = import("mods/route/history/validator/walker.lua", nil, {
         history = history,
         rewardCandidates = rewardCandidates,
@@ -75,33 +68,18 @@ function historyAssembly.create(opts)
     })
     local adapters = {
         clockworkGoal = import("mods/route/history/adapters/clockwork_goal.lua", nil, {
-            rewardCandidates = rewardCandidates,
-            roomCandidates = roomCandidates,
-            siblingCandidates = siblingCandidates,
             materializeRoom = materializeRoom,
         }),
         fieldsCageRoute = import("mods/route/history/adapters/fields_cage.lua", nil, {
-            rewardCandidates = rewardCandidates,
-            roomCandidates = roomCandidates,
-            siblingCandidates = siblingCandidates,
             materializeRoom = materializeRoom,
         }),
         fixedLinear = import("mods/route/history/adapters/fixed_linear.lua", nil, {
-            rewardCandidates = rewardCandidates,
-            roomCandidates = roomCandidates,
-            siblingCandidates = siblingCandidates,
             materializeRoom = materializeRoom,
         }),
         hubPylon = import("mods/route/history/adapters/hub_pylon.lua", nil, {
-            rewardCandidates = rewardCandidates,
-            roomCandidates = roomCandidates,
-            siblingCandidates = siblingCandidates,
             materializeRoom = materializeRoom,
         }),
         multiEncounterFixed = import("mods/route/history/adapters/multi_encounter_fixed.lua", nil, {
-            rewardCandidates = rewardCandidates,
-            roomCandidates = roomCandidates,
-            siblingCandidates = siblingCandidates,
             materializeRoom = materializeRoom,
         }),
     }
@@ -146,7 +124,6 @@ function historyAssembly.create(opts)
         history = history,
         loot = loot,
         materializeRoom = materializeRoom,
-        migrationCandidates = migrationCandidates,
         npcCandidates = npcCandidates,
         npcFeedback = npcFeedback,
         roomCandidates = roomCandidates,
