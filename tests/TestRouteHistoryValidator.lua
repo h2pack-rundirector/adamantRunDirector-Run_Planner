@@ -16,6 +16,12 @@ local historyValidator = historySystem.validator
 local valueStates = h.withTestImport(function()
     return h.testImport("mods/ui/value_states.lua")
 end)
+local forcePressure = h.withTestImport(function()
+    local common = h.testImport("mods/route/history/validator/biome_structure/common.lua")
+    return h.testImport("mods/route/history/validator/biome_structure/force_pressure.lua", nil, {
+        common = common,
+    })
+end)
 
 -- luacheck: globals TestRunPlannerRouteHistoryValidator
 TestRunPlannerRouteHistoryValidator = {}
@@ -1248,6 +1254,50 @@ function TestRunPlannerRouteHistoryValidator.testValidatorAllowsFieldsBridgeCrow
     lu.assertTrue(result.valid)
 end
 
+function TestRunPlannerRouteHistoryValidator.testValidatorAllowsFieldsBridgePickedNextWithForcedOtherDoor()
+    local route = {
+        key = "Underworld",
+        biomes = { "H" },
+    }
+    local result = validate(route, "H", h.loadFieldsCageTemplate(), {
+        {},
+        {
+            RoleKey = "Combat",
+            OptionKey = "H_Combat04",
+            VariantKey = "ThreeRewards",
+            SiblingStructureKey = "H_MiniBoss01",
+            Reward1Key = "Boon",
+            Reward1LootKey = "PoseidonUpgrade",
+            Reward2Key = "StackUpgrade",
+            Reward3Key = "MaxHealthDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "H_Combat05",
+            VariantKey = "ThreeRewards",
+            SiblingStructureKey = "H_MiniBoss02",
+            Reward1Key = "Boon",
+            Reward1LootKey = "HestiaUpgrade",
+            Reward2Key = "StackUpgrade",
+            Reward3Key = "WeaponUpgrade",
+        },
+        {
+            RoleKey = "Bridge",
+            OptionKey = "H_Bridge01",
+            SiblingStructureKey = "CombatCage2",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "H_Combat10",
+            VariantKey = "TwoRewards",
+            Reward1Key = "HermesUpgrade",
+            Reward2Key = "StackUpgrade",
+        },
+    })
+
+    lu.assertTrue(result.valid)
+end
+
 function TestRunPlannerRouteHistoryValidator.testValidatorRejectsFieldsBridgeCrowdedByOneForcedDoor()
     local route = {
         key = "Underworld",
@@ -1264,11 +1314,20 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsFieldsBridgeCro
             Reward2Key = "StackUpgrade",
         },
         {
-            RoleKey = "Miniboss",
-            OptionKey = "H_MiniBoss01",
-            SiblingStructureKey = "CombatCage2",
+            RoleKey = "Combat",
+            OptionKey = "H_Combat05",
+            VariantKey = "TwoRewards",
+            SiblingStructureKey = "H_MiniBoss01",
+            Reward1Key = "HermesUpgrade",
+            Reward2Key = "StackUpgrade",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "H_Combat10",
+            VariantKey = "TwoRewards",
             Reward1Key = "Boon",
             Reward1LootKey = "DemeterUpgrade",
+            Reward2Key = "StackUpgrade",
         },
     })
 
@@ -1315,6 +1374,100 @@ function TestRunPlannerRouteHistoryValidator.testValidatorAllowsForceGroupDeferr
     })
 
     lu.assertTrue(result.valid)
+end
+
+function TestRunPlannerRouteHistoryValidator.testForceGroupIgnoresGeneratedCandidateBeforeActiveWindow()
+    local invalid = forcePressure.validate({
+        {
+            entry = {
+                biomeKey = "F",
+                rowIndex = 4,
+                roomKey = "F_Combat04",
+                biomeDepthCache = 4,
+            },
+            phases = {
+                offer = {
+                    biomeDepthCache = 4,
+                },
+            },
+            topology = {
+                generatedExitCount = 2,
+                exits = {
+                    {
+                        branch = "picked",
+                        roomKey = "F_MiniBoss01",
+                    },
+                    {
+                        branch = "sibling",
+                        roomKey = "F_Combat05",
+                    },
+                },
+            },
+        },
+        {
+            entry = {
+                biomeKey = "F",
+                rowIndex = 6,
+                roomKey = "F_Combat06",
+                biomeDepthCache = 6,
+            },
+            phases = {
+                offer = {
+                    biomeDepthCache = 6,
+                },
+            },
+            topology = {
+                generatedExitCount = 2,
+                exits = {
+                    {
+                        branch = "picked",
+                        roomKey = "F_Combat06",
+                    },
+                    {
+                        branch = "sibling",
+                        roomKey = "F_Combat07",
+                    },
+                },
+            },
+        },
+    }, {
+        roomTopology = {
+            siblingStructureControl = {
+                options = {
+                    {
+                        key = "F_MiniBoss01",
+                        label = "Miniboss",
+                        roomKey = "F_MiniBoss01",
+                        availability = {
+                            biomeDepthCache = {
+                                min = 6,
+                            },
+                        },
+                        force = {
+                            biomeDepthCache = {
+                                min = 4,
+                                max = 6,
+                            },
+                        },
+                    },
+                },
+            },
+            forcedGroups = {
+                {
+                    key = "F_Minibosses",
+                    label = "Miniboss",
+                    candidates = { "F_MiniBoss01" },
+                    forceAtBiomeDepthMax = 6,
+                    requiredGeneratedCount = 1,
+                },
+            },
+        },
+    })
+
+    lu.assertNotNil(invalid)
+    lu.assertEquals(invalid.code, "forced_topology_group_unresolved")
+    lu.assertEquals(invalid.generatedCount, 0)
+    lu.assertEquals(invalid.requiredGeneratedCount, 1)
 end
 
 function TestRunPlannerRouteHistoryValidator.testForceGroupUsesDeclarationLabelMessage()
@@ -1416,7 +1569,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMismatchedField
             RoleKey = "Combat",
             OptionKey = "H_Combat04",
             VariantKey = "ThreeRewards",
-            SiblingStructureKey = "CombatCage2",
+            SiblingStructureKey = "CombatCage3",
             Reward1Key = "Boon",
             Reward1LootKey = "PoseidonUpgrade",
             Reward2Key = "StackUpgrade",
@@ -1443,14 +1596,14 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMismatchedField
     lu.assertFalse(result.valid)
     lu.assertEquals(result.invalids[1].code, "fields_sibling_combat_cage_count_mismatch")
     lu.assertNil(result.invalids[1].message)
-    lu.assertEquals(result.invalids[1].targetFinding.structureKey, "CombatCage2")
+    lu.assertEquals(result.invalids[1].targetFinding.structureKey, "CombatCage3")
     lu.assertNil(result.invalids[1].targetFinding.message)
 
     local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
     lu.assertEquals(feedback.route.primary.message, "Other Door combat reward count must match Picked Door")
     local states = historyFeedback.valueStatesForControl(feedback, "H", 2, "SiblingStructureKey")
-    lu.assertEquals(states.CombatCage2, valueStates.INVALID)
-    lu.assertNil(states.CombatCage3)
+    lu.assertEquals(states.CombatCage3, valueStates.INVALID)
+    lu.assertNil(states.CombatCage2)
 end
 
 function TestRunPlannerRouteHistoryValidator.testClockworkRejectsPrebossBeforeGoalsComplete()

@@ -101,29 +101,6 @@ local function generatedCandidateAt(step, candidate)
     return false
 end
 
-local function generatedCandidatesThrough(steps, index, candidates)
-    local generated = {}
-    for currentIndex = 1, index do
-        for _, candidate in ipairs(candidates or EMPTY_LIST) do
-            if generated[candidate] == nil and generatedCandidateAt(steps[currentIndex], candidate) then
-                generated[candidate] = true
-            end
-        end
-    end
-    return generated
-end
-
-local function generatedCandidateCountThrough(steps, index, candidates)
-    local generated = generatedCandidatesThrough(steps, index, candidates)
-    local count = 0
-    for _, candidate in ipairs(candidates or EMPTY_LIST) do
-        if generated[candidate] then
-            count = count + 1
-        end
-    end
-    return count
-end
-
 local function pickedCandidateBefore(steps, index, candidates)
     for currentIndex = 1, index - 1 do
         local entry = stepEntry(steps[currentIndex])
@@ -159,6 +136,33 @@ local function activeForceCandidates(steps, index, optionsByRoomKey, groupsByCan
         end
     end
     return active
+end
+
+local function generatedCandidatesThrough(steps, index, candidates, optionsByRoomKey, groupsByCandidate)
+    local generated = {}
+    for currentIndex = 1, index do
+        local active = activeForceCandidates(steps, currentIndex, optionsByRoomKey, groupsByCandidate)
+        for _, candidate in ipairs(candidates or EMPTY_LIST) do
+            if generated[candidate] == nil
+                and active[candidate] ~= nil
+                and generatedCandidateAt(steps[currentIndex], candidate)
+            then
+                generated[candidate] = true
+            end
+        end
+    end
+    return generated
+end
+
+local function generatedCandidateCountThrough(steps, index, candidates, optionsByRoomKey, groupsByCandidate)
+    local generated = generatedCandidatesThrough(steps, index, candidates, optionsByRoomKey, groupsByCandidate)
+    local count = 0
+    for _, candidate in ipairs(candidates or EMPTY_LIST) do
+        if generated[candidate] then
+            count = count + 1
+        end
+    end
+    return count
 end
 
 local function generatedActiveForceCandidateCount(step, active)
@@ -226,11 +230,12 @@ local function requiredGeneratedCount(group, step)
     return math.min(#(group.candidates or EMPTY_LIST), stepGeneratedExitCount(step))
 end
 
-local function validateForcedGroup(steps, index, group)
+local function validateForcedGroup(steps, index, group, optionsByRoomKey, groupsByCandidate)
     local step = steps[index]
     local entry = stepEntry(step)
     local deadline = group.forceAtBiomeDepthMax
-    if deadline == nil or (entry.biomeDepthCache or 0) < deadline then
+    local context = forceContext(step)
+    if deadline == nil or (context and context.biomeDepthCache or 0) < deadline then
         return nil
     end
     if group.pickedCandidateBeforeDeadlineClosesGroup
@@ -239,7 +244,13 @@ local function validateForcedGroup(steps, index, group)
         return nil
     end
     local required = requiredGeneratedCount(group, step)
-    local generatedCount = generatedCandidateCountThrough(steps, index, group.candidates)
+    local generatedCount = generatedCandidateCountThrough(
+        steps,
+        index,
+        group.candidates,
+        optionsByRoomKey,
+        groupsByCandidate
+    )
     if generatedCount >= required then
         return nil
     end
@@ -256,8 +267,8 @@ local function validateForcedGroup(steps, index, group)
     )
 end
 
-local function validateForcedGroupWithActive(steps, index, group, active)
-    local invalid = validateForcedGroup(steps, index, group)
+local function validateForcedGroupWithActive(steps, index, group, active, optionsByRoomKey, groupsByCandidate)
+    local invalid = validateForcedGroup(steps, index, group, optionsByRoomKey, groupsByCandidate)
     if invalid == nil or forceSaturated(steps[index], active) then
         return nil
     end
@@ -279,7 +290,7 @@ function forcePressure.validate(steps, biome)
             return invalid
         end
         for _, group in ipairs(topology.forcedGroups or EMPTY_LIST) do
-            invalid = validateForcedGroupWithActive(steps, index, group, active)
+            invalid = validateForcedGroupWithActive(steps, index, group, active, optionsByRoomKey, groupsByCandidate)
             if invalid ~= nil then
                 return invalid
             end

@@ -360,12 +360,16 @@ local function resolveRow(context, selectedRow, slot)
 end
 
 local function selectedTopology(selectedRow, resolved)
+    if selectedRow == nil or resolved == nil then
+        return nil
+    end
     if selectedRow.roleKey == "Combat" then
         local count = resolved.sameExitRewardCount
         if count <= 0 then
             return nil
         end
         return {
+            branch = "picked",
             structure = "CombatCage" .. tostring(count),
             rewardStore = "RunProgress",
             sameExitRewardCount = count,
@@ -373,6 +377,7 @@ local function selectedTopology(selectedRow, resolved)
         }
     elseif selectedRow.roleKey == "Miniboss" then
         return {
+            branch = "picked",
             structure = "Miniboss",
             roomKey = resolved.roomKey,
             rewardStore = "RunProgress",
@@ -382,6 +387,7 @@ local function selectedTopology(selectedRow, resolved)
         }
     elseif selectedRow.roleKey == "Bridge" then
         return {
+            branch = "picked",
             structure = "Bridge",
             roomKey = resolved.roomKey,
             sameExitRewardCount = 0,
@@ -429,6 +435,10 @@ local function siblingTopology(context, selectedRow)
         return nil
     end
     return {
+        branch = "sibling",
+        siblingIndex = 1,
+        key = option.key,
+        structureKey = structureKey,
         structure = option.structure,
         roomKey = option.roomKey,
         rewardStore = option.rewardStore,
@@ -437,13 +447,13 @@ local function siblingTopology(context, selectedRow)
     }
 end
 
-local function attachFieldsTopology(context, roomEntry, selectedRow, resolved)
+local function attachFieldsTopology(context, roomEntry, selectedRow, pickedRow, pickedResolved)
     if roomEntry == nil then
         return
     end
-    local selected = selectedTopology(selectedRow, resolved)
+    local selected = selectedTopology(pickedRow, pickedResolved)
     local sibling = siblingTopology(context, selectedRow)
-    if selected == nil or sibling == nil then
+    if selected == nil then
         return
     end
     roomEntry.topology = {
@@ -479,7 +489,11 @@ function fieldsCage.build(args)
 
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
         local resolved = resolvedRows[index]
+        local nextRow = args.snapshot.rows[index + 1]
+        local nextResolved = resolvedRows[index + 1]
         materializeRoom.stepRoom(context, selectedRow, resolved, {
+            nextRow = nextRow,
+            nextResolved = nextResolved,
             reward = selectedRewardSummary(
                 resolved.rewardContext,
                 selectedRow.rewards,
@@ -489,7 +503,7 @@ function fieldsCage.build(args)
                 sameExitRewardCount = resolved.sameExitRewardCount,
             },
             attachTopology = function(roomEntry)
-                attachFieldsTopology(context, roomEntry, selectedRow, resolved)
+                attachFieldsTopology(context, roomEntry, selectedRow, nextRow, nextResolved)
             end,
         })
     end

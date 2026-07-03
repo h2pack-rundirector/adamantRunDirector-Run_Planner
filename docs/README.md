@@ -12,6 +12,8 @@ notes and raw game-data references.
 
 ## Work In Progress
 
+- `wip/DECLARATION_TOPOLOGY_BOUNDARY.md`: target boundary for room catalogs,
+  layout, generated-door topology, node snapshots, and feedback ownership.
 - `wip/REWARD_GENERATION_MODEL.md`: reward bag, topology, and deferred Chaos
   design notes.
 - `wip/VALIDATION_MESSAGE_AUDIT.md`: route-status and validation-message
