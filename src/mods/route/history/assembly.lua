@@ -64,6 +64,12 @@ function historyAssembly.create(opts)
     local materializeRoom = import("mods/route/history/materialize_room.lua", nil, {
         migrationCandidates = migrationCandidates,
     })
+    local validatorWalker = import("mods/route/history/validator/walker.lua", nil, {
+        history = history,
+        rewardCandidates = rewardCandidates,
+        roomCandidates = roomCandidates,
+        siblingCandidates = siblingCandidates,
+    })
     local npcCandidates = import("mods/route/history/candidates/npcs.lua", nil, {
         history = history,
     })
@@ -148,6 +154,7 @@ function historyAssembly.create(opts)
         query = query,
         builder = builder,
         validator = validator,
+        walker = validatorWalker,
     }
 end
 

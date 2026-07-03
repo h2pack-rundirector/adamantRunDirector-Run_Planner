@@ -10,6 +10,19 @@
 - Candidate tables still exist on history entries as temporary
   `builderCandidateTables` migration data until the validator walker owns
   candidate generation.
+- Slice 2 complete: `history/validator/walker.lua` reconstructs validation
+  steps from the completed ledger, including room, sibling, variant, and reward
+  candidates. Tests compare its output against the temporary builder-stamped
+  candidate tables before live validators switch over.
+- Slice 3 should move `validator/candidates.lua` and its room/sibling/variant/
+  reward subvalidators to consume walker steps instead of raw history entries.
+  The selected-invalid translation should keep using source/form coordinates
+  carried by findings and candidates.
+- Slice 4 should remove builder-stamped `roomCandidates`, `siblingCandidates`,
+  `variantCandidates`, and `rewardCandidates` from history entries. O/Thessaly
+  multi-encounter reward candidates still use migration data inside
+  `reward.encounters`; slice 4 must replace that with walker-side derivation
+  before deleting the adapter-stamped data.
 
 ## Contract
 
@@ -332,6 +345,7 @@ It should compute:
 - generated/entry/offer contexts;
 - room candidates;
 - sibling candidates;
+- variant candidates;
 - reward candidates;
 - generated topology exits.
 
@@ -344,8 +358,8 @@ Change `validator/candidates.lua` so it iterates validator steps, not raw histor
 entries.
 
 Candidate validators should consume `step.candidates.*` rather than
-`entry.roomCandidates`, `entry.siblingCandidates`, and
-`entry.rewardCandidates`.
+`entry.roomCandidates`, `entry.siblingCandidates`, `entry.variantCandidates`,
+and `entry.rewardCandidates`.
 
 After this slice, builder tests should stop asserting candidates on history
 entries. New validator/walker tests should assert candidate timing.
@@ -358,6 +372,7 @@ Remove from history entries:
 
 - `roomCandidates`;
 - `siblingCandidates`;
+- `variantCandidates`;
 - `rewardCandidates`.
 
 Keep selected facts and topology only.
