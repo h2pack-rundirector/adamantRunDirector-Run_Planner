@@ -1,9 +1,9 @@
 return function(deps)
-    local layout = deps.layout
+    local rooms = deps.rooms or deps.layout
 
-    local miniboss01 = layout.minibossRoomsByKey.H_MiniBoss01
-    local miniboss02 = layout.minibossRoomsByKey.H_MiniBoss02
-    local bridge = layout.bridgeRoom
+    local miniboss01 = rooms.minibossRoomsByKey.H_MiniBoss01
+    local miniboss02 = rooms.minibossRoomsByKey.H_MiniBoss02
+    local bridge = rooms.bridgeRoom
 
     return {
         siblingStructureWindow = {
@@ -52,6 +52,8 @@ return function(deps)
                     key = miniboss01.key,
                     label = miniboss01.label,
                     structure = "Miniboss",
+                    roleKey = "Miniboss",
+                    optionKey = miniboss01.key,
                     roomKey = miniboss01.key,
                     availability = miniboss01.availability,
                     force = miniboss01.force,
@@ -63,6 +65,8 @@ return function(deps)
                     key = miniboss02.key,
                     label = miniboss02.label,
                     structure = "Miniboss",
+                    roleKey = "Miniboss",
+                    optionKey = miniboss02.key,
                     roomKey = miniboss02.key,
                     availability = miniboss02.availability,
                     force = miniboss02.force,
@@ -74,6 +78,8 @@ return function(deps)
                     key = "Bridge",
                     label = bridge.label,
                     structure = "Bridge",
+                    roleKey = "Bridge",
+                    optionKey = bridge.key,
                     roomKey = bridge.key,
                     availability = bridge.availability,
                     force = bridge.force,

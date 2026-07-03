@@ -1,0 +1,229 @@
+return function()
+local rooms = {}
+
+local WELL_SHOP_FEATURES = { wellShop = true }
+
+local function option(key, label, opts)
+    opts = opts or {}
+    local rewardBearingExitCount = opts.rewardBearingExitCount
+    if rewardBearingExitCount == nil then
+        rewardBearingExitCount = opts.exitCount
+    end
+    return {
+        key = key,
+        label = label,
+        exitCount = opts.exitCount,
+        rewardBearingExitCount = rewardBearingExitCount,
+        features = opts.features,
+        availability = opts.availability,
+        force = opts.force,
+        encounter = opts.encounter,
+        biomeEncounterDepthCost = opts.biomeEncounterDepthCost,
+        maxCageRewards = opts.maxCageRewards,
+        maxCreationsThisRun = opts.maxCreationsThisRun,
+        maxAppearancesThisBiome = opts.maxAppearancesThisBiome,
+    }
+end
+
+local function combat(roomKey, maxCageRewards, opts)
+    opts = opts or {}
+    opts.maxCageRewards = maxCageRewards
+    opts.exitCount = opts.exitCount or 2
+    opts.features = opts.features or WELL_SHOP_FEATURES
+    opts.biomeEncounterDepthCost = opts.biomeEncounterDepthCost or 1
+    opts.maxCreationsThisRun = opts.maxCreationsThisRun or 1
+    return option(roomKey, "C" .. string.sub(roomKey, -2) .. " (" .. tostring(maxCageRewards) .. " Slots)", opts)
+end
+
+local function indexByKey(items)
+    local lookup = {}
+    for _, item in ipairs(items) do
+        lookup[item.key] = item
+    end
+    return lookup
+end
+
+local earlyCombatAvailability = {
+    biomeDepthCache = { max = 3 },
+}
+local bridgeAvailability = {
+    biomeDepthCache = { exact = 3 },
+}
+local bridgeForce = {
+    biomeDepthCache = { exact = 3 },
+}
+local minibossAvailability = {
+    biomeDepthCache = { min = 2 },
+}
+local minibossForce = {
+    biomeDepthCache = { min = 2, max = 4 },
+}
+
+rooms.wellShopFeatures = WELL_SHOP_FEATURES
+
+rooms.introRoom = option("H_Intro", "Intro", {
+    exitCount = 1,
+    availability = {
+        biomeDepthCache = { min = 0, max = 1 },
+    },
+})
+
+rooms.bridgeRoom = option("H_Bridge01", "Echo", {
+    exitCount = 2,
+    availability = bridgeAvailability,
+    force = bridgeForce,
+    maxCreationsThisRun = 1,
+    maxAppearancesThisBiome = 1,
+})
+
+rooms.cageRewardPolicy = {
+    key = "H_FieldsCageRewards",
+    label = "Fields Cage Rewards",
+    rewardStore = "RunProgress",
+    countControl = {
+        key = "CageRewardCount",
+        label = "Reward Count",
+        min = 2,
+        max = 3,
+        options = {
+            {
+                key = "TwoRewards",
+                label = "2 Rewards",
+                cageRewardCount = 2,
+            },
+            {
+                key = "ThreeRewards",
+                label = "3 Rewards",
+                cageRewardCount = 3,
+                requiresAllOfferedRoomsSupport = 3,
+            },
+        },
+    },
+    maxDoorDepthChanceTable = {
+        [1] = { maxDoorChance = 0.05 },
+        [2] = { maxDoorChance = 0.20 },
+        [3] = { maxDoorChance = 0.40 },
+        [4] = { maxDoorChance = 0.80, ceilingCheck = true },
+        [5] = { maxDoorChance = 0.10, ceilingCheck = true },
+    },
+    maxDoorCageCeiling = 2,
+    locationModel = "VanillaRandomLootPoint",
+}
+
+rooms.combatRooms = {
+    combat("H_Combat01", 5, { exitCount = 1 }),
+    combat("H_Combat02", 3, { availability = earlyCombatAvailability }),
+    combat("H_Combat03", 3),
+    combat("H_Combat04", 4),
+    combat("H_Combat05", 5),
+    combat("H_Combat06", 5),
+    combat("H_Combat07", 3),
+    combat("H_Combat08", 3),
+    combat("H_Combat09", 2, { availability = earlyCombatAvailability }),
+    combat("H_Combat10", 5),
+    combat("H_Combat11", 5),
+    combat("H_Combat12", 3),
+    combat("H_Combat13", 2, { availability = earlyCombatAvailability }),
+    combat("H_Combat14", 2, { availability = earlyCombatAvailability }),
+    combat("H_Combat15", 3, { availability = earlyCombatAvailability }),
+}
+
+rooms.combatRoomsByKey = indexByKey(rooms.combatRooms)
+
+rooms.minibossRooms = {
+    option("H_MiniBoss01", "Vampire", {
+        exitCount = 2,
+        encounter = "MiniBossVampire",
+        biomeEncounterDepthCost = 1,
+        availability = minibossAvailability,
+        force = minibossForce,
+        maxCreationsThisRun = 1,
+        maxAppearancesThisBiome = 1,
+    }),
+    option("H_MiniBoss02", "Lamia", {
+        exitCount = 1,
+        encounter = "MiniBossLamia",
+        biomeEncounterDepthCost = 1,
+        availability = minibossAvailability,
+        force = minibossForce,
+        maxCreationsThisRun = 1,
+        maxAppearancesThisBiome = 1,
+    }),
+}
+
+rooms.minibossRoomsByKey = indexByKey(rooms.minibossRooms)
+
+function rooms.fixedBeforeRoute(rewards)
+    return {
+        {
+            key = "Intro",
+            label = "Intro",
+            isBiomeEntry = true,
+            room = rooms.introRoom,
+            reward = rewards.none(),
+            biomeDepthCacheCost = 1,
+            biomeEncounterDepthCost = 0,
+            roomHistoryCost = 1,
+            locked = true,
+        },
+    }
+end
+
+function rooms.fixedAfterRoute(rewards)
+    return {
+        {
+            kind = "preboss",
+            key = "Preboss",
+            label = "Preboss",
+            reward = rewards.preboss("WorldShop", "RunProgress", {
+                ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
+            }),
+            biomeDepthCacheCost = 1,
+            biomeEncounterDepthCost = 0,
+            roomHistoryCost = 1,
+        },
+    }
+end
+
+function rooms.roles(rewards, routeRules)
+    return {
+        {
+            key = "Combat",
+            label = "Combat",
+            mapOptions = rooms.combatRooms,
+            reward = rewards.fieldsCages({
+                rewardStore = "RunProgress",
+                ineligibleRewardTypes = { "Devotion" },
+            }),
+            cageRewardPolicy = "H_FieldsCageRewards",
+            requiresConcreteOption = true,
+            biomeDepthCacheCost = 1,
+            biomeEncounterDepthCost = 1,
+            roomHistoryCost = 1,
+        },
+        {
+            key = "Miniboss",
+            label = "Miniboss",
+            roomOptions = rooms.minibossRooms,
+            reward = rewards.roomStore("RunProgress", { eligibleRewardTypes = { "Boon" } }),
+            requiresConcreteOption = true,
+            biomeDepthCacheCost = 1,
+            roomHistoryCost = 1,
+            routeRules = routeRules.role("Miniboss"),
+            reserve = true,
+        },
+        {
+            key = "Bridge",
+            label = "Echo",
+            roomOptions = { rooms.bridgeRoom },
+            reward = rewards.none(),
+            biomeDepthCacheCost = 1,
+            biomeEncounterDepthCost = 0,
+            roomHistoryCost = 1,
+            reserve = true,
+        },
+    }
+end
+
+return rooms
+end

@@ -1,5 +1,13 @@
 # Declaration And Topology Boundary
 
+## Progress
+
+- 2026-07-03: Slice 1 first pass is implemented for H/Fields. H now has a
+  canonical room catalog, layout references that catalog for biome framing, and
+  the main declaration derives the legacy `roles`, `slotLayout`, and
+  `roomTopology` shape from the split sources. Topology still emits the legacy
+  generated-door option shape while downstream templates consume it.
+
 This is the target design for biome declarations, topology, templates, and
 selected snapshots. It exists because the current code still blends room facts,
 layout rows, generated-door topology, and UI sibling controls. That blending is
@@ -396,4 +404,3 @@ For each migration slice, check:
 - Can the builder still run only after form completion succeeds?
 - Does the history entry say "current room generated these next choices" without
   consulting the next entry?
-
