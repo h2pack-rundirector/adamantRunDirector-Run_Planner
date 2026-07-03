@@ -15,6 +15,11 @@ local function stepGeneratedExitCount(step)
     return step and step.topology and step.topology.generatedExitCount or 0
 end
 
+local function firstOtherDoor(topology)
+    local otherDoors = topology and (topology.otherDoors or topology.siblings) or EMPTY_LIST
+    return otherDoors[1] or topology and topology.sibling or nil
+end
+
 local function isClockworkGoalExit(exit, progression)
     return exit ~= nil
         and (
@@ -62,7 +67,7 @@ end
 
 local function siblingClockworkFinding(entry, reason, payload)
     local topology = entry and entry.topology or nil
-    local sibling = topology and topology.sibling or nil
+    local sibling = firstOtherDoor(topology)
     return findings.siblingCandidateInvalid(entry, {
         siblingIndex = 1,
         structureKey = sibling and (
@@ -96,9 +101,10 @@ end
 
 local function generatedClockworkFinding(entry, nextEntry, progression, predicate, reason, payload)
     local topology = entry and entry.topology or nil
+    local sibling = firstOtherDoor(topology)
     if topology ~= nil
-        and topology.sibling ~= nil
-        and predicate(topology.sibling, progression)
+        and sibling ~= nil
+        and predicate(sibling, progression)
     then
         return siblingClockworkFinding(entry, reason, payload)
     end

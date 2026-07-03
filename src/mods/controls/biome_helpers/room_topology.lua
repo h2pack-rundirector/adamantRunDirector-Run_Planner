@@ -15,6 +15,10 @@ local function clearMap(map)
     end
 end
 
+local function generatedDoorControl(topology)
+    return topology and (topology.generatedDoorControl or topology.siblingStructureControl) or nil
+end
+
 function roomTopology.roomKey(candidate)
     if candidate == nil then
         return nil
@@ -23,7 +27,7 @@ function roomTopology.roomKey(candidate)
 end
 
 function roomTopology.prepareSiblingPolicy(topology, opts)
-    local control = topology and topology.siblingStructureControl or nil
+    local control = generatedDoorControl(topology)
     if control == nil then
         return nil
     end

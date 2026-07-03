@@ -58,10 +58,11 @@ end
 
 local function selectedSiblingStructure(entry, finding)
     local siblingIndex = math.floor(tonumber(finding and finding.siblingIndex) or 1)
-    local siblings = entry
+    local topology = entry
         and entry.source
         and entry.source.topology
-        and entry.source.topology.siblings
+        or nil
+    local siblings = topology and (topology.otherDoors or topology.siblings)
         or common.EMPTY_LIST
     local sibling = siblings[siblingIndex]
     return sibling and sibling.structureKey or nil

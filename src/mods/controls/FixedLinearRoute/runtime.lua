@@ -262,6 +262,7 @@ function runtime.create(fields, instance)
             optionKey = selection.optionKey,
             variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
             topology = {
+                otherDoors = siblings,
                 siblings = siblings,
             },
             rewards = {

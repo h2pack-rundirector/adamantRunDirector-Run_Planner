@@ -65,6 +65,13 @@ return function(deps)
         })
     end
 
+    local generatedDoorControl = {
+        key = "SiblingStructure",
+        alias = "SiblingStructureKey",
+        label = "Other Door",
+        options = options,
+    }
+
     return {
         topologyWindow = {
             biomeDepthCache = { min = 0, max = 10 },
@@ -89,11 +96,7 @@ return function(deps)
                 pickedCandidateBeforeDeadlineClosesGroup = true,
             },
         },
-        siblingStructureControl = {
-            key = "SiblingStructure",
-            alias = "SiblingStructureKey",
-            label = "Other Door",
-            options = options,
-        },
+        generatedDoorControl = generatedDoorControl,
+        siblingStructureControl = generatedDoorControl,
     }
 end

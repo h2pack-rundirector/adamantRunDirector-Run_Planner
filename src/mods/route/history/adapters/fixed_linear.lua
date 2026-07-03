@@ -411,25 +411,23 @@ local function selectedStructure(selectedRow, resolved)
 end
 
 local function siblingPolicyOption(biome, structureKey)
-    local optionsByKey = biome
-        and biome.roomTopology
-        and biome.roomTopology.siblingStructureControl
-        and biome.roomTopology.siblingStructureControl.optionsByKey
+    local topology = biome and biome.roomTopology or nil
+    local control = topology and (topology.generatedDoorControl or topology.siblingStructureControl) or nil
+    local optionsByKey = control and control.optionsByKey
     if optionsByKey ~= nil then
         return optionsByKey[structureKey]
     end
-    for _, option in ipairs(
-        biome
-            and biome.roomTopology
-            and biome.roomTopology.siblingStructureControl
-            and biome.roomTopology.siblingStructureControl.options
-            or EMPTY_LIST
-    ) do
+    for _, option in ipairs(control and control.options or EMPTY_LIST) do
         if option.key == structureKey then
             return option
         end
     end
     return nil
+end
+
+local function otherDoorSelections(selectedRow)
+    local topology = selectedRow and selectedRow.topology or nil
+    return topology and (topology.otherDoors or topology.siblings) or EMPTY_LIST
 end
 
 local function siblingRewardSummary(selectedRow, siblingIndex, option)
@@ -567,7 +565,7 @@ local function attachNextChoiceTopology(context, roomEntry, selectedRow, nextRow
         exits[#exits + 1] = pickedExit(nextRow, nextResolved)
     end
 
-    for siblingIndex, sibling in ipairs(selectedRow and selectedRow.topology and selectedRow.topology.siblings or EMPTY_LIST) do
+    for siblingIndex, sibling in ipairs(otherDoorSelections(selectedRow)) do
         local exit = siblingExit(context, selectedRow, siblingIndex, sibling)
         if exit ~= nil then
             exits[#exits + 1] = exit

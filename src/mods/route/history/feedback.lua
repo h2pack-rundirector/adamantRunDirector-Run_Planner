@@ -41,12 +41,18 @@ local function topologyForBiome(biome)
 end
 
 local function topologyWindow(topology)
-    return topology and (topology.topologyWindow or topology.siblingStructureWindow) or nil
+    return topology and (
+        topology.topologyWindow
+            or topology.generatedDoorWindow
+            or topology.siblingStructureWindow
+    ) or nil
 end
 
 local function controlWindow(topology)
     return topology and (
-        topology.siblingControlWindow
+        topology.generatedDoorControlWindow
+            or topology.siblingControlWindow
+            or topology.generatedDoorWindow
             or topology.siblingStructureWindow
             or topology.topologyWindow
     ) or nil

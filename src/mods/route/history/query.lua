@@ -116,10 +116,14 @@ local function topologyExits(topology)
         return #topology.exits
     end
     local count = 0
-    if topology.selected ~= nil then
+    local picked = topology.picked or topology.selected
+    if picked ~= nil then
         count = count + 1
     end
-    if topology.sibling ~= nil then
+    local otherDoors = topology.otherDoors or topology.siblings
+    if otherDoors ~= nil then
+        count = count + #otherDoors
+    elseif topology.sibling ~= nil then
         count = count + 1
     end
     return count > 0 and count or nil

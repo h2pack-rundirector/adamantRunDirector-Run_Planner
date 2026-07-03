@@ -8,10 +8,8 @@ local EMPTY_LIST = common.EMPTY_LIST
 
 local function topologyOptionsByRoomKey(topology)
     local lookup = {}
-    local options = topology
-        and topology.siblingStructureControl
-        and topology.siblingStructureControl.options
-        or EMPTY_LIST
+    local control = topology and (topology.generatedDoorControl or topology.siblingStructureControl) or nil
+    local options = control and control.options or EMPTY_LIST
     for _, option in ipairs(options) do
         local roomKey = option.roomKey or (option.structure == "Miniboss" and option.key or nil)
         if roomKey ~= nil and roomKey ~= "" then

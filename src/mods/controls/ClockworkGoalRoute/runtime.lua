@@ -244,6 +244,7 @@ function runtime.create(fields, instance)
             routeKindKey = data.readRouteKind(instance, routeRows, rowIndex),
             nonGoalKindKey = data.readNonGoalKind(instance, routeRows, rowIndex),
             topology = {
+                otherDoors = siblings,
                 siblings = siblings,
             },
             rewards = {

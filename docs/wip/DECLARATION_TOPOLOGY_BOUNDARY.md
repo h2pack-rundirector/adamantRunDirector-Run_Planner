@@ -2,6 +2,11 @@
 
 ## Progress
 
+- 2026-07-03: Slice 2 is implemented. Generated-door aliases now sit beside
+  the existing sibling storage names: declarations expose
+  `generatedDoorControl`, snapshots/history expose `picked` and `otherDoors`,
+  and shared history readers prefer those aliases while preserving legacy
+  `sibling*` compatibility.
 - 2026-07-03: Slice 1 first pass is implemented for H/Fields. H now has a
   canonical room catalog, layout references that catalog for biome framing, and
   the main declaration derives the legacy `roles`, `slotLayout`, and

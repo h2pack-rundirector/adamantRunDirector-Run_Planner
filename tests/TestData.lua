@@ -350,6 +350,9 @@ local function optionKeys(options)
 end
 
 local function assertFixedLinearSiblingOptions(topology, expected)
+    lu.assertEquals(topology.generatedDoorControl.key, "SiblingStructure")
+    lu.assertEquals(topology.generatedDoorControl.alias, "SiblingStructureKey")
+    lu.assertEquals(topology.generatedDoorControl.options, topology.siblingStructureControl.options)
     lu.assertEquals(topology.siblingStructureControl.key, "SiblingStructure")
     lu.assertEquals(topology.siblingStructureControl.alias, "SiblingStructureKey")
     lu.assertNil(topology.rules)
@@ -1405,6 +1408,13 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
     lu.assertEquals(fields.fields.roomTopology.siblingStructureWindow, {
         biomeDepthCache = { min = 1, max = 4 },
     })
+    lu.assertEquals(fields.fields.roomTopology.generatedDoorWindow, {
+        biomeDepthCache = { min = 1, max = 4 },
+    })
+    lu.assertEquals(
+        fields.fields.roomTopology.generatedDoorControl.options,
+        fields.fields.roomTopology.siblingStructureControl.options
+    )
     lu.assertEquals(fields.fields.roomTopology.rules[1].key, "matchingCombatCageRewardCount")
     lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].key, "H_Minibosses")
     lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].candidates, {

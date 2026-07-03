@@ -11,10 +11,15 @@ local function isCombatCageStructure(structure)
     return string.match(tostring(structure or ""), "^CombatCage%d+$") ~= nil
 end
 
+local function firstOtherDoor(topology)
+    local otherDoors = topology and (topology.otherDoors or topology.siblings) or EMPTY_LIST
+    return otherDoors[1] or topology and topology.sibling or nil
+end
+
 local function validateMatchingCombatCageRewardCount(entry)
     local topology = entry and entry.topology or nil
-    local selected = topology and topology.selected or nil
-    local sibling = topology and topology.sibling or nil
+    local selected = topology and (topology.picked or topology.selected) or nil
+    local sibling = firstOtherDoor(topology)
     if not isCombatCageStructure(selected and selected.structure)
         or not isCombatCageStructure(sibling and sibling.structure)
     then

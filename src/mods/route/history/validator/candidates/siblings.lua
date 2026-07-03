@@ -35,6 +35,16 @@ local function forEachSiblingExit(entry, callback)
         return nil
     end
     if topology.exits == nil then
+        local otherDoors = topology.otherDoors or topology.siblings
+        if otherDoors ~= nil then
+            for _, door in ipairs(otherDoors) do
+                local result = callback(door)
+                if result ~= nil then
+                    return result
+                end
+            end
+            return nil
+        end
         if topology.sibling ~= nil then
             return callback(topology.sibling)
         end

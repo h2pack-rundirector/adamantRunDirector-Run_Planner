@@ -397,22 +397,13 @@ local function selectedTopology(selectedRow, resolved)
 end
 
 local function siblingOption(biome, structureKey)
-    local optionsByKey = biome
-        and biome.fields
-        and biome.fields.roomTopology
-        and biome.fields.roomTopology.siblingStructureControl
-        and biome.fields.roomTopology.siblingStructureControl.optionsByKey
+    local topology = biome and biome.fields and biome.fields.roomTopology or nil
+    local control = topology and (topology.generatedDoorControl or topology.siblingStructureControl) or nil
+    local optionsByKey = control and control.optionsByKey
     if optionsByKey ~= nil then
         return optionsByKey[structureKey]
     end
-    for _, option in ipairs(
-        biome
-            and biome.fields
-            and biome.fields.roomTopology
-            and biome.fields.roomTopology.siblingStructureControl
-            and biome.fields.roomTopology.siblingStructureControl.options
-            or EMPTY_LIST
-    ) do
+    for _, option in ipairs(control and control.options or EMPTY_LIST) do
         if option.key == structureKey then
             return option
         end
@@ -420,13 +411,15 @@ local function siblingOption(biome, structureKey)
     return nil
 end
 
+local function firstOtherDoorSelection(selectedRow)
+    local topology = selectedRow and selectedRow.topology or nil
+    local otherDoors = topology and (topology.otherDoors or topology.siblings) or EMPTY_LIST
+    return otherDoors[1]
+end
+
 local function siblingTopology(context, selectedRow)
-    local structureKey = selectedRow
-        and selectedRow.topology
-        and selectedRow.topology.siblings
-        and selectedRow.topology.siblings[1]
-        and selectedRow.topology.siblings[1].structureKey
-        or nil
+    local otherDoor = firstOtherDoorSelection(selectedRow)
+    local structureKey = otherDoor and otherDoor.structureKey or nil
     if structureKey == nil or structureKey == "" then
         return nil
     end
@@ -458,8 +451,11 @@ local function attachFieldsTopology(context, roomEntry, selectedRow, pickedRow, 
     end
     roomEntry.topology = {
         kind = "fieldsChoice",
+        picked = selected,
         selected = selected,
+        otherDoors = sibling ~= nil and { sibling } or nil,
         sibling = sibling,
+        siblings = sibling ~= nil and { sibling } or nil,
     }
 end
 

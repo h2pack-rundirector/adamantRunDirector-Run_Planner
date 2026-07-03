@@ -166,7 +166,9 @@ function topologyControls.create(data, provider)
 
         return {
             kind = provider.topologyKind,
+            picked = selected,
             selected = selected,
+            otherDoors = siblings,
             sibling = siblings[1],
             siblings = siblings,
         }

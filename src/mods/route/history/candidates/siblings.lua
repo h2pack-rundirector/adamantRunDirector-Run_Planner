@@ -28,7 +28,8 @@ local function roomKeyFor(option)
 end
 
 local function siblingSlotCount(selectedRow)
-    return #(selectedRow and selectedRow.topology and selectedRow.topology.siblings or EMPTY_LIST)
+    local topology = selectedRow and selectedRow.topology or nil
+    return #(topology and (topology.otherDoors or topology.siblings) or EMPTY_LIST)
 end
 
 local function appendCandidate(candidates, siblingIndex, option, opts)
@@ -56,9 +57,9 @@ end
 
 function siblingCandidates.forBiomeRow(biome, selectedRow, opts)
     local topology = topologyForBiome(biome)
-    local options = topology
-        and topology.siblingStructureControl
-        and topology.siblingStructureControl.options
+    local control = topology and (topology.generatedDoorControl or topology.siblingStructureControl) or nil
+    local options = control
+        and control.options
         or EMPTY_LIST
     local slotCount = siblingSlotCount(selectedRow)
     local candidates = {}
