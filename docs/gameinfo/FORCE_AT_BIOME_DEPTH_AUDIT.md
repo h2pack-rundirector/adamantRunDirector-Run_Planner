@@ -90,8 +90,8 @@ Intro/preboss topology rooms were excluded from this list:
 - Force window: `2-4`.
 - No upper eligibility bound.
 - Force persists after 4 if eligible.
-- Normal H structure usually ends the opportunity at the same time, so the
-  current model works by topology rather than by the true force semantics.
+- Planner force pressure now walks generated doors and active legal force
+  candidates, so H participates in the same model as F/G/P/I.
 - Eligibility adds mutual exclusion and max creation/appearance limits.
 
 ### Tartarus
@@ -204,15 +204,16 @@ The generated forced count should include both:
 - the selected primary planned room, and
 - sibling topology offers generated beside it.
 
-For F/G/P this means force pressure belongs to the room planner and sibling
+For F/G/H/I/P this means force pressure belongs to the room planner and sibling
 topology together, not sibling topology alone.
 
-Sibling controls live on the picked row, because they describe the doors
-generated beside that picked room. The generated-door capacity for that row
-comes from the previous room's `exitCount`.
+Sibling/other-door controls live on the current room row, because they describe
+doors generated from that current room. The generated-door capacity for that row
+comes from the current room's `exitCount`.
 
-H currently holds because the force deadline lines up with the biome ending, but
-that is an accident of topology. The generic model should not depend on that.
+H/Echo is exact-force at BDC 3 with exact availability at BDC 3. It can be
+crowded out only when all generated doors at that step are occupied by other
+active legal force candidates.
 
 ## Action Checklist
 
@@ -222,7 +223,8 @@ that is an accident of topology. The generic model should not depend on that.
 - Preserve real shop eligibility maxes as availability bounds. Done.
 - Keep `DebugOnly` variants out of normal route modeling unless we explicitly
   decide to surface debug rooms.
-- Teach forced-group validation to consume generated reward-door capacity and
-  primary-row plus sibling topology together. Done for fixed-linear F/G/P.
-- Apply the model to F/G/P sibling topology after the metadata split is in place.
+- Teach forced-group validation to consume generated door capacity and picked
+  plus sibling/other-door topology together. Done.
+- Apply the model to generated-door topology after the metadata split is in
+  place.
   Done.
