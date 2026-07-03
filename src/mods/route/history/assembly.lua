@@ -56,10 +56,13 @@ function historyAssembly.create(opts)
     })
     local roomCandidates = import("mods/route/history/candidates/rooms.lua")
     local siblingCandidates = import("mods/route/history/candidates/siblings.lua")
-    local step = import("mods/route/history/step.lua", nil, {
+    local migrationCandidates = import("mods/route/history/migration_candidates.lua", nil, {
         rewardCandidates = rewardCandidates,
         roomCandidates = roomCandidates,
         siblingCandidates = siblingCandidates,
+    })
+    local materializeRoom = import("mods/route/history/materialize_room.lua", nil, {
+        migrationCandidates = migrationCandidates,
     })
     local npcCandidates = import("mods/route/history/candidates/npcs.lua", nil, {
         history = history,
@@ -69,31 +72,31 @@ function historyAssembly.create(opts)
             rewardCandidates = rewardCandidates,
             roomCandidates = roomCandidates,
             siblingCandidates = siblingCandidates,
-            step = step,
+            materializeRoom = materializeRoom,
         }),
         fieldsCageRoute = import("mods/route/history/adapters/fields_cage.lua", nil, {
             rewardCandidates = rewardCandidates,
             roomCandidates = roomCandidates,
             siblingCandidates = siblingCandidates,
-            step = step,
+            materializeRoom = materializeRoom,
         }),
         fixedLinear = import("mods/route/history/adapters/fixed_linear.lua", nil, {
             rewardCandidates = rewardCandidates,
             roomCandidates = roomCandidates,
             siblingCandidates = siblingCandidates,
-            step = step,
+            materializeRoom = materializeRoom,
         }),
         hubPylon = import("mods/route/history/adapters/hub_pylon.lua", nil, {
             rewardCandidates = rewardCandidates,
             roomCandidates = roomCandidates,
             siblingCandidates = siblingCandidates,
-            step = step,
+            materializeRoom = materializeRoom,
         }),
         multiEncounterFixed = import("mods/route/history/adapters/multi_encounter_fixed.lua", nil, {
             rewardCandidates = rewardCandidates,
             roomCandidates = roomCandidates,
             siblingCandidates = siblingCandidates,
-            step = step,
+            materializeRoom = materializeRoom,
         }),
     }
     local builder = import("mods/route/history/builder.lua", nil, {
@@ -135,12 +138,13 @@ function historyAssembly.create(opts)
         findings = findings,
         history = history,
         loot = loot,
+        materializeRoom = materializeRoom,
+        migrationCandidates = migrationCandidates,
         npcCandidates = npcCandidates,
         npcFeedback = npcFeedback,
         roomCandidates = roomCandidates,
         rewardCandidates = rewardCandidates,
         siblingCandidates = siblingCandidates,
-        step = step,
         query = query,
         builder = builder,
         validator = validator,

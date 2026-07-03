@@ -1,7 +1,7 @@
 local deps = ... or {}
 
 local fieldsCage = {}
-local routeStep = deps.step
+local materializeRoom = deps.materializeRoom
 
 local EMPTY_LIST = {}
 local BIOME_ENCOUNTER_DEPTH_START = 0
@@ -479,7 +479,7 @@ function fieldsCage.build(args)
 
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
         local resolved = resolvedRows[index]
-        routeStep.stepRoom(context, selectedRow, resolved, {
+        materializeRoom.stepRoom(context, selectedRow, resolved, {
             reward = selectedRewardSummary(
                 resolved.rewardContext,
                 selectedRow.rewards,

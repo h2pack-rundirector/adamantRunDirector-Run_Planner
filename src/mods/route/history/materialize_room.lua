@@ -1,11 +1,9 @@
 local deps = ... or {}
 
-local routeStep = {}
+local materializeRoom = {}
 local formAddress = import("mods/route/history/form_address.lua")
 
-local roomCandidates = deps.roomCandidates
-local rewardCandidates = deps.rewardCandidates
-local siblingCandidates = deps.siblingCandidates
+local migrationCandidates = deps.migrationCandidates
 
 local function copyFields(target, fields)
     for key, value in pairs(fields or {}) do
@@ -44,7 +42,7 @@ local function entryPhase(context)
     }
 end
 
-function routeStep.enterRoom(context, resolved)
+function materializeRoom.enterRoom(context, resolved)
     local entryCost = entryEncounterCost(resolved)
     context.routeState.runEncounterDepth =
         context.routeState.runEncounterDepth + entryCost
@@ -52,7 +50,7 @@ function routeStep.enterRoom(context, resolved)
         context.biomeState.biomeEncounterDepth + entryCost
 end
 
-function routeStep.emitRoom(context, selectedRow, resolved, fields)
+function materializeRoom.emitRoom(context, selectedRow, resolved, fields)
     if resolved == nil or resolved.eventKey == nil or resolved.eventKey == "" then
         return nil
     end
@@ -91,12 +89,12 @@ function routeStep.emitRoom(context, selectedRow, resolved, fields)
     entry.phases = {
         generated = context.nextGeneratedPhase,
         entry = entryPhase(context),
-        offer = routeStep.offerPhase(context, entry, resolved),
+        offer = materializeRoom.offerPhase(context, entry, resolved),
     }
     return entry
 end
 
-function routeStep.offerPhase(context, entry, resolved)
+function materializeRoom.offerPhase(context, entry, resolved)
     local remainingCost = remainingEncounterCost(resolved)
     return {
         biomeDepthCache = entry and entry.biomeDepthCache or nil,
@@ -107,47 +105,7 @@ function routeStep.offerPhase(context, entry, resolved)
     }
 end
 
-function routeStep.attachCurrentRoomCandidates(context, entry, selectedRow, resolved)
-    if entry == nil then
-        return
-    end
-    entry.roomCandidates = roomCandidates.forBiomeRow(context.biome, selectedRow, resolved, {
-        availabilityContext = entry.phases.generated or entry.phases.entry,
-    })
-end
-
-function routeStep.attachPickedDoorCandidates(context, entry, nextRow, nextResolved)
-    if entry == nil or nextRow == nil or nextResolved == nil then
-        return
-    end
-    local candidates = roomCandidates.forBiomeRow(context.biome, nextRow, nextResolved, {
-        availabilityContext = entry.phases.offer,
-        targetRowIndex = nextRow.rowIndex,
-        targetRouteOrdinal = nextResolved.routeOrdinal,
-        targetFormAddress = formAddress.withRowFallback(nextRow.formAddress, nextRow.rowIndex),
-    })
-    for _, candidate in ipairs(candidates) do
-        entry.roomCandidates[#entry.roomCandidates + 1] = candidate
-    end
-end
-
-function routeStep.attachSiblingCandidates(context, entry, selectedRow)
-    if entry == nil then
-        return
-    end
-    entry.siblingCandidates = siblingCandidates.forBiomeRow(context.biome, selectedRow, {
-        availabilityContext = entry.phases.offer,
-    })
-end
-
-function routeStep.attachRewardCandidates(entry, rewardContext, opts)
-    if entry == nil then
-        return
-    end
-    entry.rewardCandidates = rewardCandidates.forContext(rewardContext, opts)
-end
-
-function routeStep.advanceAfterRoom(context, resolved)
+function materializeRoom.advanceAfterRoom(context, resolved)
     context.routeState.runEncounterDepth =
         context.routeState.runEncounterDepth + remainingEncounterCost(resolved)
     context.routeState.roomHistoryOrdinal =
@@ -158,33 +116,26 @@ function routeStep.advanceAfterRoom(context, resolved)
         context.biomeState.biomeEncounterDepth + remainingEncounterCost(resolved)
 end
 
-function routeStep.stepRoom(context, selectedRow, resolved, opts)
+function materializeRoom.stepRoom(context, selectedRow, resolved, opts)
     opts = opts or {}
-    routeStep.enterRoom(context, resolved)
-    local entry = routeStep.emitRoom(context, selectedRow, resolved, opts.fields)
+    materializeRoom.enterRoom(context, resolved)
+    local entry = materializeRoom.emitRoom(context, selectedRow, resolved, opts.fields)
     if entry == nil then
-        routeStep.advanceAfterRoom(context, resolved)
+        materializeRoom.advanceAfterRoom(context, resolved)
         return nil
-    end
-    if opts.attachCurrentRoomCandidates ~= false then
-        routeStep.attachCurrentRoomCandidates(context, entry, selectedRow, resolved)
-    end
-    if opts.attachPickedDoorCandidates ~= false then
-        routeStep.attachPickedDoorCandidates(context, entry, opts.nextRow, opts.nextResolved)
-    end
-    if opts.attachSiblingCandidates ~= false then
-        routeStep.attachSiblingCandidates(context, entry, selectedRow)
     end
     if opts.attachReward ~= false then
         entry.reward = opts.reward
-        routeStep.attachRewardCandidates(entry, resolved.rewardContext, opts.rewardCandidateOpts)
+    end
+    if migrationCandidates ~= nil and opts.attachMigrationCandidates ~= false then
+        migrationCandidates.attachForRoom(context, entry, selectedRow, resolved, opts)
     end
     if opts.attachTopology ~= nil then
         opts.attachTopology(entry)
     end
     context.nextGeneratedPhase = entry.phases.offer
-    routeStep.advanceAfterRoom(context, resolved)
+    materializeRoom.advanceAfterRoom(context, resolved)
     return entry
 end
 
-return routeStep
+return materializeRoom

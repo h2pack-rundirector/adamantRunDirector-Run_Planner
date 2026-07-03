@@ -1,353 +1,443 @@
-# Route History Builder Boundary Audit
+# Route History Builder / Validator Boundary
 
-This note audits the current route-history builder, adapter, step, validator,
-and feedback boundary. It complements `ROUTE_HISTORY_MODEL.md`,
-`ROUTE_HISTORY_COORDINATE_CONTRACT.md`, and `ROUTE_TIMING_MODEL.md`.
+## Progress
 
-The goal is to make the next implementation pass mechanical: adapters can stay
-biome-specific, but the route-history timing and validation contract should be
-shared.
+- Slice 1 complete: builder-side selected room materialization now lives in
+  `history/materialize_room.lua`; builder-time candidate stamping is isolated in
+  `history/migration_candidates.lua`.
+- `history/step.lua` has been removed so "step" can be reclaimed by the
+  validator walker.
+- Candidate tables still exist on history entries as temporary
+  `builderCandidateTables` migration data until the validator walker owns
+  candidate generation.
 
-## Target Contract
+## Contract
+
+This document is the contract for the route-history pipeline. It replaces the
+earlier hybrid model where `history/step.lua` built history entries and stamped
+candidate timing at the same time.
+
+The chosen policy is:
+
+```text
+template form
+  -> builder/materializer
+      emits selected history facts only
+  -> validator walker
+      computes timing phases, candidates, and legality
+  -> feedback
+      translates findings back to template/form coordinates
+```
+
+The builder and validator should not cooperate mid-build. The builder creates a
+complete selected-route ledger. Validation then walks that ledger as a separate
+pass.
+
+## Why This Boundary
+
+The route history system is replacing the older row-stream context model. The
+main goal is to make one stable fact artifact, the history ledger, then have all
+route rules read the same artifact.
+
+The hybrid builder-step model made ownership unclear:
+
+- the builder emitted selected entries;
+- `history/step.lua` also stamped `phases`, room candidates, sibling
+  candidates, and reward candidates;
+- candidate validators consumed those stamped candidate tables later;
+- structure validators still did their own history walks;
+- force pressure needed a second validator-side projection because the existing
+  "step" was tied to build-time mutation.
+
+That shape works mechanically but creates the same class of bugs repeatedly:
+"current room", "picked next room", "other door", and "availability timing" are
+defined in more than one place.
+
+The new boundary makes timing a validator concern. A generated candidate is not
+a selected history fact; it is a validation question asked at a point in the
+history walk.
+
+## Ownership
 
 ### Template / Form
 
-Templates own storage, rendering, and local form completeness. A template may
-know enough local structure to decide which controls exist and whether required
-inputs were filled. It should not decide route legality.
+Templates own storage, rendering, local form completion, and render gates.
+
+Templates may know enough local structure to decide:
+
+- which controls exist;
+- whether required user inputs are filled;
+- how many visible sibling/other-door controls should render;
+- when a locally selected terminal row hides later rows.
+
+Templates must not decide route legality. They should not enforce force
+pressure, depth eligibility, reward legality, NPC spacing, or route-wide caps.
 
 Template snapshots should:
 
 - preserve selected keys and blanks;
 - include `formAddress` for row and child controls that can receive feedback;
+- include the selected route shape in template row language;
 - omit resolved declaration objects;
-- omit resolved reward surfaces/items except as local form checks;
-- omit depth counters, force-pressure decisions, and invalid rows.
+- omit generated candidates;
+- omit invalid rows and value-state decoration.
 
-If the form is incomplete, history should not treat defaulted rows as facts.
-The incomplete state should return as completion feedback instead.
+If the form is incomplete, the route context should return completion feedback
+and should not ask the builder to materialize fake default rows.
 
-### History Builder
+### Builder
 
-`src/mods/route/history/builder.lua` is the route orchestrator. It should:
+`src/mods/route/history/builder.lua` is the route materializer.
+
+It should:
 
 - walk route biomes in route order;
-- retrieve the selected snapshot for each biome;
+- retrieve one complete snapshot per configured biome;
 - look up the biome declaration;
 - dispatch to the adapter named by the declaration;
-- run common post-processing, such as loot emission over emitted room entries;
-- append declaration timeline entries after a successfully built biome.
+- maintain route-level selected counters such as room-history ordinal and run
+  encounter depth;
+- append declaration timeline entries after a successfully built biome;
+- run selected-loot emission over emitted room entries.
 
-It should not walk template rows itself, infer UI semantics, or validate route
-legality.
+It should not:
+
+- validate route legality;
+- compute candidate lists;
+- color/drop options;
+- decide force pressure;
+- decide reward legality;
+- attach room/sibling/reward candidates to history entries.
+
+The builder can compute selected-path counters because those are facts of the
+selected ledger. Candidate timing contexts are not builder output in the target
+model.
 
 ### Adapter
 
 Adapters translate template row language plus biome declaration facts into the
-shared history language.
+shared selected-history language.
 
 Adapters own biome-specific traversal shape:
 
-- fixed-linear body rows;
-- H cage structure;
-- I goal/preboss structure;
-- O ship encounter structure;
+- fixed linear biomes;
+- H cage choices;
+- I goal/preboss choices;
+- O multi-encounter ships;
 - N hub/pylon/side-room traversal.
 
-Adapters may be custom, but custom traversal is not a license to fork the
-common timing contract. Any emitted physical room should use the shared step
-phase semantics for counters and generated candidates.
+Adapters should emit selected entries and selected topology facts only:
 
-### Step
+- selected room key, role key, option key;
+- selected topology exits that were generated at that point;
+- selected reward metadata;
+- form/source addresses for feedback;
+- structural costs needed to materialize selected counters.
 
-`src/mods/route/history/step.lua` is the shared room lifecycle owner.
+Adapters should not generate candidate tables. If an adapter needs a helper for
+entry emission, that helper should be builder-facing and named as materializing
+selected entries, not as a validator step.
 
-The canonical sequence is:
+### History Ledger
 
-1. `enterRoom`: increment BED/run encounter depth for the entered room.
-2. `emitRoom`: emit the current room entry and stamp `phases`.
-3. attach current-room candidates using generated/entry phase.
-4. attach picked-door candidates using offer phase.
-5. attach sibling candidates using offer phase.
-6. attach reward candidates and topology.
-7. set the next generated phase.
-8. `advanceAfterRoom`: commit room-history and BDC costs.
+The history ledger is the selected fact record. It should be enough to replay
+route timing and selected outcomes.
 
-Candidate phase policy:
+Room entries may contain:
 
-- selected/current room candidates use `entry.phases.generated` when present,
-  otherwise `entry.phases.entry`;
-- picked next-door candidates use `entry.phases.offer`;
-- other-door/sibling candidates use `entry.phases.offer`;
-- any candidate with availability rules must carry an explicit
-  `availabilityContext`.
+- `kind = "room"`;
+- route/biome identity;
+- selected room identity;
+- selected role/option keys;
+- selected topology exits;
+- selected reward summary;
+- selected costs and counters;
+- source/form coordinates.
 
-The validator currently has a fallback from candidate context to entry context.
-That should be treated as a migration fallback, not a production contract.
+Loot entries may contain:
 
-### Validator
+- acquired loot;
+- pending shop offers;
+- generated offer facts when needed to represent a selected model such as
+  Ephyra hub generated doors.
 
-Validators consume history, declarations, and candidates. They speak game
-facts, not template layout.
+The ledger should not need to contain:
 
-Validators should:
+- all possible room candidates;
+- all possible sibling candidates;
+- all possible reward candidates;
+- candidate availability contexts.
 
-- validate selected entries and generated candidates from the history ledger;
-- use `formAddress` and target metadata only as source coordinates;
-- emit game-domain findings;
-- not read template storage directly;
-- not infer timing from UI row numbers.
+Those belong to the validator walker.
 
-### Feedback
+### Validator Walker
 
-Feedback is the reverse adapter. It translates findings into template value
-states, route markers, inactive metadata, and route-status payloads.
+The validator walker is the canonical route lifecycle reader.
 
-Feedback may translate coordinates, such as picked-next findings rendered on
-the previous/current UI row. Feedback should not solve route legality or
-rebuild game timing.
+It walks the completed history ledger and declarations in route order and
+computes, for each validation point:
 
-## Current Implementation Map
+- selected entry facts;
+- entry phase facts;
+- offer/generation phase facts;
+- current room candidates;
+- picked-door candidates;
+- sibling/other-door candidates;
+- reward candidates;
+- force-pressure active candidates;
+- route-wide query state needed by validators.
 
-### Builder
+This is where `step` language belongs in the target model. A validator step is a
+read-only interpretation of the already-built ledger, not a builder mutation.
 
-`builder.lua` already matches the dispatcher shape:
-
-- creates a history ledger;
-- keeps route-level state;
-- dispatches each biome to `adapters[biome.adapter].build`;
-- runs `routeLoot.emitForRoomEntries` over the entries emitted by that adapter;
-- appends `timeline.afterBiome` entries.
-
-This is a good boundary. The builder is not currently the source of the bug
-class.
-
-### Shared Step
-
-`step.lua` contains the intended phase machinery:
-
-- `enterRoom`
-- `emitRoom`
-- `offerPhase`
-- `attachCurrentRoomCandidates`
-- `attachPickedDoorCandidates`
-- `attachSiblingCandidates`
-- `attachRewardCandidates`
-- `advanceAfterRoom`
-- `stepRoom`
-
-`fixed_linear`, `fields_cage`, `clockwork_goal`, and
-`multi_encounter_fixed` use `routeStep.stepRoom(...)`.
-
-### HubPylon Adapter
-
-`hub_pylon.lua` is intentionally custom because N is not a linear row walk. It
-emits:
-
-- fixed opening/prehub/hub/preboss entries;
-- pylon entry;
-- entered side rooms;
-- pylon restore entries;
-- hub return entries.
-
-That custom traversal is valid. `emitPhysical` now delegates each physical entry
-to `routeStep.stepRoom(...)`, with explicit attachment flags for entries that do
-not own visible controls. This keeps the N traversal custom while reusing the
-shared candidate/reward/topology timing contract.
-
-### Candidate Validator
-
-`validator/candidates/common.lua` evaluates availability against:
-
-```lua
-availabilityEntry or candidate.availabilityContext or entry
-```
-
-This is useful during migration, but it hides boundary mistakes. A candidate
-without `availabilityContext` silently becomes entry-timed.
-
-For ordinary templates this is mostly avoided because `stepRoom` stamps the
-contexts. For HubPylon, direct candidate construction currently means the
-fallback is part of live behavior.
-
-### Form Address
-
-`form_address.lua` is the right identity carrier for this migration:
-
-- row controls use `formAddress.row(rowIndex)`;
-- child controls use `formAddress.child(rowIndex, childKind, childIndex)`;
-- validators and feedback can map findings without collapsing every entry to
-  `(biomeKey, rowIndex)`.
-
-This fixed the one-row-many-entries problem for HubPylon. Future work should
-prefer `formAddress` over raw `rowIndex` whenever a control can be a child of a
-row.
-
-## Findings
-
-### P1: HubPylon Uses Shared Candidate Timing
-
-HubPylon keeps custom traversal but uses shared `stepRoom(...)` emission for each
-physical room. This means pylon room candidates receive explicit phase context,
-side-room rewards receive normal reward candidates, and physical-only restore
-and hub-return entries do not receive visible candidate state.
-
-Policy:
-
-- keep HubPylon's custom traversal;
-- keep shared step ownership for physical entry emission and candidate timing;
-- do not reintroduce direct calls to room/reward candidate builders in the
-  adapter.
-
-### P2: Candidate Timing Contract Is Not Enforced
-
-The validator accepts candidates without `availabilityContext`. That makes it
-hard to notice when an adapter bypasses the step contract.
-
-Recommended fix:
-
-- add tests that production room/sibling candidates carry explicit
-  `availabilityContext`;
-- only then consider tightening validator fallback or documenting it as test-only
-  compatibility.
-
-### P3: N Hub Batch Timing Belongs To Rewards
-
-N pylon choices are generated from hub topology, while the selected pylons are
-entered later as physical room entries. Main pylon room legality should stay
-structural and history-based: selected doors must be valid hub doors, pylon
-rooms should not duplicate each other, only one miniboss variant should be
-available, and side rooms must belong to their parent combat room.
-
-The same-time concern is reward generation. Vanilla creates the hub door rooms
-from `N_Hub` and chooses their rewards while still in the hub, then persists
-those door rewards across hub revisits. The selected pylon reward is acquired
-later, but it was offered as part of the hub batch.
-
-Required model:
-
-- the first `N_Hub` history entry owns the modeled generated hub doors;
-- later pylon entries remain the physical traversal/acquired-loot entries;
-- reward/bag validation should evaluate the generated hub-door rewards as one
-  batch owned by the hub entry;
-- room candidate validation should not use a special pylon generation context.
-
-Current implementation:
-
-- the first `N_Hub` entry carries `topology.generatedDoors` for the modeled
-  pylon doors;
-- route loot emission turns those generated-door rewards into `loot` events with
-  `timing = "generatedOffer"` and `eventSourceKind = "hubGeneratedDoor"`;
-- `generatedOffer` events are validation/offer facts and are not indexed as
-  acquired loot;
-- the later pylon loot event remains the acquired fact and carries
-  `legalityValidatedBy = "hubGeneratedOffer"` so selected-legality rules do not
-  re-run at the wrong physical-entry timing.
-
-### P4: Side Rooms Are Entries, Not Siblings
-
-N side rooms are entered branches and should remain separate physical entries
-with child form addresses. They are not room-topology siblings.
-
-Recommended policy:
-
-- side-room `entered` controls decide whether the side-room entry exists;
-- side-room rewards use reward addresses like `side:1`;
-- side-room room candidates should only exist if we intentionally add a
-  side-room candidate surface;
-- side-room feedback should use child `formAddress`, not row-only lookup.
-
-### P5: Feedback Boundary Is Mostly Correct
-
-Feedback already groups findings, applies route render records, and delegates
-to adapter feedback translators. The boundary should stay this way.
-
-Do not fix HubPylon candidate timing by adding special legality logic to
-feedback. The fix belongs in adapter/step candidate stamping.
-
-## Actionable Spec For The Next Slice
-
-### 1. Shared Physical Entry Attachment Helper
-
-`step.lua` exposes `routeStep.stepRoom(...)` with explicit attachment flags.
-Adapters that need custom traversal should still use this helper for physical
-entry emission whenever possible.
-
-### 2. HubPylon Shared Attachment
-
-`hub_pylon.lua` keeps `emitPhysical` as the physical traversal helper. It now
-passes policy flags into `routeStep.stepRoom(...)` instead of assigning
-candidates manually.
-
-Suggested policy fields:
+The walker should expose a small stable shape, for example:
 
 ```lua
 {
-    currentRoomCandidates = true,
-    pickedDoorCandidates = false,
-    siblingCandidates = false,
-    rewardCandidates = rewardContextValue,
-    rewardCandidateOpts = {
-        address = "side:1",
+    history = history,
+    biome = biome,
+    entry = entry,
+    index = index,
+    selected = {
+        role = role,
+        option = option,
+    },
+    phases = {
+        generated = generatedContext,
+        entry = entryContext,
+        offer = offerContext,
+    },
+    topology = {
+        exits = generatedExits,
+        generatedExitCount = generatedExitCount,
+    },
+    candidates = {
+        rooms = roomCandidates,
+        siblings = siblingCandidates,
+        rewards = rewardCandidates,
     },
 }
 ```
 
-Initial HubPylon policy:
+Exact field names can change during implementation, but the ownership should
+not.
 
-- fixed opening/prehub/hub/preboss entries: current-room candidates only when
-  the UI has a corresponding room control;
-- first hub entry: owns generated hub-door batch metadata for modeled pylon
-  doors and their generated rewards;
-- pylon entries: current-room candidates use ordinary entry/structural context;
-  acquired reward metadata remains on the pylon entry;
-- side-room entries: reward candidates for `side:N`; no sibling candidates;
-- pylon restore/hub return: no room/reward candidates unless a visible control
-  owns that entry.
+### Validators
 
-### 3. Make Candidate Context Explicit
+Validators consume walker steps and declarations. They speak game facts, not
+template layout.
 
-After HubPylon uses shared attachment, add focused tests:
+Structure validators should cover:
 
-- every room candidate emitted for production history has `availabilityContext`;
-- every sibling candidate emitted for production history has
-  `availabilityContext`;
-- HubPylon side-room reward candidates keep `address = "side:N"`;
-- HubPylon child form addresses survive candidate findings and feedback.
+- selected picked-entry legality;
+- previous room requirements;
+- route caps and max creation;
+- next-room tag rules;
+- force pressure;
+- deadline requirements;
+- template-specific structural rules that are still game-domain rules.
 
-### 4. Keep Validator Pure
+Candidate validators should cover:
 
-Do not move HubPylon timing into `validator/candidates/*`.
+- room candidate availability and caps;
+- sibling candidate availability and conflicts;
+- variant candidate availability;
+- reward candidate legality.
 
-The validator should only ask:
+Reward, NPC, and feature validators should use the same history/query/walker
+facts where possible. They should not revive row-stream context.
 
-- what candidates were generated;
-- what availability context was stamped on each candidate;
-- whether that candidate is available or selected-invalid.
+Validators should emit findings/invalids with game-domain codes and payloads.
+They may include source coordinates carried by the ledger or candidates, but
+they should not read template storage directly.
 
-If reward validation needs to know that a pylon reward was hub-generated, the
-adapter should expose that fact as hub-batch metadata on the `N_Hub` entry.
-Room candidate validation should not infer N hub timing from row identity.
+### Feedback
 
-## Non-Goals For This Slice
+Feedback is the reverse adapter.
 
-- Do not implement reward bag simulation.
+It translates validation findings into:
+
+- route status messages;
+- row/control value states;
+- reward value states;
+- related markers;
+- inactive-row metadata;
+- topology control metadata.
+
+Feedback may translate coordinates, such as a picked-next invalid that renders
+on the current room's "Picked Door" control. Feedback should not solve route
+legality or rebuild timing.
+
+## Current Mismatch
+
+As of this audit, the code is still hybrid:
+
+- `builder.lua` dispatches adapters and emits selected history.
+- `history/step.lua` is builder-side and mutates history while also stamping:
+  - `entry.phases`;
+  - `entry.roomCandidates`;
+  - `entry.siblingCandidates`;
+  - `entry.rewardCandidates`.
+- candidate validators read candidate tables from history entries.
+- biome-structure validators separately walk history and recompute some facts.
+- tests in `TestRouteHistoryBuilder.lua` assert candidate tables on built
+  history entries, which locks in the hybrid model.
+
+This mismatch is the next thing to remove before force-pressure work grows.
+
+## Target File Roles
+
+Recommended file direction:
+
+- `history/builder.lua`: route-level materializer.
+- `history/adapters/*.lua`: biome-specific selected ledger adapters.
+- `history/materialize_room.lua` or similar: builder-side selected-entry helper,
+  replacing the builder-facing parts of `history/step.lua`.
+- `history/validator/walker.lua` or similar: validator-side route step walker.
+- `history/candidates/*.lua`: pure candidate factories used by the validator
+  walker, not the builder.
+- `history/validator/candidates/*.lua`: candidate legality checks over walker
+  output.
+- `history/validator/biome_structure/*.lua`: selected structure validators over
+  walker output.
+
+The name `step.lua` should not remain ambiguous. If kept, it should belong to
+the validator walker, not the builder materializer.
+
+## Migration Plan
+
+### Slice 1: Split Builder Materialization From Candidate Stamping
+
+Create a builder-facing materialization helper by extracting from
+`history/step.lua` only:
+
+- selected room entry emission;
+- selected counter updates;
+- selected phase/cost values needed to keep history counters correct;
+- topology/reward attachment supplied by adapters.
+
+Adapters should call this helper instead of `routeStep.stepRoom`.
+
+At the end of this slice, builder output may still carry `phases` temporarily,
+but candidate tables should be optional or clearly marked migration-only.
+
+### Slice 2: Add Validator Walker
+
+Add the validator walker that reads built history and declarations and produces
+validation steps.
+
+It should compute:
+
+- selected declaration role/option;
+- generated/entry/offer contexts;
+- room candidates;
+- sibling candidates;
+- reward candidates;
+- generated topology exits.
+
+Candidate factories move under this walker call path. They should receive
+explicit availability context from the walker.
+
+### Slice 3: Move Candidate Validation To Walker Output
+
+Change `validator/candidates.lua` so it iterates validator steps, not raw history
+entries.
+
+Candidate validators should consume `step.candidates.*` rather than
+`entry.roomCandidates`, `entry.siblingCandidates`, and
+`entry.rewardCandidates`.
+
+After this slice, builder tests should stop asserting candidates on history
+entries. New validator/walker tests should assert candidate timing.
+
+### Slice 4: Remove Builder-Stamped Candidates
+
+Delete builder-side candidate stamping from the materialization path.
+
+Remove from history entries:
+
+- `roomCandidates`;
+- `siblingCandidates`;
+- `rewardCandidates`.
+
+Keep selected facts and topology only.
+
+### Slice 5: Move Structure Validators To Walker Output
+
+Move picked-entry, route-requirement, deadline, and template-specific structural
+validators to consume validator steps.
+
+This unifies selected-entry legality and candidate legality around the same
+timing contexts.
+
+### Slice 6: Reapply Force Pressure
+
+Reapply the stashed force-pressure work on top of the validator walker.
+
+Force pressure should:
+
+- walk the same step stream as room eligibility;
+- compute active legal force candidates from current step facts;
+- track satisfied/closed candidates and groups;
+- permit missed deadline/exact-force candidates only when generated doors are
+  saturated by other active force candidates;
+- emit the first invalid at the generated-door step.
+
+The stashed work is named:
+
+```text
+wip-force-pressure-step-boundary
+```
+
+It should be mined for tests and behavior, not replayed blindly.
+
+## Force Pressure Policy To Preserve
+
+Force pressure is not an after-the-fact deadline-only check. It is a stateful
+walk over generated doors.
+
+At each validator step:
+
+- gather force candidates whose force window is active;
+- require normal availability to be satisfied before the candidate can count as
+  active pressure;
+- ignore grouped candidates if their group was already closed by a picked
+  candidate;
+- count generated doors occupied by active force candidates;
+- if a hard/exact/deadline candidate is missing, the row is valid only if every
+  generated door is occupied by another active force candidate;
+- exact-force candidates can expire after their exact row if legally crowded
+  out;
+- min/max force candidates can persist past max while still eligible and not
+  satisfied/closed.
+
+For H Echo:
+
+- Echo is exact force at BDC 3 and availability exact BDC 3;
+- Echo + ordinary combat is valid;
+- two miniboss doors can crowd Echo out;
+- one miniboss plus ordinary combat is invalid because ordinary combat consumed
+  a door while Echo was active.
+
+## Audit Checklist
+
+Before a boundary cleanup commit is accepted:
+
+- builder does not attach candidate tables;
+- validators do not depend on candidate tables stored in history;
+- builder tests do not assert candidate tables on history entries;
+- validator/walker tests assert candidate timing and value-state findings;
+- candidate availability always uses explicit walker-provided context;
+- feedback only translates findings and route metadata;
+- force pressure consumes the same walker steps as room eligibility;
+- no new template route-legality checks are introduced.
+
+## Non-Goals
+
+- Do not implement reward bags in this pass.
+- Do not rewrite runtime execution planning in this pass.
 - Do not make HubPylon linear.
 - Do not move side rooms back to a separate data stream.
-- Do not add template route-legality checks.
 - Do not make feedback infer route timing.
-- Do not rebuild runtime execution planning.
-
-## Review Checklist
-
-Before the next implementation commit is accepted:
-
-- `hub_pylon.lua` should still own N traversal shape.
-- `hub_pylon.lua` should not manually construct ordinary room candidates
-  without explicit phase context.
-- candidates that can be availability-validated should have
-  `availabilityContext`.
-- validator candidate code should stay adapter-agnostic.
-- feedback should only translate findings to UI state.
-- tests should prove child `formAddress` survives side-room validation and
-  decoration.
+- Do not add compatibility shims for old snapshots unless a released persisted
+  state requires it.

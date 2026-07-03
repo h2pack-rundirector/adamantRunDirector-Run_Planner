@@ -1,7 +1,7 @@
 local deps = ... or {}
 
 local hubPylon = {}
-local routeStep = deps.step
+local materializeRoom = deps.materializeRoom
 local formAddress = import("mods/route/history/form_address.lua")
 
 local EMPTY_LIST = {}
@@ -252,7 +252,7 @@ local function emitPhysical(context, args)
         biomeEncounterDepthCost = numericCost(args.biomeEncounterDepthCost, 0),
         roomHistoryCost = numericCost(args.roomHistoryCost, 0),
     }
-    return routeStep.stepRoom(context, selectedRow, resolved, {
+    return materializeRoom.stepRoom(context, selectedRow, resolved, {
         fields = {
             groupKey = args.groupKey,
             eventSourceKind = args.eventSourceKind,

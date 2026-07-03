@@ -2,7 +2,7 @@ local deps = ... or {}
 
 local multiEncounterFixed = {}
 local rewardCandidates = deps.rewardCandidates
-local routeStep = deps.step
+local materializeRoom = deps.materializeRoom
 
 local EMPTY_LIST = {}
 local BIOME_ENCOUNTER_DEPTH_START = 0
@@ -433,7 +433,7 @@ function multiEncounterFixed.build(args)
 
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
         local resolved = resolvedRows[index]
-        routeStep.stepRoom(context, selectedRow, resolved, {
+        materializeRoom.stepRoom(context, selectedRow, resolved, {
             reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards),
             fields = {
                 variantLabel = resolved.variant and resolved.variant.label or nil,

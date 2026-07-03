@@ -1,7 +1,7 @@
 local deps = ... or {}
 
 local clockworkGoal = {}
-local routeStep = deps.step
+local materializeRoom = deps.materializeRoom
 
 local EMPTY_LIST = {}
 local BIOME_ENCOUNTER_DEPTH_START = 0
@@ -369,7 +369,7 @@ function clockworkGoal.build(args)
         if rowActive(args.snapshot, index) and shouldEmit(selectedRow) then
             local nextRow = args.snapshot.rows[index + 1]
             local nextResolved = resolvedRows[index + 1]
-            routeStep.stepRoom(context, selectedRow, resolved, {
+            materializeRoom.stepRoom(context, selectedRow, resolved, {
                 nextRow = nextRow,
                 nextResolved = nextResolved,
                 reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards),

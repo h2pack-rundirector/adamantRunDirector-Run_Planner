@@ -1,7 +1,7 @@
 local deps = ... or {}
 
 local fixedLinear = {}
-local routeStep = deps.step
+local materializeRoom = deps.materializeRoom
 
 local EMPTY_LIST = {}
 local BIOME_ENCOUNTER_DEPTH_START = 0
@@ -607,7 +607,7 @@ function fixedLinear.build(args)
 
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
         local resolved = resolvedRows[index]
-        routeStep.stepRoom(context, selectedRow, resolved, {
+        materializeRoom.stepRoom(context, selectedRow, resolved, {
             nextRow = args.snapshot.rows[index + 1],
             nextResolved = resolvedRows[index + 1],
             reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards),
