@@ -30,6 +30,16 @@ local function candidateInList(candidates, roomKey)
     return false
 end
 
+local function groupedCandidates(topology)
+    local lookup = {}
+    for _, group in ipairs(topology and topology.forcedGroups or EMPTY_LIST) do
+        for _, candidate in ipairs(group.candidates or EMPTY_LIST) do
+            lookup[candidate] = group
+        end
+    end
+    return lookup
+end
+
 local function forceWindowActive(force, depth)
     local range = force and force.biomeDepthCache or nil
     if range == nil or depth == nil then
@@ -78,6 +88,10 @@ local function stepGeneratedExitCount(step)
     return step and step.topology and step.topology.generatedExitCount or 0
 end
 
+local function forceContext(step)
+    return step and step.phases and step.phases.offer or stepEntry(step)
+end
+
 local function generatedCandidateAt(step, candidate)
     for _, exit in ipairs(stepExits(step)) do
         if common.generatedRoomKey(exit) == candidate then
@@ -120,78 +134,86 @@ local function pickedCandidateBefore(steps, index, candidates)
     return false
 end
 
-local function preparedForceCandidates(topology)
-    local grouped = {}
-    for _, group in ipairs(topology and topology.forcedGroups or EMPTY_LIST) do
-        for _, candidate in ipairs(group.candidates or EMPTY_LIST) do
-            grouped[candidate] = true
-        end
-    end
-
-    local candidates = {}
-    for roomKey, option in pairs(topologyOptionsByRoomKey(topology)) do
-        if option.force ~= nil and not grouped[roomKey] then
-            candidates[#candidates + 1] = roomKey
-        end
-    end
-    return candidates
-end
-
 local function forceCandidateAvailable(option, step)
-    return option ~= nil and common.availabilityFailure(option, stepEntry(step)) == nil
+    return option ~= nil and common.availabilityFailure(option, forceContext(step)) == nil
 end
 
-local function generatedForceWindowCandidateCount(steps, index, optionsByRoomKey)
+local function groupClosedBefore(steps, index, group)
+    return group ~= nil
+        and group.pickedCandidateBeforeDeadlineClosesGroup
+        and pickedCandidateBefore(steps, index, group.candidates)
+end
+
+local function activeForceCandidates(steps, index, optionsByRoomKey, groupsByCandidate)
     local step = steps[index]
-    local entry = stepEntry(step)
-    local count = 0
+    local context = forceContext(step)
+    local active = {}
     for roomKey, option in pairs(optionsByRoomKey) do
-        if forceCandidateAvailable(option, step)
-            and forceWindowActive(option.force, entry and entry.biomeDepthCache)
-            and generatedCandidateAt(step, roomKey)
+        local group = groupsByCandidate[roomKey]
+        if option.force ~= nil
+            and not groupClosedBefore(steps, index, group)
+            and forceCandidateAvailable(option, step)
+            and forceWindowActive(option.force, context and context.biomeDepthCache)
         then
+            active[roomKey] = option
+        end
+    end
+    return active
+end
+
+local function generatedActiveForceCandidateCount(step, active)
+    local count = 0
+    local seen = {}
+    for _, exit in ipairs(stepExits(step)) do
+        local roomKey = common.generatedRoomKey(exit)
+        if roomKey ~= nil
+            and active[roomKey] ~= nil
+            and not seen[roomKey]
+        then
+            seen[roomKey] = true
             count = count + 1
         end
     end
     return count
 end
 
-local function validateUngroupedForce(topology, steps, index, optionsByRoomKey)
-    local step = steps[index]
-    local entry = stepEntry(step)
+local function forceSaturated(step, active)
     local capacity = stepGeneratedExitCount(step)
-    if capacity <= 0 then
+    return capacity > 0 and generatedActiveForceCandidateCount(step, active) >= capacity
+end
+
+local function forcePressurePayload(option, step, active)
+    return {
+        topologyForceLabel = option.label,
+        deadlineBiomeDepthCache = forceDeadlineDepth(option.force),
+        generatedCount = generatedActiveForceCandidateCount(step, active),
+        requiredGeneratedCount = stepGeneratedExitCount(step),
+    }
+end
+
+local function validateUngroupedForce(step, optionsByRoomKey, groupsByCandidate, active)
+    if stepGeneratedExitCount(step) <= 0 then
         return nil
     end
 
-    local missingForceOption = nil
-    for _, candidate in ipairs(preparedForceCandidates(topology)) do
-        local option = optionsByRoomKey[candidate]
-        if forceCandidateAvailable(option, step)
-            and forceDeadlineActive(option.force, entry and entry.biomeDepthCache)
+    local context = forceContext(step)
+    for candidate, option in pairs(optionsByRoomKey) do
+        if groupsByCandidate[candidate] == nil
+            and active[candidate] ~= nil
+            and forceDeadlineActive(option.force, context and context.biomeDepthCache)
             and not generatedCandidateAt(step, candidate)
         then
-            missingForceOption = option
-            break
+            if forceSaturated(step, active) then
+                return nil
+            end
+            return common.invalidAt(
+                stepEntry(step),
+                "forced_topology_pressure_unresolved",
+                forcePressurePayload(option, step, active)
+            )
         end
     end
-    if missingForceOption == nil then
-        return nil
-    end
-    local generatedCount = generatedForceWindowCandidateCount(steps, index, optionsByRoomKey)
-    if generatedCount >= capacity then
-        return nil
-    end
-    return common.invalidAt(
-        entry,
-        "forced_topology_pressure_unresolved",
-        {
-            topologyForceLabel = missingForceOption.label,
-            deadlineBiomeDepthCache = forceDeadlineDepth(missingForceOption.force),
-            generatedCount = generatedCount,
-            requiredGeneratedCount = capacity,
-        }
-    )
+    return nil
 end
 
 local function requiredGeneratedCount(group, step)
@@ -234,6 +256,14 @@ local function validateForcedGroup(steps, index, group)
     )
 end
 
+local function validateForcedGroupWithActive(steps, index, group, active)
+    local invalid = validateForcedGroup(steps, index, group)
+    if invalid == nil or forceSaturated(steps[index], active) then
+        return nil
+    end
+    return invalid
+end
+
 function forcePressure.validate(steps, biome)
     local topology = common.routeStructureForBiome(biome)
     if topology == nil then
@@ -241,13 +271,15 @@ function forcePressure.validate(steps, biome)
     end
 
     local optionsByRoomKey = topologyOptionsByRoomKey(topology)
+    local groupsByCandidate = groupedCandidates(topology)
     for index = 1, #(steps or EMPTY_LIST) do
-        local invalid = validateUngroupedForce(topology, steps, index, optionsByRoomKey)
+        local active = activeForceCandidates(steps, index, optionsByRoomKey, groupsByCandidate)
+        local invalid = validateUngroupedForce(steps[index], optionsByRoomKey, groupsByCandidate, active)
         if invalid ~= nil then
             return invalid
         end
         for _, group in ipairs(topology.forcedGroups or EMPTY_LIST) do
-            invalid = validateForcedGroup(steps, index, group)
+            invalid = validateForcedGroupWithActive(steps, index, group, active)
             if invalid ~= nil then
                 return invalid
             end

@@ -21,6 +21,10 @@
   and template-specific structure validators consume validator walker steps.
   Materialized history entries no longer carry `entry.phases`; the walker is
   the phase authority.
+- Slice 6 complete: force pressure now computes active legal force candidates
+  from walker offer contexts. Missed exact/deadline force candidates are only
+  allowed when generated exits are saturated by other active forced candidates,
+  covering H/Echo crowding and fixed-linear force-group deferral.
 
 ## Contract
 
