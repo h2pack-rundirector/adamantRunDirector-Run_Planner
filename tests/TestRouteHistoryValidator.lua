@@ -377,6 +377,9 @@ local function emitRoom(history, roomHistoryOrdinal, fields)
         variantKey = fields and fields.variantKey or nil,
         variantLabel = fields and fields.variantLabel or nil,
         variantAvailability = fields and fields.variantAvailability or nil,
+        biomeDepthCacheCost = fields and fields.biomeDepthCacheCost or nil,
+        biomeEncounterDepthCost = fields and fields.biomeEncounterDepthCost or nil,
+        roomHistoryCost = fields and fields.roomHistoryCost or nil,
         topology = fields and fields.topology or nil,
         reward = fields and fields.reward or nil,
         nextRoomTags = fields and fields.nextRoomTags or nil,
@@ -450,6 +453,8 @@ function TestRunPlannerRouteHistoryValidator.testNpcTargetsComeFromRouteHistoryR
         roomKey = "F_Combat04",
         roleKey = "Combat",
         biomeDepthCache = 4,
+        biomeEncounterDepth = 5,
+        biomeEncounterDepthCost = 1,
     })
     local npcTargets = buildNpcTargets(history, catalog)
 
@@ -533,6 +538,8 @@ function TestRunPlannerRouteHistoryValidator.testNpcSpacingMessagesUseNpcLabels(
         roomKey = "F_Combat04",
         roleKey = "Combat",
         biomeDepthCache = 4,
+        biomeEncounterDepth = 5,
+        biomeEncounterDepthCost = 1,
     })
     emitRoom(history, 5, {
         biomeKey = "F",

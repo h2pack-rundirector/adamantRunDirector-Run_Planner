@@ -54,51 +54,6 @@ local function nextRoomTagsFailure(requiredTags, tags)
     return "previous_room_next_tags"
 end
 
-local function optionList(role)
-    return role and (role.roomOptions or role.mapOptions) or EMPTY_LIST
-end
-
-local function optionByKey(role, key)
-    if role == nil or key == nil or key == "" then
-        return nil
-    end
-    if role.optionsByKey ~= nil then
-        return role.optionsByKey[key]
-    end
-    for _, option in ipairs(optionList(role)) do
-        if option.key == key then
-            return option
-        end
-    end
-    return nil
-end
-
-local function optionByRoomKey(role, roomKey)
-    if role == nil or roomKey == nil or roomKey == "" then
-        return nil
-    end
-    for _, option in ipairs(optionList(role)) do
-        if option.key == roomKey then
-            return option
-        end
-    end
-    return nil
-end
-
-local function generatedContext(entry)
-    return entry and entry.phases and entry.phases.generated or entry
-end
-
-function pickedEntries.declarationForEntry(biome, entry)
-    local role = biome
-        and biome.rolesByKey
-        and biome.rolesByKey[entry and entry.roleKey or nil]
-        or nil
-    local option = optionByKey(role, entry and entry.optionKey)
-        or optionByRoomKey(role, entry and entry.roomKey)
-    return role, option
-end
-
 local function capFor(value)
     return value and (
         value.maxCreationsThisRun
@@ -116,12 +71,18 @@ local function appendCount(counts, key)
     return value
 end
 
-function pickedEntries.validate(history, biome)
+local function generatedContext(step)
+    return step and step.phases and step.phases.generated or step and step.entry or nil
+end
+
+function pickedEntries.validate(steps, _biome)
     local roleCounts = {}
     local optionCounts = {}
     local previousOption = nil
-    for _, entry in ipairs(common.biomeRoomEntries(history, biome.key)) do
-        local role, option = pickedEntries.declarationForEntry(biome, entry)
+    for _, step in ipairs(steps or EMPTY_LIST) do
+        local entry = step.entry
+        local role = step.selected and step.selected.role or nil
+        local option = step.selected and step.selected.option or nil
         if previousOption ~= nil then
             local requiredTags = previousOption.nextRoomTags
             local failure = nextRoomTagsFailure(requiredTags, option and option.tags)
@@ -132,7 +93,7 @@ function pickedEntries.validate(history, biome)
             end
         end
         if option ~= nil then
-            local failure = common.availabilityFailure(option, generatedContext(entry))
+            local failure = common.availabilityFailure(option, generatedContext(step))
             if failure ~= nil then
                 return common.invalidAt(entry, failure)
             end

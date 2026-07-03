@@ -15,12 +15,14 @@ local function candidateInList(candidates, roomKey)
     return false
 end
 
-local function generatedRoomKeyThrough(entries, entryIndex, roomKeys)
+local function generatedRoomKeyThrough(steps, entryIndex, roomKeys)
     for index = 1, entryIndex do
-        if candidateInList(roomKeys, entries[index].roomKey or entries[index].eventKey) then
+        local step = steps[index]
+        local entry = step and step.entry or nil
+        if candidateInList(roomKeys, entry and (entry.roomKey or entry.eventKey)) then
             return true
         end
-        for _, exit in ipairs(common.selectedAndGeneratedExits(entries[index])) do
+        for _, exit in ipairs(step and step.topology and step.topology.exits or EMPTY_LIST) do
             if candidateInList(roomKeys, exit.roomKey) then
                 return true
             end
@@ -29,19 +31,19 @@ local function generatedRoomKeyThrough(entries, entryIndex, roomKeys)
     return false
 end
 
-function deadlines.validate(history, biome)
+function deadlines.validate(steps, biome)
     local topology = common.routeStructureForBiome(biome)
     if topology == nil then
         return nil
     end
 
-    local entries = common.biomeRoomEntries(history, biome.key)
     for _, requirement in ipairs(topology.deadlineRequirements or EMPTY_LIST) do
         local deadline = requirement.biomeDepthCache
         if deadline ~= nil then
-            for index, entry in ipairs(entries) do
+            for index, step in ipairs(steps or EMPTY_LIST) do
+                local entry = step.entry
                 if (entry.biomeDepthCache or 0) >= deadline then
-                    if not generatedRoomKeyThrough(entries, index, requirement.roomKeys) then
+                    if not generatedRoomKeyThrough(steps, index, requirement.roomKeys) then
                         return common.invalidAt(
                             entry,
                             requirement.code or "room_deadline_requirement",

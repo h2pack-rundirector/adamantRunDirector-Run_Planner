@@ -28,16 +28,6 @@ local function remainingEncounterCost(resolved)
     return encounterCost(resolved) - entryEncounterCost(resolved)
 end
 
-local function entryPhase(context)
-    return {
-        biomeDepthCache = context.biomeState.biomeDepthCache,
-        biomeEncounterDepth = context.biomeState.biomeEncounterDepth,
-        runEncounterDepth = context.routeState.runEncounterDepth,
-        runDepthCache = 1 + context.routeState.roomHistoryOrdinal,
-        roomHistoryOrdinal = context.routeState.roomHistoryOrdinal,
-    }
-end
-
 function materializeRoom.enterRoom(context, resolved)
     local entryCost = entryEncounterCost(resolved)
     context.routeState.runEncounterDepth =
@@ -82,11 +72,6 @@ function materializeRoom.emitRoom(context, selectedRow, resolved, fields)
         source = selectedRow,
     }, fields))
 
-    entry.phases = {
-        generated = context.nextGeneratedPhase,
-        entry = entryPhase(context),
-        offer = materializeRoom.offerPhase(context, entry, resolved),
-    }
     return entry
 end
 
@@ -126,7 +111,7 @@ function materializeRoom.stepRoom(context, selectedRow, resolved, opts)
     if opts.attachTopology ~= nil then
         opts.attachTopology(entry)
     end
-    context.nextGeneratedPhase = entry.phases.offer
+    context.nextGeneratedPhase = materializeRoom.offerPhase(context, entry, resolved)
     materializeRoom.advanceAfterRoom(context, resolved)
     return entry
 end

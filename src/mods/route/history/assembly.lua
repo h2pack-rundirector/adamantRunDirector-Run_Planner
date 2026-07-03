@@ -92,6 +92,7 @@ function historyAssembly.create(opts)
         findings = findings,
         history = history,
         query = query,
+        walker = validatorWalker,
     })
     local rewardValidator = import("mods/route/history/validator/rewards.lua", nil, {
         history = history,

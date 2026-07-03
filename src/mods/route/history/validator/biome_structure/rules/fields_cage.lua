@@ -71,13 +71,14 @@ function fields.appendCandidateFindings(target, _history, step)
     end
 end
 
-function fields.validate(history, biome)
+function fields.validate(steps, biome)
     local topology = common.routeStructureForBiome(biome)
     if topology == nil then
         return nil
     end
 
-    for _, entry in ipairs(common.biomeRoomEntries(history, biome.key)) do
+    for _, step in ipairs(steps or EMPTY_LIST) do
+        local entry = step.entry
         for _, rule in ipairs(topology.rules or EMPTY_LIST) do
             if rule.key == "matchingCombatCageRewardCount" then
                 local invalid, invalidFindings = validateMatchingCombatCageRewardCount(entry)

@@ -1,7 +1,3 @@
-local deps = ... or {}
-
-local routeHistory = deps.history
-
 local common = {}
 
 common.EMPTY_LIST = {}
@@ -93,61 +89,8 @@ function common.routeStructureForBiome(biome)
     ) or nil
 end
 
-function common.topologyExits(entry)
-    local topology = entry and entry.topology or nil
-    if topology == nil then
-        return common.EMPTY_LIST
-    end
-    if topology.exits ~= nil then
-        return topology.exits
-    end
-    local exits = {}
-    if topology.selected ~= nil then
-        exits[#exits + 1] = topology.selected
-    end
-    if topology.sibling ~= nil then
-        exits[#exits + 1] = topology.sibling
-    end
-    return exits
-end
-
-function common.selectedExit(entry)
-    local topology = entry and entry.topology or nil
-    if topology ~= nil and topology.selected ~= nil then
-        return topology.selected
-    end
-    return {
-        structure = entry and entry.roleKey or nil,
-        roomKey = entry and entry.roomKey or nil,
-    }
-end
-
-function common.selectedAndGeneratedExits(entry)
-    local topology = entry and entry.topology or nil
-    if topology == nil then
-        return { common.selectedExit(entry) }
-    end
-    return common.topologyExits(entry)
-end
-
 function common.generatedRoomKey(exit)
     return exit and (exit.roomKey or exit.optionKey) or nil
-end
-
-function common.generatedExitCount(entry)
-    return #common.topologyExits(entry)
-end
-
-function common.biomeRoomEntries(history, biomeKey)
-    local entries = {}
-    for _, entry in ipairs(routeHistory.byKind(history, "room")) do
-        if entry.biomeKey == biomeKey
-            and entry.eventSourceKind ~= "afterBiome"
-        then
-            entries[#entries + 1] = entry
-        end
-    end
-    return entries
 end
 
 return common

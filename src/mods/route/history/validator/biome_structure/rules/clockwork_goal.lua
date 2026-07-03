@@ -5,6 +5,16 @@ local findings = deps.findings
 
 local clockwork = {}
 
+local EMPTY_LIST = common.EMPTY_LIST
+
+local function stepExits(step)
+    return step and step.topology and step.topology.exits or EMPTY_LIST
+end
+
+local function stepGeneratedExitCount(step)
+    return step and step.topology and step.topology.generatedExitCount or 0
+end
+
 local function isClockworkGoalExit(exit, progression)
     return exit ~= nil
         and (
@@ -22,9 +32,9 @@ local function isClockworkPrebossExit(exit, progression)
         )
 end
 
-local function clockworkGoalDoorCount(entry, progression)
+local function clockworkGoalDoorCount(step, progression)
     local count = 0
-    for _, exit in ipairs(common.topologyExits(entry)) do
+    for _, exit in ipairs(stepExits(step)) do
         if isClockworkGoalExit(exit, progression) then
             count = count + 1
         end
@@ -32,9 +42,9 @@ local function clockworkGoalDoorCount(entry, progression)
     return count
 end
 
-local function clockworkPrebossDoorCount(entry, progression)
+local function clockworkPrebossDoorCount(step, progression)
     local count = 0
-    for _, exit in ipairs(common.topologyExits(entry)) do
+    for _, exit in ipairs(stepExits(step)) do
         if isClockworkPrebossExit(exit, progression) then
             count = count + 1
         end
@@ -147,7 +157,7 @@ local function clockworkPayload(biome, progression)
     }
 end
 
-function clockwork.validate(history, biome)
+function clockwork.validate(steps, biome)
     local progression = biome and biome.clockwork and biome.clockwork.progression or nil
     if progression == nil then
         return nil
@@ -157,10 +167,11 @@ function clockwork.validate(history, biome)
     local progressionFindings = {}
     local requiredGoals = tonumber(progression.requiredGoals) or 0
     local payload = clockworkPayload(biome, progression)
-    local entries = common.biomeRoomEntries(history, biome.key)
-    for index, entry in ipairs(entries) do
+    for index, step in ipairs(steps or {}) do
+        local entry = step.entry
         if entry.roleKey ~= "Intro" then
-            local nextEntry = entries[index + 1]
+            local nextStep = steps[index + 1]
+            local nextEntry = nextStep and nextStep.entry or nil
             if pickedClockworkPreboss(entry, progression) then
                 if goalCount < requiredGoals then
                     return common.invalidWithFindings(
@@ -185,7 +196,7 @@ function clockwork.validate(history, biome)
             end
 
             local beforeComplete = goalCount < requiredGoals
-            local prebossDoorCount = clockworkPrebossDoorCount(entry, progression)
+            local prebossDoorCount = clockworkPrebossDoorCount(step, progression)
             if beforeComplete then
                 if prebossDoorCount > 0 then
                     local finding = generatedClockworkFinding(
@@ -204,9 +215,9 @@ function clockwork.validate(history, biome)
                     )
                 end
 
-                local goalDoorCount = clockworkGoalDoorCount(entry, progression)
+                local goalDoorCount = clockworkGoalDoorCount(step, progression)
                 if progression.singleDoorMustBeGoalBeforeComplete == true
-                    and common.generatedExitCount(entry) == 0
+                    and stepGeneratedExitCount(step) == 0
                 then
                     return common.invalidWithFindings(
                         entry,
@@ -224,7 +235,7 @@ function clockwork.validate(history, biome)
                 end
 
                 if progression.exactlyOneGoalDoorBeforeComplete == true
-                    and common.generatedExitCount(entry) > 0
+                    and stepGeneratedExitCount(step) > 0
                     and goalDoorCount ~= 1
                 then
                     return common.invalidWithFindings(
@@ -252,7 +263,7 @@ function clockwork.validate(history, biome)
                     entry,
                     "clockwork_preboss_required",
                     {
-                        common.generatedExitCount(entry) > 0
+                        stepGeneratedExitCount(step) > 0
                             and generatedClockworkFinding(
                                 entry,
                                 nextEntry,

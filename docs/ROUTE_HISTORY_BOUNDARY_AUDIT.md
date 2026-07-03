@@ -17,6 +17,10 @@
   `variantCandidates`, and `rewardCandidates` have been removed from history
   entries. O/Thessaly multi-encounter reward candidates are now derived by the
   walker from topology policy plus selected encounter facts.
+- Slice 5 complete: picked-entry, route-requirement, deadline, force-pressure,
+  and template-specific structure validators consume validator walker steps.
+  Materialized history entries no longer carry `entry.phases`; the walker is
+  the phase authority.
 
 ## Contract
 
@@ -275,22 +279,19 @@ Feedback may translate coordinates, such as a picked-next invalid that renders
 on the current room's "Picked Door" control. Feedback should not solve route
 legality or rebuild timing.
 
-## Current Mismatch
+## Resolved Mismatch
 
-As of this audit, the code is still hybrid:
+The original hybrid model has been removed:
 
-- `builder.lua` dispatches adapters and emits selected history.
-- `history/step.lua` is builder-side and mutates history while also stamping:
-  - `entry.phases`;
-  - `entry.roomCandidates`;
-  - `entry.siblingCandidates`;
-  - `entry.rewardCandidates`.
-- candidate validators read candidate tables from history entries.
-- biome-structure validators separately walk history and recompute some facts.
-- tests in `TestRouteHistoryBuilder.lua` assert candidate tables on built
-  history entries, which locks in the hybrid model.
+- `builder.lua` dispatches adapters and emits selected history only.
+- `history/step.lua` has been removed.
+- materialized history entries no longer carry `entry.phases` or candidate
+  tables.
+- candidate and biome-structure validators consume validator walker steps.
+- builder tests no longer assert candidate tables on built history entries.
 
-This mismatch is the next thing to remove before force-pressure work grows.
+Force-pressure work can now build on the validator walker as the lifecycle
+authority.
 
 ## Target File Roles
 

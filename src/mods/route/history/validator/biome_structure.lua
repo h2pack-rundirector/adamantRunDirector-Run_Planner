@@ -1,8 +1,7 @@
 local deps = ... or {}
 
-local common = import("mods/route/history/validator/biome_structure/common.lua", nil, {
-    history = deps.history,
-})
+local common = import("mods/route/history/validator/biome_structure/common.lua")
+local walker = deps.walker
 local pickedEntriesValidator = import("mods/route/history/validator/biome_structure/picked_entries.lua", nil, {
     common = common,
     findings = deps.findings,
@@ -38,10 +37,10 @@ biomeStructure.ruleValidators = ruleValidators
 
 local EMPTY_LIST = common.EMPTY_LIST
 
-local function validateInOrder(history, biome, validators)
+local function validateInOrder(steps, biome, validators, history)
     local resultFindings = {}
     for _, validator in ipairs(validators) do
-        local invalid, findings = validator.validate(history, biome)
+        local invalid, findings = validator.validate(steps, biome, history)
         common.appendFindings(resultFindings, findings)
         if invalid ~= nil then
             return invalid, resultFindings
@@ -58,10 +57,14 @@ function biomeStructure.validate(args)
     for _, biomeKey in ipairs(route and route.biomes or EMPTY_LIST) do
         local biome = biomeLookup and biomeLookup[biomeKey] or nil
         if biome ~= nil then
-            local invalid, findings = validateInOrder(history, biome, structureValidators)
+            local steps = walker.forBiome({
+                history = history,
+                biome = biome,
+            })
+            local invalid, findings = validateInOrder(steps, biome, structureValidators, history)
             common.appendFindings(resultFindings, findings)
             if invalid == nil then
-                invalid, findings = validateInOrder(history, biome, ruleValidators)
+                invalid, findings = validateInOrder(steps, biome, ruleValidators, history)
                 common.appendFindings(resultFindings, findings)
             end
             if invalid ~= nil then
