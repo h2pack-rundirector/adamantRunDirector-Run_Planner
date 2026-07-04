@@ -11,10 +11,14 @@ local function routeControlInvariantMessage(routeControlName, routeKey, biomeKey
         .. reason
 end
 
-local function selectedRowsSnapshot(context, routeKey, biomeKey)
+local function selectedRouteSnapshot(context, routeKey, biomeKey)
     local control = context:controlForBiome(routeKey, biomeKey)
     if control == nil or control.read == nil then
         return nil
+    end
+    local selectedNodes = control:read("selectedNodesSnapshot")
+    if selectedNodes ~= nil then
+        return selectedNodes
     end
     local selected = control:read("selectedRowsSnapshot")
     if selected ~= nil then
@@ -150,7 +154,7 @@ function feedback.install(context, deps)
                         route = route,
                         biomeLookup = self.biomeLookup,
                         snapshotForBiome = function(_, biomeKey)
-                            return selectedRowsSnapshot(self, route.key, biomeKey)
+                            return selectedRouteSnapshot(self, route.key, biomeKey)
                         end,
                     })
                     local npcTargets = historySystem.npcCandidates.build({

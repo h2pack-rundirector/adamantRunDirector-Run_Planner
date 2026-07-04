@@ -46,7 +46,8 @@ local function buildTemplateHistory(catalog, routeKey, biomeKey, template, rows,
         biome = catalog.lookup[biomeKey],
     })
     local control = template.createRuntime(h.routeFields(rows, encounterRewardRows), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control.read and control:read("selectedNodesSnapshot")
+        or control:buildSelectedRowsSnapshot()
     return historyBuilder.build({
         route = {
             key = routeKey,
@@ -671,7 +672,7 @@ function TestRunPlannerRouteHistoryBuilder.testFieldsCageBuildsFieldsSpine()
         biome = catalog.lookup.H,
     })
     local control = template.createRuntime(h.routeFields(fullHFieldsRows()), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:buildSelectedNodesSnapshot()
 
     local history = historyBuilder.build({
         route = {
@@ -736,7 +737,7 @@ function TestRunPlannerRouteHistoryBuilder.testFieldsCageEntriesCarryTopologyAnd
         biome = catalog.lookup.H,
     })
     local control = template.createRuntime(h.routeFields(fullHFieldsRows()), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:buildSelectedNodesSnapshot()
 
     local history = historyBuilder.build({
         route = {

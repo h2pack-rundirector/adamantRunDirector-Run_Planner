@@ -2,6 +2,10 @@
 
 ## Progress
 
+- 2026-07-03: Slice 4 is implemented for H/Fields. Route context now prefers
+  `selectedNodes.v1` when a control exposes it, and the Fields history adapter
+  consumes node snapshots directly while preserving `selectedRows.v1` as
+  temporary compatibility for unmigrated tests and templates.
 - 2026-07-03: Slice 3 first pass is implemented for H/Fields. The Fields
   runtime now exposes `selectedNodes.v1` beside `selectedRows.v1`; nodes carry
   current-room keys/rewards, picked next-door keys, active other-door keys, and

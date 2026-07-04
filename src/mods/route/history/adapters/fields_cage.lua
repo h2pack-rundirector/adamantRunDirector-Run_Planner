@@ -417,6 +417,49 @@ local function firstOtherDoorSelection(selectedRow)
     return otherDoors[1]
 end
 
+local function selectedRowFromNode(node)
+    local currentRoom = node and node.currentRoom or nil
+    if currentRoom == nil then
+        return nil
+    end
+    return {
+        rowIndex = node.rowIndex,
+        routeOrdinal = node.routeOrdinal,
+        roleKey = currentRoom.roleKey,
+        optionKey = currentRoom.optionKey,
+        variantKey = currentRoom.variantKey,
+        formAddress = currentRoom.formAddress,
+        rewards = node.rewards,
+    }
+end
+
+local function pickedRowFromNode(node)
+    local picked = node and node.nextChoices and node.nextChoices.picked or nil
+    if picked == nil then
+        return nil
+    end
+    return {
+        rowIndex = picked.targetRowIndex,
+        roleKey = picked.roleKey,
+        optionKey = picked.optionKey,
+        variantKey = picked.variantKey,
+        formAddress = picked.formAddress,
+    }
+end
+
+local function topologyRowFromNode(node)
+    local current = selectedRowFromNode(node)
+    if current == nil then
+        return nil
+    end
+    local otherDoors = node and node.nextChoices and node.nextChoices.otherDoors or nil
+    current.topology = otherDoors ~= nil and {
+        otherDoors = otherDoors,
+        siblings = otherDoors,
+    } or nil
+    return current
+end
+
 local function siblingTopology(context, selectedRow)
     local otherDoor = firstOtherDoorSelection(selectedRow)
     local structureKey = otherDoor and otherDoor.structureKey or nil
@@ -459,8 +502,8 @@ local function attachFieldsTopology(context, roomEntry, selectedRow, pickedRow, 
     }
 end
 
-function fieldsCage.build(args)
-    local context = {
+local function buildContext(args)
+    return {
         routeKey = args.route and args.route.key or args.snapshot.routeKey,
         routeBiomeIndex = args.routeBiomeIndex,
         history = args.history,
@@ -476,8 +519,42 @@ function fieldsCage.build(args)
             biomeEncounterDepth = BIOME_ENCOUNTER_DEPTH_START,
         },
     }
+end
 
-    local slots = buildSlots(args.biome)
+local function buildFromNodes(args, context, slots)
+    local resolvedNodes = {}
+    for index, node in ipairs(args.snapshot.nodes or EMPTY_LIST) do
+        local selectedRow = selectedRowFromNode(node)
+        resolvedNodes[index] = resolveRow(context, selectedRow, slots[index])
+    end
+
+    for index, node in ipairs(args.snapshot.nodes or EMPTY_LIST) do
+        local selectedRow = selectedRowFromNode(node)
+        local resolved = resolvedNodes[index]
+        local pickedRow = pickedRowFromNode(node)
+        local pickedResolved = pickedRow ~= nil
+            and resolveRow(context, pickedRow, slots[pickedRow.rowIndex])
+            or nil
+        local topologyRow = topologyRowFromNode(node)
+        materializeRoom.stepRoom(context, selectedRow, resolved, {
+            nextRow = pickedRow,
+            nextResolved = pickedResolved,
+            reward = selectedRewardSummary(
+                resolved.rewardContext,
+                selectedRow.rewards,
+                resolved.sameExitRewardCount
+            ),
+            rewardCandidateOpts = {
+                sameExitRewardCount = resolved.sameExitRewardCount,
+            },
+            attachTopology = function(roomEntry)
+                attachFieldsTopology(context, roomEntry, topologyRow, pickedRow, pickedResolved)
+            end,
+        })
+    end
+end
+
+local function buildFromRows(args, context, slots)
     local resolvedRows = {}
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
         resolvedRows[index] = resolveRow(context, selectedRow, slots[index])
@@ -502,6 +579,16 @@ function fieldsCage.build(args)
                 attachFieldsTopology(context, roomEntry, selectedRow, nextRow, nextResolved)
             end,
         })
+    end
+end
+
+function fieldsCage.build(args)
+    local context = buildContext(args)
+    local slots = buildSlots(args.biome)
+    if args.snapshot.schema == "selectedNodes.v1" then
+        buildFromNodes(args, context, slots)
+    else
+        buildFromRows(args, context, slots)
     end
 end
 
