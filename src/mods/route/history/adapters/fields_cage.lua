@@ -363,35 +363,38 @@ local function selectedTopology(selectedRow, resolved)
     if selectedRow == nil or resolved == nil then
         return nil
     end
+    local common = {
+        branch = "picked",
+        roleKey = selectedRow.roleKey,
+        optionKey = selectedRow.optionKey,
+        variantKey = selectedRow.variantKey,
+        targetRowIndex = selectedRow.rowIndex,
+        targetRouteOrdinal = selectedRow.routeOrdinal,
+        formAddress = selectedRow.formAddress,
+    }
     if selectedRow.roleKey == "Combat" then
         local count = resolved.sameExitRewardCount
         if count <= 0 then
             return nil
         end
-        return {
-            branch = "picked",
-            structure = "CombatCage" .. tostring(count),
-            rewardStore = "RunProgress",
-            sameExitRewardCount = count,
-            rewardAddresses = rewardAddresses(count),
-        }
+        common.structure = "CombatCage" .. tostring(count)
+        common.rewardStore = "RunProgress"
+        common.sameExitRewardCount = count
+        common.rewardAddresses = rewardAddresses(count)
+        return common
     elseif selectedRow.roleKey == "Miniboss" then
-        return {
-            branch = "picked",
-            structure = "Miniboss",
-            roomKey = resolved.roomKey,
-            rewardStore = "RunProgress",
-            eligibleRewardTypes = { "Boon" },
-            sameExitRewardCount = 1,
-            rewardAddresses = { "row" },
-        }
+        common.structure = "Miniboss"
+        common.roomKey = resolved.roomKey
+        common.rewardStore = "RunProgress"
+        common.eligibleRewardTypes = { "Boon" }
+        common.sameExitRewardCount = 1
+        common.rewardAddresses = { "row" }
+        return common
     elseif selectedRow.roleKey == "Bridge" then
-        return {
-            branch = "picked",
-            structure = "Bridge",
-            roomKey = resolved.roomKey,
-            sameExitRewardCount = 0,
-        }
+        common.structure = "Bridge"
+        common.roomKey = resolved.roomKey
+        common.sameExitRewardCount = 0
+        return common
     end
     return nil
 end
@@ -422,6 +425,7 @@ local function selectedRowFromNode(node)
     if currentRoom == nil then
         return nil
     end
+    local otherDoors = node and node.nextChoices and node.nextChoices.otherDoors or nil
     return {
         rowIndex = node.rowIndex,
         routeOrdinal = node.routeOrdinal,
@@ -430,6 +434,10 @@ local function selectedRowFromNode(node)
         variantKey = currentRoom.variantKey,
         formAddress = currentRoom.formAddress,
         rewards = node.rewards,
+        topology = otherDoors ~= nil and {
+            otherDoors = otherDoors,
+            siblings = otherDoors,
+        } or nil,
     }
 end
 
@@ -448,16 +456,7 @@ local function pickedRowFromNode(node)
 end
 
 local function topologyRowFromNode(node)
-    local current = selectedRowFromNode(node)
-    if current == nil then
-        return nil
-    end
-    local otherDoors = node and node.nextChoices and node.nextChoices.otherDoors or nil
-    current.topology = otherDoors ~= nil and {
-        otherDoors = otherDoors,
-        siblings = otherDoors,
-    } or nil
-    return current
+    return selectedRowFromNode(node)
 end
 
 local function siblingTopology(context, selectedRow)

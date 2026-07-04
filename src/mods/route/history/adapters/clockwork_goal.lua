@@ -211,51 +211,54 @@ local function selectedTopology(selectedRow, resolved)
     if selectedRow == nil or resolved == nil then
         return nil
     end
+    local common = {
+        branch = "picked",
+        roleKey = selectedRow.roleKey,
+        optionKey = selectedRow.optionKey,
+        variantKey = selectedRow.variantKey,
+        targetRowIndex = selectedRow.rowIndex,
+        targetRouteOrdinal = selectedRow.routeOrdinal,
+        formAddress = selectedRow.formAddress,
+    }
     if selectedRow.roleKey == "GoalCombat" then
-        return {
-            structure = "GoalCombat",
-            roomKey = resolved.roomKey,
-            isClockworkGoal = true,
-            sameExitRewardCount = 0,
-        }
+        common.structure = "GoalCombat"
+        common.roomKey = resolved.roomKey
+        common.isClockworkGoal = true
+        common.sameExitRewardCount = 0
+        return common
     elseif selectedRow.roleKey == "RewardCombat" then
-        return {
-            structure = "RewardCombat",
-            roomKey = resolved.roomKey,
-            rewardStore = "TartarusRewards",
-            ineligibleRewardTypes = { "Boon" },
-            sameExitRewardCount = 1,
-            rewardAddresses = { "row" },
-        }
+        common.structure = "RewardCombat"
+        common.roomKey = resolved.roomKey
+        common.rewardStore = "TartarusRewards"
+        common.ineligibleRewardTypes = { "Boon" }
+        common.sameExitRewardCount = 1
+        common.rewardAddresses = { "row" }
+        return common
     elseif selectedRow.roleKey == "Story" then
-        return {
-            structure = "Story",
-            roomKey = resolved.roomKey,
-            sameExitRewardCount = 0,
-        }
+        common.structure = "Story"
+        common.roomKey = resolved.roomKey
+        common.sameExitRewardCount = 0
+        return common
     elseif selectedRow.roleKey == "Fountain" then
-        return {
-            structure = "Fountain",
-            roomKey = resolved.roomKey,
-            rewardStore = "TartarusRewards",
-            ineligibleRewardTypes = { "Devotion" },
-            sameExitRewardCount = 1,
-            rewardAddresses = { "row" },
-        }
+        common.structure = "Fountain"
+        common.roomKey = resolved.roomKey
+        common.rewardStore = "TartarusRewards"
+        common.ineligibleRewardTypes = { "Devotion" }
+        common.sameExitRewardCount = 1
+        common.rewardAddresses = { "row" }
+        return common
     elseif selectedRow.roleKey == "Miniboss" then
-        return {
-            structure = "Miniboss",
-            roomKey = resolved.roomKey,
-            rewardStore = "RunProgress",
-            eligibleRewardTypes = { "Boon" },
-            sameExitRewardCount = 1,
-            rewardAddresses = { "row" },
-        }
+        common.structure = "Miniboss"
+        common.roomKey = resolved.roomKey
+        common.rewardStore = "RunProgress"
+        common.eligibleRewardTypes = { "Boon" }
+        common.sameExitRewardCount = 1
+        common.rewardAddresses = { "row" }
+        return common
     elseif selectedRow.roleKey == "Preboss" then
-        return {
-            structure = "Preboss",
-            sameExitRewardCount = 0,
-        }
+        common.structure = "Preboss"
+        common.sameExitRewardCount = 0
+        return common
     end
     return nil
 end

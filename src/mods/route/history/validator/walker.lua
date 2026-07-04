@@ -194,10 +194,6 @@ local function topologyExits(entry)
     return exits
 end
 
-local function adapterUsesPickedDoorCandidates(adapter)
-    return adapter == "fixedLinear" or adapter == "clockworkGoal"
-end
-
 local function variantPolicyForStep(step)
     local policyKey = step.selected.role and step.selected.role.encounterPolicy or nil
     local policy = step.biome
@@ -276,6 +272,39 @@ local function variantCandidatesForStep(step)
     return candidates
 end
 
+local function generatedPickedExit(step)
+    for _, exit in ipairs(step and step.topology and step.topology.exits or EMPTY_LIST) do
+        if exit.branch == "picked" then
+            return exit
+        end
+    end
+    return nil
+end
+
+local function generatedPickedSource(exit)
+    if exit == nil then
+        return nil
+    end
+    return {
+        rowIndex = exit.targetRowIndex or exit.formAddress and exit.formAddress.rowIndex or nil,
+        formAddress = exit.formAddress,
+        routeOrdinal = exit.targetRouteOrdinal,
+        roleKey = exit.roleKey,
+        optionKey = exit.optionKey or exit.roomKey,
+        variantKey = exit.variantKey,
+        roomKey = exit.roomKey,
+    }
+end
+
+local function resolvedForGeneratedPicked(step, source)
+    local role, option = declarationForEntry(step.biome, source)
+    return {
+        role = role,
+        option = option,
+        routeOrdinal = source and source.routeOrdinal or nil,
+    }
+end
+
 local function appendRoomCandidates(step)
     step.candidates.rooms = roomCandidates.forBiomeRow(
         step.biome,
@@ -286,17 +315,18 @@ local function appendRoomCandidates(step)
         }
     )
 
-    local nextStep = step.next
-    if nextStep ~= nil and adapterUsesPickedDoorCandidates(step.biome and step.biome.adapter) then
+    local pickedExit = generatedPickedExit(step)
+    local pickedSource = generatedPickedSource(pickedExit)
+    if pickedSource ~= nil and pickedSource.roleKey ~= nil then
         local candidates = roomCandidates.forBiomeRow(
             step.biome,
-            nextStep.source,
-            resolvedForStep(nextStep),
+            pickedSource,
+            resolvedForGeneratedPicked(step, pickedSource),
             {
                 availabilityContext = step.phases.offer,
-                targetRowIndex = nextStep.entry and nextStep.entry.rowIndex or nil,
-                targetRouteOrdinal = nextStep.entry and nextStep.entry.routeOrdinal or nil,
-                targetFormAddress = nextStep.entry and nextStep.entry.formAddress or nil,
+                targetRowIndex = pickedSource.rowIndex,
+                targetRouteOrdinal = pickedSource.routeOrdinal,
+                targetFormAddress = pickedSource.formAddress,
             }
         )
         for _, candidate in ipairs(candidates) do

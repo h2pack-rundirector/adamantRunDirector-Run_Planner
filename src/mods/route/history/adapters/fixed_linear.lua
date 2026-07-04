@@ -400,9 +400,13 @@ local function selectedStructure(selectedRow, resolved)
     local roleKey = selectedRow.roleKey
     local option = resolved.option
     return {
+        branch = "picked",
         roleKey = roleKey,
         optionKey = selectedRow.optionKey,
         variantKey = selectedRow.variantKey,
+        targetRowIndex = selectedRow.rowIndex,
+        targetRouteOrdinal = selectedRow.routeOrdinal,
+        formAddress = selectedRow.formAddress,
         structure = roleKey,
         roomKey = resolved.roomKey,
         eventKey = resolved.eventKey,
@@ -482,7 +486,6 @@ local function pickedExit(selectedRow, resolved)
         return nil
     end
     local selected = selectedStructure(selectedRow, resolved)
-    selected.branch = "picked"
     selected.reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards)
     return selected
 end

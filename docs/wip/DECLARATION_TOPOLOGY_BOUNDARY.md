@@ -2,6 +2,9 @@
 
 ## Progress
 
+- 2026-07-03: Slice 5 is implemented. Generated picked-door candidate
+  stamping now comes from canonical topology exits carrying picked-door target
+  metadata, so Fixed/Fields/Clockwork use the same validator walker path.
 - 2026-07-03: Slice 4 is implemented for H/Fields. Route context now prefers
   `selectedNodes.v1` when a control exposes it, and the Fields history adapter
   consumes node snapshots directly while preserving `selectedRows.v1` as

@@ -22,6 +22,15 @@ local function findCandidate(candidates, field, expected)
     return nil
 end
 
+local function findTargetedCandidate(candidates, field, expected, targetRowIndex)
+    for _, candidate in ipairs(candidates or {}) do
+        if candidate[field] == expected and candidate.targetRowIndex == targetRowIndex then
+            return candidate
+        end
+    end
+    return nil
+end
+
 local function assertPhaseEquals(actual, expected)
     lu.assertEquals(actual.biomeDepthCache, expected.biomeDepthCache)
     lu.assertEquals(actual.biomeEncounterDepth, expected.biomeEncounterDepth)
@@ -36,7 +45,8 @@ local function buildTemplateHistory(catalog, routeKey, biomeKey, template, rows,
         biome = catalog.lookup[biomeKey],
     })
     local control = template.createRuntime(h.routeFields(rows, encounterRewardRows), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control.read and control:read("selectedNodesSnapshot")
+        or control:buildSelectedRowsSnapshot()
     return historyBuilder.build({
         route = {
             key = routeKey,
@@ -265,6 +275,9 @@ function TestRunPlannerRouteHistoryWalker.testFixedLinearWalkerBuildsCandidateSt
     assertPhaseEquals(steps[2].phases.generated, steps[1].phases.offer)
     lu.assertNotNil(findCandidate(steps[2].candidates.rooms, "roomKey", "F_Combat01"))
     lu.assertNotNil(findCandidate(steps[2].candidates.rooms, "roomKey", "F_Story01"))
+    local fixedPickedCandidate = findTargetedCandidate(steps[4].candidates.rooms, "roomKey", "F_Combat04", 5)
+    lu.assertNotNil(fixedPickedCandidate)
+    lu.assertEquals(fixedPickedCandidate.targetFormAddress.rowIndex, 5)
     lu.assertNotNil(findCandidate(steps[5].candidates.siblings, "structureKey", "F_Story01"))
     lu.assertEquals(
         findCandidate(steps[6].candidates.siblings, "structureKey", "Combat").rewardBranch,
@@ -290,6 +303,9 @@ function TestRunPlannerRouteHistoryWalker.testFieldsCageWalkerRebuildsSiblingAnd
 
     lu.assertEquals(#steps, 6)
     lu.assertNotNil(findCandidate(steps[2].candidates.rooms, "roomKey", "H_Combat04"))
+    local fieldsPickedCandidate = findTargetedCandidate(steps[2].candidates.rooms, "roomKey", "H_Combat04", 3)
+    lu.assertNotNil(fieldsPickedCandidate)
+    lu.assertEquals(fieldsPickedCandidate.targetFormAddress.rowIndex, 3)
     lu.assertNotNil(findCandidate(steps[2].candidates.siblings, "structureKey", "CombatCage2"))
     lu.assertNotNil(findCandidate(steps[2].candidates.siblings, "structureKey", "CombatCage3"))
     lu.assertEquals(#steps[2].candidates.rewards, 3)
