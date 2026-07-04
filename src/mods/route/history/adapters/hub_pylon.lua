@@ -219,9 +219,9 @@ local function generatedDoorSummary(context, selectedRow, slot)
     }
 end
 
-local function generatedHubDoors(context, slots)
+local function generatedHubDoors(context, slots, rows)
     local generatedDoors = {}
-    for index, selectedRow in ipairs(context.snapshot.rows or EMPTY_LIST) do
+    for index, selectedRow in ipairs(rows or EMPTY_LIST) do
         local slot = slots[index]
         if slot ~= nil and slot.kind == "biomeRow" and shouldEmitPylon(selectedRow) then
             generatedDoors[#generatedDoors + 1] = generatedDoorSummary(context, selectedRow, slot)
@@ -416,8 +416,31 @@ local function emitPylon(context, selectedRow, slot)
     emitHubReturn(context, selectedRow)
 end
 
-function hubPylon.build(args)
-    local context = {
+local function selectedRowFromNode(node)
+    local currentRoom = node and node.currentRoom or nil
+    if currentRoom == nil then
+        return nil
+    end
+    return {
+        rowIndex = node.rowIndex,
+        formAddress = currentRoom.formAddress,
+        routeOrdinal = node.routeOrdinal,
+        slotKind = node.slotKind,
+        slotLabel = node.slotLabel,
+        isBiomeEntry = node.isBiomeEntry,
+        roleKey = currentRoom.roleKey,
+        optionKey = currentRoom.optionKey,
+        variantKey = currentRoom.variantKey,
+        roomKey = currentRoom.roomKey,
+        hubDoorId = currentRoom.hubDoorId,
+        sideRooms = node.sideRooms,
+        topology = node.topology,
+        rewards = node.rewards,
+    }
+end
+
+local function buildContext(args)
+    return {
         routeKey = args.route and args.route.key or args.snapshot.routeKey,
         routeBiomeIndex = args.routeBiomeIndex,
         snapshot = args.snapshot,
@@ -434,10 +457,11 @@ function hubPylon.build(args)
             biomeEncounterDepth = BIOME_ENCOUNTER_DEPTH_START,
         },
     }
+end
 
-    local slots = buildSlots(args.biome)
-    context.generatedHubDoors = generatedHubDoors(context, slots)
-    for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
+local function buildRows(context, rows, slots)
+    context.generatedHubDoors = generatedHubDoors(context, slots, rows)
+    for index, selectedRow in ipairs(rows or EMPTY_LIST) do
         local slot = slots[index]
         if slot ~= nil and slot.kind == "biomeRow" then
             if shouldEmitPylon(selectedRow) then
@@ -446,6 +470,24 @@ function hubPylon.build(args)
         elseif selectedRow.roleKey ~= nil and selectedRow.roleKey ~= "" then
             emitFixed(context, selectedRow, slot)
         end
+    end
+end
+
+local function buildFromNodes(args, context, slots)
+    local rows = {}
+    for index, node in ipairs(args.snapshot.nodes or EMPTY_LIST) do
+        rows[index] = selectedRowFromNode(node)
+    end
+    buildRows(context, rows, slots)
+end
+
+function hubPylon.build(args)
+    local context = buildContext(args)
+    local slots = buildSlots(args.biome)
+    if args.snapshot.schema == "selectedNodes.v1" then
+        buildFromNodes(args, context, slots)
+    else
+        buildRows(context, args.snapshot.rows, slots)
     end
 end
 

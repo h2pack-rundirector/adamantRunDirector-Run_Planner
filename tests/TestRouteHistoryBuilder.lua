@@ -1153,7 +1153,7 @@ function TestRunPlannerRouteHistoryBuilder.testHubPylonBuildsAccurateEphyraTrave
         biome = catalog.lookup.N,
     })
     local control = template.createRuntime(h.routeFields(fullNEphyraRows()), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = {
@@ -1204,7 +1204,7 @@ function TestRunPlannerRouteHistoryBuilder.testHubPylonTraversalCountersFollowEp
         biome = catalog.lookup.N,
     })
     local control = template.createRuntime(h.routeFields(fullNEphyraRows()), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = {
@@ -1257,7 +1257,7 @@ function TestRunPlannerRouteHistoryBuilder.testHubPylonEntriesCarryHubAndSideRew
         biome = catalog.lookup.N,
     })
     local control = template.createRuntime(h.routeFields(fullNEphyraRows()), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = {

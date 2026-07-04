@@ -260,6 +260,68 @@ function TestRunPlannerHubPylonRoute.testHubPylonReadSelectedRowsSnapshot()
     lu.assertEquals(snapshot.rows[4].optionKey, "N_Combat05")
 end
 
+function TestRunPlannerHubPylonRoute.testHubPylonEmitsSelectedNodesSnapshot()
+    local catalog = loadCatalog()
+    local template = loadHubPylonTemplate()
+    local instance = template.prepare({
+        name = "RouteN",
+        biome = catalog.lookup.N,
+    })
+    local control = template.createRuntime(routeFields({
+            { Reward1Key = "SpellDrop" },
+            { Reward1Key = "WeaponUpgrade" },
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "N_Combat12",
+                Reward1Key = "Boon",
+                Reward2Key = "ZeusUpgrade",
+                Side1ModeKey = "Enabled",
+                Side1Entered = true,
+                Side1Reward1Key = "MaxHealthDrop",
+            },
+            {
+                RoleKey = "Story",
+                OptionKey = "N_Story01",
+            },
+            {},
+            {},
+            {},
+            {},
+            {},
+        }), instance)
+
+    local snapshot = control:read("selectedNodesSnapshot")
+
+    lu.assertEquals(snapshot.schema, "selectedNodes.v1")
+    lu.assertEquals(snapshot.controlName, "RouteN")
+    lu.assertEquals(snapshot.biomeKey, "N")
+    lu.assertEquals(snapshot.adapter, "hubPylon")
+    lu.assertEquals(snapshot.hub.roomKey, "N_Hub")
+    lu.assertEquals(snapshot.nodes[1].currentRoom.roleKey, "Opening")
+    lu.assertEquals(snapshot.nodes[1].currentRoom.roomKey, "N_Opening01")
+    lu.assertEquals(snapshot.nodes[3].currentRoom.roleKey, "Hub")
+
+    local pylon = snapshot.nodes[4]
+    lu.assertEquals(pylon.currentRoom.roleKey, "Combat")
+    lu.assertEquals(pylon.currentRoom.optionKey, "N_Combat12")
+    lu.assertEquals(pylon.currentRoom.roomKey, "N_Combat12")
+    lu.assertEquals(pylon.currentRoom.hubDoorId, 561389)
+    lu.assertEquals(pylon.rewards.row.values[1], "Boon")
+    lu.assertEquals(pylon.rewards.row.values[2], "ZeusUpgrade")
+    lu.assertEquals(#pylon.sideRooms, 3)
+    lu.assertEquals(pylon.sideRooms[1].formAddress, {
+        rowIndex = 4,
+        childKind = "sideRoom",
+        childIndex = 1,
+    })
+    lu.assertEquals(pylon.sideRooms[1].roomKey, "N_Sub09")
+    lu.assertTrue(pylon.sideRooms[1].entered)
+    lu.assertEquals(pylon.sideRooms[1].rewards[1], "MaxHealthDrop")
+    lu.assertEquals(snapshot.nodes[5].currentRoom.roleKey, "Story")
+    lu.assertEquals(snapshot.nodes[5].currentRoom.optionKey, "N_Story01")
+end
+
 function TestRunPlannerHubPylonRoute.testHubPylonCompletionRequiresEnteredSideEncounterClass()
     local catalog = loadCatalog()
     local template = loadHubPylonTemplate()

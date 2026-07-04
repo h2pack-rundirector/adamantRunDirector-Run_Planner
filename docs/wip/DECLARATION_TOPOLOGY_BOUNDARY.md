@@ -10,6 +10,9 @@
   `selectedNodes.v1`; its adapter consumes current-room nodes while keeping
   ship combat/wheel topology as current-room data rather than generated-door
   topology.
+- 2026-07-04: Slice 7 now covers HubPylon/N. N exposes `selectedNodes.v1`;
+  its adapter consumes current-room nodes with embedded side-room child
+  snapshots while preserving the accurate hub/pylon/side-room traversal.
 - 2026-07-03: Slice 6 is implemented. Candidate findings now carry generated
   picked-door and other-door form addresses through feedback, and the old
   adapter `nextChoiceRenderRecord` row-shift hook has been removed.
