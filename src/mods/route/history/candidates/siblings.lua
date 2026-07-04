@@ -29,12 +29,12 @@ end
 
 local function siblingSlotCount(selectedRow)
     local topology = selectedRow and selectedRow.topology or nil
-    return #(topology and (topology.otherDoors or topology.siblings) or EMPTY_LIST)
+    return #(topology and topology.otherDoors or EMPTY_LIST)
 end
 
 local function siblingDoor(selectedRow, siblingIndex)
     local topology = selectedRow and selectedRow.topology or nil
-    local doors = topology and (topology.otherDoors or topology.siblings) or EMPTY_LIST
+    local doors = topology and topology.otherDoors or EMPTY_LIST
     return doors[siblingIndex]
 end
 
@@ -66,7 +66,7 @@ end
 
 function siblingCandidates.forBiomeRow(biome, selectedRow, opts)
     local topology = topologyForBiome(biome)
-    local control = topology and (topology.generatedDoorControl or topology.siblingStructureControl) or nil
+    local control = topology and (topology.generatedDoorControl or topology.otherDoorControl) or nil
     local options = control
         and control.options
         or EMPTY_LIST

@@ -74,7 +74,7 @@ local function siblingRoomTopology(option)
     }
 end
 
-local function hasSelectableSiblingStructure(roleKey)
+local function hasSelectableOtherDoor(roleKey)
     return roleKey == "Combat" or roleKey == "Miniboss" or roleKey == "Bridge"
 end
 
@@ -89,12 +89,12 @@ function topology.create(data)
                 and instance.biome.fields.roomTopology
                 or nil
         end,
-        hasSelectableSiblingStructure = function(_, _, _, roleKey)
-            return hasSelectableSiblingStructure(roleKey)
+        hasSelectableOtherDoor = function(_, _, _, roleKey)
+            return hasSelectableOtherDoor(roleKey)
         end,
         shouldValidateRow = function(instance, rows, rowIndex)
             return not data.isFixedIdentityRow(instance, rowIndex)
-                and hasSelectableSiblingStructure(data.resolveRole(instance, rows, rowIndex))
+                and hasSelectableOtherDoor(data.resolveRole(instance, rows, rowIndex))
         end,
         validateSelected = function(instance, rows, rowIndex)
             local roleKey = data.resolveRole(instance, rows, rowIndex)
@@ -120,7 +120,7 @@ function topology.create(data)
             local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
             return selectedRoomTopology(roleKey, option, cageCount)
         end,
-        siblingTopology = function(_, _, _, _, _, option)
+        otherDoorTopology = function(_, _, _, _, _, option)
             return siblingRoomTopology(option)
         end,
     })

@@ -484,11 +484,10 @@ end
 function hubPylon.build(args)
     local context = buildContext(args)
     local slots = buildSlots(args.biome)
-    if args.snapshot.schema == "selectedNodes.v1" then
-        buildFromNodes(args, context, slots)
-    else
-        buildRows(context, args.snapshot.rows, slots)
+    if args.snapshot.schema ~= "selectedNodes.v1" then
+        error("HubPylon history adapter requires selectedNodes.v1", 0)
     end
+    buildFromNodes(args, context, slots)
 end
 
 return hubPylon

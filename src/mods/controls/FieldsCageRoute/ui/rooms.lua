@@ -124,22 +124,22 @@ local function getCageCountOpts(control, instance, rowIndex, roleKey)
     return opts
 end
 
-local function siblingStructureOpts(control, instance, rowIndex)
-    control._siblingStructureOptsByRow = control._siblingStructureOptsByRow or {}
-    local opts = control._siblingStructureOptsByRow[rowIndex]
+local function otherDoorOpts(control, instance, rowIndex)
+    control._otherDoorOptsByRow = control._otherDoorOptsByRow or {}
+    local opts = control._otherDoorOptsByRow[rowIndex]
     if opts == nil then
         opts = copyBaseOpts(SIBLING_STRUCTURE_OPTS)
-        opts.values = data.siblingStructureValues(instance)
-        opts.displayValues = data.siblingStructureLabels(instance)
-        control._siblingStructureOptsByRow[rowIndex] = opts
+        opts.values = data.otherDoorValues(instance)
+        opts.displayValues = data.otherDoorLabels(instance)
+        control._otherDoorOptsByRow[rowIndex] = opts
     end
     return decorations.decorateDropdown(
         opts,
         opts,
         valueStateHelpers.merge(
             opts,
-            data.siblingStructureValueStatesForRow(instance, control:routeRows(), rowIndex),
-            valueStateHelpers.history(instance, rowIndex, data.siblingStructureAlias(instance))
+            data.otherDoorValueStatesForRow(instance, control:routeRows(), rowIndex),
+            valueStateHelpers.history(instance, rowIndex, data.otherDoorAlias(instance))
         )
     )
 end
@@ -216,26 +216,26 @@ local function drawCageCountDropdown(draw, control, instance, rowIndex, roleKey,
     )
 end
 
-local function siblingStructureLabel(instance)
-    return instance.siblingStructurePolicy and instance.siblingStructurePolicy.label or "Other Door"
+local function otherDoorLabel(instance)
+    return instance.otherDoorPolicy and instance.otherDoorPolicy.label or "Other Door"
 end
 
-local function drawSiblingStructureDropdown(draw, control, instance, rowIndex, labelColumnX, controlColumnX)
-    if not data.shouldDrawSiblingStructure(instance, control:routeRows(), rowIndex) then
+local function drawOtherDoorDropdown(draw, control, instance, rowIndex, labelColumnX, controlColumnX)
+    if not data.shouldDrawOtherDoor(instance, control:routeRows(), rowIndex) then
         return false
     end
 
-    local opts = siblingStructureOpts(control, instance, rowIndex)
+    local opts = otherDoorOpts(control, instance, rowIndex)
     if opts.values[1] == nil then
         return false
     end
 
     draw.imgui.SetCursorPosX(labelColumnX or DOOR_LABEL_COLUMN_X)
     draw.imgui.AlignTextToFramePadding()
-    draw.imgui.Text(siblingStructureLabel(instance))
+    draw.imgui.Text(otherDoorLabel(instance))
     draw.imgui.SameLine()
     draw.imgui.SetCursorPosX(controlColumnX or DOOR_CONTROL_COLUMN_X)
-    return draw.widgets.dropdown(control:roomField(rowIndex, data.siblingStructureAlias(instance)), opts)
+    return draw.widgets.dropdown(control:roomField(rowIndex, data.otherDoorAlias(instance)), opts)
 end
 
 local function drawRouteRowHeader(imgui, slot)
@@ -384,7 +384,7 @@ local function drawRoomRow(draw, control, instance, rowIndex, terminalRowIndex)
             NEXT_CHOICE_OPTION_COLUMN_X,
             NEXT_CHOICE_CAGE_COUNT_COLUMN_X
         )
-        if drawSiblingStructureDropdown(
+        if drawOtherDoorDropdown(
             draw,
             control,
             instance,

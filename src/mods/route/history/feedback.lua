@@ -44,16 +44,15 @@ local function topologyWindow(topology)
     return topology and (
         topology.topologyWindow
             or topology.generatedDoorWindow
-            or topology.siblingStructureWindow
+            or topology.otherDoorWindow
     ) or nil
 end
 
 local function controlWindow(topology)
     return topology and (
         topology.generatedDoorControlWindow
-            or topology.siblingControlWindow
             or topology.generatedDoorWindow
-            or topology.siblingStructureWindow
+            or topology.otherDoorWindow
             or topology.topologyWindow
     ) or nil
 end

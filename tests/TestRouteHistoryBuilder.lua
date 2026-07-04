@@ -46,8 +46,7 @@ local function buildTemplateHistory(catalog, routeKey, biomeKey, template, rows,
         biome = catalog.lookup[biomeKey],
     })
     local control = template.createRuntime(h.routeFields(rows, encounterRewardRows), instance)
-    local selectedSnapshot = control.read and control:read("selectedNodesSnapshot")
-        or control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
     return historyBuilder.build({
         route = {
             key = routeKey,
@@ -90,14 +89,14 @@ local function fullFErebusRows()
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat04",
-            SiblingStructureKey = "F_Story01",
+            OtherDoorKey = "F_Story01",
             Reward1Key = "Major",
             Reward2Key = "StackUpgrade",
         },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat05",
-            SiblingStructureKey = "Combat",
+            OtherDoorKey = "Combat",
             Reward1Key = "Major",
             Reward2Key = "Boon",
             Reward3Key = "ZeusUpgrade",
@@ -157,19 +156,19 @@ local function fullHFieldsRows()
             RoleKey = "Combat",
             OptionKey = "H_Combat09",
             VariantKey = "TwoRewards",
-            SiblingStructureKey = "CombatCage2",
+            OtherDoorKey = "CombatCage2",
             Reward1Key = "Boon",
             Reward1LootKey = "HestiaUpgrade",
             Reward2Key = "WeaponUpgrade",
         },
         {
             RoleKey = "Bridge",
-            SiblingStructureKey = "H_MiniBoss02",
+            OtherDoorKey = "H_MiniBoss02",
         },
         {
             RoleKey = "Miniboss",
             OptionKey = "H_MiniBoss01",
-            SiblingStructureKey = "CombatCage2",
+            OtherDoorKey = "CombatCage2",
             Reward1Key = "ZeusUpgrade",
         },
         {
@@ -255,7 +254,7 @@ local function iGoal(optionKey, siblingKey)
     return {
         RouteKindKey = "Goal",
         OptionKey = optionKey,
-        SiblingStructureKey = siblingKey,
+        OtherDoorKey = siblingKey,
     }
 end
 
@@ -264,7 +263,7 @@ local function iRewardCombat(optionKey, siblingKey, rewardType)
         RouteKindKey = "NonGoal",
         NonGoalKindKey = "RewardCombat",
         OptionKey = optionKey,
-        SiblingStructureKey = siblingKey,
+        OtherDoorKey = siblingKey,
         Reward1Key = rewardType or "MaxHealthDrop",
     }
 end
@@ -279,14 +278,14 @@ local function fullITartarusRows()
             RouteKindKey = "NonGoal",
             NonGoalKindKey = "Story",
             OptionKey = "I_Story01",
-            SiblingStructureKey = "CombatGoal",
+            OtherDoorKey = "CombatGoal",
         },
         iGoal("I_Combat09", "CombatReward"),
         {
             RouteKindKey = "NonGoal",
             NonGoalKindKey = "Fountain",
             OptionKey = "I_Reprieve01",
-            SiblingStructureKey = "CombatGoal",
+            OtherDoorKey = "CombatGoal",
             Reward1Key = "MaxManaDrop",
         },
         iGoal("I_Combat10", "CombatReward"),
@@ -294,7 +293,7 @@ local function fullITartarusRows()
             RouteKindKey = "NonGoal",
             NonGoalKindKey = "Miniboss",
             OptionKey = "I_MiniBoss01",
-            SiblingStructureKey = "CombatGoal",
+            OtherDoorKey = "CombatGoal",
             Reward1Key = "ZeusUpgrade",
         },
         iGoal("I_Combat11", "CombatReward"),
@@ -379,46 +378,6 @@ local function withShopOnlyPreboss(biome)
     return copy
 end
 
-function TestRunPlannerRouteHistoryBuilder.testFixedLinearEmitsDumbSelectedRowsSnapshot()
-    local catalog = h.loadCatalog()
-    local template = h.loadFixedLinearTemplate()
-    local instance = template.prepare({
-        name = "RouteF",
-        biome = catalog.lookup.F,
-    })
-    local control = template.createRuntime(h.routeFields({
-        {
-            OptionKey = "F_Opening01",
-            Reward1Key = "SpellDrop",
-        },
-        {
-            RoleKey = "Combat",
-            OptionKey = "F_Combat02",
-            SiblingStructureKey = "Combat",
-            Reward1Key = "Major",
-            Reward2Key = "MaxHealthDrop",
-            SiblingRewardClassKey = "Major",
-        },
-    }), instance)
-
-    local snapshot = control:buildSelectedRowsSnapshot()
-
-    lu.assertEquals(snapshot.schema, "selectedRows.v1")
-    lu.assertEquals(snapshot.controlName, "RouteF")
-    lu.assertEquals(snapshot.biomeKey, "F")
-    lu.assertEquals(snapshot.adapter, "fixedLinear")
-    lu.assertNil(snapshot.rows[1].valid)
-    lu.assertNil(snapshot.rows[1].roomTopology)
-    lu.assertEquals(snapshot.rows[1].roleKey, "Opening")
-    lu.assertEquals(snapshot.rows[1].optionKey, "F_Opening01")
-    lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
-    lu.assertEquals(snapshot.rows[2].optionKey, "F_Combat02")
-    lu.assertEquals(snapshot.rows[2].topology.siblings[1].structureKey, "Combat")
-    lu.assertEquals(snapshot.rows[2].rewards.row.values[1], "Major")
-    lu.assertEquals(snapshot.rows[2].rewards.row.values[2], "MaxHealthDrop")
-    lu.assertEquals(snapshot.rows[2].rewards.row.states[1], "")
-    lu.assertEquals(snapshot.rows[2].rewards.sibling[1].rewardClassKey, "Major")
-end
 
 function TestRunPlannerRouteHistoryBuilder.testFixedLinearEmitsSelectedNodesSnapshot()
     local catalog = h.loadCatalog()
@@ -435,7 +394,7 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearEmitsSelectedNodesSnap
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat02",
-            SiblingStructureKey = "Combat",
+            OtherDoorKey = "Combat",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
             SiblingRewardClassKey = "Major",
@@ -457,7 +416,7 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearEmitsSelectedNodesSnap
     lu.assertEquals(snapshot.nodes[2].nextChoices.otherDoors[1].structureKey, "Combat")
     lu.assertEquals(snapshot.nodes[2].nextChoices.otherDoors[1].formAddress.childKind, "otherDoor")
     lu.assertEquals(snapshot.nodes[2].rewards.row.values[1], "Major")
-    lu.assertEquals(snapshot.nodes[2].rewards.sibling[1].rewardClassKey, "Major")
+    lu.assertEquals(snapshot.nodes[2].rewards.otherDoors[1].rewardClassKey, "Major")
 end
 
 function TestRunPlannerRouteHistoryBuilder.testFixedLinearBuilderResolvesRoomFactsFromDeclarations()
@@ -479,7 +438,7 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearBuilderResolvesRoomFac
             Reward2Key = "MaxHealthDrop",
         },
     }), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = catalog.routes.lookup.Underworld,
@@ -679,7 +638,7 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearPrebossShopOnlyDoesNot
         biome = biome,
     })
     local control = template.createRuntime(h.routeFields(fullFErebusRows()), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = catalog.routes.lookup.Underworld,
@@ -800,7 +759,7 @@ function TestRunPlannerRouteHistoryBuilder.testFieldsCageEntriesCarryTopologyAnd
     lu.assertEquals(rooms[2].topology.kind, "fieldsChoice")
     lu.assertEquals(rooms[2].topology.selected.structure, "CombatCage2")
     lu.assertEquals(rooms[2].topology.selected.sameExitRewardCount, 2)
-    lu.assertNil(rooms[2].topology.sibling)
+    lu.assertNil(rooms[2].topology.otherDoors)
     lu.assertEquals(rooms[2].reward.kind, "fieldsCages")
     lu.assertEquals(rooms[2].reward.sameExitRewardCount, 3)
     lu.assertEquals(rooms[2].reward.picks[1].rewardType, "Boon")
@@ -810,16 +769,14 @@ function TestRunPlannerRouteHistoryBuilder.testFieldsCageEntriesCarryTopologyAnd
     lu.assertEquals(rooms[3].topology.selected.structure, "Bridge")
     lu.assertEquals(rooms[3].topology.picked.structure, "Bridge")
     lu.assertEquals(rooms[3].topology.selected.roomKey, "H_Bridge01")
-    lu.assertEquals(rooms[3].topology.sibling.structure, "CombatCage2")
     lu.assertEquals(rooms[3].topology.otherDoors[1].structure, "CombatCage2")
-    lu.assertEquals(rooms[3].topology.sibling.sameExitRewardCount, 2)
+    lu.assertEquals(rooms[3].topology.otherDoors[1].sameExitRewardCount, 2)
     lu.assertEquals(rooms[4].topology.selected.structure, "Miniboss")
     lu.assertEquals(rooms[4].topology.picked.structure, "Miniboss")
     lu.assertEquals(rooms[4].topology.selected.roomKey, "H_MiniBoss01")
-    lu.assertEquals(rooms[4].topology.sibling.structure, "Miniboss")
     lu.assertEquals(rooms[4].topology.otherDoors[1].structure, "Miniboss")
-    lu.assertEquals(rooms[4].topology.sibling.roomKey, "H_MiniBoss02")
-    lu.assertEquals(rooms[4].topology.sibling.eligibleRewardTypes[1], "Boon")
+    lu.assertEquals(rooms[4].topology.otherDoors[1].roomKey, "H_MiniBoss02")
+    lu.assertEquals(rooms[4].topology.otherDoors[1].eligibleRewardTypes[1], "Boon")
 
     lu.assertNil(rooms[5].topology)
     lu.assertEquals(rooms[5].reward.kind, "roomStore")
@@ -1124,13 +1081,12 @@ function TestRunPlannerRouteHistoryBuilder.testClockworkGoalEntriesCarryTopology
     lu.assertEquals(rooms[3].reward.rewardType, "MaxHealthDrop")
     lu.assertEquals(rooms[2].topology.kind, "clockworkSiblingChoice")
     lu.assertEquals(rooms[2].topology.selected.structure, "RewardCombat")
-    lu.assertNil(rooms[2].topology.sibling)
+    lu.assertNil(rooms[2].topology.otherDoors)
     lu.assertEquals(rooms[3].topology.kind, "clockworkSiblingChoice")
     lu.assertEquals(rooms[3].topology.selected.structure, "GoalCombat")
     lu.assertEquals(rooms[3].topology.picked.structure, "GoalCombat")
-    lu.assertEquals(rooms[3].topology.sibling.structure, "GoalCombat")
     lu.assertEquals(rooms[3].topology.otherDoors[1].structure, "GoalCombat")
-    lu.assertTrue(rooms[3].topology.sibling.isClockworkGoal)
+    lu.assertTrue(rooms[3].topology.otherDoors[1].isClockworkGoal)
 
     lu.assertEquals(rooms[7].roleKey, "Fountain")
     lu.assertEquals(rooms[7].reward.rewardStore, "TartarusRewards")
@@ -1140,7 +1096,7 @@ function TestRunPlannerRouteHistoryBuilder.testClockworkGoalEntriesCarryTopology
     lu.assertEquals(rooms[9].reward.rewardType, "Boon")
     lu.assertEquals(rooms[9].reward.boonSource, "ZeusUpgrade")
     lu.assertEquals(rooms[11].topology.selected.structure, "Preboss")
-    lu.assertEquals(rooms[11].topology.sibling.structure, "RewardCombat")
+    lu.assertEquals(rooms[11].topology.otherDoors[1].structure, "RewardCombat")
     lu.assertEquals(rooms[12].reward.kind, "shop")
     lu.assertEquals(rooms[12].reward.shopProfile, "I_WorldShop")
 end

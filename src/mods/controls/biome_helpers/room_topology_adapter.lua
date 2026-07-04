@@ -17,13 +17,13 @@ local nestedRecord = readCache.nestedRecord
 local EMPTY_VALUES = {}
 local EMPTY_LABELS = {}
 
-local function indexedSiblingStructureAlias(baseAlias, siblingIndex)
+local function indexedOtherDoorAlias(baseAlias, siblingIndex)
     siblingIndex = math.floor(tonumber(siblingIndex) or 1)
     if siblingIndex <= 1 then
         return baseAlias
     end
     local prefix = string.match(baseAlias or "", "^(.*)Key$")
-    return (prefix or tostring(baseAlias or "SiblingStructure")) .. tostring(siblingIndex) .. "Key"
+    return (prefix or tostring(baseAlias or "OtherDoor")) .. tostring(siblingIndex) .. "Key"
 end
 
 local function structuralCountForRow(data, slots, instance, rows, rowIndex, field)
@@ -71,15 +71,15 @@ function adapter.create(data, opts)
     local api = {}
     local slots = opts.slots
 
-    function api.prepareSiblingStructurePolicy(instance)
-        instance.siblingStructurePolicy = roomTopology.prepareSiblingPolicy(opts.topologyForInstance(instance), {
+    function api.prepareOtherDoorPolicy(instance)
+        instance.otherDoorPolicy = roomTopology.prepareOtherDoorPolicy(opts.topologyForInstance(instance), {
             namespace = opts.namespace,
         })
     end
 
-    function api.prepareSiblingStructureCount(instance)
-        if instance.siblingStructurePolicy == nil then
-            instance.maxSiblingStructureCount = 0
+    function api.prepareOtherDoorCount(instance)
+        if instance.otherDoorPolicy == nil then
+            instance.maxOtherDoorCount = 0
             return
         end
 
@@ -90,60 +90,60 @@ function adapter.create(data, opts)
                 maxExitCount = roleMax
             end
         end
-        instance.maxSiblingStructureCount = roomTopology.siblingCountForExitCount(maxExitCount)
+        instance.maxOtherDoorCount = roomTopology.otherDoorCountForExitCount(maxExitCount)
     end
 
-    function api.maxSiblingStructureCount(instance)
-        return instance.maxSiblingStructureCount or 0
+    function api.maxOtherDoorCount(instance)
+        return instance.maxOtherDoorCount or 0
     end
 
-    function api.siblingStructureAlias(instance, siblingIndex)
-        local policy = instance.siblingStructurePolicy
-        local baseAlias = policy and policy.alias or "SiblingStructureKey"
+    function api.otherDoorAlias(instance, otherDoorIndex)
+        local policy = instance.otherDoorPolicy
+        local baseAlias = policy and policy.alias or "OtherDoorKey"
         if opts.indexedAliases then
-            return indexedSiblingStructureAlias(baseAlias, siblingIndex)
+            return indexedOtherDoorAlias(baseAlias, otherDoorIndex)
         end
         return baseAlias
     end
 
-    function api.siblingStructureControlTargets(instance, siblingIndex)
+    function api.otherDoorControlTargets(instance, otherDoorIndex)
         return form.selectedTargets({
             tabKey = "rooms",
-            controlAlias = api.siblingStructureAlias(instance, siblingIndex),
+            controlAlias = api.otherDoorAlias(instance, otherDoorIndex),
             state = WARNING_STATE,
         })
     end
 
-    function api.siblingStructureLabels(instance)
-        local policy = instance.siblingStructurePolicy
+    function api.otherDoorLabels(instance)
+        local policy = instance.otherDoorPolicy
         return policy and policy.labels or EMPTY_LABELS
     end
 
-    function api.siblingStructureValues(instance)
-        local policy = instance.siblingStructurePolicy
+    function api.otherDoorValues(instance)
+        local policy = instance.otherDoorPolicy
         return policy and policy.values or EMPTY_VALUES
     end
 
-    function api.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
-        local policy = instance.siblingStructurePolicy
+    function api.resolveOtherDoor(instance, rows, rowIndex, otherDoorIndex)
+        local policy = instance.otherDoorPolicy
         if policy == nil then
             return "", nil
         end
 
-        local key = rows and rows:read(rowIndex, api.siblingStructureAlias(instance, siblingIndex)) or ""
+        local key = rows and rows:read(rowIndex, api.otherDoorAlias(instance, otherDoorIndex)) or ""
         key = key or ""
         return key, policy.optionsByKey[key]
     end
 
-    function api.siblingPolicyContext(instance, rows, rowIndex, siblingIndex)
+    function api.otherDoorPolicyContext(instance, rows, rowIndex, otherDoorIndex)
         local roleKey, role = data.resolveRole(instance, rows, rowIndex)
         local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
         return {
             rowIndex = rowIndex,
             routeRowCount = instance.routeRowCount,
-            candidateSiblingIndex = siblingIndex,
+            candidateOtherDoorIndex = otherDoorIndex,
             isFixedIdentityRow = data.isFixedIdentityRow(instance, rowIndex),
-            hasSelectableSiblingStructure = opts.hasSelectableSiblingStructure(
+            hasSelectableOtherDoor = opts.hasSelectableOtherDoor(
                 instance,
                 rows,
                 rowIndex,
@@ -154,14 +154,14 @@ function adapter.create(data, opts)
             structuralCountAt = function(index, field)
                 return structuralCountForRow(data, slots, instance, rows, index, field)
             end,
-            siblingAt = function(currentSiblingIndex)
-                return data.resolveSiblingStructure(instance, rows, rowIndex, currentSiblingIndex)
+            otherDoorAt = function(currentOtherDoorIndex)
+                return data.resolveOtherDoor(instance, rows, rowIndex, currentOtherDoorIndex)
             end,
         }
     end
 
-    function api.siblingTopologyStatus(instance, _rows, rowIndex)
-        local policy = instance.siblingStructurePolicy
+    function api.otherDoorTopologyStatus(instance, _rows, rowIndex)
+        local policy = instance.otherDoorPolicy
         if policy == nil then
             return validStatus()
         end
@@ -172,8 +172,8 @@ function adapter.create(data, opts)
         return validStatus()
     end
 
-    function api.siblingStructureStatus(instance, _rows, rowIndex)
-        local policy = instance.siblingStructurePolicy
+    function api.otherDoorStatus(instance, _rows, rowIndex)
+        local policy = instance.otherDoorPolicy
         if policy == nil then
             return validStatus()
         end
@@ -184,73 +184,73 @@ function adapter.create(data, opts)
         return validStatus()
     end
 
-    function api.activeSiblingStructureCount(instance, rows, rowIndex)
+    function api.activeOtherDoorCount(instance, rows, rowIndex)
         local cache = activeReadCache(instance)
         if cache == nil then
-            return roomTopology.activeSiblingCount(
-                instance.siblingStructurePolicy,
-                api.siblingPolicyContext(instance, rows, rowIndex)
+            return roomTopology.activeOtherDoorCount(
+                instance.otherDoorPolicy,
+                api.otherDoorPolicyContext(instance, rows, rowIndex)
             )
         end
 
-        cache.activeSiblingStructureCounts = cache.activeSiblingStructureCounts or {}
-        local record = rowRecord(cache.activeSiblingStructureCounts, rowIndex)
+        cache.activeOtherDoorCounts = cache.activeOtherDoorCounts or {}
+        local record = rowRecord(cache.activeOtherDoorCounts, rowIndex)
         if record.pass ~= cache.pass then
             record.pass = cache.pass
-            record.value = roomTopology.activeSiblingCount(
-                instance.siblingStructurePolicy,
-                api.siblingPolicyContext(instance, rows, rowIndex)
+            record.value = roomTopology.activeOtherDoorCount(
+                instance.otherDoorPolicy,
+                api.otherDoorPolicyContext(instance, rows, rowIndex)
             )
         end
         return record.value
     end
 
-    function api.shouldDrawSiblingStructure(instance, rows, rowIndex, siblingIndex)
-        return roomTopology.shouldDrawActiveSibling(
-            data.activeSiblingStructureCount(instance, rows, rowIndex),
-            data.siblingStructureStatus(instance, rows, rowIndex),
-            siblingIndex
+    function api.shouldDrawOtherDoor(instance, rows, rowIndex, otherDoorIndex)
+        return roomTopology.shouldDrawActiveOtherDoor(
+            data.activeOtherDoorCount(instance, rows, rowIndex),
+            data.otherDoorStatus(instance, rows, rowIndex),
+            otherDoorIndex
         )
     end
 
-    function api.siblingStructureValueStatesForRow(instance, rows, rowIndex, siblingIndex)
+    function api.otherDoorValueStatesForRow(instance, rows, rowIndex, otherDoorIndex)
         local cache = activeReadCache(instance)
         if cache == nil then
-            return roomTopology.fillSiblingValueStates(
-                instance.siblingStructurePolicy,
-                api.siblingPolicyContext(instance, rows, rowIndex, siblingIndex),
+            return roomTopology.fillOtherDoorValueStates(
+                instance.otherDoorPolicy,
+                api.otherDoorPolicyContext(instance, rows, rowIndex, otherDoorIndex),
                 {}
             )
         end
 
-        cache.siblingStructureValueStates = cache.siblingStructureValueStates or {}
+        cache.otherDoorValueStates = cache.otherDoorValueStates or {}
         local record
         if opts.indexedAliases then
-            record = nestedRecord(cache.siblingStructureValueStates, rowIndex, siblingIndex or 1)
+            record = nestedRecord(cache.otherDoorValueStates, rowIndex, otherDoorIndex or 1)
         else
-            record = rowRecord(cache.siblingStructureValueStates, rowIndex)
+            record = rowRecord(cache.otherDoorValueStates, rowIndex)
         end
         if record.pass ~= cache.pass then
             record.pass = cache.pass
             record.states = record.states or {}
-            roomTopology.fillSiblingValueStates(
-                instance.siblingStructurePolicy,
-                api.siblingPolicyContext(instance, rows, rowIndex, siblingIndex),
+            roomTopology.fillOtherDoorValueStates(
+                instance.otherDoorPolicy,
+                api.otherDoorPolicyContext(instance, rows, rowIndex, otherDoorIndex),
                 record.states
             )
         end
         return record.states
     end
 
-    function api.validateSiblingStructures(instance, rows, rowIndex, validateOpts)
-        local invalid, siblingIndex = roomTopology.validateRequiredSiblingStructures(
-            instance.siblingStructurePolicy,
-            api.siblingPolicyContext(instance, rows, rowIndex),
+    function api.validateOtherDoors(instance, rows, rowIndex, validateOpts)
+        local invalid, otherDoorIndex = roomTopology.validateRequiredOtherDoors(
+            instance.otherDoorPolicy,
+            api.otherDoorPolicyContext(instance, rows, rowIndex),
             validateOpts
         )
         if invalid ~= nil and invalid.controlTargets == nil then
             invalid.tabKey = "rooms"
-            invalid.controlTargets = api.siblingStructureControlTargets(instance, siblingIndex)
+            invalid.controlTargets = api.otherDoorControlTargets(instance, otherDoorIndex)
         end
         return invalid
     end

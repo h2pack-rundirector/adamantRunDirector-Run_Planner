@@ -205,7 +205,7 @@ function data.prepare(instance)
     instance.label = instance.label or instance.biome.label or instance.biomeKey
     data.prepareRoles(instance)
     prepareCagePolicies(instance)
-    topology.prepareSiblingStructurePolicy(instance)
+    topology.prepareOtherDoorPolicy(instance)
     prepareCageRewardContexts(instance)
 
     slots.buildRouteSlots(instance)
@@ -257,32 +257,32 @@ function data.resolveCageCount(instance, rows, rowIndex, roleKey)
     return cageCountKey, policy.optionsByKey[cageCountKey]
 end
 
-function data.siblingStructureAlias(instance)
-    return topology.siblingStructureAlias(instance)
+function data.otherDoorAlias(instance)
+    return topology.otherDoorAlias(instance)
 end
 
-function data.siblingStructureLabels(instance)
-    return topology.siblingStructureLabels(instance)
+function data.otherDoorLabels(instance)
+    return topology.otherDoorLabels(instance)
 end
 
-function data.siblingStructureValues(instance)
-    return topology.siblingStructureValues(instance)
+function data.otherDoorValues(instance)
+    return topology.otherDoorValues(instance)
 end
 
-function data.siblingStructureStatus(instance, rows, rowIndex)
-    return topology.siblingStructureStatus(instance, rows, rowIndex)
+function data.otherDoorStatus(instance, rows, rowIndex)
+    return topology.otherDoorStatus(instance, rows, rowIndex)
 end
 
-function data.shouldDrawSiblingStructure(instance, rows, rowIndex)
-    return topology.shouldDrawSiblingStructure(instance, rows, rowIndex)
+function data.shouldDrawOtherDoor(instance, rows, rowIndex)
+    return topology.shouldDrawOtherDoor(instance, rows, rowIndex)
 end
 
-function data.resolveSiblingStructure(instance, rows, rowIndex)
-    return topology.resolveSiblingStructure(instance, rows, rowIndex)
+function data.resolveOtherDoor(instance, rows, rowIndex)
+    return topology.resolveOtherDoor(instance, rows, rowIndex)
 end
 
-function data.siblingStructureValueStatesForRow(instance, rows, rowIndex)
-    return topology.siblingStructureValueStatesForRow(instance, rows, rowIndex)
+function data.otherDoorValueStatesForRow(instance, rows, rowIndex)
+    return topology.otherDoorValueStatesForRow(instance, rows, rowIndex)
 end
 
 function data.validateRoomTopology(instance, rows, rowIndex)
@@ -297,8 +297,8 @@ function data.roomTopology(instance, rows, rowIndex)
     return topology.roomTopology(instance, rows, rowIndex)
 end
 
-function data.activeSiblingStructureCount(instance, rows, rowIndex)
-    return topology.activeSiblingStructureCount(instance, rows, rowIndex)
+function data.activeOtherDoorCount(instance, rows, rowIndex)
+    return topology.activeOtherDoorCount(instance, rows, rowIndex)
 end
 
 function data.maxCageRewardCount(instance)
@@ -320,7 +320,7 @@ end
 function data.storage(instance)
     local roomRows = data.buildRoomRows()
     roomRows[#roomRows + 1] = {
-        key = data.siblingStructureAlias(instance),
+        key = data.otherDoorAlias(instance),
         type = "string",
         default = "",
         maxLen = 32,

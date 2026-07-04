@@ -14,7 +14,7 @@ end
 local function resetRoomDetails(fields, instance, rowIndex)
     fields.Rooms:reset(rowIndex, "OptionKey")
     fields.Rooms:reset(rowIndex, "VariantKey")
-    fields.Rooms:reset(rowIndex, data.siblingStructureAlias(instance))
+    fields.Rooms:reset(rowIndex, data.otherDoorAlias(instance))
 end
 
 local function resetRowDetails(fields, instance, rowIndex)

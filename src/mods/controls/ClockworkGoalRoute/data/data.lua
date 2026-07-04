@@ -197,17 +197,17 @@ function data.prepare(instance)
     data.buildRoleChoices(instance)
     addFixedRoleLabels(instance)
     data.prepareSlots(instance)
-    topology.prepareSiblingStructurePolicy(instance)
-    topology.prepareSiblingStructureCount(instance)
+    topology.prepareOtherDoorPolicy(instance)
+    topology.prepareOtherDoorCount(instance)
     return instance
 end
 
 function data.storage(instance)
     local roomRows = buildRoomRows()
-    if instance.siblingStructurePolicy ~= nil then
-        for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
+    if instance.otherDoorPolicy ~= nil then
+        for siblingIndex = 1, data.maxOtherDoorCount(instance) do
             roomRows[#roomRows + 1] = {
-                key = data.siblingStructureAlias(instance, siblingIndex),
+                key = data.otherDoorAlias(instance, siblingIndex),
                 type = "string",
                 default = "",
                 maxLen = 32,
@@ -319,44 +319,44 @@ function data.isRouteSlot(slot)
     return slots.isRouteSlot(slot)
 end
 
-function data.maxSiblingStructureCount(instance)
-    return topology.maxSiblingStructureCount(instance)
+function data.maxOtherDoorCount(instance)
+    return topology.maxOtherDoorCount(instance)
 end
 
-function data.siblingStructureAlias(instance, siblingIndex)
-    return topology.siblingStructureAlias(instance, siblingIndex)
+function data.otherDoorAlias(instance, siblingIndex)
+    return topology.otherDoorAlias(instance, siblingIndex)
 end
 
-function data.siblingStructureLabels(instance)
-    return topology.siblingStructureLabels(instance)
+function data.otherDoorLabels(instance)
+    return topology.otherDoorLabels(instance)
 end
 
-function data.siblingStructureValues(instance)
-    return topology.siblingStructureValues(instance)
+function data.otherDoorValues(instance)
+    return topology.otherDoorValues(instance)
 end
 
-function data.siblingStructureStatus(instance, rows, rowIndex)
-    return topology.siblingStructureStatus(instance, rows, rowIndex)
+function data.otherDoorStatus(instance, rows, rowIndex)
+    return topology.otherDoorStatus(instance, rows, rowIndex)
 end
 
-function data.siblingTopologyStatus(instance, rows, rowIndex)
-    return topology.siblingTopologyStatus(instance, rows, rowIndex)
+function data.otherDoorTopologyStatus(instance, rows, rowIndex)
+    return topology.otherDoorTopologyStatus(instance, rows, rowIndex)
 end
 
-function data.activeSiblingStructureCount(instance, rows, rowIndex)
-    return topology.activeSiblingStructureCount(instance, rows, rowIndex)
+function data.activeOtherDoorCount(instance, rows, rowIndex)
+    return topology.activeOtherDoorCount(instance, rows, rowIndex)
 end
 
-function data.shouldDrawSiblingStructure(instance, rows, rowIndex, siblingIndex)
-    return topology.shouldDrawSiblingStructure(instance, rows, rowIndex, siblingIndex)
+function data.shouldDrawOtherDoor(instance, rows, rowIndex, siblingIndex)
+    return topology.shouldDrawOtherDoor(instance, rows, rowIndex, siblingIndex)
 end
 
-function data.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
-    return topology.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
+function data.resolveOtherDoor(instance, rows, rowIndex, siblingIndex)
+    return topology.resolveOtherDoor(instance, rows, rowIndex, siblingIndex)
 end
 
-function data.siblingStructureValueStatesForRow(instance, rows, rowIndex, siblingIndex)
-    return topology.siblingStructureValueStatesForRow(instance, rows, rowIndex, siblingIndex)
+function data.otherDoorValueStatesForRow(instance, rows, rowIndex, siblingIndex)
+    return topology.otherDoorValueStatesForRow(instance, rows, rowIndex, siblingIndex)
 end
 
 function data.validateRoomTopology(instance, rows, rowIndex)

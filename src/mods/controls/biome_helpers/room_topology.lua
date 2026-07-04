@@ -16,7 +16,7 @@ local function clearMap(map)
 end
 
 local function generatedDoorControl(topology)
-    return topology and (topology.generatedDoorControl or topology.siblingStructureControl) or nil
+    return topology and (topology.generatedDoorControl or topology.otherDoorControl) or nil
 end
 
 function roomTopology.roomKey(candidate)
@@ -26,7 +26,7 @@ function roomTopology.roomKey(candidate)
     return candidate.roomKey or (candidate.structure == "Miniboss" and candidate.key or nil)
 end
 
-function roomTopology.prepareSiblingPolicy(topology, opts)
+function roomTopology.prepareOtherDoorPolicy(topology, opts)
     local control = generatedDoorControl(topology)
     if control == nil then
         return nil
@@ -36,7 +36,7 @@ function roomTopology.prepareSiblingPolicy(topology, opts)
         namespace = opts and opts.namespace or "topology",
         key = control.key,
         label = control.label or control.key,
-        alias = control.alias or "SiblingStructureKey",
+        alias = control.alias or "OtherDoorKey",
         values = {},
         labels = {},
         optionsByKey = {},
@@ -58,48 +58,48 @@ function roomTopology.generatedStructuralCount(ctx, field)
     return math.floor(tonumber(ctx.structuralCountAt(ctx.rowIndex, field)) or 0)
 end
 
-function roomTopology.siblingCountForExitCount(exitCount)
-    return roomStructure.siblingCountForExitCount(exitCount)
+function roomTopology.otherDoorCountForExitCount(exitCount)
+    return roomStructure.otherDoorCountForExitCount(exitCount)
 end
 
-function roomTopology.activeSiblingCount(policy, ctx)
+function roomTopology.activeOtherDoorCount(policy, ctx)
     if policy == nil or ctx.isFixedIdentityRow then
         return 0
     end
-    if not ctx.hasSelectableSiblingStructure then
+    if not ctx.hasSelectableOtherDoor then
         return 0
     end
 
-    return roomTopology.siblingCountForExitCount(roomTopology.generatedStructuralCount(ctx, "exitCount"))
+    return roomTopology.otherDoorCountForExitCount(roomTopology.generatedStructuralCount(ctx, "exitCount"))
 end
 
-function roomTopology.shouldDrawActiveSibling(activeSiblingCount, status, siblingIndex)
-    if not form.shouldDrawIndex(activeSiblingCount, siblingIndex or 1) then
+function roomTopology.shouldDrawActiveOtherDoor(activeOtherDoorCount, status, otherDoorIndex)
+    if not form.shouldDrawIndex(activeOtherDoorCount, otherDoorIndex or 1) then
         return false
     end
     return status ~= nil and status.valid == true
 end
 
-function roomTopology.validateRequiredSiblingStructures(policy, ctx, opts)
+function roomTopology.validateRequiredOtherDoors(policy, ctx, opts)
     opts = opts or {}
-    local count = roomTopology.activeSiblingCount(policy, ctx)
-    for siblingIndex = 1, count do
-        local siblingKey, sibling = ctx.siblingAt(siblingIndex)
-        if sibling == nil or siblingKey == "" then
-            return invalidStatus(opts.requiredCode, opts.requiredMessage), siblingIndex
+    local count = roomTopology.activeOtherDoorCount(policy, ctx)
+    for otherDoorIndex = 1, count do
+        local otherDoorKey, otherDoor = ctx.otherDoorAt(otherDoorIndex)
+        if otherDoor == nil or otherDoorKey == "" then
+            return invalidStatus(opts.requiredCode, opts.requiredMessage), otherDoorIndex
         end
     end
     return nil
 end
 
-function roomTopology.fillSiblingValueStates(policy, ctx, states)
+function roomTopology.fillOtherDoorValueStates(policy, ctx, states)
     clearMap(states)
     if policy == nil then
         return states
     end
-    if roomTopology.activeSiblingCount(policy, ctx) >= (ctx.candidateSiblingIndex or 1) then
-        local siblingKey = ctx.siblingAt(ctx.candidateSiblingIndex or 1)
-        if siblingKey == nil or siblingKey == "" then
+    if roomTopology.activeOtherDoorCount(policy, ctx) >= (ctx.candidateOtherDoorIndex or 1) then
+        local otherDoorKey = ctx.otherDoorAt(ctx.candidateOtherDoorIndex or 1)
+        if otherDoorKey == nil or otherDoorKey == "" then
             valueStates.set(states, "", valueStates.INVALID)
         end
     end

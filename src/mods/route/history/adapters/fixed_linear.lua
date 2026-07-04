@@ -416,7 +416,7 @@ end
 
 local function siblingPolicyOption(biome, structureKey)
     local topology = biome and biome.roomTopology or nil
-    local control = topology and (topology.generatedDoorControl or topology.siblingStructureControl) or nil
+    local control = topology and (topology.generatedDoorControl or topology.otherDoorControl) or nil
     local optionsByKey = control and control.optionsByKey
     if optionsByKey ~= nil then
         return optionsByKey[structureKey]
@@ -431,18 +431,18 @@ end
 
 local function otherDoorSelections(selectedRow)
     local topology = selectedRow and selectedRow.topology or nil
-    return topology and (topology.otherDoors or topology.siblings) or EMPTY_LIST
+    return topology and topology.otherDoors or EMPTY_LIST
 end
 
-local function siblingRewardSummary(selectedRow, siblingIndex, option)
+local function otherDoorRewardSummary(selectedRow, otherDoorIndex, option)
     if option == nil or option.sameExitRewardCount == nil or option.sameExitRewardCount <= 0 then
         return nil
     end
     local rewardClass = selectedRow
         and selectedRow.rewards
-        and selectedRow.rewards.sibling
-        and selectedRow.rewards.sibling[siblingIndex]
-        and selectedRow.rewards.sibling[siblingIndex].rewardClassKey
+        and selectedRow.rewards.otherDoors
+        and selectedRow.rewards.otherDoors[otherDoorIndex]
+        and selectedRow.rewards.otherDoors[otherDoorIndex].rewardClassKey
         or nil
     if option.rewardBranch == "majorMinor" then
         return {
@@ -459,8 +459,8 @@ local function siblingRewardSummary(selectedRow, siblingIndex, option)
     }
 end
 
-local function siblingExit(context, selectedRow, siblingIndex, sibling)
-    local structureKey = sibling and sibling.structureKey or nil
+local function otherDoorExit(context, selectedRow, otherDoorIndex, otherDoor)
+    local structureKey = otherDoor and otherDoor.structureKey or nil
     if structureKey == nil or structureKey == "" then
         return nil
     end
@@ -470,15 +470,15 @@ local function siblingExit(context, selectedRow, siblingIndex, sibling)
     end
     return {
         branch = "sibling",
-        siblingIndex = siblingIndex,
+        siblingIndex = otherDoorIndex,
         structureKey = structureKey,
-        formAddress = sibling.formAddress,
+        formAddress = otherDoor.formAddress,
         structure = option.structure,
         roleKey = option.roleKey,
         optionKey = option.roomKey,
         roomKey = option.roomKey,
         sameExitRewardCount = option.sameExitRewardCount,
-        reward = siblingRewardSummary(selectedRow, siblingIndex, option),
+        reward = otherDoorRewardSummary(selectedRow, otherDoorIndex, option),
     }
 end
 
@@ -569,8 +569,8 @@ local function attachNextChoiceTopology(context, roomEntry, selectedRow, nextRow
         exits[#exits + 1] = pickedExit(nextRow, nextResolved)
     end
 
-    for siblingIndex, sibling in ipairs(otherDoorSelections(selectedRow)) do
-        local exit = siblingExit(context, selectedRow, siblingIndex, sibling)
+    for otherDoorIndex, otherDoor in ipairs(otherDoorSelections(selectedRow)) do
+        local exit = otherDoorExit(context, selectedRow, otherDoorIndex, otherDoor)
         if exit ~= nil then
             exits[#exits + 1] = exit
         end
@@ -591,6 +591,7 @@ local function selectedRowFromNode(node)
     return {
         rowIndex = node.rowIndex,
         routeOrdinal = node.routeOrdinal,
+        slotLabel = node.slotLabel,
         roleKey = currentRoom.roleKey,
         optionKey = currentRoom.optionKey,
         variantKey = currentRoom.variantKey,
@@ -598,7 +599,6 @@ local function selectedRowFromNode(node)
         rewards = node.rewards,
         topology = otherDoors ~= nil and {
             otherDoors = otherDoors,
-            siblings = otherDoors,
         } or nil,
     }
 end
@@ -611,6 +611,7 @@ local function pickedRowFromNode(node)
     return {
         rowIndex = picked.targetRowIndex,
         routeOrdinal = picked.targetRouteOrdinal,
+        slotLabel = picked.targetSlotLabel,
         roleKey = picked.roleKey,
         optionKey = picked.optionKey,
         variantKey = picked.variantKey,
@@ -669,38 +670,12 @@ local function buildFromNodes(args, context)
     end
 end
 
-local function buildFromRows(args, context)
-    local resolvedRows = {}
-    for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
-        resolvedRows[index] = resolveRow(context, selectedRow)
-    end
-
-    for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
-        local resolved = resolvedRows[index]
-        materializeRoom.stepRoom(context, selectedRow, resolved, {
-            nextRow = args.snapshot.rows[index + 1],
-            nextResolved = resolvedRows[index + 1],
-            reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards),
-            attachTopology = function(roomEntry)
-                attachNextChoiceTopology(
-                    context,
-                    roomEntry,
-                    selectedRow,
-                    args.snapshot.rows[index + 1],
-                    resolvedRows[index + 1]
-                )
-            end,
-        })
-    end
-end
-
 function fixedLinear.build(args)
     local context = buildContext(args)
-    if args.snapshot.schema == "selectedNodes.v1" then
-        buildFromNodes(args, context)
-    else
-        buildFromRows(args, context)
+    if args.snapshot.schema ~= "selectedNodes.v1" then
+        error("FixedLinear history adapter requires selectedNodes.v1", 0)
     end
+    buildFromNodes(args, context)
 end
 
 return fixedLinear

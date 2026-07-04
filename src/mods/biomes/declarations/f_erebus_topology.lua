@@ -66,8 +66,8 @@ return function(deps)
     end
 
     local generatedDoorControl = {
-        key = "SiblingStructure",
-        alias = "SiblingStructureKey",
+        key = "OtherDoor",
+        alias = "OtherDoorKey",
         label = "Other Door",
         options = options,
     }
@@ -97,6 +97,6 @@ return function(deps)
             },
         },
         generatedDoorControl = generatedDoorControl,
-        siblingStructureControl = generatedDoorControl,
+        otherDoorControl = generatedDoorControl,
     }
 end

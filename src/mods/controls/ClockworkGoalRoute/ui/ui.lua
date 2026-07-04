@@ -10,9 +10,9 @@ local ui = {}
 local function resetRoomDetails(fields, instance, rowIndex)
     fields.Rooms:reset(rowIndex, data.optionAlias())
     fields.Rooms:reset(rowIndex, "VariantKey")
-    if instance.siblingStructurePolicy ~= nil then
-        for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
-            fields.Rooms:reset(rowIndex, data.siblingStructureAlias(instance, siblingIndex))
+    if instance.otherDoorPolicy ~= nil then
+        for siblingIndex = 1, data.maxOtherDoorCount(instance) do
+            fields.Rooms:reset(rowIndex, data.otherDoorAlias(instance, siblingIndex))
         end
     end
 end

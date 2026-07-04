@@ -9,8 +9,8 @@ return function(deps)
         biomeDepthCache = { min = 1, max = 4 },
     }
     local generatedDoorControl = {
-        key = "SiblingStructure",
-        alias = "SiblingStructureKey",
+        key = "OtherDoor",
+        alias = "OtherDoorKey",
         label = "Other Door",
         options = {
             {
@@ -73,7 +73,7 @@ return function(deps)
 
     return {
         generatedDoorWindow = generatedDoorWindow,
-        siblingStructureWindow = generatedDoorWindow,
+        otherDoorWindow = generatedDoorWindow,
         rules = {
             {
                 key = "matchingCombatCageRewardCount",
@@ -91,6 +91,6 @@ return function(deps)
             },
         },
         generatedDoorControl = generatedDoorControl,
-        siblingStructureControl = generatedDoorControl,
+        otherDoorControl = generatedDoorControl,
     }
 end

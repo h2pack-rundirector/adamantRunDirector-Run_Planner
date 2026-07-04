@@ -11,21 +11,28 @@ local function defaultSelectable()
     return true
 end
 
-local function siblingTopologies(data, provider, instance, rows, rowIndex)
-    local siblings = {}
-    local count = data.activeSiblingStructureCount(instance, rows, rowIndex)
-    for siblingIndex = 1, count do
-        local _, sibling = data.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
-        local siblingTopology = provider.siblingTopology(instance, rows, rowIndex, siblingIndex, count, sibling)
-        if siblingTopology == nil then
+local function otherDoorTopologies(data, provider, instance, rows, rowIndex)
+    local otherDoors = {}
+    local count = data.activeOtherDoorCount(instance, rows, rowIndex)
+    for otherDoorIndex = 1, count do
+        local _, otherDoor = data.resolveOtherDoor(instance, rows, rowIndex, otherDoorIndex)
+        local otherDoorTopology = provider.otherDoorTopology(
+            instance,
+            rows,
+            rowIndex,
+            otherDoorIndex,
+            count,
+            otherDoor
+        )
+        if otherDoorTopology == nil then
             return nil
         end
-        siblings[#siblings + 1] = siblingTopology
+        otherDoors[#otherDoors + 1] = otherDoorTopology
     end
-    if siblings[1] == nil then
+    if otherDoors[1] == nil then
         return nil
     end
-    return siblings
+    return otherDoors
 end
 
 function topologyControls.create(data, provider)
@@ -35,66 +42,66 @@ function topologyControls.create(data, provider)
         slots = provider.slots,
         indexedAliases = provider.indexedAliases,
         topologyForInstance = provider.topologyForInstance or defaultTopologyForInstance,
-        hasSelectableSiblingStructure = provider.hasSelectableSiblingStructure or defaultSelectable,
+        hasSelectableOtherDoor = provider.hasSelectableOtherDoor or defaultSelectable,
     })
 
     local api = {}
 
-    function api.prepareSiblingStructurePolicy(instance)
-        return shared.prepareSiblingStructurePolicy(instance)
+    function api.prepareOtherDoorPolicy(instance)
+        return shared.prepareOtherDoorPolicy(instance)
     end
 
-    function api.prepareSiblingStructureCount(instance)
-        return shared.prepareSiblingStructureCount(instance)
+    function api.prepareOtherDoorCount(instance)
+        return shared.prepareOtherDoorCount(instance)
     end
 
-    function api.maxSiblingStructureCount(instance)
-        return shared.maxSiblingStructureCount(instance)
+    function api.maxOtherDoorCount(instance)
+        return shared.maxOtherDoorCount(instance)
     end
 
-    function api.siblingStructureAlias(instance, siblingIndex)
-        return shared.siblingStructureAlias(instance, siblingIndex)
+    function api.otherDoorAlias(instance, otherDoorIndex)
+        return shared.otherDoorAlias(instance, otherDoorIndex)
     end
 
-    function api.siblingStructureLabels(instance)
-        return shared.siblingStructureLabels(instance)
+    function api.otherDoorLabels(instance)
+        return shared.otherDoorLabels(instance)
     end
 
-    function api.siblingStructureValues(instance)
-        return shared.siblingStructureValues(instance)
+    function api.otherDoorValues(instance)
+        return shared.otherDoorValues(instance)
     end
 
-    function api.siblingStructureStatus(instance, rows, rowIndex)
-        return shared.siblingStructureStatus(instance, rows, rowIndex)
+    function api.otherDoorStatus(instance, rows, rowIndex)
+        return shared.otherDoorStatus(instance, rows, rowIndex)
     end
 
-    function api.siblingTopologyStatus(instance, rows, rowIndex)
-        return shared.siblingTopologyStatus(instance, rows, rowIndex)
+    function api.otherDoorTopologyStatus(instance, rows, rowIndex)
+        return shared.otherDoorTopologyStatus(instance, rows, rowIndex)
     end
 
-    function api.activeSiblingStructureCount(instance, rows, rowIndex)
-        return shared.activeSiblingStructureCount(instance, rows, rowIndex)
+    function api.activeOtherDoorCount(instance, rows, rowIndex)
+        return shared.activeOtherDoorCount(instance, rows, rowIndex)
     end
 
-    function api.shouldDrawSiblingStructure(instance, rows, rowIndex, siblingIndex)
-        if provider.shouldDrawSiblingStructure ~= nil then
-            return provider.shouldDrawSiblingStructure(shared, instance, rows, rowIndex, siblingIndex)
+    function api.shouldDrawOtherDoor(instance, rows, rowIndex, otherDoorIndex)
+        if provider.shouldDrawOtherDoor ~= nil then
+            return provider.shouldDrawOtherDoor(shared, instance, rows, rowIndex, otherDoorIndex)
         end
-        return shared.shouldDrawSiblingStructure(instance, rows, rowIndex, siblingIndex)
+        return shared.shouldDrawOtherDoor(instance, rows, rowIndex, otherDoorIndex)
     end
 
-    function api.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
-        if provider.implicitSiblingStructure ~= nil then
-            local implicit = provider.implicitSiblingStructure(api, instance, rows, rowIndex, siblingIndex)
+    function api.resolveOtherDoor(instance, rows, rowIndex, otherDoorIndex)
+        if provider.implicitOtherDoor ~= nil then
+            local implicit = provider.implicitOtherDoor(api, instance, rows, rowIndex, otherDoorIndex)
             if implicit ~= nil then
                 return implicit.key, implicit
             end
         end
-        return shared.resolveSiblingStructure(instance, rows, rowIndex, siblingIndex)
+        return shared.resolveOtherDoor(instance, rows, rowIndex, otherDoorIndex)
     end
 
-    function api.siblingStructureValueStatesForRow(instance, rows, rowIndex, siblingIndex)
-        return shared.siblingStructureValueStatesForRow(instance, rows, rowIndex, siblingIndex)
+    function api.otherDoorValueStatesForRow(instance, rows, rowIndex, otherDoorIndex)
+        return shared.otherDoorValueStatesForRow(instance, rows, rowIndex, otherDoorIndex)
     end
 
     function api.validateSelectedTopology(instance, rows, rowIndex)
@@ -118,18 +125,18 @@ function topologyControls.create(data, provider)
             return selectedInvalid
         end
 
-        if provider.skipSiblingValidation ~= nil and provider.skipSiblingValidation(instance, rows, rowIndex) then
+        if provider.skipOtherDoorValidation ~= nil and provider.skipOtherDoorValidation(instance, rows, rowIndex) then
             return nil
         end
 
-        local siblingInvalid = shared.validateSiblingStructures(instance, rows, rowIndex, {
+        local otherDoorInvalid = shared.validateOtherDoors(instance, rows, rowIndex, {
             requiredCode = provider.requiredCode,
             requiredMessage = provider.requiredMessage,
             unavailableCode = provider.unavailableCode,
             unavailableMessage = provider.unavailableMessage,
         })
-        if siblingInvalid ~= nil then
-            return siblingInvalid
+        if otherDoorInvalid ~= nil then
+            return otherDoorInvalid
         end
 
         if provider.validateAfterSiblings ~= nil then
@@ -146,21 +153,21 @@ function topologyControls.create(data, provider)
             end
         end
 
-        if instance.siblingStructurePolicy == nil
+        if instance.otherDoorPolicy == nil
             or (provider.isFixedIdentityRow ~= nil and provider.isFixedIdentityRow(instance, rowIndex))
-            or not data.siblingTopologyStatus(instance, rows, rowIndex).valid
+            or not data.otherDoorTopologyStatus(instance, rows, rowIndex).valid
         then
             return nil
         end
 
-        local count = data.activeSiblingStructureCount(instance, rows, rowIndex)
+        local count = data.activeOtherDoorCount(instance, rows, rowIndex)
         if count < 1 then
             return nil
         end
 
         local selected = provider.selectedTopology(instance, rows, rowIndex)
-        local siblings = siblingTopologies(data, provider, instance, rows, rowIndex)
-        if selected == nil or siblings == nil then
+        local otherDoors = otherDoorTopologies(data, provider, instance, rows, rowIndex)
+        if selected == nil or otherDoors == nil then
             return nil
         end
 
@@ -168,9 +175,7 @@ function topologyControls.create(data, provider)
             kind = provider.topologyKind,
             picked = selected,
             selected = selected,
-            otherDoors = siblings,
-            sibling = siblings[1],
-            siblings = siblings,
+            otherDoors = otherDoors,
         }
     end
 

@@ -265,7 +265,7 @@ end
 
 local function siblingPolicyOption(biome, structureKey)
     local topology = biome and biome.roomTopology or nil
-    local control = topology and (topology.generatedDoorControl or topology.siblingStructureControl) or nil
+    local control = topology and (topology.generatedDoorControl or topology.otherDoorControl) or nil
     local optionsByKey = control and control.optionsByKey
     if optionsByKey ~= nil then
         return optionsByKey[structureKey]
@@ -280,11 +280,11 @@ end
 
 local function firstOtherDoorSelection(selectedRow)
     local topology = selectedRow and selectedRow.topology or nil
-    local otherDoors = topology and (topology.otherDoors or topology.siblings) or EMPTY_LIST
+    local otherDoors = topology and topology.otherDoors or EMPTY_LIST
     return otherDoors[1]
 end
 
-local function siblingTopology(context, selectedRow)
+local function otherDoorTopology(context, selectedRow)
     local otherDoor = firstOtherDoorSelection(selectedRow)
     local structureKey = otherDoor and otherDoor.structureKey or nil
     if structureKey == nil or structureKey == "" then
@@ -315,7 +315,7 @@ local function attachClockworkTopology(context, roomEntry, selectedRow, pickedRo
     if roomEntry == nil then
         return
     end
-    local sibling = siblingTopology(context, selectedRow)
+    local sibling = otherDoorTopology(context, selectedRow)
     local selected = selectedTopology(pickedRow, pickedResolved)
     if selected == nil then
         return
@@ -325,8 +325,6 @@ local function attachClockworkTopology(context, roomEntry, selectedRow, pickedRo
         picked = selected,
         selected = selected,
         otherDoors = sibling ~= nil and { sibling } or nil,
-        sibling = sibling,
-        siblings = sibling ~= nil and { sibling } or nil,
     }
 end
 
@@ -350,6 +348,8 @@ local function selectedRowFromNode(node)
     local otherDoors = node and node.nextChoices and node.nextChoices.otherDoors or nil
     return {
         rowIndex = node.rowIndex,
+        routeOrdinal = node.routeOrdinal,
+        slotLabel = node.slotLabel,
         roleKey = currentRoom.roleKey,
         optionKey = currentRoom.optionKey,
         variantKey = currentRoom.variantKey,
@@ -358,7 +358,6 @@ local function selectedRowFromNode(node)
         formAddress = currentRoom.formAddress,
         topology = otherDoors ~= nil and {
             otherDoors = otherDoors,
-            siblings = otherDoors,
         } or nil,
         rewards = node.rewards,
     }
@@ -371,6 +370,8 @@ local function pickedRowFromNode(node)
     end
     return {
         rowIndex = picked.targetRowIndex,
+        routeOrdinal = picked.targetRouteOrdinal,
+        slotLabel = picked.targetSlotLabel,
         roleKey = picked.roleKey,
         optionKey = picked.optionKey,
         variantKey = picked.variantKey,
@@ -398,31 +399,6 @@ local function buildContext(args)
             biomeEncounterDepth = BIOME_ENCOUNTER_DEPTH_START,
         },
     }
-end
-
-local function buildFromRows(args, context, slots)
-    local resolvedRows = {}
-    for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
-        if rowActive(args.snapshot, index) then
-            resolvedRows[index] = resolveRow(context, selectedRow, slots[index])
-        end
-    end
-
-    for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
-        local resolved = resolvedRows[index]
-        if rowActive(args.snapshot, index) and shouldEmit(selectedRow) then
-            local nextRow = args.snapshot.rows[index + 1]
-            local nextResolved = resolvedRows[index + 1]
-            materializeRoom.stepRoom(context, selectedRow, resolved, {
-                nextRow = nextRow,
-                nextResolved = nextResolved,
-                reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards),
-                attachTopology = function(roomEntry)
-                    attachClockworkTopology(context, roomEntry, selectedRow, nextRow, nextResolved)
-                end,
-            })
-        end
-    end
 end
 
 local function buildFromNodes(args, context, slots)
@@ -456,11 +432,10 @@ end
 function clockworkGoal.build(args)
     local context = buildContext(args)
     local slots = buildSlots(args.biome)
-    if args.snapshot.schema == "selectedNodes.v1" then
-        buildFromNodes(args, context, slots)
-    else
-        buildFromRows(args, context, slots)
+    if args.snapshot.schema ~= "selectedNodes.v1" then
+        error("ClockworkGoal history adapter requires selectedNodes.v1", 0)
     end
+    buildFromNodes(args, context, slots)
 end
 
 return clockworkGoal

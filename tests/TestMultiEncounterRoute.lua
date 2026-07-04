@@ -205,40 +205,6 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterCombatRequiresComba
     lu.assertEquals(completion.completionInvalidRows[1].controlTargets[1].controlAlias, "VariantKey")
 end
 
-function TestRunPlannerMultiEncounterRoute.testMultiEncounterEmitsDumbSelectedRowsSnapshot()
-    local control = buildThessalyControlWithEncounterRewards({
-        {},
-        thessalyCombat("O_Combat01"),
-        thessalyCombat("O_Combat02", "ThreeCombats"),
-    })
-
-    local snapshot = control:buildSelectedRowsSnapshot()
-
-    lu.assertEquals(snapshot.schema, "selectedRows.v1")
-    lu.assertEquals(snapshot.controlName, "RouteO")
-    lu.assertEquals(snapshot.biomeKey, "O")
-    lu.assertEquals(snapshot.adapter, "multiEncounterFixed")
-    lu.assertNil(snapshot.rows[1].valid)
-    lu.assertNil(snapshot.rows[1].roomTopology)
-    lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
-    lu.assertEquals(snapshot.rows[1].optionKey, "O_Intro")
-    lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
-    lu.assertEquals(snapshot.rows[2].optionKey, "O_Combat01")
-    lu.assertEquals(snapshot.rows[2].variantKey, "TwoCombats")
-    lu.assertEquals(#snapshot.rows[2].rewards.encounter, 1)
-    lu.assertEquals(snapshot.rows[2].rewards.encounter[1].legIndex, 1)
-    lu.assertEquals(snapshot.rows[2].rewards.encounter[1].wheelOfferKey, "OneChoice")
-    lu.assertEquals(snapshot.rows[2].rewards.encounter[1].values[1], "Major")
-    lu.assertEquals(snapshot.rows[2].rewards.encounter[1].values[2], "MaxHealthDrop")
-    lu.assertEquals(snapshot.rows[3].roleKey, "Combat")
-    lu.assertEquals(snapshot.rows[3].optionKey, "O_Combat02")
-    lu.assertEquals(snapshot.rows[3].variantKey, "ThreeCombats")
-    lu.assertEquals(#snapshot.rows[3].rewards.encounter, 2)
-    lu.assertEquals(snapshot.rows[3].rewards.encounter[2].legIndex, 2)
-    lu.assertEquals(snapshot.rows[3].rewards.encounter[2].wheelOfferKey, "TwoChoices")
-    lu.assertEquals(snapshot.rows[3].rewards.encounter[2].values[1], "Major")
-end
-
 
 function TestRunPlannerMultiEncounterRoute.testMultiEncounterRewardRatioSummaryCountsEncounterLegs()
     local catalog = loadCatalog()
@@ -300,9 +266,9 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterSnapshotUsesSelecte
             VariantKey = "TwoCombats",
         },
     }), instance)
-    local snapshot = control:buildSelectedRowsSnapshot()
+    local snapshot = control:read("selectedNodesSnapshot")
 
-    lu.assertEquals(snapshot.rows[2].optionKey, "O_Combat01")
+    lu.assertEquals(snapshot.nodes[2].currentRoom.optionKey, "O_Combat01")
 end
 
 function TestRunPlannerMultiEncounterRoute.testMultiEncounterEmitsSelectedNodesSnapshot()
@@ -473,10 +439,10 @@ function TestRunPlannerMultiEncounterRoute.testMultiEncounterExportsDuplicateTri
             Reward2Key = "ZeusUpgrade",
         },
     }), instance)
-    local snapshot = control:buildSelectedRowsSnapshot()
+    local snapshot = control:read("selectedNodesSnapshot")
 
-    lu.assertEquals(snapshot.rows[4].rewards.row.values[1], "ZeusUpgrade")
-    lu.assertEquals(snapshot.rows[4].rewards.row.values[2], "ZeusUpgrade")
+    lu.assertEquals(snapshot.nodes[4].rewards.row.values[1], "ZeusUpgrade")
+    lu.assertEquals(snapshot.nodes[4].rewards.row.values[2], "ZeusUpgrade")
 end
 
 

@@ -33,7 +33,7 @@ local function buildHistory(route, biomeKey, template, rows)
         biome = catalog.lookup[biomeKey],
     })
     local control = template.createRuntime(h.routeFields(rows), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
     return historyBuilder.build({
         route = route,
         biomeLookup = catalog.lookup,
@@ -818,7 +818,9 @@ function TestRunPlannerRouteHistoryValidator.testValidatorAcceptsMidshopAfterTwo
         optionKey = "F_Combat04",
         topology = {
             selected = { roomKey = "F_Combat04" },
-            sibling = { roomKey = "F_Combat05" },
+            otherDoors = {
+                { roomKey = "F_Combat05" },
+            },
         },
     })
     emitRoom(history, 5, {
@@ -1132,7 +1134,7 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsSiblingF
     lu.assertEquals(finding.formAddress.childIndex, 1)
 
     local feedback = historyFeedback.fromFindings(result.findings)
-    local states = historyFeedback.valueStatesForControl(feedback, "F", finding.rowIndex, "SiblingStructureKey")
+    local states = historyFeedback.valueStatesForControl(feedback, "F", finding.rowIndex, "OtherDoorKey")
     lu.assertEquals(states.F_Story01, valueStates.HIDDEN)
 end
 
@@ -1214,7 +1216,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMissingFieldsBr
             RoleKey = "Combat",
             OptionKey = "H_Combat09",
             VariantKey = "TwoRewards",
-            SiblingStructureKey = "CombatCage2",
+            OtherDoorKey = "CombatCage2",
             Reward1Key = "Boon",
             Reward1LootKey = "HestiaUpgrade",
             Reward2Key = "WeaponUpgrade",
@@ -1223,7 +1225,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMissingFieldsBr
             RoleKey = "Combat",
             OptionKey = "H_Combat13",
             VariantKey = "TwoRewards",
-            SiblingStructureKey = "H_MiniBoss02",
+            OtherDoorKey = "H_MiniBoss02",
             Reward1Key = "HermesUpgrade",
             Reward2Key = "StackUpgrade",
         },
@@ -1263,7 +1265,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorAllowsFieldsBridgeCrow
         {
             RoleKey = "Miniboss",
             OptionKey = "H_MiniBoss01",
-            SiblingStructureKey = "H_MiniBoss02",
+            OtherDoorKey = "H_MiniBoss02",
             Reward1Key = "Boon",
             Reward1LootKey = "DemeterUpgrade",
         },
@@ -1283,7 +1285,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorAllowsFieldsBridgePick
             RoleKey = "Combat",
             OptionKey = "H_Combat04",
             VariantKey = "ThreeRewards",
-            SiblingStructureKey = "H_MiniBoss01",
+            OtherDoorKey = "H_MiniBoss01",
             Reward1Key = "Boon",
             Reward1LootKey = "PoseidonUpgrade",
             Reward2Key = "StackUpgrade",
@@ -1293,7 +1295,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorAllowsFieldsBridgePick
             RoleKey = "Combat",
             OptionKey = "H_Combat05",
             VariantKey = "ThreeRewards",
-            SiblingStructureKey = "H_MiniBoss02",
+            OtherDoorKey = "H_MiniBoss02",
             Reward1Key = "Boon",
             Reward1LootKey = "HestiaUpgrade",
             Reward2Key = "StackUpgrade",
@@ -1302,7 +1304,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorAllowsFieldsBridgePick
         {
             RoleKey = "Bridge",
             OptionKey = "H_Bridge01",
-            SiblingStructureKey = "CombatCage2",
+            OtherDoorKey = "CombatCage2",
         },
         {
             RoleKey = "Combat",
@@ -1335,7 +1337,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsFieldsBridgeCro
             RoleKey = "Combat",
             OptionKey = "H_Combat05",
             VariantKey = "TwoRewards",
-            SiblingStructureKey = "H_MiniBoss01",
+            OtherDoorKey = "H_MiniBoss01",
             Reward1Key = "HermesUpgrade",
             Reward2Key = "StackUpgrade",
         },
@@ -1450,7 +1452,7 @@ function TestRunPlannerRouteHistoryValidator.testForceGroupIgnoresGeneratedCandi
         },
     }, {
         roomTopology = {
-            siblingStructureControl = {
+            otherDoorControl = {
                 options = {
                     {
                         key = "F_MiniBoss01",
@@ -1559,7 +1561,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorAcceptsGeneratedFields
             RoleKey = "Combat",
             OptionKey = "H_Combat09",
             VariantKey = "TwoRewards",
-            SiblingStructureKey = "Bridge",
+            OtherDoorKey = "Bridge",
             Reward1Key = "Boon",
             Reward1LootKey = "HestiaUpgrade",
             Reward2Key = "WeaponUpgrade",
@@ -1567,7 +1569,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorAcceptsGeneratedFields
         {
             RoleKey = "Miniboss",
             OptionKey = "H_MiniBoss01",
-            SiblingStructureKey = "H_MiniBoss02",
+            OtherDoorKey = "H_MiniBoss02",
             Reward1Key = "Boon",
             Reward1LootKey = "DemeterUpgrade",
         },
@@ -1587,7 +1589,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMismatchedField
             RoleKey = "Combat",
             OptionKey = "H_Combat04",
             VariantKey = "ThreeRewards",
-            SiblingStructureKey = "CombatCage3",
+            OtherDoorKey = "CombatCage3",
             Reward1Key = "Boon",
             Reward1LootKey = "PoseidonUpgrade",
             Reward2Key = "StackUpgrade",
@@ -1597,7 +1599,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMismatchedField
             RoleKey = "Combat",
             OptionKey = "H_Combat09",
             VariantKey = "TwoRewards",
-            SiblingStructureKey = "Bridge",
+            OtherDoorKey = "Bridge",
             Reward1Key = "Boon",
             Reward1LootKey = "HestiaUpgrade",
             Reward2Key = "WeaponUpgrade",
@@ -1605,7 +1607,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMismatchedField
         {
             RoleKey = "Miniboss",
             OptionKey = "H_MiniBoss01",
-            SiblingStructureKey = "H_MiniBoss02",
+            OtherDoorKey = "H_MiniBoss02",
             Reward1Key = "Boon",
             Reward1LootKey = "DemeterUpgrade",
         },
@@ -1619,7 +1621,7 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsMismatchedField
 
     local feedback = historyFeedback.fromFindings(result.findings, result.invalids)
     lu.assertEquals(feedback.route.primary.message, "Other Door combat reward count must match Picked Door")
-    local states = historyFeedback.valueStatesForControl(feedback, "H", 2, "SiblingStructureKey")
+    local states = historyFeedback.valueStatesForControl(feedback, "H", 2, "OtherDoorKey")
     lu.assertEquals(states.CombatCage3, valueStates.INVALID)
     lu.assertNil(states.CombatCage2)
 end
@@ -1634,7 +1636,7 @@ function TestRunPlannerRouteHistoryValidator.testClockworkRejectsPrebossBeforeGo
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat03",
-            SiblingStructureKey = "Preboss",
+            OtherDoorKey = "Preboss",
         },
         {
             RouteKindKey = "Goal",
@@ -1658,7 +1660,7 @@ function TestRunPlannerRouteHistoryValidator.testClockworkRejectsPrebossBeforeGo
         feedback.route.primary.message,
         "Tartarus Preboss cannot appear before Clockwork goals are complete"
     )
-    local states = historyFeedback.valueStatesForControl(feedback, "I", finding.rowIndex, "SiblingStructureKey")
+    local states = historyFeedback.valueStatesForControl(feedback, "I", finding.rowIndex, "OtherDoorKey")
     lu.assertEquals(states.Preboss, valueStates.INVALID)
 end
 
@@ -1709,13 +1711,13 @@ function TestRunPlannerRouteHistoryValidator.testClockworkRejectsGeneratedDoorsW
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat03",
-            SiblingStructureKey = "CombatReward",
+            OtherDoorKey = "CombatReward",
         },
         {
             RouteKindKey = "NonGoal",
             NonGoalKindKey = "RewardCombat",
             OptionKey = "I_Combat04",
-            SiblingStructureKey = "CombatReward",
+            OtherDoorKey = "CombatReward",
         },
     })
 
@@ -1816,32 +1818,32 @@ function TestRunPlannerRouteHistoryValidator.testClockworkRequiresPrebossAfterGo
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat03",
-            SiblingStructureKey = "CombatReward",
+            OtherDoorKey = "CombatReward",
         },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat04",
-            SiblingStructureKey = "CombatReward",
+            OtherDoorKey = "CombatReward",
         },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat09",
-            SiblingStructureKey = "I_Story01",
+            OtherDoorKey = "I_Story01",
         },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat10",
-            SiblingStructureKey = "I_MiniBoss01",
+            OtherDoorKey = "I_MiniBoss01",
         },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat11",
-            SiblingStructureKey = "I_MiniBoss02",
+            OtherDoorKey = "I_MiniBoss02",
         },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat12",
-            SiblingStructureKey = "CombatReward",
+            OtherDoorKey = "CombatReward",
         },
     })
 
@@ -1868,17 +1870,17 @@ function TestRunPlannerRouteHistoryValidator.testClockworkNeedsPickedPrebossAfte
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat03",
-            SiblingStructureKey = "I_Story01",
+            OtherDoorKey = "I_Story01",
         },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat04",
-            SiblingStructureKey = "I_MiniBoss01",
+            OtherDoorKey = "I_MiniBoss01",
         },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat09",
-            SiblingStructureKey = "I_MiniBoss02",
+            OtherDoorKey = "I_MiniBoss02",
         },
         {
             RouteKindKey = "Goal",
@@ -1909,27 +1911,27 @@ function TestRunPlannerRouteHistoryValidator.testClockworkPickedPrebossEndsRoute
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat03",
-            SiblingStructureKey = "CombatReward",
+            OtherDoorKey = "CombatReward",
         },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat04",
-            SiblingStructureKey = "CombatReward",
+            OtherDoorKey = "CombatReward",
         },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat09",
-            SiblingStructureKey = "I_Story01",
+            OtherDoorKey = "I_Story01",
         },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat10",
-            SiblingStructureKey = "CombatReward",
+            OtherDoorKey = "CombatReward",
         },
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat11",
-            SiblingStructureKey = "CombatReward",
+            OtherDoorKey = "CombatReward",
         },
         {
             RouteKindKey = "Preboss",
@@ -1959,7 +1961,7 @@ function TestRunPlannerRouteHistoryValidator.testClockworkAllowsNonGoalGoalThenG
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat04",
-            SiblingStructureKey = "I_Story01",
+            OtherDoorKey = "I_Story01",
         },
         {
             RouteKindKey = "Goal",
@@ -1968,7 +1970,7 @@ function TestRunPlannerRouteHistoryValidator.testClockworkAllowsNonGoalGoalThenG
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat10",
-            SiblingStructureKey = "CombatGoal",
+            OtherDoorKey = "CombatGoal",
         },
         {
             RouteKindKey = "NonGoal",
@@ -1978,7 +1980,7 @@ function TestRunPlannerRouteHistoryValidator.testClockworkAllowsNonGoalGoalThenG
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat11",
-            SiblingStructureKey = "CombatReward",
+            OtherDoorKey = "CombatReward",
         },
         {
             RouteKindKey = "Preboss",
@@ -1998,7 +2000,7 @@ function TestRunPlannerRouteHistoryValidator.testClockworkTopologyUsesPickedNext
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat03",
-            SiblingStructureKey = "CombatGoal",
+            OtherDoorKey = "CombatGoal",
         },
         {
             RouteKindKey = "NonGoal",
@@ -2018,8 +2020,8 @@ function TestRunPlannerRouteHistoryValidator.testClockworkTopologyUsesPickedNext
     lu.assertNotNil(rowTwo)
     lu.assertEquals(rowTwo.topology.selected.structure, "Story")
     lu.assertEquals(rowTwo.topology.selected.roomKey, "I_Story01")
-    lu.assertEquals(rowTwo.topology.sibling.structure, "GoalCombat")
-    lu.assertTrue(rowTwo.topology.sibling.isClockworkGoal)
+    lu.assertEquals(rowTwo.topology.otherDoors[1].structure, "GoalCombat")
+    lu.assertTrue(rowTwo.topology.otherDoors[1].isClockworkGoal)
 end
 
 function TestRunPlannerRouteHistoryValidator.testRewardValidatorRejectsTalentBeforeSpell()
@@ -2292,7 +2294,7 @@ function TestRunPlannerRouteHistoryValidator.testErebusTopologyControlsAreActive
             OptionKey = "F_Combat02",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
-            SiblingStructureKey = "Combat",
+            OtherDoorKey = "Combat",
             SiblingRewardClassKey = "Major",
         },
     })

@@ -183,13 +183,11 @@ local function topologyExits(entry)
     if picked ~= nil then
         exits[#exits + 1] = picked
     end
-    local otherDoors = topology.otherDoors or topology.siblings
+    local otherDoors = topology.otherDoors
     if otherDoors ~= nil then
         for _, door in ipairs(otherDoors) do
             exits[#exits + 1] = door
         end
-    elseif topology.sibling ~= nil then
-        exits[#exits + 1] = topology.sibling
     end
     return exits
 end

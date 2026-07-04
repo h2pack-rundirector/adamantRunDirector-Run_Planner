@@ -95,20 +95,20 @@ local function getOptionOpts(control, instance, rowIndex, roleKey)
     )
 end
 
-local function siblingStructureOpts(control, instance, rowIndex, siblingIndex)
-    control._siblingStructureOptsByRow = control._siblingStructureOptsByRow or {}
-    local optsBySibling = control._siblingStructureOptsByRow[rowIndex]
+local function otherDoorOpts(control, instance, rowIndex, siblingIndex)
+    control._otherDoorOptsByRow = control._otherDoorOptsByRow or {}
+    local optsBySibling = control._otherDoorOptsByRow[rowIndex]
     if optsBySibling == nil then
         optsBySibling = {}
-        control._siblingStructureOptsByRow[rowIndex] = optsBySibling
+        control._otherDoorOptsByRow[rowIndex] = optsBySibling
     end
 
     siblingIndex = siblingIndex or 1
     local opts = optsBySibling[siblingIndex]
     if opts == nil then
         opts = copyBaseOpts(SIBLING_STRUCTURE_OPTS)
-        opts.values = data.siblingStructureValues(instance)
-        opts.displayValues = data.siblingStructureLabels(instance)
+        opts.values = data.otherDoorValues(instance)
+        opts.displayValues = data.otherDoorLabels(instance)
         optsBySibling[siblingIndex] = opts
     end
     return decorations.decorateDropdown(
@@ -116,11 +116,11 @@ local function siblingStructureOpts(control, instance, rowIndex, siblingIndex)
         opts,
         valueStateHelpers.merge(
             opts,
-            data.siblingStructureValueStatesForRow(instance, control:routeRows(), rowIndex, siblingIndex),
+            data.otherDoorValueStatesForRow(instance, control:routeRows(), rowIndex, siblingIndex),
             valueStateHelpers.history(
                 instance,
                 rowIndex,
-                data.siblingStructureAlias(instance, siblingIndex)
+                data.otherDoorAlias(instance, siblingIndex)
             )
         )
     )
@@ -184,15 +184,15 @@ local function drawOptionDropdown(draw, control, instance, rowIndex, roleKey, co
     return changed, storedOptionKey
 end
 
-local function siblingStructureLabel(instance, activeCount, siblingIndex)
-    local label = instance.siblingStructurePolicy and instance.siblingStructurePolicy.label or "Other Door"
+local function otherDoorLabel(instance, activeCount, siblingIndex)
+    local label = instance.otherDoorPolicy and instance.otherDoorPolicy.label or "Other Door"
     if (activeCount or 0) > 1 then
         return label .. " " .. tostring(siblingIndex)
     end
     return label
 end
 
-local function drawSiblingStructureDropdown(
+local function drawOtherDoorDropdown(
     draw,
     control,
     instance,
@@ -202,28 +202,28 @@ local function drawSiblingStructureDropdown(
     labelColumnX,
     controlColumnX
 )
-    if not data.shouldDrawSiblingStructure(instance, control:routeRows(), rowIndex, siblingIndex) then
+    if not data.shouldDrawOtherDoor(instance, control:routeRows(), rowIndex, siblingIndex) then
         return false
     end
 
-    local opts = siblingStructureOpts(control, instance, rowIndex, siblingIndex)
+    local opts = otherDoorOpts(control, instance, rowIndex, siblingIndex)
     if opts.values[1] == nil then
         return false
     end
 
     draw.imgui.SetCursorPosX(labelColumnX or DOOR_LABEL_COLUMN_X)
     draw.imgui.AlignTextToFramePadding()
-    draw.imgui.Text(siblingStructureLabel(instance, activeCount, siblingIndex))
+    draw.imgui.Text(otherDoorLabel(instance, activeCount, siblingIndex))
     draw.imgui.SameLine()
     draw.imgui.SetCursorPosX(controlColumnX or DOOR_CONTROL_COLUMN_X)
-    return draw.widgets.dropdown(control:roomField(rowIndex, data.siblingStructureAlias(instance, siblingIndex)), opts)
+    return draw.widgets.dropdown(control:roomField(rowIndex, data.otherDoorAlias(instance, siblingIndex)), opts)
 end
 
-local function drawSiblingStructureDropdowns(draw, control, instance, rowIndex, labelColumnX, controlColumnX)
+local function drawOtherDoorDropdowns(draw, control, instance, rowIndex, labelColumnX, controlColumnX)
     local changed = false
-    local activeCount = data.activeSiblingStructureCount(instance, control:routeRows(), rowIndex)
-    for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
-        if drawSiblingStructureDropdown(
+    local activeCount = data.activeOtherDoorCount(instance, control:routeRows(), rowIndex)
+    for siblingIndex = 1, data.maxOtherDoorCount(instance) do
+        if drawOtherDoorDropdown(
             draw,
             control,
             instance,
@@ -373,7 +373,7 @@ local function drawRoomRow(draw, control, instance, rowIndex, terminalRowIndex)
             NEXT_CHOICE_CONTROL_COLUMN_X,
             NEXT_CHOICE_OPTION_COLUMN_X
         )
-        if drawSiblingStructureDropdowns(
+        if drawOtherDoorDropdowns(
             draw,
             control,
             instance,

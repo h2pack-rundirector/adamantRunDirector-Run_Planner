@@ -45,7 +45,7 @@ local function fCombatRow(optionKey, rewardKey, siblingKey)
         RoleKey = "Combat",
         OptionKey = optionKey,
         Reward1Key = rewardKey,
-        SiblingStructureKey = siblingKey,
+        OtherDoorKey = siblingKey,
     }
     if rewardKey == "Major" then
         row.Reward2Key = "MaxHealthDrop"
@@ -103,7 +103,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
     lu.assertEquals(storage[1].row[1].default, "")
     lu.assertEquals(storage[1].row[2].key, "OptionKey")
     lu.assertEquals(storage[1].row[3].key, "VariantKey")
-    lu.assertEquals(storage[1].row[4].key, "SiblingStructureKey")
+    lu.assertEquals(storage[1].row[4].key, "OtherDoorKey")
     lu.assertEquals(storage[2].key, "Rewards")
     lu.assertEquals(storage[2].type, "table")
     lu.assertEquals(storage[2].minRows, 12)
@@ -123,8 +123,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearStorageMatchesRouteRows()
         biome = catalog.lookup.G,
     })
     storage = template.storage(instance)
-    lu.assertEquals(storage[1].row[4].key, "SiblingStructureKey")
-    lu.assertEquals(storage[1].row[5].key, "SiblingStructure2Key")
+    lu.assertEquals(storage[1].row[4].key, "OtherDoorKey")
+    lu.assertEquals(storage[1].row[5].key, "OtherDoor2Key")
     lu.assertEquals(storage[2].row[20].key, "SiblingRewardClassKey")
     lu.assertEquals(storage[2].row[21].key, "Sibling2RewardClassKey")
 
@@ -152,12 +152,12 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyDefaultsControlsA
         fCombatRow("F_Combat03", "Major"),
     })
 
-    lu.assertTrue(data.siblingTopologyStatus(instance, rows, 3).valid)
-    lu.assertTrue(data.siblingStructureStatus(instance, rows, 3).valid)
-    lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 2), 1)
-    lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 3), 1)
-    lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 2, 1))
-    lu.assertTrue(data.shouldDrawSiblingStructure(instance, rows, 3, 1))
+    lu.assertTrue(data.otherDoorTopologyStatus(instance, rows, 3).valid)
+    lu.assertTrue(data.otherDoorStatus(instance, rows, 3).valid)
+    lu.assertEquals(data.activeOtherDoorCount(instance, rows, 2), 1)
+    lu.assertEquals(data.activeOtherDoorCount(instance, rows, 3), 1)
+    lu.assertTrue(data.shouldDrawOtherDoor(instance, rows, 2, 1))
+    lu.assertTrue(data.shouldDrawOtherDoor(instance, rows, 3, 1))
     lu.assertFalse(data.shouldDrawSiblingRewardClass(instance, rows, 3, 1))
     lu.assertEquals(data.validateRoomTopology(instance, rows, 3).message, "Choose Other Door")
     lu.assertNil(data.roomTopology(instance, rows, 3))
@@ -179,8 +179,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingValueStatesDoNotOw
         {
             RoleKey = "Combat",
             OptionKey = "G_Combat02",
-            SiblingStructureKey = "G_Shop01",
-            SiblingStructure2Key = "Combat",
+            OtherDoorKey = "G_Shop01",
+            OtherDoor2Key = "Combat",
         },
         {
             RoleKey = "Midshop",
@@ -188,7 +188,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingValueStatesDoNotOw
         },
     })
 
-    local states = data.siblingStructureValueStatesForRow(instance, rows, 3, 1)
+    local states = data.otherDoorValueStatesForRow(instance, rows, 3, 1)
     lu.assertNil(states.G_Shop01)
     lu.assertNil(data.validateRoomTopology(instance, rows, 3))
 end
@@ -227,9 +227,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearTopologyControlsUseRouteF
         },
     }
 
-    lu.assertTrue(data.siblingTopologyStatus(instance, rows, 3).valid)
-    lu.assertFalse(data.siblingStructureStatus(instance, rows, 3).valid)
-    lu.assertFalse(data.shouldDrawSiblingStructure(instance, rows, 3, 1))
+    lu.assertTrue(data.otherDoorTopologyStatus(instance, rows, 3).valid)
+    lu.assertFalse(data.otherDoorStatus(instance, rows, 3).valid)
+    lu.assertFalse(data.shouldDrawOtherDoor(instance, rows, 3, 1))
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearRoomsViewEditsNextPickedDoor()
@@ -246,7 +246,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRoomsViewEditsNextPickedD
     local control = template.createUi(fields, instance)
     local row2RoleField = fields.Rooms:get(2, "RoleKey")
     local row2OptionField = fields.Rooms:get(2, "OptionKey")
-    local row2SiblingField = fields.Rooms:get(2, "SiblingStructureKey")
+    local row2SiblingField = fields.Rooms:get(2, "OtherDoorKey")
     local row2RoleDropdowns = 0
     local row2OptionDropdowns = 0
     local row2SiblingDropdowns = 0
@@ -282,8 +282,8 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearOpeningDoesNotUsePickedDo
     fields.Rooms:get(2, "RoleKey"):write("Combat")
     fields.Rooms:get(2, "OptionKey"):write("F_Combat02")
     local control = template.createUi(fields, instance)
-    local row1SiblingField = fields.Rooms:get(1, "SiblingStructureKey")
-    local row2SiblingField = fields.Rooms:get(2, "SiblingStructureKey")
+    local row1SiblingField = fields.Rooms:get(1, "OtherDoorKey")
+    local row2SiblingField = fields.Rooms:get(2, "OtherDoorKey")
     local row1SiblingDropdowns = 0
     local row2SiblingDropdowns = 0
     local draw = noOpDraw()
@@ -358,7 +358,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearRoomsViewHidesDepthCacheI
         route = route,
         biomeLookup = catalog.lookup,
         snapshotForBiome = function()
-            return control:read("selectedRowsSnapshot")
+            return control:read("selectedNodesSnapshot")
         end,
     })
     local result = historySystem.validator.validate({
@@ -441,7 +441,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearNextChoicesUseSourceRoomD
         route = route,
         biomeLookup = catalog.lookup,
         snapshotForBiome = function()
-            return control:read("selectedRowsSnapshot")
+            return control:read("selectedNodesSnapshot")
         end,
     })
     local result = historySystem.validator.validate({
@@ -467,9 +467,9 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearNextChoicesUseSourceRoomD
     }, "Underworld")
 
     local row4RoleField = fields.Rooms:get(4, "RoleKey")
-    local row4SiblingField = fields.Rooms:get(4, "SiblingStructureKey")
+    local row4SiblingField = fields.Rooms:get(4, "OtherDoorKey")
     local row5RoleField = fields.Rooms:get(5, "RoleKey")
-    local row5SiblingField = fields.Rooms:get(5, "SiblingStructureKey")
+    local row5SiblingField = fields.Rooms:get(5, "OtherDoorKey")
     local row4RoleVisibleValues
     local row4SiblingVisibleValues
     local row5RoleVisibleValues
@@ -529,7 +529,7 @@ function TestRunPlannerFixedLinearRoute.testOceanusDepthTwoNextChoiceAllowsShop(
         route = route,
         biomeLookup = catalog.lookup,
         snapshotForBiome = function()
-            return control:read("selectedRowsSnapshot")
+            return control:read("selectedNodesSnapshot")
         end,
     })
     local result = historySystem.validator.validate({
@@ -555,7 +555,7 @@ function TestRunPlannerFixedLinearRoute.testOceanusDepthTwoNextChoiceAllowsShop(
     }, "Underworld")
 
     local row4RoleField = fields.Rooms:get(4, "RoleKey")
-    local row3SiblingField = fields.Rooms:get(3, "SiblingStructureKey")
+    local row3SiblingField = fields.Rooms:get(3, "OtherDoorKey")
     local row4RoleVisibleValues
     local row3SiblingVisibleValues
     local draw = noOpDraw()
@@ -697,7 +697,7 @@ function TestRunPlannerFixedLinearRoute.testCompletionIgnoresTerminalSiblingBefo
             OptionKey = optionKey,
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
-            SiblingStructureKey = siblingKey,
+            OtherDoorKey = siblingKey,
         }
     end
     local control = template.createRuntime(routeFields({
@@ -757,7 +757,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearOpeningRowUsesFixedRoomCh
     lu.assertEquals(option.label, "Opening 2")
 end
 
-function TestRunPlannerFixedLinearRoute.testSelectedRowsSnapshotPreservesUnknownFixedRoomOption()
+function TestRunPlannerFixedLinearRoute.testSelectedNodesSnapshotPreservesUnknownFixedRoomOption()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
     local instance = template.prepare({
@@ -771,10 +771,10 @@ function TestRunPlannerFixedLinearRoute.testSelectedRowsSnapshotPreservesUnknown
         },
     }), instance)
 
-    local snapshot = control:buildSelectedRowsSnapshot()
+    local snapshot = control:read("selectedNodesSnapshot")
 
-    lu.assertEquals(snapshot.rows[1].roleKey, "Opening")
-    lu.assertEquals(snapshot.rows[1].optionKey, "F_Opening99")
+    lu.assertEquals(snapshot.nodes[1].currentRoom.roleKey, "Opening")
+    lu.assertEquals(snapshot.nodes[1].currentRoom.optionKey, "F_Opening99")
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearPrebossRowUsesFixedRoomChoice()
@@ -864,7 +864,7 @@ function TestRunPlannerFixedLinearRoute.testSingleRoomRolesDefaultToConcreteOpti
             {
                 RoleKey = "Story",
                 OptionKey = "",
-                SiblingStructureKey = "Combat",
+                OtherDoorKey = "Combat",
             },
         })
     local roleKey = data.resolveRole(instance, rows, 6)
@@ -875,7 +875,7 @@ function TestRunPlannerFixedLinearRoute.testSingleRoomRolesDefaultToConcreteOpti
     lu.assertEquals(option.label, "Arachne")
 end
 
-function TestRunPlannerFixedLinearRoute.testSelectedRowsSnapshotNormalizesImplicitSingleRoomOption()
+function TestRunPlannerFixedLinearRoute.testSelectedNodesSnapshotNormalizesImplicitSingleRoomOption()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
     local instance = template.prepare({
@@ -891,17 +891,17 @@ function TestRunPlannerFixedLinearRoute.testSelectedRowsSnapshotNormalizesImplic
         {
             RoleKey = "Story",
             OptionKey = "",
-            SiblingStructureKey = "Combat",
+            OtherDoorKey = "Combat",
         },
     }), instance)
 
-    local snapshot = control:buildSelectedRowsSnapshot()
+    local snapshot = control:read("selectedNodesSnapshot")
 
-    lu.assertEquals(snapshot.rows[6].roleKey, "Story")
-    lu.assertEquals(snapshot.rows[6].optionKey, "F_Story01")
+    lu.assertEquals(snapshot.nodes[6].currentRoom.roleKey, "Story")
+    lu.assertEquals(snapshot.nodes[6].currentRoom.optionKey, "F_Story01")
 end
 
-function TestRunPlannerFixedLinearRoute.testSelectedRowsSnapshotPreservesRequiredBlankRoomOption()
+function TestRunPlannerFixedLinearRoute.testSelectedNodesSnapshotPreservesRequiredBlankRoomOption()
     local catalog = loadCatalog()
     local template = loadFixedLinearTemplate()
     local instance = template.prepare({
@@ -915,14 +915,14 @@ function TestRunPlannerFixedLinearRoute.testSelectedRowsSnapshotPreservesRequire
             OptionKey = "",
             Reward1Key = "Major",
             Reward2Key = "MaxHealthDrop",
-            SiblingStructureKey = "Combat",
+            OtherDoorKey = "Combat",
         },
     }), instance)
 
-    local snapshot = control:buildSelectedRowsSnapshot()
+    local snapshot = control:read("selectedNodesSnapshot")
 
-    lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
-    lu.assertEquals(snapshot.rows[2].optionKey, "")
+    lu.assertEquals(snapshot.nodes[2].currentRoom.roleKey, "Combat")
+    lu.assertEquals(snapshot.nodes[2].currentRoom.optionKey, "")
 end
 
 function TestRunPlannerFixedLinearRoute.testFixedLinearValueStatesRolesByRouteRow()
@@ -1339,7 +1339,7 @@ function TestRunPlannerFixedLinearRoute.testFixedLinearSiblingRewardDropdownUses
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat06",
-            SiblingStructureKey = "Combat",
+            OtherDoorKey = "Combat",
         },
         {
             Reward1Key = "Major",

@@ -32,7 +32,7 @@ local function goalCombat(optionKey, siblingKey)
     return {
         RouteKindKey = "Goal",
         OptionKey = optionKey,
-        SiblingStructureKey = siblingKey,
+        OtherDoorKey = siblingKey,
     }
 end
 
@@ -41,7 +41,7 @@ local function rewardCombat(optionKey, siblingKey)
         RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat",
         OptionKey = optionKey,
         Reward1Key = "MaxHealthDrop",
-        SiblingStructureKey = siblingKey,
+        OtherDoorKey = siblingKey,
     }
 end
 
@@ -98,7 +98,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalStorageMatchesTartaru
     lu.assertEquals(storage[1].row[2].key, "NonGoalKindKey")
     lu.assertEquals(storage[1].row[3].key, "OptionKey")
     lu.assertEquals(storage[1].row[4].key, "VariantKey")
-    lu.assertEquals(storage[1].row[5].key, "SiblingStructureKey")
+    lu.assertEquals(storage[1].row[5].key, "OtherDoorKey")
     lu.assertEquals(storage[2].key, "Rewards")
     lu.assertEquals(storage[2].type, "table")
     lu.assertEquals(storage[2].minRows, 13)
@@ -152,12 +152,12 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalSnapshotIgnoresHidden
     local fields = routeUiFields(template.storage(instance))
     fields.Rooms:get(2, "RouteKindKey"):write("Goal")
     fields.Rooms:get(2, "OptionKey"):write("I_Combat02")
-    fields.Rooms:get(2, "SiblingStructureKey"):write("Preboss")
+    fields.Rooms:get(2, "OtherDoorKey"):write("Preboss")
 
     local control = template.createUi(fields, instance)
-    local snapshot = control:buildSelectedRowsSnapshot()
+    local snapshot = control:read("selectedNodesSnapshot")
 
-    lu.assertNil(snapshot.rows[2].topology.siblings[1])
+    lu.assertNil(snapshot.nodes[2].nextChoices.otherDoors)
 end
 
 
@@ -194,7 +194,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalForcePressureUsesNonG
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat03",
-            SiblingStructureKey = "CombatReward",
+            OtherDoorKey = "CombatReward",
         },
     })
     lu.assertNil(data.validateRoomTopology(instance, missingForcedStory, 3))
@@ -205,7 +205,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalForcePressureUsesNonG
         {
             RouteKindKey = "Goal",
             OptionKey = "I_Combat03",
-            SiblingStructureKey = "I_Story01",
+            OtherDoorKey = "I_Story01",
         },
     })
 
@@ -237,8 +237,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalLiveStoryForcePressur
         goalCombat("I_Combat09", "CombatReward"),
     })
     lu.assertNil(data.validateRoomTopology(instance, missingStory, 5))
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, missingStory, 5).CombatReward)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, missingStory, 5).I_Story01)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, missingStory, 5).CombatReward)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, missingStory, 5).I_Story01)
 
     local siblingStory = fakeRows({
         {},
@@ -258,7 +258,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalLiveStoryForcePressur
         {
             RouteKindKey = "NonGoal", NonGoalKindKey = "Story",
             OptionKey = "I_Story01",
-            SiblingStructureKey = "CombatGoal",
+            OtherDoorKey = "CombatGoal",
         },
     })
 
@@ -283,8 +283,8 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalLiveMinibossForcePres
         goalCombat("I_Combat12", "CombatReward"),
     })
     lu.assertNil(data.validateRoomTopology(instance, missingMiniboss, 8))
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, missingMiniboss, 8).CombatReward)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, missingMiniboss, 8).I_MiniBoss01)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, missingMiniboss, 8).CombatReward)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, missingMiniboss, 8).I_MiniBoss01)
 
     local siblingMiniboss = fakeRows({
         {},
@@ -307,7 +307,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalLiveMinibossForcePres
         {
             RouteKindKey = "NonGoal", NonGoalKindKey = "Miniboss",
             OptionKey = "I_MiniBoss01",
-            SiblingStructureKey = "CombatGoal",
+            OtherDoorKey = "CombatGoal",
         },
         rewardCombat("I_Combat09", "CombatGoal"),
         goalCombat("I_Combat10", "CombatReward"),
@@ -394,16 +394,16 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRoomsViewEditsNextPic
     local fields = routeUiFields(template.storage(instance))
     fields.Rooms:get(2, "RouteKindKey"):write("Goal")
     fields.Rooms:get(2, "OptionKey"):write("I_Combat01")
-    fields.Rooms:get(2, "SiblingStructureKey"):write("CombatReward")
+    fields.Rooms:get(2, "OtherDoorKey"):write("CombatReward")
     fields.Rooms:get(3, "RouteKindKey"):write("NonGoal")
     fields.Rooms:get(3, "NonGoalKindKey"):write("RewardCombat")
     fields.Rooms:get(3, "OptionKey"):write("I_Combat03")
-    fields.Rooms:get(3, "SiblingStructureKey"):write("CombatGoal")
+    fields.Rooms:get(3, "OtherDoorKey"):write("CombatGoal")
     local control = template.createUi(fields, instance)
     local row3RouteKindField = fields.Rooms:get(3, "RouteKindKey")
     local row3NonGoalKindField = fields.Rooms:get(3, "NonGoalKindKey")
     local row3OptionField = fields.Rooms:get(3, "OptionKey")
-    local row3SiblingField = fields.Rooms:get(3, "SiblingStructureKey")
+    local row3SiblingField = fields.Rooms:get(3, "OtherDoorKey")
     local row3RouteKindDropdowns = 0
     local row3NonGoalKindDropdowns = 0
     local row3OptionDropdowns = 0
@@ -464,64 +464,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalRoomsViewShowsMinibos
 end
 
 
-function TestRunPlannerClockworkGoalRoute.testClockworkGoalEmitsDumbSelectedRowsSnapshot()
-    local catalog = loadCatalog()
-    local template = loadClockworkGoalTemplate()
-    local instance = template.prepare({
-        name = "RouteI",
-        biome = catalog.lookup.I,
-    })
-    local control = template.createRuntime(routeFields({
-        {},
-        { RouteKindKey = "Goal", OptionKey = "I_Combat01" },
-        {
-            RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat",
-            OptionKey = "I_Combat03",
-            SiblingStructureKey = "CombatGoal",
-            Reward1Key = "MaxHealthDrop",
-        },
-    }), instance)
 
-    local snapshot = control:buildSelectedRowsSnapshot()
-
-    lu.assertEquals(snapshot.schema, "selectedRows.v1")
-    lu.assertEquals(snapshot.controlName, "RouteI")
-    lu.assertEquals(snapshot.biomeKey, "I")
-    lu.assertEquals(snapshot.adapter, "clockworkGoal")
-    lu.assertNil(snapshot.rows[1].valid)
-    lu.assertNil(snapshot.rows[1].roomTopology)
-    lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
-    lu.assertEquals(snapshot.rows[1].optionKey, "I_Intro")
-    lu.assertEquals(snapshot.rows[1].routeKindKey, "Intro")
-    lu.assertEquals(snapshot.rows[2].roleKey, "GoalCombat")
-    lu.assertEquals(snapshot.rows[2].optionKey, "I_Combat01")
-    lu.assertEquals(snapshot.rows[2].routeKindKey, "Goal")
-    lu.assertEquals(snapshot.rows[3].roleKey, "RewardCombat")
-    lu.assertEquals(snapshot.rows[3].optionKey, "I_Combat03")
-    lu.assertEquals(snapshot.rows[3].routeKindKey, "NonGoal")
-    lu.assertEquals(snapshot.rows[3].nonGoalKindKey, "RewardCombat")
-    lu.assertEquals(snapshot.rows[3].topology.siblings[1].structureKey, "CombatGoal")
-    lu.assertEquals(snapshot.rows[3].rewards.row.values[1], "MaxHealthDrop")
-end
-
-function TestRunPlannerClockworkGoalRoute.testClockworkGoalReadSelectedRowsSnapshot()
-    local catalog = loadCatalog()
-    local template = loadClockworkGoalTemplate()
-    local instance = template.prepare({
-        name = "RouteI",
-        biome = catalog.lookup.I,
-    })
-    local control = template.createRuntime(routeFields({
-        {},
-        { RouteKindKey = "Goal", OptionKey = "I_Combat01" },
-    }), instance)
-
-    local snapshot = control:buildSelectedRowsSnapshot()
-
-    lu.assertEquals(snapshot.schema, "selectedRows.v1")
-    lu.assertEquals(snapshot.rows[2].roleKey, "GoalCombat")
-    lu.assertEquals(snapshot.rows[2].optionKey, "I_Combat01")
-end
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalEmitsSelectedNodesSnapshot()
     local catalog = loadCatalog()
@@ -536,7 +479,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalEmitsSelectedNodesSna
         {
             RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat",
             OptionKey = "I_Combat03",
-            SiblingStructureKey = "CombatGoal",
+            OtherDoorKey = "CombatGoal",
             Reward1Key = "MaxHealthDrop",
         },
     }), instance)
@@ -574,17 +517,17 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalExportsDuplicateTrial
         {
             RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat",
             OptionKey = "I_Combat03",
-            SiblingStructureKey = "CombatGoal",
+            OtherDoorKey = "CombatGoal",
             Reward1Key = "Devotion",
             Reward3Key = "ZeusUpgrade",
             Reward4Key = "ZeusUpgrade",
         },
     }), instance)
-    local snapshot = control:buildSelectedRowsSnapshot()
+    local snapshot = control:read("selectedNodesSnapshot")
 
-    lu.assertEquals(snapshot.rows[3].rewards.row.values[1], "Devotion")
-    lu.assertEquals(snapshot.rows[3].rewards.row.values[3], "ZeusUpgrade")
-    lu.assertEquals(snapshot.rows[3].rewards.row.values[4], "ZeusUpgrade")
+    lu.assertEquals(snapshot.nodes[3].rewards.row.values[1], "Devotion")
+    lu.assertEquals(snapshot.nodes[3].rewards.row.values[3], "ZeusUpgrade")
+    lu.assertEquals(snapshot.nodes[3].rewards.row.values[4], "ZeusUpgrade")
 end
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCountersAndSidePaths()
@@ -598,7 +541,7 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
     local storyAfterOneExit = fakeRows({
         {},
         { RouteKindKey = "Goal", OptionKey = "I_Combat02" },
-        { RouteKindKey = "NonGoal", NonGoalKindKey = "Story", OptionKey = "I_Story01", SiblingStructureKey = "CombatGoal" },
+        { RouteKindKey = "NonGoal", NonGoalKindKey = "Story", OptionKey = "I_Story01", OtherDoorKey = "CombatGoal" },
     })
     lu.assertTrue(hasValue(data.roleValuesForRow(instance, storyAfterOneExit, 3), "Story"))
     lu.assertNil(data.routeKindValueStatesForRow(instance, storyAfterOneExit, 3).Goal)
@@ -633,10 +576,10 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalValidationModelsCount
     local sixthGoal = fakeRows({
         {},
         { RouteKindKey = "Goal", OptionKey = "I_Combat01" },
-        { RouteKindKey = "Goal", OptionKey = "I_Combat03", SiblingStructureKey = "CombatReward" },
-        { RouteKindKey = "Goal", OptionKey = "I_Combat04", SiblingStructureKey = "CombatReward" },
-        { RouteKindKey = "Goal", OptionKey = "I_Combat09", SiblingStructureKey = "CombatReward" },
-        { RouteKindKey = "Goal", OptionKey = "I_Combat10", SiblingStructureKey = "CombatReward" },
+        { RouteKindKey = "Goal", OptionKey = "I_Combat03", OtherDoorKey = "CombatReward" },
+        { RouteKindKey = "Goal", OptionKey = "I_Combat04", OtherDoorKey = "CombatReward" },
+        { RouteKindKey = "Goal", OptionKey = "I_Combat09", OtherDoorKey = "CombatReward" },
+        { RouteKindKey = "Goal", OptionKey = "I_Combat10", OtherDoorKey = "CombatReward" },
         { RouteKindKey = "Goal", OptionKey = "I_Combat11" },
     })
     lu.assertEquals(data.readRoleKey(instance, sixthGoal, 7), "GoalCombat")

@@ -677,7 +677,7 @@ function TestRunPlannerRouteUi.testTartarusCompletionIgnoresRowsAfterClockworkRo
     for _, row in ipairs(rows) do
         fields.Rooms:get(row.rowIndex, "RouteKindKey"):write("Goal")
         fields.Rooms:get(row.rowIndex, "OptionKey"):write(row.optionKey)
-        fields.Rooms:get(row.rowIndex, "SiblingStructureKey"):write(row.siblingKey)
+        fields.Rooms:get(row.rowIndex, "OtherDoorKey"):write(row.siblingKey)
     end
     fields.Rooms:get(7, "RouteKindKey"):write("Preboss")
     fields.Rooms:get(13, "RouteKindKey"):write("NonGoal")

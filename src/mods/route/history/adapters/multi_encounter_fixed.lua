@@ -448,11 +448,10 @@ end
 
 function multiEncounterFixed.build(args)
     local context = buildContext(args)
-    if args.snapshot.schema == "selectedNodes.v1" then
-        buildFromNodes(args, context)
-    else
-        buildRows(context, args.snapshot.rows)
+    if args.snapshot.schema ~= "selectedNodes.v1" then
+        error("MultiEncounterFixed history adapter requires selectedNodes.v1", 0)
     end
+    buildFromNodes(args, context)
 end
 
 return multiEncounterFixed

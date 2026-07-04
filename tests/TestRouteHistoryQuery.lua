@@ -20,7 +20,7 @@ local function buildFErebusHistory(rows)
         biome = catalog.lookup.F,
     })
     local control = template.createRuntime(h.routeFields(rows), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
     return historyBuilder.build({
         route = catalog.routes.lookup.Underworld,
         biomeLookup = catalog.lookup,
@@ -302,7 +302,9 @@ function TestRunPlannerRouteHistoryQuery.testRequiredMinExitsUsesLootParentRoom(
         eventKey = "PreviousRoom",
         topology = {
             selected = { roomKey = "CurrentRoom" },
-            sibling = { roomKey = "OtherRoom" },
+            otherDoors = {
+                { roomKey = "OtherRoom" },
+            },
         },
     })
     local current = routeHistory.emitAt(history, {

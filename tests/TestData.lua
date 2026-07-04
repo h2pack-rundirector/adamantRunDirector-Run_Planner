@@ -350,24 +350,24 @@ local function optionKeys(options)
 end
 
 local function assertFixedLinearSiblingOptions(topology, expected)
-    lu.assertEquals(topology.generatedDoorControl.key, "SiblingStructure")
-    lu.assertEquals(topology.generatedDoorControl.alias, "SiblingStructureKey")
-    lu.assertEquals(topology.generatedDoorControl.options, topology.siblingStructureControl.options)
-    lu.assertEquals(topology.siblingStructureControl.key, "SiblingStructure")
-    lu.assertEquals(topology.siblingStructureControl.alias, "SiblingStructureKey")
+    lu.assertEquals(topology.generatedDoorControl.key, "OtherDoor")
+    lu.assertEquals(topology.generatedDoorControl.alias, "OtherDoorKey")
+    lu.assertEquals(topology.generatedDoorControl.options, topology.otherDoorControl.options)
+    lu.assertEquals(topology.otherDoorControl.key, "OtherDoor")
+    lu.assertEquals(topology.otherDoorControl.alias, "OtherDoorKey")
     lu.assertNil(topology.rules)
-    lu.assertEquals(optionKeys(topology.siblingStructureControl.options), expected.keys)
-    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, "Combat").structure, "Combat")
-    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, "Combat").rewardBranch, "majorMinor")
-    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.storyKey).structure, "Story")
-    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.shopKey).structure, "Midshop")
-    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.fountainKey).structure, "Fountain")
-    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.fountainKey).rewardBranch, "majorMinor")
-    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.minibossKeys[1]).structure, "Miniboss")
-    lu.assertEquals(optionByKey(topology.siblingStructureControl.options, expected.minibossKeys[1]).rewardStore, "RunProgress")
+    lu.assertEquals(optionKeys(topology.otherDoorControl.options), expected.keys)
+    lu.assertEquals(optionByKey(topology.otherDoorControl.options, "Combat").structure, "Combat")
+    lu.assertEquals(optionByKey(topology.otherDoorControl.options, "Combat").rewardBranch, "majorMinor")
+    lu.assertEquals(optionByKey(topology.otherDoorControl.options, expected.storyKey).structure, "Story")
+    lu.assertEquals(optionByKey(topology.otherDoorControl.options, expected.shopKey).structure, "Midshop")
+    lu.assertEquals(optionByKey(topology.otherDoorControl.options, expected.fountainKey).structure, "Fountain")
+    lu.assertEquals(optionByKey(topology.otherDoorControl.options, expected.fountainKey).rewardBranch, "majorMinor")
+    lu.assertEquals(optionByKey(topology.otherDoorControl.options, expected.minibossKeys[1]).structure, "Miniboss")
+    lu.assertEquals(optionByKey(topology.otherDoorControl.options, expected.minibossKeys[1]).rewardStore, "RunProgress")
 end
 
-function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure()
+function TestRunPlannerData.testFixedLinearTopologyFilesDeclareOtherDoor()
     local erebus = loadTopology(
         "mods/biomes/declarations/f_erebus_layout.lua",
         "mods/biomes/declarations/f_erebus_topology.lua"
@@ -382,7 +382,7 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
     )
 
     lu.assertEquals(erebus.topologyWindow, { biomeDepthCache = { min = 0, max = 10 } })
-    lu.assertNil(erebus.siblingControlWindow)
+    lu.assertNil(erebus.generatedDoorControlWindow)
     assertFixedLinearSiblingOptions(erebus, {
         keys = {
             "",
@@ -413,7 +413,7 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
     lu.assertTrue(erebus.forcedGroups[2].pickedCandidateBeforeDeadlineClosesGroup)
 
     lu.assertEquals(oceanus.topologyWindow, { biomeDepthCache = { min = 1, max = 7 } })
-    lu.assertNil(oceanus.siblingControlWindow)
+    lu.assertNil(oceanus.generatedDoorControlWindow)
     assertFixedLinearSiblingOptions(oceanus, {
         keys = {
             "",
@@ -438,7 +438,7 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
     lu.assertEquals(oceanus.forcedGroups[2].forceAtBiomeDepthMax, 7)
 
     lu.assertEquals(olympus.topologyWindow, { biomeDepthCache = { min = 1, max = 8 } })
-    lu.assertNil(olympus.siblingControlWindow)
+    lu.assertNil(olympus.generatedDoorControlWindow)
     assertFixedLinearSiblingOptions(olympus, {
         keys = {
             "",
@@ -461,7 +461,7 @@ function TestRunPlannerData.testFixedLinearTopologyFilesDeclareSiblingStructure(
         "P_MiniBoss02",
     })
     lu.assertEquals(olympus.forcedGroups[1].forceAtBiomeDepthMax, 7)
-    lu.assertEquals(optionByKey(olympus.siblingStructureControl.options, "P_MiniBoss02").nextRoomTags, { "Outdoor" })
+    lu.assertEquals(optionByKey(olympus.otherDoorControl.options, "P_MiniBoss02").nextRoomTags, { "Outdoor" })
 end
 
 function TestRunPlannerData.testBiomeDefinitionsLabelCombatRoomMetadata()
@@ -1163,8 +1163,8 @@ function TestRunPlannerData.testTartarusClockworkLayoutModelsGoalRoute()
         },
     })
     lu.assertEquals(tartarus.roomTopology.topologyWindow, { biomeDepthCache = { min = 1, max = 12 } })
-    lu.assertEquals(tartarus.roomTopology.siblingControlWindow, { biomeDepthCache = { min = 2, max = 12 } })
-    lu.assertEquals(optionByKey(tartarus.roomTopology.siblingStructureControl.options, "Preboss"), {
+    lu.assertEquals(tartarus.roomTopology.generatedDoorControlWindow, { biomeDepthCache = { min = 2, max = 12 } })
+    lu.assertEquals(optionByKey(tartarus.roomTopology.otherDoorControl.options, "Preboss"), {
         key = "Preboss",
         label = "Preboss",
         structure = "Preboss",
@@ -1405,7 +1405,7 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
     lu.assertEquals(cagePolicy.countControl.options[2].key, "ThreeRewards")
     lu.assertEquals(cagePolicy.countControl.options[2].cageRewardCount, 3)
     lu.assertEquals(cagePolicy.countControl.options[2].requiresAllOfferedRoomsSupport, 3)
-    lu.assertEquals(fields.fields.roomTopology.siblingStructureWindow, {
+    lu.assertEquals(fields.fields.roomTopology.otherDoorWindow, {
         biomeDepthCache = { min = 1, max = 4 },
     })
     lu.assertEquals(fields.fields.roomTopology.generatedDoorWindow, {
@@ -1413,7 +1413,7 @@ function TestRunPlannerData.testFieldsLayoutModelsCageRoute()
     })
     lu.assertEquals(
         fields.fields.roomTopology.generatedDoorControl.options,
-        fields.fields.roomTopology.siblingStructureControl.options
+        fields.fields.roomTopology.otherDoorControl.options
     )
     lu.assertEquals(fields.fields.roomTopology.rules[1].key, "matchingCombatCageRewardCount")
     lu.assertEquals(fields.fields.roomTopology.forcedGroups[1].key, "H_Minibosses")

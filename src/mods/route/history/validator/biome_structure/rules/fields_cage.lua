@@ -12,8 +12,8 @@ local function isCombatCageStructure(structure)
 end
 
 local function firstOtherDoor(topology)
-    local otherDoors = topology and (topology.otherDoors or topology.siblings) or EMPTY_LIST
-    return otherDoors[1] or topology and topology.sibling or nil
+    local otherDoors = topology and topology.otherDoors or EMPTY_LIST
+    return otherDoors[1]
 end
 
 local function validateMatchingCombatCageRewardCount(entry)

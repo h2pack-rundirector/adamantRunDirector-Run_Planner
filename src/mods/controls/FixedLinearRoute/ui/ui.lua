@@ -10,9 +10,9 @@ local ui = {}
 local function resetRoomDetails(fields, instance, rowIndex)
     fields.Rooms:reset(rowIndex, "OptionKey")
     fields.Rooms:reset(rowIndex, "VariantKey")
-    if instance.siblingStructurePolicy ~= nil then
-        for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
-            fields.Rooms:reset(rowIndex, data.siblingStructureAlias(instance, siblingIndex))
+    if instance.otherDoorPolicy ~= nil then
+        for siblingIndex = 1, data.maxOtherDoorCount(instance) do
+            fields.Rooms:reset(rowIndex, data.otherDoorAlias(instance, siblingIndex))
         end
     end
 end
@@ -22,8 +22,8 @@ local function resetRewardDetails(fields, rowIndex)
 end
 
 local function resetSiblingRewardDetails(fields, instance, rowIndex)
-    if instance.siblingStructurePolicy ~= nil then
-        for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
+    if instance.otherDoorPolicy ~= nil then
+        for siblingIndex = 1, data.maxOtherDoorCount(instance) do
             fields.Rewards:reset(rowIndex, data.siblingRewardClassAlias(instance, siblingIndex))
         end
     end

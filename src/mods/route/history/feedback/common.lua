@@ -33,9 +33,9 @@ end
 local function siblingControlAlias(record)
     local siblingIndex = math.floor(tonumber(record and record.siblingIndex) or 1)
     if siblingIndex <= 1 then
-        return "SiblingStructureKey"
+        return "OtherDoorKey"
     end
-    return "SiblingStructure" .. tostring(siblingIndex) .. "Key"
+    return "OtherDoor" .. tostring(siblingIndex) .. "Key"
 end
 
 local function roomControlAlias(record)

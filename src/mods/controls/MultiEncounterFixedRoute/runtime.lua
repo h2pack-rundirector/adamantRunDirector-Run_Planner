@@ -332,39 +332,6 @@ function runtime.create(fields, instance)
         data.endReadPass(instance)
     end
 
-    function control:selectedRowSnapshot(rowIndex)
-        local slot = self:slot(rowIndex)
-        if slot == nil then
-            return nil
-        end
-
-        local selection = form.selectedRoomSnapshotChoice({
-            data = data,
-            instance = instance,
-            rows = routeRows,
-            rowIndex = rowIndex,
-            slot = slot,
-        })
-
-        return {
-            rowIndex = rowIndex,
-            routeOrdinal = slot.routeOrdinal,
-            slotLabel = slot.label,
-            roleKey = selection.roleKey,
-            optionKey = selection.optionKey,
-            variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
-            rewards = {
-                row = {
-                    values = rewardSystem.readRewards(fields.Rewards, rowIndex),
-                    loot = rewardSystem.readRewardLoot(fields.Rewards, rowIndex),
-                    states = rewardSystem.readRewardStates(fields.Rewards, rowIndex),
-                    branchKey = fields.Rewards:read(rowIndex, rewardSystem.PREBOSS_BRANCH_ALIAS) or "",
-                },
-                encounter = selectedEncounterRewardSnapshots(fields, instance, routeRows, rowIndex),
-            },
-        }
-    end
-
     local function currentRoomNode(self, rowIndex)
         local slot = self:slot(rowIndex)
         if slot == nil then
@@ -413,6 +380,7 @@ function runtime.create(fields, instance)
 
         currentRoom.targetRowIndex = targetRowIndex
         currentRoom.targetRouteOrdinal = targetSlot.routeOrdinal
+        currentRoom.targetSlotLabel = targetSlot.label
         currentRoom.rewards = rewardNode(targetRowIndex)
         return currentRoom
     end
@@ -447,21 +415,6 @@ function runtime.create(fields, instance)
             biomeKey = instance.biomeKey,
             adapter = instance.biome.adapter,
             nodes = nodes,
-        }
-    end
-
-    function control:buildSelectedRowsSnapshot()
-        local rows = {}
-        for rowIndex = 1, self:rowCount() do
-            rows[#rows + 1] = self:selectedRowSnapshot(rowIndex)
-        end
-        return {
-            schema = "selectedRows.v1",
-            routeKey = instance.routeKey,
-            controlName = instance.name,
-            biomeKey = instance.biomeKey,
-            adapter = instance.biome.adapter,
-            rows = rows,
         }
     end
 
@@ -511,8 +464,6 @@ function runtime.create(fields, instance)
             return buildCompletionReport(self)
         elseif path == "selectedNodesSnapshot" then
             return self:buildSelectedNodesSnapshot()
-        elseif path == "selectedRowsSnapshot" then
-            return self:buildSelectedRowsSnapshot()
         end
         return nil
     end

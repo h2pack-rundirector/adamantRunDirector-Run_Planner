@@ -370,46 +370,6 @@ function runtime.create(fields, instance)
         data.endReadPass(instance)
     end
 
-    function control:selectedRowSnapshot(rowIndex)
-        local slot = self:slot(rowIndex)
-        if slot == nil then
-            return nil
-        end
-
-        local selection = form.selectedRoomSnapshotChoice({
-            data = data,
-            instance = instance,
-            rows = routeRows,
-            rowIndex = rowIndex,
-            slot = slot,
-        })
-        return {
-            rowIndex = rowIndex,
-            formAddress = formAddress.row(rowIndex),
-            routeOrdinal = slot.routeOrdinal,
-            slotKind = slot.kind or "biomeRow",
-            slotLabel = slot.label,
-            isBiomeEntry = slot.isBiomeEntry == true,
-            roleKey = selection.roleKey,
-            optionKey = selection.optionKey,
-            variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
-            roomKey = selection.option and selection.option.key or slot.roomKey,
-            hubDoorId = selection.option and selection.option.hubDoorId or slot.hubDoorId,
-            sideRooms = sideRoomSnapshots(instance, fields, routeRows, rowIndex, self:rewardsConfigured()),
-            topology = {
-                hub = slot.kind == "biomeRow" and hubTopology(instance) or nil,
-            },
-            rewards = {
-                row = {
-                    values = rewardSystem.readRewards(fields.Rewards, rowIndex),
-                    loot = rewardSystem.readRewardLoot(fields.Rewards, rowIndex),
-                    states = rewardSystem.readRewardStates(fields.Rewards, rowIndex),
-                    branchKey = fields.Rewards:read(rowIndex, rewardSystem.PREBOSS_BRANCH_ALIAS) or "",
-                },
-            },
-        }
-    end
-
     local function currentRoomNode(self, rowIndex)
         local slot = self:slot(rowIndex)
         if slot == nil then
@@ -484,24 +444,6 @@ function runtime.create(fields, instance)
         }
     end
 
-    function control:buildSelectedRowsSnapshot()
-        local rows = {}
-        self:beginReadPass()
-        for rowIndex = 1, self:rowCount() do
-            rows[#rows + 1] = self:selectedRowSnapshot(rowIndex)
-        end
-        self:endReadPass()
-        return {
-            schema = "selectedRows.v1",
-            routeKey = instance.routeKey,
-            controlName = instance.name,
-            biomeKey = instance.biomeKey,
-            adapter = instance.biome.adapter,
-            hub = hubTopology(instance),
-            rows = rows,
-        }
-    end
-
     local function buildCompletionReport(self)
         local completionInvalidRows = {}
         self:beginReadPass()
@@ -548,8 +490,6 @@ function runtime.create(fields, instance)
             return buildCompletionReport(self)
         elseif path == "selectedNodesSnapshot" then
             return self:buildSelectedNodesSnapshot()
-        elseif path == "selectedRowsSnapshot" then
-            return self:buildSelectedRowsSnapshot()
         end
         return nil
     end

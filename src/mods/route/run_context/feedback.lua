@@ -16,15 +16,7 @@ local function selectedRouteSnapshot(context, routeKey, biomeKey)
     if control == nil or control.read == nil then
         return nil
     end
-    local selectedNodes = control:read("selectedNodesSnapshot")
-    if selectedNodes ~= nil then
-        return selectedNodes
-    end
-    local selected = control:read("selectedRowsSnapshot")
-    if selected ~= nil then
-        return selected
-    end
-    return nil
+    return control:read("selectedNodesSnapshot")
 end
 
 local function selectedNpcSnapshot(context, routeKey)

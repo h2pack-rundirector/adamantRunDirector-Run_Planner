@@ -56,13 +56,13 @@ local function entryForFinding(byAddress, finding)
     return biomeEntries and biomeEntries[key] or nil
 end
 
-local function selectedSiblingStructure(entry, finding)
+local function selectedOtherDoor(entry, finding)
     local siblingIndex = math.floor(tonumber(finding and finding.siblingIndex) or 1)
     local topology = entry
         and entry.source
         and entry.source.topology
         or nil
-    local siblings = topology and (topology.otherDoors or topology.siblings)
+    local siblings = topology and topology.otherDoors
         or common.EMPTY_LIST
     local sibling = siblings[siblingIndex]
     return sibling and sibling.structureKey or nil
@@ -112,7 +112,7 @@ local function selectedEntryForFinding(history, byAddress, finding)
         end
     elseif finding.kind == "siblingCandidateInvalid" then
         local entry = finding.entry or entryForFinding(byAddress, finding)
-        if selectedSiblingStructure(entry, finding) == finding.structureKey then
+        if selectedOtherDoor(entry, finding) == finding.structureKey then
             return entry
         end
     elseif finding.kind == "variantCandidateInvalid" then

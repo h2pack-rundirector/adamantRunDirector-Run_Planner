@@ -17,7 +17,7 @@ local function hCombatTwoRewardRow(optionKey, lootKey)
         RoleKey = "Combat",
         OptionKey = optionKey,
         VariantKey = "TwoRewards",
-        SiblingStructureKey = "CombatCage2",
+        OtherDoorKey = "CombatCage2",
         Reward1Key = "Boon",
         Reward1LootKey = lootKey or "HestiaUpgrade",
         Reward2Key = "MaxHealthDrop",
@@ -63,7 +63,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageStorageMatchesFieldsRouteRo
     lu.assertEquals(#storage, 2)
     lu.assertEquals(storage[1].key, "Rooms")
     lu.assertEquals(storage[1].minRows, 6)
-    lu.assertEquals(storage[1].row[4].key, "SiblingStructureKey")
+    lu.assertEquals(storage[1].row[4].key, "OtherDoorKey")
     lu.assertEquals(storage[2].key, "Rewards")
     lu.assertEquals(storage[2].minRows, 6)
 
@@ -92,7 +92,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageStorageMatchesFieldsRouteRo
     })
 end
 
-function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureRendersInRoomsView()
+function TestRunPlannerFieldsCageRoute.testFieldsCageOtherDoorRendersInRoomsView()
     local catalog = loadCatalog()
     local template = loadFieldsCageTemplate()
     local instance = template.prepare({
@@ -149,7 +149,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRoomsViewEditsNextPickedDoo
     local row3RoleField = fields.Rooms:get(3, "RoleKey")
     local row3OptionField = fields.Rooms:get(3, "OptionKey")
     local row3VariantField = fields.Rooms:get(3, "VariantKey")
-    local row3SiblingField = fields.Rooms:get(3, "SiblingStructureKey")
+    local row3SiblingField = fields.Rooms:get(3, "OtherDoorKey")
     local row3RoleDropdowns = 0
     local row3OptionDropdowns = 0
     local row3VariantDropdowns = 0
@@ -206,7 +206,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageRoomsViewShowsMinibossOptio
     })
 end
 
-function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingStructureUsesCurrentRoomExits()
+function TestRunPlannerFieldsCageRoute.testFieldsCageOtherDoorUsesCurrentRoomExits()
     local catalog = loadCatalog()
     local template = loadFieldsCageTemplate()
     local instance = template.prepare({
@@ -253,8 +253,8 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingCountUsesPhysicalExi
         },
     })
 
-    lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 2), 1)
-    lu.assertEquals(data.activeSiblingStructureCount(instance, rows, 3), 1)
+    lu.assertEquals(data.activeOtherDoorCount(instance, rows, 2), 1)
+    lu.assertEquals(data.activeOtherDoorCount(instance, rows, 3), 1)
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageTerminalCombatRequiresCageCount()
@@ -302,7 +302,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageTerminalRowDoesNotExportHid
                 RoleKey = "Combat",
                 OptionKey = "H_Combat07",
                 VariantKey = "TwoRewards",
-                SiblingStructureKey = "CombatCage3",
+                OtherDoorKey = "CombatCage3",
                 Reward1Key = "Boon",
                 Reward1LootKey = "DemeterUpgrade",
                 Reward2Key = "StackUpgrade",
@@ -310,63 +310,13 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageTerminalRowDoesNotExportHid
         }), instance)
 
     local completion = control:read("completion")
-    local snapshot = control:buildSelectedRowsSnapshot()
+    local snapshot = control:read("selectedNodesSnapshot")
 
     lu.assertTrue(completion.valid)
-    lu.assertNil(snapshot.rows[5].topology.siblings[1])
+    lu.assertNil(snapshot.nodes[5].nextChoices.otherDoors)
 end
 
 
-function TestRunPlannerFieldsCageRoute.testFieldsCageEmitsDumbSelectedRowsSnapshot()
-    local catalog = loadCatalog()
-    local template = loadFieldsCageTemplate()
-    local instance = template.prepare({
-        name = "RouteH",
-        biome = catalog.lookup.H,
-    })
-    local control = template.createRuntime(routeFields({
-            {},
-            {
-                RoleKey = "Combat",
-                OptionKey = "H_Combat04",
-                VariantKey = "ThreeRewards",
-                SiblingStructureKey = "CombatCage3",
-                Reward1Key = "Boon",
-                Reward1LootKey = "PoseidonUpgrade",
-                Reward2Key = "HermesUpgrade",
-                Reward3Key = "StackUpgrade",
-            },
-            {
-                RoleKey = "Miniboss",
-                OptionKey = "H_MiniBoss01",
-                SiblingStructureKey = "CombatCage2",
-                Reward1Key = "ZeusUpgrade",
-            },
-        }), instance)
-
-    local snapshot = control:buildSelectedRowsSnapshot()
-
-    lu.assertEquals(snapshot.schema, "selectedRows.v1")
-    lu.assertEquals(snapshot.controlName, "RouteH")
-    lu.assertEquals(snapshot.biomeKey, "H")
-    lu.assertEquals(snapshot.adapter, "fieldsCageRoute")
-    lu.assertNil(snapshot.rows[1].valid)
-    lu.assertNil(snapshot.rows[1].roomTopology)
-    lu.assertEquals(snapshot.rows[1].roleKey, "Intro")
-    lu.assertEquals(snapshot.rows[1].optionKey, "H_Intro")
-    lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
-    lu.assertEquals(snapshot.rows[2].optionKey, "H_Combat04")
-    lu.assertEquals(snapshot.rows[2].variantKey, "ThreeRewards")
-    lu.assertEquals(snapshot.rows[2].topology.siblings[1].structureKey, "CombatCage3")
-    lu.assertEquals(snapshot.rows[2].rewards.row.values[1], "Boon")
-    lu.assertEquals(snapshot.rows[2].rewards.row.loot[1], "PoseidonUpgrade")
-    lu.assertEquals(snapshot.rows[2].rewards.row.values[2], "HermesUpgrade")
-    lu.assertEquals(snapshot.rows[2].rewards.row.values[3], "StackUpgrade")
-    lu.assertEquals(snapshot.rows[3].roleKey, "Miniboss")
-    lu.assertEquals(snapshot.rows[3].optionKey, "H_MiniBoss01")
-    lu.assertEquals(snapshot.rows[3].topology.siblings[1].structureKey, "CombatCage2")
-    lu.assertEquals(snapshot.rows[3].rewards.row.values[1], "ZeusUpgrade")
-end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageEmitsSelectedNodesSnapshot()
     local catalog = loadCatalog()
@@ -381,7 +331,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageEmitsSelectedNodesSnapshot(
                 RoleKey = "Combat",
                 OptionKey = "H_Combat04",
                 VariantKey = "ThreeRewards",
-                SiblingStructureKey = "CombatCage3",
+                OtherDoorKey = "CombatCage3",
                 Reward1Key = "Boon",
                 Reward1LootKey = "PoseidonUpgrade",
                 Reward2Key = "HermesUpgrade",
@@ -390,7 +340,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageEmitsSelectedNodesSnapshot(
             {
                 RoleKey = "Miniboss",
                 OptionKey = "H_MiniBoss01",
-                SiblingStructureKey = "CombatCage2",
+                OtherDoorKey = "CombatCage2",
                 Reward1Key = "ZeusUpgrade",
             },
         }), instance)
@@ -452,45 +402,6 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageReadSelectedNodesSnapshot()
     lu.assertEquals(snapshot.nodes[2].currentRoom.variantKey, "TwoRewards")
 end
 
-function TestRunPlannerFieldsCageRoute.testFieldsCageReadSelectedRowsSnapshot()
-    local catalog = loadCatalog()
-    local template = loadFieldsCageTemplate()
-    local instance = template.prepare({
-        name = "RouteH",
-        biome = catalog.lookup.H,
-    })
-    local control = template.createRuntime(routeFields({
-            {},
-            hCombatTwoRewardRow("H_Combat13"),
-        }), instance)
-
-    local snapshot = control:buildSelectedRowsSnapshot()
-
-    lu.assertEquals(snapshot.schema, "selectedRows.v1")
-    lu.assertEquals(snapshot.rows[2].roleKey, "Combat")
-    lu.assertEquals(snapshot.rows[2].optionKey, "H_Combat13")
-    lu.assertEquals(snapshot.rows[2].variantKey, "TwoRewards")
-end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageExportsDuplicateBoonSourcesInSameCageSet()
     local catalog = loadCatalog()
@@ -505,7 +416,7 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageExportsDuplicateBoonSources
                 RoleKey = "Combat",
                 OptionKey = "H_Combat04",
                 VariantKey = "ThreeRewards",
-                SiblingStructureKey = "CombatCage3",
+                OtherDoorKey = "CombatCage3",
                 Reward1Key = "Boon",
                 Reward1LootKey = "PoseidonUpgrade",
                 Reward2Key = "Boon",
@@ -513,12 +424,12 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageExportsDuplicateBoonSources
                 Reward3Key = "HermesUpgrade",
             },
         }), instance)
-    local snapshot = control:buildSelectedRowsSnapshot()
+    local snapshot = control:read("selectedNodesSnapshot")
 
-    lu.assertEquals(snapshot.rows[2].rewards.row.values[1], "Boon")
-    lu.assertEquals(snapshot.rows[2].rewards.row.loot[1], "PoseidonUpgrade")
-    lu.assertEquals(snapshot.rows[2].rewards.row.values[2], "Boon")
-    lu.assertEquals(snapshot.rows[2].rewards.row.loot[2], "PoseidonUpgrade")
+    lu.assertEquals(snapshot.nodes[2].rewards.row.values[1], "Boon")
+    lu.assertEquals(snapshot.nodes[2].rewards.row.loot[1], "PoseidonUpgrade")
+    lu.assertEquals(snapshot.nodes[2].rewards.row.values[2], "Boon")
+    lu.assertEquals(snapshot.nodes[2].rewards.row.loot[2], "PoseidonUpgrade")
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageExportsDuplicateNonBoonRewards()
@@ -534,15 +445,15 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageExportsDuplicateNonBoonRewa
                 RoleKey = "Combat",
                 OptionKey = "H_Combat04",
                 VariantKey = "TwoRewards",
-                SiblingStructureKey = "CombatCage2",
+                OtherDoorKey = "CombatCage2",
                 Reward1Key = "MaxHealthDrop",
                 Reward2Key = "MaxHealthDrop",
             },
         })
     local runtimeControl = template.createRuntime(fields, instance)
-    local snapshot = runtimeControl:buildSelectedRowsSnapshot()
-    lu.assertEquals(snapshot.rows[2].rewards.row.values[1], "MaxHealthDrop")
-    lu.assertEquals(snapshot.rows[2].rewards.row.values[2], "MaxHealthDrop")
+    local snapshot = runtimeControl:read("selectedNodesSnapshot")
+    lu.assertEquals(snapshot.nodes[2].rewards.row.values[1], "MaxHealthDrop")
+    lu.assertEquals(snapshot.nodes[2].rewards.row.values[2], "MaxHealthDrop")
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageValueStatesEchoBeforeThirdPick()
@@ -582,20 +493,20 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesUseTopolo
     })
     local rows = fakeRows({})
 
-    lu.assertTrue(data.siblingStructureStatus(instance, rows, 2).valid)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).H_MiniBoss01)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).H_MiniBoss02)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).Bridge)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).CombatCage2)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 2).CombatCage3)
+    lu.assertTrue(data.otherDoorStatus(instance, rows, 2).valid)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 2).H_MiniBoss01)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 2).H_MiniBoss02)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 2).Bridge)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 2).CombatCage2)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 2).CombatCage3)
 
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss01)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss02)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).Bridge)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 3).H_MiniBoss01)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 3).H_MiniBoss02)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 3).Bridge)
 
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).H_MiniBoss01)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).H_MiniBoss02)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 4).Bridge)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 4).H_MiniBoss01)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 4).H_MiniBoss02)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 4).Bridge)
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesDoNotOwnCombatCageCountMatching()
@@ -624,10 +535,10 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesDoNotOwnC
         },
     })
 
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, threeRewardRows, 3).CombatCage2)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, threeRewardRows, 3).CombatCage3)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, twoRewardRows, 3).CombatCage2)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, twoRewardRows, 3).CombatCage3)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, threeRewardRows, 3).CombatCage2)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, threeRewardRows, 3).CombatCage3)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, twoRewardRows, 3).CombatCage2)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, twoRewardRows, 3).CombatCage3)
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkUnresolvedForcedTopology()
@@ -648,9 +559,9 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesMarkUnres
         },
     })
 
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).CombatCage2)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).CombatCage3)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 5).CombatCage2)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 5).CombatCage3)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 5).H_MiniBoss02)
 end
 
 function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesDoNotOwnPlannedTopologyRooms()
@@ -670,8 +581,8 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageSiblingValueStatesDoNotOwnP
         },
     })
 
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss01)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 3).H_MiniBoss02)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss01)
-    lu.assertNil(data.siblingStructureValueStatesForRow(instance, rows, 5).H_MiniBoss02)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 3).H_MiniBoss01)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 3).H_MiniBoss02)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 5).H_MiniBoss01)
+    lu.assertNil(data.otherDoorValueStatesForRow(instance, rows, 5).H_MiniBoss02)
 end

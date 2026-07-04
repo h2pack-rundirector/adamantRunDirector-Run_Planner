@@ -214,52 +214,6 @@ function runtime.create(fields, instance)
         data.endReadPass(instance)
     end
 
-    function control:selectedRowSnapshot(rowIndex)
-        local slot = self:slot(rowIndex)
-        if slot == nil then
-            return nil
-        end
-
-        local selection = form.selectedRoomSnapshotChoice({
-            data = data,
-            instance = instance,
-            rows = routeRows,
-            rowIndex = rowIndex,
-            slot = slot,
-        })
-
-        local siblings = {}
-        for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
-            if data.shouldDrawSiblingStructure(instance, routeRows, rowIndex, siblingIndex) then
-                siblings[siblingIndex] = {
-                    structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance, siblingIndex)) or "",
-                    formAddress = formAddress.child(rowIndex, "otherDoor", siblingIndex),
-                }
-            end
-        end
-
-        return {
-            rowIndex = rowIndex,
-            roleKey = selection.roleKey,
-            optionKey = selection.optionKey,
-            variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
-            routeKindKey = data.readRouteKind(instance, routeRows, rowIndex),
-            nonGoalKindKey = data.readNonGoalKind(instance, routeRows, rowIndex),
-            topology = {
-                otherDoors = siblings,
-                siblings = siblings,
-            },
-            rewards = {
-                row = {
-                    values = rewardSystem.readRewards(fields.Rewards, rowIndex),
-                    loot = rewardSystem.readRewardLoot(fields.Rewards, rowIndex),
-                    states = rewardSystem.readRewardStates(fields.Rewards, rowIndex),
-                    branchKey = fields.Rewards:read(rowIndex, rewardSystem.PREBOSS_BRANCH_ALIAS) or "",
-                },
-            },
-        }
-    end
-
     local function currentRoomNode(self, rowIndex)
         local slot = self:slot(rowIndex)
         if slot == nil then
@@ -309,6 +263,7 @@ function runtime.create(fields, instance)
 
         currentRoom.targetRowIndex = targetRowIndex
         currentRoom.targetRouteOrdinal = targetSlot.routeOrdinal
+        currentRoom.targetSlotLabel = targetSlot.label
         currentRoom.rewards = rewardNode(targetRowIndex)
         return currentRoom
     end
@@ -320,11 +275,11 @@ function runtime.create(fields, instance)
         end
 
         local otherDoors = {}
-        for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
-            if data.shouldDrawSiblingStructure(instance, routeRows, rowIndex, siblingIndex) then
+        for siblingIndex = 1, data.maxOtherDoorCount(instance) do
+            if data.shouldDrawOtherDoor(instance, routeRows, rowIndex, siblingIndex) then
                 otherDoors[siblingIndex] = {
                     doorIndex = siblingIndex,
-                    structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance, siblingIndex)) or "",
+                    structureKey = fields.Rooms:read(rowIndex, data.otherDoorAlias(instance, siblingIndex)) or "",
                     formAddress = formAddress.child(rowIndex, "otherDoor", siblingIndex),
                 }
             end
@@ -341,6 +296,7 @@ function runtime.create(fields, instance)
         return {
             rowIndex = rowIndex,
             routeOrdinal = slot.routeOrdinal,
+            slotLabel = slot.label,
             currentRoom = currentRoomNode(self, rowIndex),
             nextChoices = {
                 picked = pickedNextChoice(self, rowIndex),
@@ -366,25 +322,6 @@ function runtime.create(fields, instance)
             adapter = instance.biome.adapter,
             inactiveAfterRowIndex = inactiveAfterRowIndex,
             nodes = nodes,
-        }
-    end
-
-    function control:buildSelectedRowsSnapshot()
-        local rows = {}
-        self:beginReadPass()
-        local inactiveAfterRowIndex = self:localInactiveAfterRowIndex()
-        for rowIndex = 1, self:rowCount() do
-            rows[#rows + 1] = self:selectedRowSnapshot(rowIndex)
-        end
-        self:endReadPass()
-        return {
-            schema = "selectedRows.v1",
-            routeKey = instance.routeKey,
-            controlName = instance.name,
-            biomeKey = instance.biomeKey,
-            adapter = instance.biome.adapter,
-            inactiveAfterRowIndex = inactiveAfterRowIndex,
-            rows = rows,
         }
     end
 
@@ -438,8 +375,6 @@ function runtime.create(fields, instance)
             return buildCompletionReport(self)
         elseif path == "selectedNodesSnapshot" then
             return self:buildSelectedNodesSnapshot()
-        elseif path == "selectedRowsSnapshot" then
-            return self:buildSelectedRowsSnapshot()
         end
         return nil
     end

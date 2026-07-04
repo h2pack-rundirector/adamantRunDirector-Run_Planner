@@ -144,8 +144,8 @@ end
 
 local function drawSiblingRewardClassDropdowns(draw, control, instance, rowIndex)
     local changed = false
-    local activeCount = data.activeSiblingStructureCount(instance, control:routeRows(), rowIndex)
-    for siblingIndex = 1, data.maxSiblingStructureCount(instance) do
+    local activeCount = data.activeOtherDoorCount(instance, control:routeRows(), rowIndex)
+    for siblingIndex = 1, data.maxOtherDoorCount(instance) do
         if drawSiblingRewardClassDropdown(draw, control, instance, rowIndex, siblingIndex, activeCount) then
             changed = true
         end

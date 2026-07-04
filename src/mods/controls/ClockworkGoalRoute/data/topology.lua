@@ -59,7 +59,7 @@ local function selectedRoomTopology(roleKey, option)
     return nil
 end
 
-local function siblingRoomTopology(option)
+local function otherDoorRoomTopology(option)
     if option == nil or option.key == nil or option.key == "" then
         return nil
     end
@@ -75,7 +75,7 @@ local function siblingRoomTopology(option)
     }
 end
 
-local function hasSelectableSiblingStructure(roleKey, option)
+local function hasSelectableOtherDoor(roleKey, option)
     return roleKey == "GoalCombat"
         or roleKey == "RewardCombat"
         or roleKey == "Story"
@@ -87,29 +87,29 @@ function topology.create(data)
     return topologyControls.create(data, {
         namespace = "clockwork",
         slots = slots,
-        topologyKind = "clockworkSiblingChoice",
+        topologyKind = "clockworkOtherDoorChoice",
         isFixedIdentityRow = data.isFixedIdentityRow,
-        hasSelectableSiblingStructure = function(_, _, _, roleKey, _, option)
-            return hasSelectableSiblingStructure(roleKey, option)
+        hasSelectableOtherDoor = function(_, _, _, roleKey, _, option)
+            return hasSelectableOtherDoor(roleKey, option)
         end,
         shouldValidateRow = function(instance, rows, rowIndex)
             local roleKey = data.resolveRole(instance, rows, rowIndex)
             local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
-            return hasSelectableSiblingStructure(roleKey, option)
+            return hasSelectableOtherDoor(roleKey, option)
         end,
         requiredCode = "clockwork_sibling_structure_required",
         requiredMessage = "Choose Other Door",
         unavailableCode = "clockwork_sibling_structure_unavailable",
-        unavailableMessage = function(sibling, siblingKey)
-            return "Other Door " .. tostring(sibling.label or siblingKey) .. " is not valid at this step"
+        unavailableMessage = function(otherDoor, otherDoorKey)
+            return "Other Door " .. tostring(otherDoor.label or otherDoorKey) .. " is not valid at this step"
         end,
         selectedTopology = function(instance, rows, rowIndex)
             local roleKey = data.resolveRole(instance, rows, rowIndex)
             local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
             return selectedRoomTopology(roleKey, option)
         end,
-        siblingTopology = function(_, _, _, _, _, option)
-            return siblingRoomTopology(option)
+        otherDoorTopology = function(_, _, _, _, _, option)
+            return otherDoorRoomTopology(option)
         end,
     })
 end

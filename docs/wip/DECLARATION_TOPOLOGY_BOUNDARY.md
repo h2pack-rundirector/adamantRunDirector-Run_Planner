@@ -2,6 +2,13 @@
 
 ## Progress
 
+- 2026-07-04: Slice 8 is implemented. Route context and all history adapters
+  now require `selectedNodes.v1` for biome history materialization. Runtime
+  row snapshots have been removed, history entries and validators use
+  `otherDoors` instead of `topology.sibling(s)`, and shared helper APIs now use
+  generated-door / other-door language. The remaining `sibling` names are
+  storage/test compatibility for fixed-linear other-door reward branches and
+  validator finding kinds.
 - 2026-07-04: Slice 7 is implemented for FixedLinear. FixedLinear now exposes
   `selectedNodes.v1` and its history adapter can consume node snapshots while
   keeping `selectedRows.v1` as temporary compatibility. Clockwork now follows
@@ -342,19 +349,19 @@ These are the main places where the current code violates the target boundary:
 
 - `*_topology.lua` files duplicate room facts such as availability, force,
   reward store, and labels from layout/role declarations.
-- `topology.siblingStructureControl` is UI-control language inside topology.
+- `topology.otherDoorControl` is UI-control language inside topology.
   Topology should define generated-door options; templates should decide how to
   render controls for them.
 - `FixedLinearRoute/data/topology.lua`,
   `FieldsCageRoute/data/topology.lua`, and
   `ClockworkGoalRoute/data/topology.lua` rebuild selected-room topology from
   form rows. This makes topology both a data resolver and a UI helper.
-- Runtime snapshots export `topology.siblings`, which forces adapters to stitch
-  current row other doors with next row picked room.
-- History adapters use `selectedRow`, `nextRow`, and `nextResolved` to
-  reconstruct generated topology.
-- Names like `sibling` and `SiblingStructureKey` remain domain language even
-  though the intended model is "other generated door."
+- History adapters still contain some local `selectedRow` / `nextRow` naming
+  from the old transition language even though their input contract is now
+  node snapshots.
+- FixedLinear still uses `SiblingRewardClassKey` storage aliases for other-door
+  reward branches. This is a storage vocabulary cleanup, not a topology
+  boundary blocker.
 
 ## Migration Plan
 
@@ -373,7 +380,7 @@ Start with H because it exposes the ambiguity most clearly.
 
 Add generated-door aliases without changing storage yet:
 
-- `generatedDoorControl` beside `siblingStructureControl`;
+- `generatedDoorControl` beside `otherDoorControl`;
 - `otherDoors` beside `siblings`;
 - `picked` remains the selected generated door;
 - `sibling` stays as compatibility only inside adapters/tests.
@@ -415,8 +422,10 @@ After all templates use nodes:
 
 - remove `topology.sibling`;
 - remove `topology.siblings`;
-- remove `SiblingStructureKey` naming where migration is not needed;
-- rename tests and helper APIs to generated-door / other-door language.
+- remove row-snapshot runtime/test compatibility;
+- rename tests and helper APIs to generated-door / other-door language;
+- defer storage alias cleanup such as `SiblingRewardClassKey` unless it becomes
+  an active UI/data-model hazard.
 
 ## Review Checklist
 

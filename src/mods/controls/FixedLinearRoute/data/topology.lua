@@ -92,7 +92,7 @@ local function deterministicTopologyNode(node, selected)
     return snapshot
 end
 
-local function hasSelectableSiblingStructure(roleKey, option)
+local function hasSelectableOtherDoor(roleKey, option)
     return roleKey == "Combat"
         or roleKey == "Fountain"
         or roleKey == "Story"
@@ -100,43 +100,43 @@ local function hasSelectableSiblingStructure(roleKey, option)
         or (roleKey == "Miniboss" and option ~= nil)
 end
 
-local function siblingRewardStoreForChoice(data, instance, rows, rowIndex, siblingIndex, option)
+local function otherDoorRewardStoreForChoice(data, instance, rows, rowIndex, otherDoorIndex, option)
     if data.siblingNeedsRewardClass(option) then
-        if not data.siblingStructureStatus(instance, rows, rowIndex).valid then
+        if not data.otherDoorStatus(instance, rows, rowIndex).valid then
             return rewardStoreForMajorMinorChoice(rows, rowIndex)
         end
-        local rewardClass = data.resolveSiblingRewardClass(instance, rows, rowIndex, siblingIndex)
+        local rewardClass = data.resolveSiblingRewardClass(instance, rows, rowIndex, otherDoorIndex)
         return rewardStoreForRewardClass(rewardClass)
     end
     return option and option.rewardStore or nil, option and option.rewardClass or nil
 end
 
-local function siblingRewardBranchLabel(activeSiblingCount, siblingIndex)
-    if (activeSiblingCount or 0) > 1 then
-        return "Other Door " .. tostring(siblingIndex) .. " Reward"
+local function otherDoorRewardBranchLabel(activeOtherDoorCount, otherDoorIndex)
+    if (activeOtherDoorCount or 0) > 1 then
+        return "Other Door " .. tostring(otherDoorIndex) .. " Reward"
     end
     return "Other Door Reward"
 end
 
-local function siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex, activeSiblingCount, option)
+local function otherDoorRoomTopology(data, instance, rows, rowIndex, otherDoorIndex, activeOtherDoorCount, option)
     if option == nil or option.key == nil or option.key == "" then
         return nil
     end
-    local rewardStore, rewardClass = siblingRewardStoreForChoice(data, instance, rows, rowIndex, siblingIndex, option)
+    local rewardStore, rewardClass = otherDoorRewardStoreForChoice(data, instance, rows, rowIndex, otherDoorIndex, option)
     local hasVisibleRewardBranch = option.rewardBranch ~= nil
-        and data.siblingStructureStatus(instance, rows, rowIndex).valid == true
+        and data.otherDoorStatus(instance, rows, rowIndex).valid == true
     return {
         structure = option.structure,
         roomKey = roomTopology.roomKey(option),
         rewardStore = rewardStore,
         rewardClass = rewardClass,
         rewardBranch = hasVisibleRewardBranch and option.rewardBranch or nil,
-        rewardBranchAddress = hasVisibleRewardBranch and data.siblingRewardClassAddress(instance, siblingIndex) or nil,
+        rewardBranchAddress = hasVisibleRewardBranch and data.siblingRewardClassAddress(instance, otherDoorIndex) or nil,
         rewardBranchControlAlias = hasVisibleRewardBranch
-            and data.siblingRewardClassAlias(instance, siblingIndex)
+            and data.siblingRewardClassAlias(instance, otherDoorIndex)
             or nil,
         rewardBranchLabel = hasVisibleRewardBranch
-            and siblingRewardBranchLabel(activeSiblingCount, siblingIndex)
+            and otherDoorRewardBranchLabel(activeOtherDoorCount, otherDoorIndex)
             or nil,
         eligibleRewardTypes = option.eligibleRewardTypes,
         sameExitRewardCount = option.sameExitRewardCount,
@@ -144,9 +144,9 @@ local function siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex,
 end
 
 function topology.create(data)
-    local function implicitSiblingStructure(instance, rows, rowIndex)
-        if data.siblingTopologyStatus(instance, rows, rowIndex).valid ~= true
-            or data.siblingStructureStatus(instance, rows, rowIndex).valid == true
+    local function implicitOtherDoor(instance, rows, rowIndex)
+        if data.otherDoorTopologyStatus(instance, rows, rowIndex).valid ~= true
+            or data.otherDoorStatus(instance, rows, rowIndex).valid == true
         then
             return nil
         end
@@ -156,7 +156,7 @@ function topology.create(data)
             return nil
         end
 
-        local policy = instance.siblingStructurePolicy
+        local policy = instance.otherDoorPolicy
         return policy and policy.optionsByKey and policy.optionsByKey.Combat or nil
     end
 
@@ -175,21 +175,20 @@ function topology.create(data)
         end
 
         local selected = deterministicTopologyNode(pair.nodesByRoomKey and pair.nodesByRoomKey[roomKey], true)
-        local siblings = {}
+        local otherDoors = {}
         for _, node in ipairs(pair.nodes or {}) do
             if node.roomKey ~= roomKey then
-                siblings[#siblings + 1] = deterministicTopologyNode(node)
+                otherDoors[#otherDoors + 1] = deterministicTopologyNode(node)
             end
         end
-        if selected == nil or siblings[1] == nil then
+        if selected == nil or otherDoors[1] == nil then
             return nil
         end
 
         return {
             kind = "fixedLinearSiblingChoice",
             selected = selected,
-            sibling = siblings[1],
-            siblings = siblings,
+            otherDoors = otherDoors,
         }
     end
 
@@ -200,28 +199,28 @@ function topology.create(data)
         topologyKind = "fixedLinearSiblingChoice",
         isFixedIdentityRow = data.isFixedIdentityRow,
         deterministicTopology = deterministicRoomTopology,
-        implicitSiblingStructure = function(_, instance, rows, rowIndex)
-            return implicitSiblingStructure(instance, rows, rowIndex)
+        implicitOtherDoor = function(_, instance, rows, rowIndex)
+            return implicitOtherDoor(instance, rows, rowIndex)
         end,
-        hasSelectableSiblingStructure = function(_, _, _, roleKey, _, option)
-            return hasSelectableSiblingStructure(roleKey, option)
+        hasSelectableOtherDoor = function(_, _, _, roleKey, _, option)
+            return hasSelectableOtherDoor(roleKey, option)
         end,
         shouldValidateRow = function(instance, rows, rowIndex)
             local roleKey = data.resolveRole(instance, rows, rowIndex)
             local _, option = data.resolveOption(instance, rows, rowIndex, roleKey)
-            return hasSelectableSiblingStructure(roleKey, option)
+            return hasSelectableOtherDoor(roleKey, option)
         end,
         requiredCode = "fixed_sibling_structure_required",
         requiredMessage = "Choose Other Door",
         unavailableCode = "fixed_sibling_structure_unavailable",
-        unavailableMessage = function(sibling, siblingKey)
-            return "Other Door " .. tostring(sibling.label or siblingKey) .. " is not valid at this depth"
+        unavailableMessage = function(otherDoor, otherDoorKey)
+            return "Other Door " .. tostring(otherDoor.label or otherDoorKey) .. " is not valid at this depth"
         end,
         selectedTopology = function(instance, rows, rowIndex)
             return selectedRoomTopologyForRow(data, instance, rows, rowIndex)
         end,
-        siblingTopology = function(instance, rows, rowIndex, siblingIndex, activeSiblingCount, option)
-            return siblingRoomTopology(data, instance, rows, rowIndex, siblingIndex, activeSiblingCount, option)
+        otherDoorTopology = function(instance, rows, rowIndex, otherDoorIndex, activeOtherDoorCount, option)
+            return otherDoorRoomTopology(data, instance, rows, rowIndex, otherDoorIndex, activeOtherDoorCount, option)
         end,
     })
 end

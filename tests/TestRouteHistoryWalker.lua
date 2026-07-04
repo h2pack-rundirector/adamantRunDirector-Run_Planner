@@ -45,8 +45,7 @@ local function buildTemplateHistory(catalog, routeKey, biomeKey, template, rows,
         biome = catalog.lookup[biomeKey],
     })
     local control = template.createRuntime(h.routeFields(rows, encounterRewardRows), instance)
-    local selectedSnapshot = control.read and control:read("selectedNodesSnapshot")
-        or control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
     return historyBuilder.build({
         route = {
             key = routeKey,
@@ -89,14 +88,14 @@ local function fullFErebusRows()
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat04",
-            SiblingStructureKey = "F_Story01",
+            OtherDoorKey = "F_Story01",
             Reward1Key = "Major",
             Reward2Key = "StackUpgrade",
         },
         {
             RoleKey = "Combat",
             OptionKey = "F_Combat05",
-            SiblingStructureKey = "Combat",
+            OtherDoorKey = "Combat",
             Reward1Key = "Major",
             Reward2Key = "Boon",
             Reward3Key = "ZeusUpgrade",
@@ -156,19 +155,19 @@ local function fullHFieldsRows()
             RoleKey = "Combat",
             OptionKey = "H_Combat09",
             VariantKey = "TwoRewards",
-            SiblingStructureKey = "CombatCage2",
+            OtherDoorKey = "CombatCage2",
             Reward1Key = "Boon",
             Reward1LootKey = "HestiaUpgrade",
             Reward2Key = "WeaponUpgrade",
         },
         {
             RoleKey = "Bridge",
-            SiblingStructureKey = "H_MiniBoss02",
+            OtherDoorKey = "H_MiniBoss02",
         },
         {
             RoleKey = "Miniboss",
             OptionKey = "H_MiniBoss01",
-            SiblingStructureKey = "CombatCage2",
+            OtherDoorKey = "CombatCage2",
             Reward1Key = "ZeusUpgrade",
         },
         {

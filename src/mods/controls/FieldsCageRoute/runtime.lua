@@ -191,52 +191,6 @@ function runtime.create(fields, instance)
         data.endReadPass(instance)
     end
 
-    function control:selectedRowSnapshot(rowIndex)
-        local slot = self:slot(rowIndex)
-        if slot == nil then
-            return nil
-        end
-
-        local selection = form.selectedRoomSnapshotChoice({
-            data = data,
-            instance = instance,
-            rows = routeRows,
-            rowIndex = rowIndex,
-            slot = slot,
-        })
-
-        local siblings = {}
-        if form.shouldValidateCompletionTopology(slot, self:slot(rowIndex + 1))
-            and data.shouldDrawSiblingStructure(instance, routeRows, rowIndex)
-        then
-            siblings[1] = {
-                structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance)) or "",
-                formAddress = formAddress.child(rowIndex, "otherDoor", 1),
-            }
-        end
-
-        return {
-            rowIndex = rowIndex,
-            routeOrdinal = slot.routeOrdinal,
-            slotLabel = slot.label,
-            roleKey = selection.roleKey,
-            optionKey = selection.optionKey,
-            variantKey = fields.Rooms:read(rowIndex, "VariantKey") or "",
-            topology = {
-                otherDoors = siblings,
-                siblings = siblings,
-            },
-            rewards = {
-                row = {
-                    values = rewardSystem.readRewards(fields.Rewards, rowIndex),
-                    loot = rewardSystem.readRewardLoot(fields.Rewards, rowIndex),
-                    states = rewardSystem.readRewardStates(fields.Rewards, rowIndex),
-                    branchKey = fields.Rewards:read(rowIndex, rewardSystem.PREBOSS_BRANCH_ALIAS) or "",
-                },
-            },
-        }
-    end
-
     local function currentRoomNode(self, rowIndex)
         local slot = self:slot(rowIndex)
         if slot == nil then
@@ -272,13 +226,15 @@ function runtime.create(fields, instance)
         end
 
         currentRoom.targetRowIndex = targetRowIndex
+        currentRoom.targetRouteOrdinal = targetSlot.routeOrdinal
+        currentRoom.targetSlotLabel = targetSlot.label
         return currentRoom
     end
 
     local function otherDoorChoices(self, rowIndex)
         local slot = self:slot(rowIndex)
         if not form.shouldValidateCompletionTopology(slot, self:slot(rowIndex + 1))
-            or not data.shouldDrawSiblingStructure(instance, routeRows, rowIndex)
+            or not data.shouldDrawOtherDoor(instance, routeRows, rowIndex)
         then
             return nil
         end
@@ -286,7 +242,7 @@ function runtime.create(fields, instance)
         return {
             {
                 doorIndex = 1,
-                structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance)) or "",
+                structureKey = fields.Rooms:read(rowIndex, data.otherDoorAlias(instance)) or "",
                 formAddress = formAddress.child(rowIndex, "otherDoor", 1),
             },
         }
@@ -301,6 +257,7 @@ function runtime.create(fields, instance)
         return {
             rowIndex = rowIndex,
             routeOrdinal = slot.routeOrdinal,
+            slotLabel = slot.label,
             currentRoom = currentRoomNode(self, rowIndex),
             nextChoices = {
                 picked = pickedNextChoice(self, rowIndex),
@@ -329,21 +286,6 @@ function runtime.create(fields, instance)
             biomeKey = instance.biomeKey,
             adapter = instance.biome.adapter,
             nodes = nodes,
-        }
-    end
-
-    function control:buildSelectedRowsSnapshot()
-        local rows = {}
-        for rowIndex = 1, self:rowCount() do
-            rows[#rows + 1] = self:selectedRowSnapshot(rowIndex)
-        end
-        return {
-            schema = "selectedRows.v1",
-            routeKey = instance.routeKey,
-            controlName = instance.name,
-            biomeKey = instance.biomeKey,
-            adapter = instance.biome.adapter,
-            rows = rows,
         }
     end
 
@@ -393,8 +335,6 @@ function runtime.create(fields, instance)
             return buildCompletionReport(self)
         elseif path == "selectedNodesSnapshot" then
             return self:buildSelectedNodesSnapshot()
-        elseif path == "selectedRowsSnapshot" then
-            return self:buildSelectedRowsSnapshot()
         end
         return nil
     end
