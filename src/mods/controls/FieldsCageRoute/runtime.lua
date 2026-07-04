@@ -211,6 +211,7 @@ function runtime.create(fields, instance)
         then
             siblings[1] = {
                 structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance)) or "",
+                formAddress = formAddress.child(rowIndex, "otherDoor", 1),
             }
         end
 

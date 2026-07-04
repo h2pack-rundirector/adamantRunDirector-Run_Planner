@@ -32,7 +32,13 @@ local function siblingSlotCount(selectedRow)
     return #(topology and (topology.otherDoors or topology.siblings) or EMPTY_LIST)
 end
 
-local function appendCandidate(candidates, siblingIndex, option, opts)
+local function siblingDoor(selectedRow, siblingIndex)
+    local topology = selectedRow and selectedRow.topology or nil
+    local doors = topology and (topology.otherDoors or topology.siblings) or EMPTY_LIST
+    return doors[siblingIndex]
+end
+
+local function appendCandidate(candidates, siblingIndex, option, opts, door)
     candidates[#candidates + 1] = {
         siblingIndex = siblingIndex,
         structureKey = option.key,
@@ -52,6 +58,9 @@ local function appendCandidate(candidates, siblingIndex, option, opts)
         isClockworkGoal = option.isClockworkGoal == true,
         isPreboss = option.isPreboss == true,
         availabilityContext = copyValue(opts and opts.availabilityContext),
+        targetRowIndex = door and door.formAddress and door.formAddress.rowIndex or nil,
+        targetRouteOrdinal = opts and opts.targetRouteOrdinal or nil,
+        targetFormAddress = copyValue(door and door.formAddress or nil),
     }
 end
 
@@ -64,8 +73,9 @@ function siblingCandidates.forBiomeRow(biome, selectedRow, opts)
     local slotCount = siblingSlotCount(selectedRow)
     local candidates = {}
     for siblingIndex = 1, slotCount do
+        local door = siblingDoor(selectedRow, siblingIndex)
         for _, option in ipairs(options) do
-            appendCandidate(candidates, siblingIndex, option, opts)
+            appendCandidate(candidates, siblingIndex, option, opts, door)
         end
     end
     return candidates

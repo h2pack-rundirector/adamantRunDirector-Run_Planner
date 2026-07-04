@@ -6,6 +6,7 @@ local common = deps.common
 local rewardSystem = deps.rewards
 local rewardRatio = deps.rewardRatio
 local form = deps.form
+local formAddress = import("mods/route/history/form_address.lua")
 
 local runtime = {}
 
@@ -241,6 +242,7 @@ function runtime.create(fields, instance)
             if data.shouldDrawSiblingStructure(instance, routeRows, rowIndex, siblingIndex) then
                 siblings[siblingIndex] = {
                     structureKey = fields.Rooms:read(rowIndex, data.siblingStructureAlias(instance, siblingIndex)) or "",
+                    formAddress = formAddress.child(rowIndex, "otherDoor", siblingIndex),
                 }
             end
         end

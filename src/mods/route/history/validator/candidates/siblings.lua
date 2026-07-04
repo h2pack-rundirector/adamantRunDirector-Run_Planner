@@ -162,7 +162,11 @@ local function pickedCandidateClosesGroup(history, entry, topology, roomKey)
 end
 
 local function appendFinding(target, entry, candidate, reason)
-    target[#target + 1] = findings.siblingCandidateInvalid(entry, candidate, reason)
+    target[#target + 1] = findings.siblingCandidateInvalid(entry, candidate, reason, {
+        rowIndex = candidate and candidate.targetRowIndex or nil,
+        routeOrdinal = candidate and candidate.targetRouteOrdinal or nil,
+        formAddress = candidate and candidate.targetFormAddress or nil,
+    })
 end
 
 local function appendStructuralFindings(target, history, entry, biome, candidate)

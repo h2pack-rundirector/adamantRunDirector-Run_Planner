@@ -474,6 +474,7 @@ local function siblingTopology(context, selectedRow)
         siblingIndex = 1,
         key = option.key,
         structureKey = structureKey,
+        formAddress = otherDoor.formAddress,
         structure = option.structure,
         roomKey = option.roomKey,
         rewardStore = option.rewardStore,

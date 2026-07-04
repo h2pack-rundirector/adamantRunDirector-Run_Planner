@@ -1,5 +1,3 @@
 local common = (... or {}).common
 
-return common.createAdapter({
-    renderRecord = common.nextChoiceRenderRecord,
-})
+return common.createAdapter()

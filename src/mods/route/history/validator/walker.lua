@@ -338,6 +338,7 @@ end
 local function appendSiblingCandidates(step)
     step.candidates.siblings = siblingCandidates.forBiomeRow(step.biome, step.source, {
         availabilityContext = step.phases.offer,
+        targetRouteOrdinal = step.entry and step.entry.routeOrdinal or nil,
     })
 end
 

@@ -295,7 +295,11 @@ local function siblingTopology(context, selectedRow)
         return nil
     end
     return {
+        branch = "sibling",
+        siblingIndex = 1,
         key = option.key,
+        structureKey = structureKey,
+        formAddress = otherDoor.formAddress,
         structure = option.structure,
         roomKey = option.roomKey,
         rewardStore = option.rewardStore,

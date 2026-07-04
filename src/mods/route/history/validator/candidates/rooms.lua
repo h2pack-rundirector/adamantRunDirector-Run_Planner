@@ -111,6 +111,9 @@ local function appendNextRoomTagsFinding(target, history, entry, candidate)
     target[#target + 1] = findings.roomCandidateInvalid(entry, candidate, "previous_room_next_tags", {
         controlAlias = "OptionKey",
         controlValue = candidate and candidate.optionKey or nil,
+        rowIndex = candidate and candidate.targetRowIndex or nil,
+        routeOrdinal = candidate and candidate.targetRouteOrdinal or nil,
+        formAddress = candidate and candidate.targetFormAddress or nil,
         requiredTags = requiredTags,
     })
 end
@@ -123,6 +126,9 @@ local function appendCapFindings(target, history, entry, candidate)
         target[#target + 1] = findings.roomCandidateInvalid(entry, candidate, "role_limit", {
             controlAlias = "RoleKey",
             controlValue = candidate.roleKey,
+            rowIndex = candidate.targetRowIndex,
+            routeOrdinal = candidate.targetRouteOrdinal,
+            formAddress = candidate.targetFormAddress,
         })
     end
 
@@ -133,6 +139,9 @@ local function appendCapFindings(target, history, entry, candidate)
         target[#target + 1] = findings.roomCandidateInvalid(entry, candidate, "option_limit", {
             controlAlias = "OptionKey",
             controlValue = candidate.optionKey,
+            rowIndex = candidate.targetRowIndex,
+            routeOrdinal = candidate.targetRouteOrdinal,
+            formAddress = candidate.targetFormAddress,
         })
     end
 end

@@ -450,6 +450,18 @@ local function firstFinding(result, kind, field, expected)
     return nil
 end
 
+local function firstFindingAtRow(result, kind, field, expected, rowIndex)
+    for _, finding in ipairs(result and result.findings or {}) do
+        if finding.kind == kind
+            and finding.rowIndex == rowIndex
+            and (field == nil or finding[field] == expected)
+        then
+            return finding
+        end
+    end
+    return nil
+end
+
 function TestRunPlannerRouteHistoryValidator.testNpcTargetsComeFromRouteHistoryRooms()
     local catalog = h.loadCatalog()
     local history = routeHistory.create()
@@ -665,8 +677,8 @@ function TestRunPlannerRouteHistoryValidator.testValidatorRejectsDuplicateConcre
     lu.assertEquals(states.F_Combat02, valueStates.INVALID)
     lu.assertEquals(feedback.route.primary.rowIndex, 3)
     lu.assertEquals(feedback.route.primary.routeOrdinal, 2)
-    lu.assertEquals(feedback.route.primary.renderRowIndex, 2)
-    lu.assertEquals(feedback.route.primary.renderRouteOrdinal, 1)
+    lu.assertNil(feedback.route.primary.renderRowIndex)
+    lu.assertNil(feedback.route.primary.renderRouteOrdinal)
     lu.assertEquals(feedback.route.primary.locationLabel, "Erebus Depth 2")
     lu.assertEquals(feedback.route.primary.message, "C02 (2 Exits) is already generated")
 end
@@ -952,6 +964,9 @@ function TestRunPlannerRouteHistoryValidator.testFixedLinearPickedDoorRoleUsesNe
         biomeLookup = catalog.lookup,
     })
     local feedback = historyFeedback.fromFindings(result.findings)
+    local finding = firstFindingAtRow(result, "roomCandidateInvalid", "roleKey", "Story", 5)
+    lu.assertNotNil(finding)
+    lu.assertEquals(finding.formAddress.rowIndex, 5)
 
     local depthThreePickedRoleStates = historyFeedback.valueStatesForControl(feedback, "F", 5, "RoleKey")
     lu.assertEquals(depthThreePickedRoleStates.Story, valueStates.HIDDEN)
@@ -1112,6 +1127,9 @@ function TestRunPlannerRouteHistoryValidator.testCandidateValidatorEmitsSiblingF
     lu.assertNotNil(finding)
     lu.assertEquals(finding.reason, "biome_depth_unavailable")
     lu.assertEquals(finding.siblingIndex, 1)
+    lu.assertEquals(finding.formAddress.rowIndex, 2)
+    lu.assertEquals(finding.formAddress.childKind, "otherDoor")
+    lu.assertEquals(finding.formAddress.childIndex, 1)
 
     local feedback = historyFeedback.fromFindings(result.findings)
     local states = historyFeedback.valueStatesForControl(feedback, "F", finding.rowIndex, "SiblingStructureKey")

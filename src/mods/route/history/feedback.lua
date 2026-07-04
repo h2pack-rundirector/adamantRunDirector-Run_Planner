@@ -133,45 +133,6 @@ local function adapterFor(args, biomeKey)
     return biome and feedbackAdapters[biome.adapter] or feedbackAdapters.fixedLinear
 end
 
-local function copyRecord(record)
-    local copy = {}
-    for key, value in pairs(record or {}) do
-        copy[key] = value
-    end
-    return copy
-end
-
-local function applyRenderRecord(args, record)
-    local targetRecord = record and (record.targetFinding or record) or nil
-    if targetRecord ~= nil and targetRecord.completion == true then
-        return record
-    end
-    local biomeKey = targetRecord and targetRecord.biomeKey or record and record.biomeKey or nil
-    local biome = args and args.biomeLookup and args.biomeLookup[biomeKey] or nil
-    if biome == nil then
-        return record
-    end
-    local adapter = adapterFor(args, biomeKey)
-    local renderedTarget = adapter and adapter.renderRecord and adapter.renderRecord(targetRecord) or targetRecord
-    if renderedTarget == targetRecord or renderedTarget == nil then
-        return record
-    end
-
-    local rendered = copyRecord(record)
-    rendered.renderRowIndex = renderedTarget.renderRowIndex
-    rendered.renderRouteOrdinal = renderedTarget.renderRouteOrdinal
-    rendered.renderTabKey = renderedTarget.renderTabKey
-    return rendered
-end
-
-local function renderInvalids(args)
-    local rendered = {}
-    for index, invalid in ipairs(args.invalids or EMPTY_LIST) do
-        rendered[index] = applyRenderRecord(args, invalid)
-    end
-    return rendered
-end
-
 local function translate(args, feedbackState)
     local grouped = recordsByBiome(args)
     for biomeKey, records in pairs(grouped) do
@@ -188,7 +149,7 @@ function feedback.fromResult(args)
         route = routeFeedback.fromResult({
             route = args.route,
             biomeLookup = args.biomeLookup,
-            invalids = renderInvalids(args),
+            invalids = args.invalids,
         }),
         byBiome = {},
     }

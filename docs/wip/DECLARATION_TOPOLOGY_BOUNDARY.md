@@ -2,6 +2,9 @@
 
 ## Progress
 
+- 2026-07-03: Slice 6 is implemented. Candidate findings now carry generated
+  picked-door and other-door form addresses through feedback, and the old
+  adapter `nextChoiceRenderRecord` row-shift hook has been removed.
 - 2026-07-03: Slice 5 is implemented. Generated picked-door candidate
   stamping now comes from canonical topology exits carrying picked-door target
   metadata, so Fixed/Fields/Clockwork use the same validator walker path.
@@ -341,8 +344,6 @@ These are the main places where the current code violates the target boundary:
   reconstruct generated topology.
 - The validator walker has `adapterUsesPickedDoorCandidates`, so candidate
   generation is adapter-specific instead of node-topology driven.
-- Feedback uses `nextChoiceRenderRecord` to shift picked-next findings back to
-  the previous row. Form addresses should make this unnecessary.
 - Names like `sibling` and `SiblingStructureKey` remain domain language even
   though the intended model is "other generated door."
 
