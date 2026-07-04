@@ -379,8 +379,25 @@ local function resolveRow(context, selectedRow)
     }
 end
 
-function multiEncounterFixed.build(args)
-    local context = {
+local function selectedRowFromNode(node)
+    local currentRoom = node and node.currentRoom or nil
+    if currentRoom == nil then
+        return nil
+    end
+    return {
+        rowIndex = node.rowIndex,
+        routeOrdinal = node.routeOrdinal,
+        slotLabel = node.slotLabel,
+        roleKey = currentRoom.roleKey,
+        optionKey = currentRoom.optionKey,
+        variantKey = currentRoom.variantKey,
+        formAddress = currentRoom.formAddress,
+        rewards = node.rewards,
+    }
+end
+
+local function buildContext(args)
+    return {
         routeKey = args.route and args.route.key or args.snapshot.routeKey,
         routeBiomeIndex = args.routeBiomeIndex,
         history = args.history,
@@ -396,13 +413,15 @@ function multiEncounterFixed.build(args)
             biomeEncounterDepth = BIOME_ENCOUNTER_DEPTH_START,
         },
     }
+end
 
+local function buildRows(context, rows)
     local resolvedRows = {}
-    for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
+    for index, selectedRow in ipairs(rows or EMPTY_LIST) do
         resolvedRows[index] = resolveRow(context, selectedRow)
     end
 
-    for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
+    for index, selectedRow in ipairs(rows or EMPTY_LIST) do
         local resolved = resolvedRows[index]
         materializeRoom.stepRoom(context, selectedRow, resolved, {
             reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards),
@@ -416,6 +435,23 @@ function multiEncounterFixed.build(args)
                 attachShipCombat(context, roomEntry, selectedRow, resolved)
             end,
         })
+    end
+end
+
+local function buildFromNodes(args, context)
+    local rows = {}
+    for index, node in ipairs(args.snapshot.nodes or EMPTY_LIST) do
+        rows[index] = selectedRowFromNode(node)
+    end
+    buildRows(context, rows)
+end
+
+function multiEncounterFixed.build(args)
+    local context = buildContext(args)
+    if args.snapshot.schema == "selectedNodes.v1" then
+        buildFromNodes(args, context)
+    else
+        buildRows(context, args.snapshot.rows)
     end
 end
 

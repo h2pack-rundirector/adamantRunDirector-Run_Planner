@@ -856,7 +856,7 @@ function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedBuildsThessaly
         h.routeFields(fullOThessalyRows(), fullOThessalyEncounterRewardRows()),
         instance
     )
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = {
@@ -918,7 +918,7 @@ function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedTracksShipEnco
         h.routeFields(fullOThessalyRows(), fullOThessalyEncounterRewardRows()),
         instance
     )
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = {
@@ -958,7 +958,7 @@ function TestRunPlannerRouteHistoryBuilder.testMultiEncounterFixedEntriesCarryEn
         h.routeFields(fullOThessalyRows(), fullOThessalyEncounterRewardRows()),
         instance
     )
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = {

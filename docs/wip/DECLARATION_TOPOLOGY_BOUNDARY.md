@@ -6,6 +6,10 @@
   `selectedNodes.v1` and its history adapter can consume node snapshots while
   keeping `selectedRows.v1` as temporary compatibility. Clockwork now follows
   the same node snapshot path.
+- 2026-07-04: Slice 7 now covers MultiEncounter/O as well. O exposes
+  `selectedNodes.v1`; its adapter consumes current-room nodes while keeping
+  ship combat/wheel topology as current-room data rather than generated-door
+  topology.
 - 2026-07-03: Slice 6 is implemented. Candidate findings now carry generated
   picked-door and other-door form addresses through feedback, and the old
   adapter `nextChoiceRenderRecord` row-shift hook has been removed.
