@@ -420,6 +420,46 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearEmitsDumbSelectedRowsS
     lu.assertEquals(snapshot.rows[2].rewards.sibling[1].rewardClassKey, "Major")
 end
 
+function TestRunPlannerRouteHistoryBuilder.testFixedLinearEmitsSelectedNodesSnapshot()
+    local catalog = h.loadCatalog()
+    local template = h.loadFixedLinearTemplate()
+    local instance = template.prepare({
+        name = "RouteF",
+        biome = catalog.lookup.F,
+    })
+    local control = template.createRuntime(h.routeFields({
+        {
+            OptionKey = "F_Opening01",
+            Reward1Key = "SpellDrop",
+        },
+        {
+            RoleKey = "Combat",
+            OptionKey = "F_Combat02",
+            SiblingStructureKey = "Combat",
+            Reward1Key = "Major",
+            Reward2Key = "MaxHealthDrop",
+            SiblingRewardClassKey = "Major",
+        },
+    }), instance)
+
+    local snapshot = control:read("selectedNodesSnapshot")
+
+    lu.assertEquals(snapshot.schema, "selectedNodes.v1")
+    lu.assertEquals(snapshot.controlName, "RouteF")
+    lu.assertEquals(snapshot.biomeKey, "F")
+    lu.assertEquals(snapshot.adapter, "fixedLinear")
+    lu.assertEquals(snapshot.nodes[1].currentRoom.optionKey, "F_Opening01")
+    lu.assertEquals(snapshot.nodes[1].nextChoices.picked.targetRowIndex, 2)
+    lu.assertEquals(snapshot.nodes[1].nextChoices.picked.optionKey, "F_Combat02")
+    lu.assertEquals(snapshot.nodes[1].nextChoices.picked.rewards.row.values[1], "Major")
+    lu.assertNil(snapshot.nodes[1].nextChoices.otherDoors)
+    lu.assertEquals(snapshot.nodes[2].currentRoom.optionKey, "F_Combat02")
+    lu.assertEquals(snapshot.nodes[2].nextChoices.otherDoors[1].structureKey, "Combat")
+    lu.assertEquals(snapshot.nodes[2].nextChoices.otherDoors[1].formAddress.childKind, "otherDoor")
+    lu.assertEquals(snapshot.nodes[2].rewards.row.values[1], "Major")
+    lu.assertEquals(snapshot.nodes[2].rewards.sibling[1].rewardClassKey, "Major")
+end
+
 function TestRunPlannerRouteHistoryBuilder.testFixedLinearBuilderResolvesRoomFactsFromDeclarations()
     local catalog = h.loadCatalog()
     local template = h.loadFixedLinearTemplate()
@@ -503,7 +543,7 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearBuildsFullDeclaredFEre
         biome = catalog.lookup.F,
     })
     local control = template.createRuntime(h.routeFields(fullFErebusRows()), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = catalog.routes.lookup.Underworld,
@@ -540,7 +580,7 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearRoomEntriesCarryNextCh
         biome = catalog.lookup.F,
     })
     local control = template.createRuntime(h.routeFields(fullFErebusRows()), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = catalog.routes.lookup.Underworld,
@@ -585,7 +625,7 @@ function TestRunPlannerRouteHistoryBuilder.testFixedLinearPrebossBranchesGenerat
         biome = catalog.lookup.F,
     })
     local control = template.createRuntime(h.routeFields(fullFErebusRows()), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = catalog.routes.lookup.Underworld,

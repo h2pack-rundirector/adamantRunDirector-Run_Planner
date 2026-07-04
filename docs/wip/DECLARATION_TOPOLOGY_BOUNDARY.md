@@ -2,6 +2,10 @@
 
 ## Progress
 
+- 2026-07-04: Slice 7 is implemented for FixedLinear. FixedLinear now exposes
+  `selectedNodes.v1` and its history adapter can consume node snapshots while
+  keeping `selectedRows.v1` as temporary compatibility. Clockwork is still
+  pending.
 - 2026-07-03: Slice 6 is implemented. Candidate findings now carry generated
   picked-door and other-door form addresses through feedback, and the old
   adapter `nextChoiceRenderRecord` row-shift hook has been removed.
@@ -342,8 +346,6 @@ These are the main places where the current code violates the target boundary:
   current row other doors with next row picked room.
 - History adapters use `selectedRow`, `nextRow`, and `nextResolved` to
   reconstruct generated topology.
-- The validator walker has `adapterUsesPickedDoorCandidates`, so candidate
-  generation is adapter-specific instead of node-topology driven.
 - Names like `sibling` and `SiblingStructureKey` remain domain language even
   though the intended model is "other generated door."
 

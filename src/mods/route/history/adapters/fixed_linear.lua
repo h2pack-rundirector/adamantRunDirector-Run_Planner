@@ -582,14 +582,49 @@ local function attachNextChoiceTopology(context, roomEntry, selectedRow, nextRow
     }
 end
 
-function fixedLinear.build(args)
-    local history = args.history
-    local routeHistory = args.routeHistory
-    local context = {
+local function selectedRowFromNode(node)
+    local currentRoom = node and node.currentRoom or nil
+    if currentRoom == nil then
+        return nil
+    end
+    local otherDoors = node and node.nextChoices and node.nextChoices.otherDoors or nil
+    return {
+        rowIndex = node.rowIndex,
+        routeOrdinal = node.routeOrdinal,
+        roleKey = currentRoom.roleKey,
+        optionKey = currentRoom.optionKey,
+        variantKey = currentRoom.variantKey,
+        formAddress = currentRoom.formAddress,
+        rewards = node.rewards,
+        topology = otherDoors ~= nil and {
+            otherDoors = otherDoors,
+            siblings = otherDoors,
+        } or nil,
+    }
+end
+
+local function pickedRowFromNode(node)
+    local picked = node and node.nextChoices and node.nextChoices.picked or nil
+    if picked == nil then
+        return nil
+    end
+    return {
+        rowIndex = picked.targetRowIndex,
+        routeOrdinal = picked.targetRouteOrdinal,
+        roleKey = picked.roleKey,
+        optionKey = picked.optionKey,
+        variantKey = picked.variantKey,
+        formAddress = picked.formAddress,
+        rewards = picked.rewards,
+    }
+end
+
+local function buildContext(args)
+    return {
         routeKey = args.route and args.route.key or args.snapshot.routeKey,
         routeBiomeIndex = args.routeBiomeIndex,
-        history = history,
-        routeHistory = routeHistory,
+        history = args.history,
+        routeHistory = args.routeHistory,
         snapshot = args.snapshot,
         biome = args.biome,
         routeState = args.routeState,
@@ -601,7 +636,40 @@ function fixedLinear.build(args)
             biomeEncounterDepth = BIOME_ENCOUNTER_DEPTH_START,
         },
     }
+end
 
+local function buildFromNodes(args, context)
+    local resolvedNodes = {}
+    for index, node in ipairs(args.snapshot.nodes or EMPTY_LIST) do
+        local selectedRow = selectedRowFromNode(node)
+        resolvedNodes[index] = resolveRow(context, selectedRow)
+    end
+
+    for index, node in ipairs(args.snapshot.nodes or EMPTY_LIST) do
+        local selectedRow = selectedRowFromNode(node)
+        local resolved = resolvedNodes[index]
+        local pickedRow = pickedRowFromNode(node)
+        local pickedResolved = pickedRow ~= nil
+            and resolveRow(context, pickedRow)
+            or nil
+        materializeRoom.stepRoom(context, selectedRow, resolved, {
+            nextRow = pickedRow,
+            nextResolved = pickedResolved,
+            reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards),
+            attachTopology = function(roomEntry)
+                attachNextChoiceTopology(
+                    context,
+                    roomEntry,
+                    selectedRow,
+                    pickedRow,
+                    pickedResolved
+                )
+            end,
+        })
+    end
+end
+
+local function buildFromRows(args, context)
     local resolvedRows = {}
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
         resolvedRows[index] = resolveRow(context, selectedRow)
@@ -623,6 +691,15 @@ function fixedLinear.build(args)
                 )
             end,
         })
+    end
+end
+
+function fixedLinear.build(args)
+    local context = buildContext(args)
+    if args.snapshot.schema == "selectedNodes.v1" then
+        buildFromNodes(args, context)
+    else
+        buildFromRows(args, context)
     end
 end
 
