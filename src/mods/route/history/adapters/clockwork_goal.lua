@@ -342,8 +342,47 @@ local function rowActive(snapshot, rowIndex)
         or rowIndex <= inactiveAfterRowIndex
 end
 
-function clockworkGoal.build(args)
-    local context = {
+local function selectedRowFromNode(node)
+    local currentRoom = node and node.currentRoom or nil
+    if currentRoom == nil then
+        return nil
+    end
+    local otherDoors = node and node.nextChoices and node.nextChoices.otherDoors or nil
+    return {
+        rowIndex = node.rowIndex,
+        roleKey = currentRoom.roleKey,
+        optionKey = currentRoom.optionKey,
+        variantKey = currentRoom.variantKey,
+        routeKindKey = currentRoom.routeKindKey,
+        nonGoalKindKey = currentRoom.nonGoalKindKey,
+        formAddress = currentRoom.formAddress,
+        topology = otherDoors ~= nil and {
+            otherDoors = otherDoors,
+            siblings = otherDoors,
+        } or nil,
+        rewards = node.rewards,
+    }
+end
+
+local function pickedRowFromNode(node)
+    local picked = node and node.nextChoices and node.nextChoices.picked or nil
+    if picked == nil then
+        return nil
+    end
+    return {
+        rowIndex = picked.targetRowIndex,
+        roleKey = picked.roleKey,
+        optionKey = picked.optionKey,
+        variantKey = picked.variantKey,
+        routeKindKey = picked.routeKindKey,
+        nonGoalKindKey = picked.nonGoalKindKey,
+        formAddress = picked.formAddress,
+        rewards = picked.rewards,
+    }
+end
+
+local function buildContext(args)
+    return {
         routeKey = args.route and args.route.key or args.snapshot.routeKey,
         routeBiomeIndex = args.routeBiomeIndex,
         history = args.history,
@@ -359,8 +398,9 @@ function clockworkGoal.build(args)
             biomeEncounterDepth = BIOME_ENCOUNTER_DEPTH_START,
         },
     }
+end
 
-    local slots = buildSlots(args.biome)
+local function buildFromRows(args, context, slots)
     local resolvedRows = {}
     for index, selectedRow in ipairs(args.snapshot.rows or EMPTY_LIST) do
         if rowActive(args.snapshot, index) then
@@ -382,6 +422,44 @@ function clockworkGoal.build(args)
                 end,
             })
         end
+    end
+end
+
+local function buildFromNodes(args, context, slots)
+    local selectedRows = {}
+    local resolvedRows = {}
+    for index, node in ipairs(args.snapshot.nodes or EMPTY_LIST) do
+        if rowActive(args.snapshot, index) then
+            local selectedRow = selectedRowFromNode(node)
+            selectedRows[index] = selectedRow
+            resolvedRows[index] = resolveRow(context, selectedRow, slots[index])
+        end
+    end
+
+    for index, selectedRow in ipairs(selectedRows) do
+        local resolved = resolvedRows[index]
+        if rowActive(args.snapshot, index) and shouldEmit(selectedRow) then
+            local pickedRow = pickedRowFromNode(args.snapshot.nodes[index])
+            local pickedResolved = pickedRow ~= nil and resolvedRows[pickedRow.rowIndex] or nil
+            materializeRoom.stepRoom(context, selectedRow, resolved, {
+                nextRow = pickedRow,
+                nextResolved = pickedResolved,
+                reward = selectedRewardSummary(resolved.rewardContext, selectedRow.rewards),
+                attachTopology = function(roomEntry)
+                    attachClockworkTopology(context, roomEntry, selectedRow, pickedRow, pickedResolved)
+                end,
+            })
+        end
+    end
+end
+
+function clockworkGoal.build(args)
+    local context = buildContext(args)
+    local slots = buildSlots(args.biome)
+    if args.snapshot.schema == "selectedNodes.v1" then
+        buildFromNodes(args, context, slots)
+    else
+        buildFromRows(args, context, slots)
     end
 end
 

@@ -1013,7 +1013,7 @@ function TestRunPlannerRouteHistoryBuilder.testClockworkGoalBuildsTartarusSpine(
         biome = catalog.lookup.I,
     })
     local control = template.createRuntime(h.routeFields(fullITartarusRows()), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = {
@@ -1069,7 +1069,7 @@ function TestRunPlannerRouteHistoryBuilder.testClockworkGoalSkipsInactiveRowsAnd
         biome = catalog.lookup.I,
     })
     local control = template.createRuntime(h.routeFields(fullITartarusRows()), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = {
@@ -1102,7 +1102,7 @@ function TestRunPlannerRouteHistoryBuilder.testClockworkGoalEntriesCarryTopology
         biome = catalog.lookup.I,
     })
     local control = template.createRuntime(h.routeFields(fullITartarusRows()), instance)
-    local selectedSnapshot = control:buildSelectedRowsSnapshot()
+    local selectedSnapshot = control:read("selectedNodesSnapshot")
 
     local history = historyBuilder.build({
         route = {

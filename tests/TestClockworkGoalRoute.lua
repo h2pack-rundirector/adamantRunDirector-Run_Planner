@@ -523,6 +523,43 @@ function TestRunPlannerClockworkGoalRoute.testClockworkGoalReadSelectedRowsSnaps
     lu.assertEquals(snapshot.rows[2].optionKey, "I_Combat01")
 end
 
+function TestRunPlannerClockworkGoalRoute.testClockworkGoalEmitsSelectedNodesSnapshot()
+    local catalog = loadCatalog()
+    local template = loadClockworkGoalTemplate()
+    local instance = template.prepare({
+        name = "RouteI",
+        biome = catalog.lookup.I,
+    })
+    local control = template.createRuntime(routeFields({
+        {},
+        { RouteKindKey = "Goal", OptionKey = "I_Combat01" },
+        {
+            RouteKindKey = "NonGoal", NonGoalKindKey = "RewardCombat",
+            OptionKey = "I_Combat03",
+            SiblingStructureKey = "CombatGoal",
+            Reward1Key = "MaxHealthDrop",
+        },
+    }), instance)
+
+    local snapshot = control:read("selectedNodesSnapshot")
+
+    lu.assertEquals(snapshot.schema, "selectedNodes.v1")
+    lu.assertEquals(snapshot.controlName, "RouteI")
+    lu.assertEquals(snapshot.biomeKey, "I")
+    lu.assertEquals(snapshot.adapter, "clockworkGoal")
+    lu.assertEquals(snapshot.nodes[1].currentRoom.roleKey, "Intro")
+    lu.assertEquals(snapshot.nodes[1].currentRoom.optionKey, "I_Intro")
+    lu.assertEquals(snapshot.nodes[1].nextChoices.picked.roleKey, "GoalCombat")
+    lu.assertEquals(snapshot.nodes[1].nextChoices.picked.optionKey, "I_Combat01")
+    lu.assertNil(snapshot.nodes[1].nextChoices.otherDoors)
+    lu.assertEquals(snapshot.nodes[2].currentRoom.roleKey, "GoalCombat")
+    lu.assertEquals(snapshot.nodes[2].nextChoices.picked.roleKey, "RewardCombat")
+    lu.assertEquals(snapshot.nodes[2].nextChoices.picked.rewards.row.values[1], "MaxHealthDrop")
+    lu.assertEquals(snapshot.nodes[3].currentRoom.roleKey, "RewardCombat")
+    lu.assertEquals(snapshot.nodes[3].nextChoices.otherDoors[1].structureKey, "CombatGoal")
+    lu.assertEquals(snapshot.nodes[3].nextChoices.otherDoors[1].formAddress.childKind, "otherDoor")
+end
+
 
 function TestRunPlannerClockworkGoalRoute.testClockworkGoalExportsDuplicateTrialRewardGods()
     local catalog = loadCatalog()
