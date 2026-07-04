@@ -2,6 +2,10 @@
 
 ## Progress
 
+- 2026-07-03: Slice 3 first pass is implemented for H/Fields. The Fields
+  runtime now exposes `selectedNodes.v1` beside `selectedRows.v1`; nodes carry
+  current-room keys/rewards, picked next-door keys, active other-door keys, and
+  form addresses without changing the existing builder path.
 - 2026-07-03: Slice 2 is implemented. Generated-door aliases now sit beside
   the existing sibling storage names: declarations expose
   `generatedDoorControl`, snapshots/history expose `picked` and `otherDoors`,

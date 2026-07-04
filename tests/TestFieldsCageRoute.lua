@@ -368,6 +368,90 @@ function TestRunPlannerFieldsCageRoute.testFieldsCageEmitsDumbSelectedRowsSnapsh
     lu.assertEquals(snapshot.rows[3].rewards.row.values[1], "ZeusUpgrade")
 end
 
+function TestRunPlannerFieldsCageRoute.testFieldsCageEmitsSelectedNodesSnapshot()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            {
+                RoleKey = "Combat",
+                OptionKey = "H_Combat04",
+                VariantKey = "ThreeRewards",
+                SiblingStructureKey = "CombatCage3",
+                Reward1Key = "Boon",
+                Reward1LootKey = "PoseidonUpgrade",
+                Reward2Key = "HermesUpgrade",
+                Reward3Key = "StackUpgrade",
+            },
+            {
+                RoleKey = "Miniboss",
+                OptionKey = "H_MiniBoss01",
+                SiblingStructureKey = "CombatCage2",
+                Reward1Key = "ZeusUpgrade",
+            },
+        }), instance)
+
+    local snapshot = control:buildSelectedNodesSnapshot()
+
+    lu.assertEquals(snapshot.schema, "selectedNodes.v1")
+    lu.assertEquals(snapshot.controlName, "RouteH")
+    lu.assertEquals(snapshot.biomeKey, "H")
+    lu.assertEquals(snapshot.adapter, "fieldsCageRoute")
+
+    lu.assertEquals(snapshot.nodes[1].currentRoom.roleKey, "Intro")
+    lu.assertEquals(snapshot.nodes[1].currentRoom.optionKey, "H_Intro")
+    lu.assertEquals(snapshot.nodes[1].currentRoom.formAddress, { rowIndex = 1 })
+    lu.assertEquals(snapshot.nodes[1].nextChoices.picked.targetRowIndex, 2)
+    lu.assertEquals(snapshot.nodes[1].nextChoices.picked.roleKey, "Combat")
+    lu.assertEquals(snapshot.nodes[1].nextChoices.picked.optionKey, "H_Combat04")
+    lu.assertNil(snapshot.nodes[1].nextChoices.otherDoors)
+
+    lu.assertEquals(snapshot.nodes[2].currentRoom.roleKey, "Combat")
+    lu.assertEquals(snapshot.nodes[2].currentRoom.optionKey, "H_Combat04")
+    lu.assertEquals(snapshot.nodes[2].currentRoom.variantKey, "ThreeRewards")
+    lu.assertEquals(snapshot.nodes[2].currentRoom.formAddress, { rowIndex = 2 })
+    lu.assertEquals(snapshot.nodes[2].nextChoices.picked.targetRowIndex, 3)
+    lu.assertEquals(snapshot.nodes[2].nextChoices.picked.roleKey, "Miniboss")
+    lu.assertEquals(snapshot.nodes[2].nextChoices.picked.optionKey, "H_MiniBoss01")
+    lu.assertEquals(snapshot.nodes[2].nextChoices.otherDoors[1], {
+        doorIndex = 1,
+        structureKey = "CombatCage3",
+        formAddress = {
+            rowIndex = 2,
+            childKind = "otherDoor",
+            childIndex = 1,
+        },
+    })
+    lu.assertEquals(snapshot.nodes[2].rewards.row.values[1], "Boon")
+    lu.assertEquals(snapshot.nodes[2].rewards.row.loot[1], "PoseidonUpgrade")
+    lu.assertEquals(snapshot.nodes[2].rewards.row.values[2], "HermesUpgrade")
+    lu.assertEquals(snapshot.nodes[2].rewards.row.values[3], "StackUpgrade")
+end
+
+function TestRunPlannerFieldsCageRoute.testFieldsCageReadSelectedNodesSnapshot()
+    local catalog = loadCatalog()
+    local template = loadFieldsCageTemplate()
+    local instance = template.prepare({
+        name = "RouteH",
+        biome = catalog.lookup.H,
+    })
+    local control = template.createRuntime(routeFields({
+            {},
+            hCombatTwoRewardRow("H_Combat13"),
+        }), instance)
+
+    local snapshot = control:read("selectedNodesSnapshot")
+
+    lu.assertEquals(snapshot.schema, "selectedNodes.v1")
+    lu.assertEquals(snapshot.nodes[1].nextChoices.picked.roleKey, "Combat")
+    lu.assertEquals(snapshot.nodes[1].nextChoices.picked.optionKey, "H_Combat13")
+    lu.assertEquals(snapshot.nodes[2].currentRoom.variantKey, "TwoRewards")
+end
+
 function TestRunPlannerFieldsCageRoute.testFieldsCageReadSelectedRowsSnapshot()
     local catalog = loadCatalog()
     local template = loadFieldsCageTemplate()
