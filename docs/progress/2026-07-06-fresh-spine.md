@@ -3,7 +3,7 @@
 ## Status
 
 The fresh planner branch now has a clean active planning spine through route
-evaluation and candidate feedback export.
+evaluation, candidate feedback export, and candidate feedback application.
 
 Completed child commits:
 
@@ -75,6 +75,10 @@ Completed shell commits:
   validation findings, candidate records, and candidate presentation results.
 - Candidate feedback currently covers generated next-room target candidates for
   structural exit/target failures.
+- Candidate feedback application now clears provider-owned feedback arrays and
+  applies validator candidate results back to matching provider versions.
+- Stale candidate results and missing providers are skipped with an explicit
+  summary so route-context rebuild code can decide how to respond.
 
 ## Validation
 
@@ -94,7 +98,7 @@ lua tests/smoke.lua
 
 Latest observed results:
 
-- `lua tests/all.lua`: 39 tests passed.
+- `lua tests/all.lua`: 42 tests passed.
 - `luacheck src tests`: 0 warnings, 0 errors.
 - `git diff --check`: passed.
 - `lua tests/smoke.lua`: smoke passed for 4 module entrypoints and 1
@@ -113,10 +117,10 @@ declaration catalog and the F/Erebus test surface. It does not yet implement
 the full room eligibility model, force windows, reward bag simulation,
 multi-biome scope, NPC/feature planning, Chaos detours, or runtime compilation.
 
-Candidate feedback is present as a validator output lane, but the only
-implemented semantic candidate kind is generated next-room target validation.
-Reward candidate policies and broader timing/eligibility candidate policies are
-still deferred.
+Candidate feedback is present as a validator output lane and a provider
+application bridge, but the only implemented semantic candidate kind is
+generated next-room target validation. Reward candidate policies and broader
+timing/eligibility candidate policies are still deferred.
 
 ## Next Slices
 
@@ -125,12 +129,13 @@ The next implementation work should continue from
 
 Near-term slices:
 
-- add the feedback application bridge that applies candidate results back to
-  matching provider versions;
 - expand room/timing legality from structural checks into requirement-backed
   eligibility checks;
+- expand candidate export/evaluation beyond generated next-room targets;
 - extend reward offer validation toward offer domains and reward bag
   simulation;
+- wire candidate feedback application into route-control rebuilds once the
+  control layer exists;
 - add route scope and multi-biome history once the single-biome history and
   validator behavior are stable;
 - defer runtime compilation until validated history and feedback semantics are

@@ -244,8 +244,13 @@ function TestRoutePipeline.testCandidateResultsDoNotInvalidateSelectedRoute()
             doorIndex = 1,
         })
 
-        local applied = provider.applyCandidateFeedback(result.candidateResults[1])
-        lu.assertTrue(applied)
+        local summary = pipeline.applyCandidateFeedback(draft, result)
+        lu.assertEquals(summary, {
+            cleared = 1,
+            applied = 1,
+            stale = 0,
+            missing = 0,
+        })
         lu.assertEquals(provider.messages[2], "Generated door target room is not declared.")
         lu.assertFalse(provider.hidden[2])
     end)

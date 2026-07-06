@@ -1,6 +1,7 @@
 local routeForm = import("mods/forms/route.lua")
 local historyBuilder = import("mods/history/builder.lua")
 local structuralValidator = import("mods/validation/structural.lua")
+local candidateFeedback = import("mods/feedback/candidates.lua")
 
 local routePipeline = {}
 
@@ -103,6 +104,10 @@ function routePipeline.evaluate(draft, context)
         candidateResults = candidateResults,
         feedback = {},
     }
+end
+
+function routePipeline.applyCandidateFeedback(draft, evaluation)
+    return candidateFeedback.apply(draft, evaluation.candidateResults or {})
 end
 
 return routePipeline
