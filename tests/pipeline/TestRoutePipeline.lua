@@ -216,6 +216,36 @@ function TestRoutePipeline.testCandidateResultsUseCreationCaps()
     end)
 end
 
+function TestRoutePipeline.testCandidateCreationCapsIgnoreFutureGeneratedRooms()
+    h.withTestImport(function()
+        local candidateProvider = h.testImport("mods/forms/candidate_provider.lua")
+        local pipeline = h.testImport("mods/pipeline/route.lua")
+        local draft = completeDraft()
+        draft.biomes[1].rooms[1].generatedDoors.doors[1].candidateProviders = {
+            nextDoorTarget = candidateProvider.create({
+                key = "nextDoorTarget",
+                version = 12,
+                values = { "F_Combat01", "F_Combat02" },
+                labels = { "Combat 1", "Combat 2" },
+                semanticForValue = function(value, _index, _formAddress, candidateContext)
+                    return {
+                        kind = "nextRoom",
+                        biomeKey = candidateContext.candidate.biomeKey,
+                        sourceRoomKey = candidateContext.candidate.sourceRoomKey,
+                        exitIndex = candidateContext.candidate.exitIndex,
+                        targetRoomKey = value,
+                    }
+                end,
+            }),
+        }
+
+        local result = pipeline.evaluate(draft, context())
+
+        lu.assertEquals(result.state, "valid")
+        lu.assertEquals(#result.candidateResults, 0)
+    end)
+end
+
 function TestRoutePipeline.testUnresolvedRewardUsesCompletionFeedback()
     h.withTestImport(function()
         local pipeline = h.testImport("mods/pipeline/route.lua")

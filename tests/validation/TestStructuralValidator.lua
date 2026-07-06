@@ -353,6 +353,52 @@ function TestStructuralValidator.testDetectsMissingForcedRoomAtGenerateNext()
     end)
 end
 
+function TestStructuralValidator.testForcePressureIgnoresFutureGeneratedRooms()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[3] = {
+            roomKey = "F_Combat01",
+            generatedDoors = {
+                batchRule = "Standard",
+                selectedDoorIndex = 1,
+                doors = {
+                    {
+                        exitIndex = 1,
+                        targetRoomKey = "F_Shop01",
+                        offerPoint = {
+                            kind = "generatedDoorRewards",
+                            batchKey = "nextDoors",
+                            offers = {
+                                {
+                                    store = "WorldShop",
+                                    rewardType = "HermesUpgrade",
+                                    acquired = false,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        }
+        local history = buildHistory(plan, catalog)
+        findEvent(history, "room.generate_next", 2).biomeDepthCache = 4
+        findEvent(history, "room.generate_next", 3).biomeDepthCache = 4
+
+        local result = h.testImport("mods/validation/structural.lua").validate(history, {
+            catalog = catalog,
+        })
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "force_pressure_missing_room")
+        lu.assertEquals(result.findings[1].sourceAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+        })
+    end)
+end
+
 function TestStructuralValidator.testForcedRoomSatisfiesPressureWhenGenerated()
     h.withTestImport(function()
         local catalog = loadCatalog()
@@ -396,6 +442,53 @@ function TestStructuralValidator.testDetectsRoomCreationCaps()
         lu.assertEquals(result.findings[1].code, "room_creation_cap_exceeded")
         lu.assertEquals(result.findings[1].payload, {
             targetRoomKey = "F_Combat02",
+            actualCount = 2,
+            maxCreationsThisRun = 1,
+        })
+    end)
+end
+
+function TestStructuralValidator.testRoomCreationCapsIgnoreFutureGeneratedRooms()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[3] = {
+            roomKey = "F_Combat01",
+            generatedDoors = {
+                batchRule = "Standard",
+                selectedDoorIndex = 1,
+                doors = {
+                    {
+                        exitIndex = 1,
+                        targetRoomKey = "F_Combat01",
+                        offerPoint = {
+                            kind = "generatedDoorRewards",
+                            batchKey = "nextDoors",
+                            offers = {
+                                {
+                                    store = "RunProgress",
+                                    rewardType = "MaxHealthDrop",
+                                    acquired = false,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        }
+
+        local result = validatePlan(plan, catalog)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "room_creation_cap_exceeded")
+        lu.assertEquals(result.findings[1].sourceAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 3,
+            doorIndex = 1,
+        })
+        lu.assertEquals(result.findings[1].payload, {
+            targetRoomKey = "F_Combat01",
             actualCount = 2,
             maxCreationsThisRun = 1,
         })
