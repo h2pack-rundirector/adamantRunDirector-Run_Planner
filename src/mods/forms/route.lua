@@ -1,5 +1,6 @@
 local address = import("mods/forms/address.lua")
 local completion = import("mods/forms/completion.lua")
+local guard = import("mods/declarations/guard.lua")
 
 local routeForm = {}
 
@@ -27,6 +28,14 @@ local function copyTable(source)
         else
             copy[key] = value
         end
+    end
+    return copy
+end
+
+local function copyContext(context)
+    local copy = {}
+    for key, value in pairs(context or {}) do
+        copy[key] = value
     end
     return copy
 end
@@ -297,6 +306,86 @@ local function materializeBiome(biomeDraft)
         biomeKey = biomeDraft.biomeKey,
         rooms = rooms,
     }
+end
+
+local function sortedProviderKeys(providers)
+    local keys = {}
+    for key, _ in pairs(providers) do
+        keys[#keys + 1] = key
+    end
+    table.sort(keys, function(left, right)
+        return tostring(left) < tostring(right)
+    end)
+    return keys
+end
+
+local function candidateContext(context, draft, biomeDraft, biomeIndex, roomNode, roomIndex, door, doorIndex)
+    local exportContext = copyContext(context)
+    exportContext.candidate = {
+        routeKey = draft.routeKey,
+        biomeKey = biomeDraft.biomeKey,
+        biomeIndex = biomeIndex,
+        sourceRoomKey = roomNode.roomKey,
+        roomIndex = roomIndex,
+        doorIndex = doorIndex,
+        exitIndex = door.exitIndex,
+        targetRoomKey = door.targetRoomKey,
+        selected = roomNode.generatedDoors.selectedDoorIndex == doorIndex,
+    }
+    return exportContext
+end
+
+local function exportProvider(out, provider, formAddress, context, providerContext)
+    guard.expectTable(provider, providerContext)
+    if type(provider.exportCandidates) ~= "function" then
+        guard.fail(providerContext, "candidate provider must expose exportCandidates")
+    end
+    provider.exportCandidates(out, formAddress, context)
+end
+
+local function exportProviderMap(out, providers, formAddress, context, providerMapContext)
+    if providers == nil then
+        return
+    end
+
+    guard.expectTable(providers, providerMapContext)
+    for _, key in ipairs(sortedProviderKeys(providers)) do
+        exportProvider(out, providers[key], formAddress, context, providerMapContext .. "." .. tostring(key))
+    end
+end
+
+local function exportDoorCandidates(out, draft, biomeDraft, biomeIndex, roomNode, roomIndex, door, doorIndex, context)
+    local formAddress = address.door(draft.routeKey, biomeIndex, roomIndex, doorIndex)
+    local exportContext = candidateContext(context, draft, biomeDraft, biomeIndex, roomNode, roomIndex, door, doorIndex)
+    exportProviderMap(
+        out,
+        door.candidateProviders,
+        formAddress,
+        exportContext,
+        "routeForm.biomes[" .. tostring(biomeIndex) .. "].rooms[" .. tostring(roomIndex) .. "].generatedDoors.doors[" .. tostring(doorIndex) .. "].candidateProviders"
+    )
+end
+
+function routeForm.exportCandidates(draft, context, out)
+    context = context or {}
+    out = out or {}
+
+    local completed = routeForm.isComplete(draft, context)
+    if not completed.complete then
+        error("Run Planner form invariant: cannot export candidate records from incomplete route draft", 2)
+    end
+
+    for biomeIndex, biomeDraft in ipairs(draft.biomes) do
+        for roomIndex, roomNode in ipairs(biomeDraft.rooms) do
+            if roomNode.generatedDoors ~= nil then
+                for doorIndex, door in ipairs(roomNode.generatedDoors.doors or {}) do
+                    exportDoorCandidates(out, draft, biomeDraft, biomeIndex, roomNode, roomIndex, door, doorIndex, context)
+                end
+            end
+        end
+    end
+
+    return out
 end
 
 function routeForm.materialize(draft, context)

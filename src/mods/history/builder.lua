@@ -12,6 +12,7 @@ local function newHistory(routeKey)
         generatedDoorHistory = {},
         rewardOfferHistory = {},
         lootHistory = {},
+        candidateRecords = {},
         counters = {
             runEncounterDepth = 0,
             roomHistoryOrdinal = 0,
@@ -270,6 +271,10 @@ function builder.build(plan, context)
     guard.expectNonEmptyArray(plan.biomes, "history.plan.biomes")
 
     local history = newHistory(routeKey)
+    if context.candidateRecords ~= nil then
+        history.candidateRecords = guard.expectArray(context.candidateRecords, "history.candidateRecords")
+    end
+
     for biomeIndex, biomePlan in ipairs(plan.biomes) do
         materializeBiome(history, context.catalog, routeKey, biomeIndex, biomePlan)
     end

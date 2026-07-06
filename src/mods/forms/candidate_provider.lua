@@ -57,6 +57,32 @@ function candidateProvider.create(opts)
     function provider.exportCandidates(out, formAddress, context)
         if opts.exportCandidates ~= nil then
             opts.exportCandidates(out, formAddress, context)
+            return
+        end
+
+        if opts.semanticForValue == nil then
+            return
+        end
+
+        for index, value in ipairs(provider.values) do
+            local semantic = opts.semanticForValue(value, index, formAddress, context)
+            if semantic ~= nil then
+                guard.expectTable(semantic, "candidateProvider.semantic")
+
+                local candidateKey = value
+                if opts.candidateKeyForValue ~= nil then
+                    candidateKey = opts.candidateKeyForValue(value, index, formAddress, context)
+                end
+
+                out[#out + 1] = {
+                    formAddress = formAddress,
+                    providerKey = provider.key,
+                    providerVersion = provider.version,
+                    candidateKey = guard.expectString(candidateKey, "candidateProvider.candidateKey"),
+                    candidateIndex = index,
+                    semantic = semantic,
+                }
+            end
         end
     end
 

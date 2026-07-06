@@ -40,6 +40,15 @@ local function status(state, feedback)
     }
 end
 
+local function contextWithCandidateRecords(context, candidateRecords)
+    local copy = {}
+    for key, value in pairs(context or {}) do
+        copy[key] = value
+    end
+    copy.candidateRecords = candidateRecords
+    return copy
+end
+
 function routePipeline.evaluate(draft, context)
     context = context or {}
 
@@ -52,13 +61,17 @@ function routePipeline.evaluate(draft, context)
             valid = false,
             status = status("incomplete", feedback),
             completion = completion,
+            candidateRecords = {},
+            candidateResults = {},
             feedback = feedback,
         }
     end
 
+    local candidateRecords = routeForm.exportCandidates(draft, context)
     local plan = routeForm.materialize(draft, context)
-    local history = historyBuilder.build(plan, context)
+    local history = historyBuilder.build(plan, contextWithCandidateRecords(context, candidateRecords))
     local validation = structuralValidator.validate(history, context)
+    local candidateResults = validation.candidateResults or {}
 
     if not validation.valid then
         local feedback = validationFeedback(validation)
@@ -71,6 +84,8 @@ function routePipeline.evaluate(draft, context)
             plan = plan,
             history = history,
             validation = validation,
+            candidateRecords = candidateRecords,
+            candidateResults = candidateResults,
             feedback = feedback,
         }
     end
@@ -84,6 +99,8 @@ function routePipeline.evaluate(draft, context)
         plan = plan,
         history = history,
         validation = validation,
+        candidateRecords = candidateRecords,
+        candidateResults = candidateResults,
         feedback = {},
     }
 end

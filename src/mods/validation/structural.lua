@@ -32,9 +32,14 @@ local function roomKey(biomeKey, roomIndex)
     return tostring(biomeKey) .. ":" .. tostring(roomIndex)
 end
 
+local function addressKey(formAddress)
+    return tostring(formAddress.routeKey) .. ":" .. tostring(formAddress.biomeIndex) .. ":" .. tostring(formAddress.roomIndex)
+end
+
 local function indexHistory(history)
     local indexed = {
         roomByIndex = {},
+        roomByAddress = {},
         generatedDoorsByRoom = {},
         generateNextByRoom = {},
     }
@@ -42,6 +47,7 @@ local function indexHistory(history)
     for _, event in ipairs(history.events) do
         if event.kind == "room.enter" then
             indexed.roomByIndex[roomKey(event.biomeKey, event.roomIndex)] = event
+            indexed.roomByAddress[addressKey(event.sourceAddress)] = event
         elseif event.kind == "room.generate_next" then
             indexed.generateNextByRoom[roomKey(event.biomeKey, event.roomIndex)] = event
         end
@@ -75,27 +81,57 @@ local function validateRoomExistence(result, catalog, history)
     end
 end
 
-local function validateDoorExit(result, catalog, door)
-    local sourceRoom = getRoom(catalog, door.biomeKey, door.roomKey)
+local function doorExitViolation(catalog, biomeKey, sourceRoomKey, exitIndex)
+    local sourceRoom = getRoom(catalog, biomeKey, sourceRoomKey)
     if sourceRoom == nil then
         return
     end
 
-    if sourceRoom.exits[door.exitIndex] == nil then
-        validationResult.invalid(result, "generated_door_exit_unknown", "room.generate_next", door.sourceAddress, {
-            roomKey = door.roomKey,
-            exitIndex = door.exitIndex,
+    if sourceRoom.exits[exitIndex] ~= nil then
+        return nil
+    end
+
+    return {
+        code = "generated_door_exit_unknown",
+        phase = "room.generate_next",
+        presentation = "invalid",
+        payload = {
+            roomKey = sourceRoomKey,
+            exitIndex = exitIndex,
             declaredExitCount = #sourceRoom.exits,
-        }, "Generated door references an undeclared exit.")
+        },
+        message = "Generated door references an undeclared exit.",
+    }
+end
+
+local function doorTargetViolation(catalog, biomeKey, targetRoomKey)
+    if getRoom(catalog, biomeKey, targetRoomKey) ~= nil then
+        return nil
+    end
+
+    return {
+        code = "generated_door_target_unknown",
+        phase = "room.generate_next",
+        presentation = "invalid",
+        payload = {
+            targetRoomKey = targetRoomKey,
+        },
+        message = "Generated door target room is not declared.",
+    }
+end
+
+local function addSelectedViolation(result, sourceAddress, violation)
+    if violation ~= nil then
+        validationResult.invalid(result, violation.code, violation.phase, sourceAddress, violation.payload, violation.message)
     end
 end
 
+local function validateDoorExit(result, catalog, door)
+    addSelectedViolation(result, door.sourceAddress, doorExitViolation(catalog, door.biomeKey, door.roomKey, door.exitIndex))
+end
+
 local function validateDoorTarget(result, catalog, door)
-    if getRoom(catalog, door.biomeKey, door.targetRoomKey) == nil then
-        validationResult.invalid(result, "generated_door_target_unknown", "room.generate_next", door.sourceAddress, {
-            targetRoomKey = door.targetRoomKey,
-        }, "Generated door target room is not declared.")
-    end
+    addSelectedViolation(result, door.sourceAddress, doorTargetViolation(catalog, door.biomeKey, door.targetRoomKey))
 end
 
 local function validateDoorCount(result, catalog, roomEvent, doors)
@@ -184,6 +220,79 @@ local function validateTerminalPlacement(result, catalog, history)
     end
 end
 
+local function candidateRecords(context, history)
+    local records = context.candidateRecords or history.candidateRecords
+    if records == nil then
+        return {}
+    end
+    return guard.expectArray(records, "validation.candidateRecords")
+end
+
+local function addCandidateViolation(result, record, violation)
+    if violation ~= nil then
+        validationResult.candidate(
+            result,
+            record,
+            violation.code,
+            violation.phase,
+            violation.presentation,
+            violation.payload,
+            violation.message,
+            violation.color
+        )
+    end
+end
+
+local function sourceForNextRoomCandidate(indexed, record, semantic, context)
+    local biomeKey = semantic.biomeKey
+    local sourceRoomKey = semantic.sourceRoomKey
+
+    if biomeKey ~= nil and sourceRoomKey ~= nil then
+        return biomeKey, sourceRoomKey
+    end
+
+    local sourceRoom = indexed.roomByAddress[addressKey(record.formAddress)]
+    if sourceRoom == nil then
+        guard.fail(context .. ".formAddress", "candidate address must resolve to room history")
+    end
+
+    return biomeKey or sourceRoom.biomeKey, sourceRoomKey or sourceRoom.roomKey
+end
+
+local function evaluateNextRoomCandidate(result, catalog, indexed, record, semantic, context)
+    local biomeKey, sourceRoomKey = sourceForNextRoomCandidate(indexed, record, semantic, context)
+    local exitIndex = guard.expectNumber(semantic.exitIndex, context .. ".semantic.exitIndex")
+    local targetRoomKey = guard.expectString(semantic.targetRoomKey, context .. ".semantic.targetRoomKey")
+
+    addCandidateViolation(result, record, doorExitViolation(catalog, biomeKey, sourceRoomKey, exitIndex))
+    addCandidateViolation(result, record, doorTargetViolation(catalog, biomeKey, targetRoomKey))
+end
+
+local function expectCandidateRecord(record, context)
+    guard.expectTable(record, context)
+    guard.expectTable(record.formAddress, context .. ".formAddress")
+    guard.expectString(record.providerKey, context .. ".providerKey")
+    guard.expectNumber(record.providerVersion, context .. ".providerVersion")
+    guard.expectString(record.candidateKey, context .. ".candidateKey")
+    guard.expectNumber(record.candidateIndex, context .. ".candidateIndex")
+    local semantic = guard.expectTable(record.semantic, context .. ".semantic")
+    local kind = guard.expectString(semantic.kind, context .. ".semantic.kind")
+    return kind, semantic
+end
+
+local function evaluateCandidateRecords(result, catalog, indexed, records)
+    for index, record in ipairs(records) do
+        local context = "validation.candidateRecords[" .. tostring(index) .. "]"
+        local kind, semantic = expectCandidateRecord(record, context)
+
+        if kind == "nextRoom" then
+            evaluateNextRoomCandidate(result, catalog, indexed, record, semantic, context)
+        else
+            guard.fail(context .. ".semantic.kind", "unknown candidate kind '" .. kind .. "'")
+        end
+    end
+end
+
 function structural.validate(history, context)
     context = context or {}
     expectCatalog(context.catalog)
@@ -195,6 +304,7 @@ function structural.validate(history, context)
     validateRoomExistence(result, context.catalog, history)
     validateGeneratedDoors(result, context.catalog, history, indexed)
     validateTerminalPlacement(result, context.catalog, history)
+    evaluateCandidateRecords(result, context.catalog, indexed, candidateRecords(context, history))
 
     return result
 end

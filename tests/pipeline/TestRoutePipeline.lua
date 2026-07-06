@@ -198,3 +198,55 @@ function TestRoutePipeline.testUnresolvedRewardUsesCompletionFeedback()
         lu.assertEquals(result.feedback[1].field, "rewardType")
     end)
 end
+
+function TestRoutePipeline.testCandidateResultsDoNotInvalidateSelectedRoute()
+    h.withTestImport(function()
+        local candidateProvider = h.testImport("mods/forms/candidate_provider.lua")
+        local pipeline = h.testImport("mods/pipeline/route.lua")
+        local draft = completeDraft()
+        local provider = candidateProvider.create({
+            key = "nextDoorTarget",
+            version = 9,
+            values = { "F_Combat01", "F_Missing01" },
+            labels = { "Combat", "Missing" },
+            semanticForValue = function(value, _index, _formAddress, candidateContext)
+                return {
+                    kind = "nextRoom",
+                    biomeKey = candidateContext.candidate.biomeKey,
+                    sourceRoomKey = candidateContext.candidate.sourceRoomKey,
+                    exitIndex = candidateContext.candidate.exitIndex,
+                    targetRoomKey = value,
+                }
+            end,
+        })
+        draft.biomes[1].rooms[2].generatedDoors.doors[1].candidateProviders = {
+            nextDoorTarget = provider,
+        }
+
+        local result = pipeline.evaluate(draft, context())
+
+        lu.assertEquals(result.state, "valid")
+        lu.assertTrue(result.valid)
+        lu.assertEquals(result.feedback, {})
+        lu.assertEquals(#result.candidateRecords, 2)
+        lu.assertEquals(result.history.candidateRecords, result.candidateRecords)
+        lu.assertEquals(#result.candidateResults, 1)
+        lu.assertEquals(result.candidateResults[1].code, "generated_door_target_unknown")
+        lu.assertEquals(result.candidateResults[1].presentation, "invalid")
+        lu.assertEquals(result.candidateResults[1].providerKey, "nextDoorTarget")
+        lu.assertEquals(result.candidateResults[1].providerVersion, 9)
+        lu.assertEquals(result.candidateResults[1].candidateKey, "F_Missing01")
+        lu.assertEquals(result.candidateResults[1].candidateIndex, 2)
+        lu.assertEquals(result.candidateResults[1].formAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+            doorIndex = 1,
+        })
+
+        local applied = provider.applyCandidateFeedback(result.candidateResults[1])
+        lu.assertTrue(applied)
+        lu.assertEquals(provider.messages[2], "Generated door target room is not declared.")
+        lu.assertFalse(provider.hidden[2])
+    end)
+end
