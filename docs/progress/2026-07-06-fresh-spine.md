@@ -4,7 +4,8 @@
 
 The fresh planner branch now has a clean active planning spine through route
 evaluation, candidate feedback export/application, and first-pass generated
-room legality plus force-pressure checks.
+room legality, force-pressure checks, and generated-door reward offer domain
+validation.
 
 Completed child commits:
 
@@ -21,6 +22,7 @@ Completed child commits:
 - `ed4ffd4 feat(feedback): apply candidate results`
 - `f973a51 feat(validation): add timing eligibility`
 - `602878e feat(validation): add room legality checks`
+- `91cf02f feat(validation): add force pressure`
 
 Completed shell commits:
 
@@ -34,6 +36,7 @@ Completed shell commits:
 - `60d1379 chore: point planner to feedback bridge`
 - `c41db94 chore: point planner to timing eligibility`
 - `82c1ea2 chore: point planner to room legality`
+- `b0d6103 chore: point planner to force pressure`
 
 ## What Changed
 
@@ -106,6 +109,13 @@ Completed shell commits:
   eligible forced rooms with physical exit compatibility and available creation
   capacity, then requires those room targets to appear when enough exits are
   available.
+- Route validation now composes structural validation with reward offer
+  validation before the route pipeline emits validity and feedback.
+- Generated-door reward offers now validate:
+  - materialized offer point kind;
+  - declared reward store or shop profile;
+  - reward type membership in the selected store/profile;
+  - generated target room offer profile compatibility.
 
 ## Validation
 
@@ -125,7 +135,7 @@ lua tests/smoke.lua
 
 Latest observed results:
 
-- `lua tests/all.lua`: 53 tests passed.
+- `lua tests/all.lua`: 59 tests passed.
 - `luacheck src tests`: 0 warnings, 0 errors.
 - `git diff --check`: passed.
 - `lua tests/smoke.lua`: smoke passed for 4 module entrypoints and 1
@@ -155,7 +165,13 @@ Force-window validation, room creation caps, exit-tag compatibility, and
 batch-level force-pressure validation are implemented for generated room
 targets. `nextRoom` candidates share the local generated-target checks, while
 missing forced rooms remain selected-route feedback on the generated-door
-batch. Reward requirements and bag simulation are still deferred.
+batch.
+
+Reward offer validation currently covers generated-door offer point domains:
+offer point kind, store/shop existence, reward type membership, and target
+room offer-profile compatibility. Reward entry requirements, payload-specific
+rules, shop acquisition timing, room-local offer points, batch uniqueness, and
+bag simulation are still deferred.
 
 ## Next Slices
 
@@ -165,8 +181,10 @@ The next implementation work should continue from
 Near-term slices:
 
 - expand candidate export/evaluation beyond generated next-room targets;
-- extend reward offer validation toward offer domains and reward bag
-  simulation;
+- extend reward offer validation toward source-specific entry requirements and
+  payload rules;
+- add reward candidate export/evaluation and presentation policies;
+- add reward bag simulation after source legality is stable;
 - wire candidate feedback application into route-control rebuilds once the
   control layer exists;
 - add route scope and multi-biome history once the single-biome history and

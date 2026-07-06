@@ -1,6 +1,6 @@
 local routeForm = import("mods/forms/route.lua")
 local historyBuilder = import("mods/history/builder.lua")
-local structuralValidator = import("mods/validation/structural.lua")
+local routeValidator = import("mods/validation/route.lua")
 local candidateFeedback = import("mods/feedback/candidates.lua")
 
 local routePipeline = {}
@@ -71,7 +71,7 @@ function routePipeline.evaluate(draft, context)
     local candidateRecords = routeForm.exportCandidates(draft, context)
     local plan = routeForm.materialize(draft, context)
     local history = historyBuilder.build(plan, contextWithCandidateRecords(context, candidateRecords))
-    local validation = structuralValidator.validate(history, context)
+    local validation = routeValidator.validate(history, context)
     local candidateResults = validation.candidateResults or {}
 
     if not validation.valid then

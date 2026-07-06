@@ -20,7 +20,7 @@ local function completeDraft()
                             doors = {
                                 {
                                     exitIndex = 1,
-                                    targetRoomKey = "F_Combat02",
+                                    targetRoomKey = "F_Combat01",
                                     offerPoint = {
                                         kind = "generatedDoorRewards",
                                         batchKey = "nextDoors",
@@ -38,14 +38,14 @@ local function completeDraft()
                         },
                     },
                     {
-                        roomKey = "F_Combat02",
+                        roomKey = "F_Combat01",
                         generatedDoors = {
                             batchRule = "Standard",
                             selectedDoorIndex = 1,
                             doors = {
                                 {
                                     exitIndex = 1,
-                                    targetRoomKey = "F_Combat01",
+                                    targetRoomKey = "F_Combat02",
                                     offerPoint = {
                                         kind = "generatedDoorRewards",
                                         batchKey = "nextDoors",
@@ -54,21 +54,6 @@ local function completeDraft()
                                                 store = "RunProgress",
                                                 rewardType = "MaxHealthDrop",
                                                 acquired = false,
-                                            },
-                                        },
-                                    },
-                                },
-                                {
-                                    exitIndex = 2,
-                                    targetRoomKey = "F_Opening01",
-                                    offerPoint = {
-                                        kind = "generatedDoorRewards",
-                                        batchKey = "nextDoors",
-                                        offers = {
-                                            {
-                                                store = "MetaProgress",
-                                                rewardType = "GiftDrop",
-                                                acquired = true,
                                             },
                                         },
                                     },
@@ -130,7 +115,7 @@ function TestRoutePipeline.testValidDraftBuildsPlanHistoryAndValidation()
         lu.assertEquals(result.feedback, {})
         lu.assertEquals(result.status.feedbackCount, 0)
         lu.assertEquals(result.plan.routeKey, "Underworld")
-        lu.assertEquals(#result.history.events, 17)
+        lu.assertEquals(#result.history.events, 14)
         lu.assertTrue(result.validation.valid)
     end)
 end
@@ -139,23 +124,17 @@ function TestRoutePipeline.testStructurallyInvalidDraftReturnsValidatorFeedback(
     h.withTestImport(function()
         local pipeline = h.testImport("mods/pipeline/route.lua")
         local draft = completeDraft()
-        draft.biomes[1].rooms[2].generatedDoors = {
-            batchRule = "Standard",
-            selectedDoorIndex = 1,
-            doors = {
-                {
-                    exitIndex = 2,
-                    targetRoomKey = "F_Combat01",
-                    offerPoint = {
-                        kind = "generatedDoorRewards",
-                        batchKey = "nextDoors",
-                        offers = {
-                            {
-                                store = "MetaProgress",
-                                rewardType = "GiftDrop",
-                                acquired = true,
-                            },
-                        },
+        draft.biomes[1].rooms[2].generatedDoors.doors[2] = {
+            exitIndex = 1,
+            targetRoomKey = "F_Opening01",
+            offerPoint = {
+                kind = "generatedDoorRewards",
+                batchKey = "nextDoors",
+                offers = {
+                    {
+                        store = "MetaProgress",
+                        rewardType = "GiftDrop",
+                        acquired = false,
                     },
                 },
             },
@@ -176,7 +155,7 @@ function TestRoutePipeline.testStructurallyInvalidDraftReturnsValidatorFeedback(
             roomIndex = 2,
         })
         lu.assertEquals(result.feedback[1].phase, "room.generate_next")
-        lu.assertEquals(result.feedback[1].payload.expectedCount, 2)
+        lu.assertEquals(result.feedback[1].payload.expectedCount, 1)
         lu.assertEquals(result.status.firstIssue.code, "generated_door_count_mismatch")
     end)
 end
@@ -231,7 +210,7 @@ function TestRoutePipeline.testCandidateResultsUseCreationCaps()
         lu.assertEquals(result.state, "valid")
         lu.assertEquals(#result.candidateResults, 1)
         lu.assertEquals(result.candidateResults[1].code, "room_creation_cap_exceeded")
-        lu.assertEquals(result.candidateResults[1].payload.targetRoomKey, "F_Combat02")
+        lu.assertEquals(result.candidateResults[1].payload.targetRoomKey, "F_Combat01")
         lu.assertEquals(result.candidateResults[1].payload.actualCount, 2)
         lu.assertEquals(result.candidateResults[1].payload.maxCreationsThisRun, 1)
     end)
@@ -260,7 +239,7 @@ function TestRoutePipeline.testCandidateResultsDoNotInvalidateSelectedRoute()
         local provider = candidateProvider.create({
             key = "nextDoorTarget",
             version = 9,
-            values = { "F_Combat01", "F_Missing01" },
+            values = { "F_Combat02", "F_Missing01" },
             labels = { "Combat", "Missing" },
             semanticForValue = function(value, _index, _formAddress, candidateContext)
                 return {
@@ -318,7 +297,7 @@ function TestRoutePipeline.testCandidateResultsUseTimingEligibility()
             nextDoorTarget = candidateProvider.create({
                 key = "nextDoorTarget",
                 version = 10,
-                values = { "F_Combat01", "F_PreBoss01" },
+                values = { "F_Combat02", "F_PreBoss01" },
                 labels = { "Combat", "Preboss" },
                 semanticForValue = function(value, _index, _formAddress, candidateContext)
                     return {
