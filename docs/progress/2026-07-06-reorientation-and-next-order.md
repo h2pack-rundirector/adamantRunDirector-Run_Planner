@@ -457,26 +457,41 @@ Implemented in the current working checkpoint:
 - `RequiredNotInStore` now observes active pending shop offers instead of an
   always-empty placeholder ledger.
 
+## Completed Minimal Room-Offer Harness Slice
+
+Implemented in the current working checkpoint:
+
+- the debug harness automatically creates one raw room-local offer point when
+  a mutable room becomes an F shop or preboss room;
+- room-local offers use the same store, reward-type, acquired-state, and
+  candidate-provider path as generated-door reward offers;
+- room-local reward-type candidate feedback is attached before each real
+  pipeline evaluation;
+- the draw fallback shows the room-offer surface so it is visible in the
+  current in-game debug loop;
+- tests cover shop-room offer control creation and pending-store feedback from
+  a shop offer blocking a same-room generated Hammer reward.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Minimal room-offer harness wiring
+Generalize linear biome declarations
 ```
 
 Concrete scope:
 
-- expose one raw room-local offer point in the debug harness for shop/preboss
-  rooms;
-- keep the UI shape temporary and data-focused;
-- attach the same reward-type candidate providers used by generated-door
-  offers;
-- show pending-store validation feedback in the live UI loop.
+- start expanding beyond the F-only declaration surface with the next simple
+  linear biome, likely G;
+- keep the declarations concrete and conservative rather than introducing a
+  shared builder before duplication is visible;
+- use the existing route/history/validation loop unchanged;
+- keep special-biome mechanics and reward bag simulation deferred.
 
-This keeps the in-game model-testing loop useful without starting the final UI
-pass. After this, the branch can either expand linear biome declarations or add
-the next reward batch/constraint rule with better live feedback coverage.
+This starts Phase 4 without losing the useful F debug loop. If G exposes a
+missing common linear rule, add that rule in declarations/validation rather
+than branching the route engine.
 
 ## Validation Baseline
 
@@ -491,7 +506,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 94 passed;
+- child tests: 97 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.

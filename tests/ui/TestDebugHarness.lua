@@ -28,6 +28,22 @@ local function lineSink()
     }
 end
 
+local function feedbackCodeAt(result, address)
+    for _, feedback in ipairs(result.feedback or {}) do
+        local matches = true
+        for key, value in pairs(address) do
+            if feedback.address[key] ~= value then
+                matches = false
+                break
+            end
+        end
+        if matches then
+            return feedback.code
+        end
+    end
+    return nil
+end
+
 function TestDebugHarness.testDefaultDraftEvaluatesThroughRealPipeline()
     h.withTestImport(function()
         local harness = createHarness()
@@ -84,6 +100,42 @@ function TestDebugHarness.testAppendSelectedTargetExtendsMutableDraft()
     end)
 end
 
+function TestDebugHarness.testShopRoomCreatesRoomOfferControls()
+    h.withTestImport(function()
+        local harness = createHarness()
+
+        harness.setDoorTarget(1, 1, "F_Shop01")
+        harness.setRoomKey(2, "F_Shop01")
+        local result = harness.evaluate()
+
+        local room = harness.draft.biomes[1].rooms[2]
+        lu.assertNotNil(room.offerPoints)
+        lu.assertEquals(room.offerPoints[1].kind, "shop")
+        lu.assertEquals(room.offerPoints[1].offers[1].store, "WorldShop")
+        lu.assertNotNil(room.offerPoints[1].offers[1].candidateProviders.rewardType)
+        lu.assertTrue(result.complete)
+    end)
+end
+
+function TestDebugHarness.testRoomOfferPendingStoreFeedbackReachesHarness()
+    h.withTestImport(function()
+        local harness = createHarness()
+
+        harness.setDoorTarget(1, 1, "F_Shop01")
+        harness.setRoomKey(2, "F_Shop01")
+        harness.setRewardType(2, 1, "WeaponUpgrade")
+        local result = harness.evaluate()
+
+        lu.assertEquals(feedbackCodeAt(result, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+            doorIndex = 1,
+            offerIndex = 1,
+        }), "late_hammer_pending_in_shop")
+    end)
+end
+
 function TestDebugHarness.testDrawTabEmitsStatusWithoutFullImguiSurface()
     h.withTestImport(function()
         local harness = createHarness()
@@ -96,5 +148,20 @@ function TestDebugHarness.testDrawTabEmitsStatusWithoutFullImguiSurface()
         lu.assertNotNil(combined:find("docs/system_design", 1, true))
         lu.assertNotNil(combined:find("State: valid", 1, true))
         lu.assertNotNil(combined:find("Candidates: 7", 1, true))
+    end)
+end
+
+function TestDebugHarness.testDrawTabIncludesRoomOfferSurface()
+    h.withTestImport(function()
+        local harness = createHarness()
+        harness.setDoorTarget(1, 1, "F_Shop01")
+        harness.setRoomKey(2, "F_Shop01")
+        local lines, ctx = lineSink()
+
+        harness.drawTab(nil, ctx)
+
+        local combined = table.concat(lines, "\n")
+        lu.assertNotNil(combined:find("Room offer 1 / shop", 1, true))
+        lu.assertNotNil(combined:find("Room reward##room2", 1, true))
     end)
 end

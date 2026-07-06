@@ -160,6 +160,43 @@ local function defaultOfferPoint(catalog)
     }
 end
 
+local function offerProfile(catalog, profileKey)
+    return catalog.offerProfiles and catalog.offerProfiles[profileKey] or nil
+end
+
+local function shopStoreForProfile(catalog, profileKey)
+    local profile = offerProfile(catalog, profileKey)
+    if profile == nil then
+        return nil
+    end
+    if profile.kind == "shop" then
+        return profile.shopKey
+    end
+    if profile.kind == "branch" then
+        for _, branch in ipairs(profile.branches or {}) do
+            if branch.offerProfile ~= nil then
+                local storeKey = shopStoreForProfile(catalog, branch.offerProfile)
+                if storeKey ~= nil then
+                    return storeKey
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function defaultRoomOfferPoint(catalog, room)
+    local storeKey = shopStoreForProfile(catalog, room.offerProfile) or "WorldShop"
+    local kind = room.kind == "Preboss" and "prebossRewards" or "shop"
+    return {
+        kind = kind,
+        batchKey = room.key .. "_roomOffers",
+        offers = {
+            defaultOffer(catalog, storeKey),
+        },
+    }
+end
+
 local function roomDeclaration(catalog, biomeKey, roomKey)
     local biome = catalog.biomes.lookup[biomeKey]
     return biome and biome.rooms.lookup[roomKey] or nil
@@ -191,6 +228,14 @@ local function materializedGeneratedDoors(catalog, biomeKey, roomKey, existing)
     end
 
     return generatedDoors
+end
+
+local function materializedRoomOfferPoints(catalog, biomeKey, roomKey, existing)
+    local room = roomDeclaration(catalog, biomeKey, roomKey)
+    if room == nil or (room.kind ~= "Shop" and room.kind ~= "Preboss") then
+        return nil
+    end
+    return deepCopy(existing or { defaultRoomOfferPoint(catalog, room) })
 end
 
 function debugHarness.defaultDraft()
@@ -347,6 +392,16 @@ local function ensureOffer(catalog, door)
     return door.offerPoint.offers[1]
 end
 
+local function ensureRoomOffer(catalog, biomeKey, room)
+    room.offerPoints = materializedRoomOfferPoints(catalog, biomeKey, room.roomKey, room.offerPoints)
+    local roomDeclarationValue = roomDeclaration(catalog, biomeKey, room.roomKey)
+    room.offerPoints = room.offerPoints or { defaultRoomOfferPoint(catalog, roomDeclarationValue or { key = room.roomKey }) }
+    room.offerPoints[1] = room.offerPoints[1] or defaultRoomOfferPoint(catalog, roomDeclarationValue or { key = room.roomKey })
+    room.offerPoints[1].offers = room.offerPoints[1].offers or { defaultOffer(catalog, "WorldShop") }
+    room.offerPoints[1].offers[1] = room.offerPoints[1].offers[1] or defaultOffer(catalog, "WorldShop")
+    return room.offerPoints[1].offers[1]
+end
+
 local function addressMatches(left, right)
     if left == nil or right == nil then
         return false
@@ -385,6 +440,28 @@ end
 local function attachCandidateProviders(state)
     local biome = state.draft.biomes[1]
     for _, room in ipairs(biome.rooms or {}) do
+        for _, offerPoint in ipairs(room.offerPoints or {}) do
+            for _, offer in ipairs(offerPoint.offers or {}) do
+                local rewardOptions = state.rewardTypeOptions[offer.store] or { values = {}, labels = {} }
+                offer.candidateProviders = {
+                    rewardType = state.candidateProvider.create({
+                        key = "rewardType",
+                        version = state.providerVersion,
+                        values = rewardOptions.values,
+                        labels = rewardOptions.labels,
+                        semanticForValue = function(value, _, _, context)
+                            return {
+                                kind = "rewardType",
+                                store = context.candidate.store,
+                                rewardType = value,
+                                payload = defaultPayloadForRewardType(state.catalog, value),
+                            }
+                        end,
+                    }),
+                }
+            end
+        end
+
         local generatedDoors = room.generatedDoors
         if generatedDoors ~= nil then
             for _, door in ipairs(generatedDoors.doors or {}) do
@@ -485,6 +562,7 @@ local function setRoomKey(state, roomIndex, roomKey)
         return false
     end
     room.roomKey = roomKey
+    room.offerPoints = materializedRoomOfferPoints(state.catalog, biome.biomeKey, roomKey, room.offerPoints)
     room.generatedDoors = materializedGeneratedDoors(state.catalog, biome.biomeKey, roomKey, room.generatedDoors)
     markDirty(state)
     return true
@@ -556,6 +634,42 @@ local function setRewardAcquired(state, roomIndex, doorIndex, acquired)
     return true
 end
 
+local function setRoomOfferStore(state, roomIndex, storeKey)
+    local biome = currentBiome(state)
+    local offer = ensureRoomOffer(state.catalog, biome.biomeKey, biome.rooms[roomIndex])
+    if offer.store == storeKey then
+        return false
+    end
+    offer.store = storeKey
+    offer.rewardType = first(rewardTypesForStore(state.catalog, storeKey), offer.rewardType)
+    offer.payload = defaultPayloadForRewardType(state.catalog, offer.rewardType)
+    markDirty(state)
+    return true
+end
+
+local function setRoomOfferType(state, roomIndex, rewardType)
+    local biome = currentBiome(state)
+    local offer = ensureRoomOffer(state.catalog, biome.biomeKey, biome.rooms[roomIndex])
+    if offer.rewardType == rewardType then
+        return false
+    end
+    offer.rewardType = rewardType
+    offer.payload = defaultPayloadForRewardType(state.catalog, rewardType)
+    markDirty(state)
+    return true
+end
+
+local function setRoomOfferAcquired(state, roomIndex, acquired)
+    local biome = currentBiome(state)
+    local offer = ensureRoomOffer(state.catalog, biome.biomeKey, biome.rooms[roomIndex])
+    if offer.acquired == acquired then
+        return false
+    end
+    offer.acquired = acquired
+    markDirty(state)
+    return true
+end
+
 local function setSelectedDoor(state, roomIndex, selectedDoorIndex)
     local generatedDoors = currentBiome(state).rooms[roomIndex].generatedDoors
     if generatedDoors.selectedDoorIndex == selectedDoorIndex then
@@ -581,6 +695,7 @@ local function appendSelectedTarget(state)
     local room = {
         roomKey = selectedDoor.targetRoomKey,
     }
+    room.offerPoints = materializedRoomOfferPoints(state.catalog, biome.biomeKey, room.roomKey, nil)
     room.generatedDoors = materializedGeneratedDoors(state.catalog, biome.biomeKey, room.roomKey, nil)
     biome.rooms[#biome.rooms + 1] = room
     markDirty(state)
@@ -712,6 +827,49 @@ local function drawDoor(state, imgui, evaluation, roomIndex, doorIndex, door)
     }))
 end
 
+local function drawRoomOffer(state, imgui, evaluation, roomIndex, room)
+    local biome = currentBiome(state)
+    local offer = ensureRoomOffer(state.catalog, biome.biomeKey, room)
+    local offerPoint = room.offerPoints[1]
+
+    pushText(imgui, "Room offer 1 / " .. tostring(offerPoint.kind))
+    local nextStore, storeChanged = drawChoice(imgui, "Room store##room" .. roomIndex, offer.store, state.storeOptions)
+    if storeChanged then
+        setRoomOfferStore(state, roomIndex, nextStore)
+        offer = ensureRoomOffer(state.catalog, biome.biomeKey, room)
+    end
+
+    local offerProviders = offer.candidateProviders or {}
+    local rewardOptions = offerProviders.rewardType or state.rewardTypeOptions[offer.store] or { values = {}, labels = {} }
+    local nextRewardType, rewardChanged = drawChoice(
+        imgui,
+        "Room reward##room" .. roomIndex,
+        offer.rewardType,
+        rewardOptions
+    )
+    if rewardChanged then
+        setRoomOfferType(state, roomIndex, nextRewardType)
+        offer = ensureRoomOffer(state.catalog, biome.biomeKey, room)
+    end
+
+    drawFeedback(imgui, "Room reward feedback", feedbackFor(evaluation, {
+        routeKey = state.draft.routeKey,
+        biomeIndex = 1,
+        roomIndex = roomIndex,
+        offerPointIndex = 1,
+        offerIndex = 1,
+    }))
+
+    if imgui ~= nil and imgui.Checkbox ~= nil then
+        local nextAcquired, acquiredChanged = imgui.Checkbox("Room acquired##room" .. roomIndex, offer.acquired == true)
+        if acquiredChanged then
+            setRoomOfferAcquired(state, roomIndex, nextAcquired)
+        end
+    else
+        pushText(imgui, "Room acquired: " .. tostring(offer.acquired == true))
+    end
+end
+
 local function drawRoom(state, imgui, evaluation, roomIndex, room)
     separator(imgui)
     pushText(imgui, "Room " .. tostring(roomIndex))
@@ -725,6 +883,10 @@ local function drawRoom(state, imgui, evaluation, roomIndex, room)
         biomeIndex = 1,
         roomIndex = roomIndex,
     }))
+
+    if room.offerPoints ~= nil then
+        drawRoomOffer(state, imgui, evaluation, roomIndex, room)
+    end
 
     local generatedDoors = room.generatedDoors
     if generatedDoors == nil then
@@ -835,6 +997,15 @@ function debugHarness.create(opts)
     end
     state.setDevotionSource = function(roomIndex, doorIndex, sourceIndex, source)
         return setDevotionSource(state, roomIndex, doorIndex, sourceIndex, source)
+    end
+    state.setRoomOfferStore = function(roomIndex, storeKey)
+        return setRoomOfferStore(state, roomIndex, storeKey)
+    end
+    state.setRoomOfferType = function(roomIndex, rewardType)
+        return setRoomOfferType(state, roomIndex, rewardType)
+    end
+    state.setRoomOfferAcquired = function(roomIndex, acquired)
+        return setRoomOfferAcquired(state, roomIndex, acquired)
     end
 
     return state
