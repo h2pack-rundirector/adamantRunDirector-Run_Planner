@@ -3,8 +3,8 @@
 ## Status
 
 The fresh planner branch now has a clean active planning spine through route
-evaluation, candidate feedback export/application, and first-pass
-requirement-backed room timing checks.
+evaluation, candidate feedback export/application, and first-pass generated
+room legality checks.
 
 Completed child commits:
 
@@ -92,6 +92,12 @@ Completed shell commits:
   lookup at the validation boundary.
 - Selected generated-door targets and next-room candidate records share the
   same room eligibility evaluation path.
+- Generated room targets now also validate:
+  - force windows after eligibility passes;
+  - per-run room creation caps;
+  - declared exit tag constraints against target room tags.
+- Candidate `nextRoom` results use the same force-window, cap, and exit-tag
+  checks as selected generated doors.
 
 ## Validation
 
@@ -111,7 +117,7 @@ lua tests/smoke.lua
 
 Latest observed results:
 
-- `lua tests/all.lua`: 46 tests passed.
+- `lua tests/all.lua`: 50 tests passed.
 - `luacheck src tests`: 0 warnings, 0 errors.
 - `git diff --check`: passed.
 - `lua tests/smoke.lua`: smoke passed for 4 module entrypoints and 1
@@ -137,8 +143,13 @@ timing/eligibility candidate policies are still deferred.
 
 Room eligibility currently supports only the explicit timing predicates needed
 by the F/Erebus declarations: `BiomeDepthCache` and `BiomeEncounterDepth`.
-Force pressure, room creation caps, exit-tag compatibility, reward
-requirements, and bag simulation are still deferred.
+Force-window validation, room creation caps, and exit-tag compatibility are
+implemented for generated room targets and `nextRoom` candidates.
+
+Full force-pressure validation is still deferred. The validator checks whether
+a generated forced room is inside its declared force window, but it does not
+yet require missing forced rooms to appear when pressure says they should.
+Reward requirements and bag simulation are still deferred.
 
 ## Next Slices
 
@@ -147,8 +158,8 @@ The next implementation work should continue from
 
 Near-term slices:
 
-- expand room/timing legality to force windows, creation caps, and exit-tag
-  compatibility;
+- add force-pressure validation that requires eligible forced rooms to appear
+  in generated-door batches when physically possible;
 - expand candidate export/evaluation beyond generated next-room targets;
 - extend reward offer validation toward offer domains and reward bag
   simulation;

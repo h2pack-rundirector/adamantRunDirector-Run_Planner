@@ -37,10 +37,20 @@ local function addressKey(formAddress)
     return tostring(formAddress.routeKey) .. ":" .. tostring(formAddress.biomeIndex) .. ":" .. tostring(formAddress.roomIndex)
 end
 
+local function doorAddressKey(formAddress)
+    return addressKey(formAddress) .. ":" .. tostring(formAddress.doorIndex)
+end
+
+local function targetCountKey(biomeKey, targetRoomKey)
+    return tostring(biomeKey) .. ":" .. tostring(targetRoomKey)
+end
+
 local function indexHistory(history)
     local indexed = {
         roomByIndex = {},
         roomByAddress = {},
+        generatedDoorByAddress = {},
+        generatedTargetCounts = {},
         generatedDoorsByRoom = {},
         generateNextByRoom = {},
     }
@@ -62,6 +72,10 @@ local function indexHistory(history)
             indexed.generatedDoorsByRoom[key] = doors
         end
         doors[#doors + 1] = door
+        indexed.generatedDoorByAddress[doorAddressKey(door.sourceAddress)] = door
+
+        local countKey = targetCountKey(door.biomeKey, door.targetRoomKey)
+        indexed.generatedTargetCounts[countKey] = (indexed.generatedTargetCounts[countKey] or 0) + 1
     end
 
     return indexed
@@ -127,6 +141,24 @@ local function addSelectedViolation(result, sourceAddress, violation)
     end
 end
 
+local function arraySet(values)
+    local set = {}
+    for _, value in ipairs(values or {}) do
+        set[value] = true
+    end
+    return set
+end
+
+local function filteredExitTags(exit)
+    local tags = {}
+    for _, tag in ipairs(exit.tags or {}) do
+        if tag ~= "Standard" then
+            tags[#tags + 1] = tag
+        end
+    end
+    return tags
+end
+
 local function generateNextForRoom(indexed, biomeKey, roomIndex, context)
     local generateNextEvent = indexed.generateNextByRoom[roomKey(biomeKey, roomIndex)]
     if generateNextEvent == nil then
@@ -164,6 +196,109 @@ local function roomEligibilityViolation(catalog, generateNextEvent, targetRoomKe
     return violation
 end
 
+local function roomForceViolation(catalog, generateNextEvent, targetRoomKey, context)
+    local targetRoom = getRoom(catalog, generateNextEvent.biomeKey, targetRoomKey)
+    if targetRoom == nil or targetRoom.force == nil then
+        return nil
+    end
+
+    local violation = requirements.evaluate(targetRoom.force, {
+        path = context .. ".force",
+        namedRequirements = catalog.requirements,
+        counters = eligibilityCounters(generateNextEvent),
+    })
+
+    if violation ~= nil then
+        violation.payload.targetRoomKey = targetRoomKey
+        violation.payload.sourceRoomKey = generateNextEvent.roomKey
+    end
+
+    return violation
+end
+
+local function roomCapViolation(catalog, biomeKey, targetRoomKey, projectedCount)
+    local targetRoom = getRoom(catalog, biomeKey, targetRoomKey)
+    if targetRoom == nil or targetRoom.caps == nil or targetRoom.caps.maxCreationsThisRun == nil then
+        return nil
+    end
+
+    local maxCreations = guard.expectNumber(targetRoom.caps.maxCreationsThisRun, "validation.room.caps.maxCreationsThisRun")
+    if projectedCount <= maxCreations then
+        return nil
+    end
+
+    return {
+        code = "room_creation_cap_exceeded",
+        phase = "room.generate_next",
+        presentation = "invalid",
+        payload = {
+            targetRoomKey = targetRoomKey,
+            actualCount = projectedCount,
+            maxCreationsThisRun = maxCreations,
+        },
+        message = "Generated room target exceeds its creation cap.",
+    }
+end
+
+local function selectedRoomCapViolation(catalog, indexed, biomeKey, targetRoomKey)
+    return roomCapViolation(
+        catalog,
+        biomeKey,
+        targetRoomKey,
+        indexed.generatedTargetCounts[targetCountKey(biomeKey, targetRoomKey)] or 0
+    )
+end
+
+local function candidateRoomCapViolation(catalog, indexed, biomeKey, targetRoomKey, currentDoor)
+    local count = indexed.generatedTargetCounts[targetCountKey(biomeKey, targetRoomKey)] or 0
+    if currentDoor == nil then
+        guard.fail("validation.candidate.formAddress", "candidate address must resolve to generated door history")
+    end
+    if currentDoor.targetRoomKey ~= targetRoomKey then
+        count = count + 1
+    end
+    return roomCapViolation(catalog, biomeKey, targetRoomKey, count)
+end
+
+local function exitTagsViolation(catalog, biomeKey, sourceRoomKey, exitIndex, targetRoomKey)
+    local sourceRoom = getRoom(catalog, biomeKey, sourceRoomKey)
+    local targetRoom = getRoom(catalog, biomeKey, targetRoomKey)
+    if sourceRoom == nil or targetRoom == nil then
+        return nil
+    end
+
+    local exit = sourceRoom.exits[exitIndex]
+    if exit == nil then
+        return nil
+    end
+
+    local requiredTags = filteredExitTags(exit)
+    if #requiredTags == 0 then
+        return nil
+    end
+
+    local targetTags = arraySet(targetRoom.tags)
+    for _, tag in ipairs(requiredTags) do
+        if not targetTags[tag] then
+            return {
+                code = "generated_door_exit_tags_mismatch",
+                phase = "room.generate_next",
+                presentation = "invalid",
+                payload = {
+                    roomKey = sourceRoomKey,
+                    exitIndex = exitIndex,
+                    exitTags = requiredTags,
+                    targetRoomKey = targetRoomKey,
+                    targetTags = targetRoom.tags or {},
+                },
+                message = "Generated door target does not satisfy declared exit tags.",
+            }
+        end
+    end
+
+    return nil
+end
+
 local function validateDoorExit(result, catalog, door)
     addSelectedViolation(result, door.sourceAddress, doorExitViolation(catalog, door.biomeKey, door.roomKey, door.exitIndex))
 end
@@ -172,7 +307,7 @@ local function validateDoorTarget(result, catalog, door)
     addSelectedViolation(result, door.sourceAddress, doorTargetViolation(catalog, door.biomeKey, door.targetRoomKey))
 end
 
-local function validateDoorEligibility(result, catalog, indexed, door)
+local function validateDoorLegality(result, catalog, indexed, door)
     if getRoom(catalog, door.biomeKey, door.targetRoomKey) == nil then
         return
     end
@@ -183,11 +318,14 @@ local function validateDoorEligibility(result, catalog, indexed, door)
         door.roomIndex,
         "validation.generatedDoors[" .. tostring(door.eventIndex) .. "]"
     )
-    addSelectedViolation(
-        result,
-        door.sourceAddress,
-        roomEligibilityViolation(catalog, generateNextEvent, door.targetRoomKey, "validation.generatedDoors[" .. tostring(door.eventIndex) .. "].targetRoom")
-    )
+    local context = "validation.generatedDoors[" .. tostring(door.eventIndex) .. "].targetRoom"
+    local eligibilityViolation = roomEligibilityViolation(catalog, generateNextEvent, door.targetRoomKey, context)
+    addSelectedViolation(result, door.sourceAddress, exitTagsViolation(catalog, door.biomeKey, door.roomKey, door.exitIndex, door.targetRoomKey))
+    addSelectedViolation(result, door.sourceAddress, eligibilityViolation)
+    if eligibilityViolation == nil then
+        addSelectedViolation(result, door.sourceAddress, roomForceViolation(catalog, generateNextEvent, door.targetRoomKey, context))
+    end
+    addSelectedViolation(result, door.sourceAddress, selectedRoomCapViolation(catalog, indexed, door.biomeKey, door.targetRoomKey))
 end
 
 local function validateDoorCount(result, catalog, roomEvent, doors)
@@ -241,7 +379,7 @@ local function validateGeneratedDoors(result, catalog, history, indexed)
     for _, door in ipairs(history.generatedDoorHistory) do
         validateDoorExit(result, catalog, door)
         validateDoorTarget(result, catalog, door)
-        validateDoorEligibility(result, catalog, indexed, door)
+        validateDoorLegality(result, catalog, indexed, door)
     end
 
     for _, roomEvent in ipairs(history.roomHistory) do
@@ -322,10 +460,17 @@ local function evaluateNextRoomCandidate(result, catalog, indexed, record, seman
     local targetRoomKey = guard.expectString(semantic.targetRoomKey, context .. ".semantic.targetRoomKey")
     local sourceRoomIndex = guard.expectNumber(record.formAddress.roomIndex, context .. ".formAddress.roomIndex")
     local generateNextEvent = generateNextForRoom(indexed, biomeKey, sourceRoomIndex, context .. ".formAddress")
+    local currentDoor = indexed.generatedDoorByAddress[doorAddressKey(record.formAddress)]
+    local eligibilityViolation = roomEligibilityViolation(catalog, generateNextEvent, targetRoomKey, context .. ".semantic")
 
     addCandidateViolation(result, record, doorExitViolation(catalog, biomeKey, sourceRoomKey, exitIndex))
     addCandidateViolation(result, record, doorTargetViolation(catalog, biomeKey, targetRoomKey))
-    addCandidateViolation(result, record, roomEligibilityViolation(catalog, generateNextEvent, targetRoomKey, context .. ".semantic"))
+    addCandidateViolation(result, record, exitTagsViolation(catalog, biomeKey, sourceRoomKey, exitIndex, targetRoomKey))
+    addCandidateViolation(result, record, eligibilityViolation)
+    if eligibilityViolation == nil then
+        addCandidateViolation(result, record, roomForceViolation(catalog, generateNextEvent, targetRoomKey, context .. ".semantic"))
+    end
+    addCandidateViolation(result, record, candidateRoomCapViolation(catalog, indexed, biomeKey, targetRoomKey, currentDoor))
 end
 
 local function expectCandidateRecord(record, context)

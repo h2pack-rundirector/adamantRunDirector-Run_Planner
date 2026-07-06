@@ -60,7 +60,7 @@ local function completeDraft()
                                 },
                                 {
                                     exitIndex = 2,
-                                    targetRoomKey = "F_Combat02",
+                                    targetRoomKey = "F_Opening01",
                                     offerPoint = {
                                         kind = "generatedDoorRewards",
                                         batchKey = "nextDoors",
@@ -200,6 +200,40 @@ function TestRoutePipeline.testTimingInvalidDraftReturnsRequirementFeedback()
             roomIndex = 2,
             doorIndex = 1,
         })
+    end)
+end
+
+function TestRoutePipeline.testCandidateResultsUseCreationCaps()
+    h.withTestImport(function()
+        local candidateProvider = h.testImport("mods/forms/candidate_provider.lua")
+        local pipeline = h.testImport("mods/pipeline/route.lua")
+        local draft = completeDraft()
+        draft.biomes[1].rooms[2].generatedDoors.doors[1].candidateProviders = {
+            nextDoorTarget = candidateProvider.create({
+                key = "nextDoorTarget",
+                version = 11,
+                values = { "F_Combat01", "F_Combat02" },
+                labels = { "Combat 1", "Combat 2" },
+                semanticForValue = function(value, _index, _formAddress, candidateContext)
+                    return {
+                        kind = "nextRoom",
+                        biomeKey = candidateContext.candidate.biomeKey,
+                        sourceRoomKey = candidateContext.candidate.sourceRoomKey,
+                        exitIndex = candidateContext.candidate.exitIndex,
+                        targetRoomKey = value,
+                    }
+                end,
+            }),
+        }
+
+        local result = pipeline.evaluate(draft, context())
+
+        lu.assertEquals(result.state, "valid")
+        lu.assertEquals(#result.candidateResults, 1)
+        lu.assertEquals(result.candidateResults[1].code, "room_creation_cap_exceeded")
+        lu.assertEquals(result.candidateResults[1].payload.targetRoomKey, "F_Combat02")
+        lu.assertEquals(result.candidateResults[1].payload.actualCount, 2)
+        lu.assertEquals(result.candidateResults[1].payload.maxCreationsThisRun, 1)
     end)
 end
 

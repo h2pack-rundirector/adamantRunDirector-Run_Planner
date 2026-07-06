@@ -60,7 +60,7 @@ local function completeDraft()
                                 },
                                 {
                                     exitIndex = 2,
-                                    targetRoomKey = "F_Combat02",
+                                    targetRoomKey = "F_Opening01",
                                     offerPoint = {
                                         kind = "generatedDoorRewards",
                                         batchKey = "nextDoors",
@@ -307,6 +307,60 @@ function TestStructuralValidator.testRoomEligibilityUsesBiomeEncounterDepth()
         lu.assertEquals(result.findings[1].payload.axis, "BiomeEncounterDepth")
         lu.assertEquals(result.findings[1].payload.actual, 6)
         lu.assertEquals(result.findings[1].payload.expected, 5)
+    end)
+end
+
+function TestStructuralValidator.testDetectsForceWindowAtGenerateNext()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[2].generatedDoors.doors[1].targetRoomKey = "F_PreBoss01"
+        local history = buildHistory(plan, catalog)
+        findEvent(history, "room.generate_next", 2).biomeDepthCache = 11
+
+        local result = h.testImport("mods/validation/structural.lua").validate(history, {
+            catalog = catalog,
+        })
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "f_preboss_force_depth")
+        lu.assertEquals(result.findings[1].payload.axis, "BiomeDepthCache")
+        lu.assertEquals(result.findings[1].payload.actual, 11)
+        lu.assertEquals(result.findings[1].payload.expected, 10)
+    end)
+end
+
+function TestStructuralValidator.testDetectsRoomCreationCaps()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[2].generatedDoors.doors[2].targetRoomKey = "F_Combat02"
+
+        local result = validatePlan(plan, catalog)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "room_creation_cap_exceeded")
+        lu.assertEquals(result.findings[1].payload, {
+            targetRoomKey = "F_Combat02",
+            actualCount = 2,
+            maxCreationsThisRun = 1,
+        })
+    end)
+end
+
+function TestStructuralValidator.testDetectsExitTagMismatch()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        catalog.biomes.lookup.F.rooms.lookup.F_Combat02.exits[1].tags = { "Shop" }
+        local plan = materializePlan(completeDraft(), catalog)
+
+        local result = validatePlan(plan, catalog)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "generated_door_exit_tags_mismatch")
+        lu.assertEquals(result.findings[1].payload.exitTags, { "Shop" })
+        lu.assertEquals(result.findings[1].payload.targetRoomKey, "F_Combat01")
+        lu.assertEquals(result.findings[1].payload.targetTags, { "Combat" })
     end)
 end
 
