@@ -207,40 +207,6 @@ local function roomEligibilityViolation(catalog, generateNextEvent, targetRoomKe
     return violation
 end
 
-local function roomForceViolation(catalog, generateNextEvent, targetRoomKey, context)
-    local targetRoom = getRoom(catalog, generateNextEvent.biomeKey, targetRoomKey)
-    if targetRoom == nil or targetRoom.force == nil then
-        return nil
-    end
-
-    local violation = requirements.evaluate(targetRoom.force, {
-        path = context .. ".force",
-        namedRequirements = catalog.requirements,
-        counters = eligibilityCounters(generateNextEvent),
-    })
-
-    if violation ~= nil then
-        violation.payload.targetRoomKey = targetRoomKey
-        violation.payload.sourceRoomKey = generateNextEvent.roomKey
-    end
-
-    return violation
-end
-
-local function roomForceActive(catalog, generateNextEvent, targetRoomKey, context)
-    local targetRoom = getRoom(catalog, generateNextEvent.biomeKey, targetRoomKey)
-    if targetRoom == nil or targetRoom.force == nil then
-        return false
-    end
-
-    local violation = requirements.evaluate(targetRoom.force, {
-        path = context .. ".force",
-        namedRequirements = catalog.requirements,
-        counters = eligibilityCounters(generateNextEvent),
-    })
-    return violation == nil
-end
-
 local function roomCapViolation(catalog, biomeKey, targetRoomKey, projectedCount)
     local targetRoom = getRoom(catalog, biomeKey, targetRoomKey)
     if targetRoom == nil or targetRoom.caps == nil or targetRoom.caps.maxCreationsThisRun == nil then
@@ -348,16 +314,6 @@ local function selectedRoomCapViolation(catalog, indexed, generateNextEvent, doo
     )
 end
 
-local function roomHasCreationCapacity(catalog, indexed, generateNextEvent, roomKeyValue)
-    local room = getRoom(catalog, generateNextEvent.biomeKey, roomKeyValue)
-    if room == nil or room.caps == nil or room.caps.maxCreationsThisRun == nil then
-        return true
-    end
-
-    local maxCreations = guard.expectNumber(room.caps.maxCreationsThisRun, "validation.room.caps.maxCreationsThisRun")
-    return projectedCreationCount(indexed, generateNextEvent, roomKeyValue, 0) < maxCreations
-end
-
 local function exitTagsViolation(catalog, biomeKey, sourceRoomKey, exitIndex, targetRoomKey)
     local sourceRoom = getRoom(catalog, biomeKey, sourceRoomKey)
     local targetRoom = getRoom(catalog, biomeKey, targetRoomKey)
@@ -413,9 +369,6 @@ local function validateDoorLegality(result, catalog, indexed, door)
     local eligibilityViolation = roomEligibilityViolation(catalog, generateNextEvent, door.targetRoomKey, context)
     addSelectedViolation(result, door.sourceAddress, exitTagsViolation(catalog, door.biomeKey, door.roomKey, door.exitIndex, door.targetRoomKey))
     addSelectedViolation(result, door.sourceAddress, eligibilityViolation)
-    if eligibilityViolation == nil then
-        addSelectedViolation(result, door.sourceAddress, roomForceViolation(catalog, generateNextEvent, door.targetRoomKey, context))
-    end
     addSelectedViolation(result, door.sourceAddress, selectedRoomCapViolation(catalog, indexed, generateNextEvent, door, doors))
 end
 
@@ -466,78 +419,6 @@ local function validateSelectedDoor(result, indexed, generateNextEvent, doors)
     end
 end
 
-local function generatedTargetSet(doors)
-    local set = {}
-    for _, door in ipairs(doors or {}) do
-        set[door.targetRoomKey] = true
-    end
-    return set
-end
-
-local function roomCanUseAnyGeneratedExit(sourceRoom, targetRoom, doors)
-    for _, door in ipairs(doors or {}) do
-        local exit = sourceRoom.exits[door.exitIndex]
-        if exit ~= nil and exitTagsSatisfied(exit, targetRoom) then
-            return true
-        end
-    end
-    return false
-end
-
-local function forcedCandidates(catalog, indexed, generateNextEvent, doors)
-    local biome = getBiome(catalog, generateNextEvent.biomeKey)
-    local sourceRoom = getRoom(catalog, generateNextEvent.biomeKey, generateNextEvent.roomKey)
-    if biome == nil or sourceRoom == nil then
-        return {}
-    end
-
-    local candidates = {}
-    for _, targetRoom in ipairs(biome.rooms.ordered or {}) do
-        if targetRoom.key ~= generateNextEvent.roomKey
-            and roomHasCreationCapacity(catalog, indexed, generateNextEvent, targetRoom.key)
-            and roomCanUseAnyGeneratedExit(sourceRoom, targetRoom, doors)
-            and roomEligibilityViolation(catalog, generateNextEvent, targetRoom.key, "validation.forcePressure." .. targetRoom.key) == nil
-            and roomForceActive(catalog, generateNextEvent, targetRoom.key, "validation.forcePressure." .. targetRoom.key) then
-            candidates[#candidates + 1] = targetRoom.key
-        end
-    end
-    table.sort(candidates)
-    return candidates
-end
-
-local function validateForcePressure(result, catalog, indexed, generateNextEvent, doors)
-    local forced = forcedCandidates(catalog, indexed, generateNextEvent, doors)
-    if #forced == 0 then
-        return
-    end
-
-    local requiredCount = math.min(#forced, #(doors or {}))
-    if requiredCount == 0 then
-        return
-    end
-
-    local generated = generatedTargetSet(doors)
-    local missing = {}
-    for _, roomKeyValue in ipairs(forced) do
-        if not generated[roomKeyValue] then
-            missing[#missing + 1] = roomKeyValue
-            if #missing == requiredCount then
-                break
-            end
-        end
-    end
-
-    if #missing > 0 then
-        validationResult.invalid(result, "force_pressure_missing_room", "room.generate_next", generateNextEvent.sourceAddress, {
-            roomKey = generateNextEvent.roomKey,
-            missingRoomKeys = missing,
-            forcedRoomKeys = forced,
-            requiredCount = requiredCount,
-            generatedDoorCount = #(doors or {}),
-        }, "Generated doors must include active forced room targets when exits are available.")
-    end
-end
-
 local function validateGeneratedDoors(result, catalog, history, indexed)
     for _, door in ipairs(history.generatedDoorHistory) do
         validateDoorExit(result, catalog, door)
@@ -561,7 +442,6 @@ local function validateGeneratedDoors(result, catalog, history, indexed)
             validateDoorCount(result, catalog, roomEvent, doors)
             if generateNextEvent ~= nil then
                 validateSelectedDoor(result, indexed, generateNextEvent, doors)
-                validateForcePressure(result, catalog, indexed, generateNextEvent, doors)
             end
         end
     end
@@ -632,9 +512,6 @@ local function evaluateNextRoomCandidate(result, catalog, indexed, record, seman
     addCandidateViolation(result, record, doorTargetViolation(catalog, biomeKey, targetRoomKey))
     addCandidateViolation(result, record, exitTagsViolation(catalog, biomeKey, sourceRoomKey, exitIndex, targetRoomKey))
     addCandidateViolation(result, record, eligibilityViolation)
-    if eligibilityViolation == nil then
-        addCandidateViolation(result, record, roomForceViolation(catalog, generateNextEvent, targetRoomKey, context .. ".semantic"))
-    end
     addCandidateViolation(result, record, candidateRoomCapViolation(
         catalog,
         indexed,
