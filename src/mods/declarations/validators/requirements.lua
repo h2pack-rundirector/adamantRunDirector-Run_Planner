@@ -6,6 +6,7 @@ local KNOWN_REQUIREMENT_KINDS = {
     All = true,
     Any = true,
     Not = true,
+    EncounterDepth = true,
     BiomeDepthCache = true,
     BiomeEncounterDepth = true,
     ClearedBiomes = true,
@@ -14,6 +15,8 @@ local KNOWN_REQUIREMENT_KINDS = {
     CurrentLootSourcesSeen = true,
     UniquePayloadValues = true,
     RequiredNotInStore = true,
+    RequiredMinRoomsSinceEvent = true,
+    RequiredMinExits = true,
 }
 
 local KNOWN_PRESENTATION_POLICIES = {
@@ -70,6 +73,12 @@ local function validateComparison(requirement, context)
     end
 end
 
+local function validateEventSelector(selector, context)
+    guard.expectTable(selector, context)
+    guard.expectString(selector.kind, context .. ".kind")
+    guard.expectOptionalString(selector.rewardType, context .. ".rewardType")
+end
+
 function requirementsValidator.validateRequirement(requirement, namedRequirements, context)
     guard.expectTable(requirement, context)
 
@@ -102,6 +111,12 @@ function requirementsValidator.validateRequirement(requirement, namedRequirement
         validateStringArray(requirement.sourceValues, context .. ".sourceValues")
     elseif kind == "UniquePayloadValues" then
         validateStringArray(requirement.values, context .. ".values")
+    elseif kind == "RequiredMinRoomsSinceEvent" then
+        validateEventSelector(requirement.event, context .. ".event")
+        guard.expectString(requirement.axis, context .. ".axis")
+        guard.expectNumber(requirement.count, context .. ".count")
+    elseif kind == "RequiredMinExits" then
+        guard.expectNumber(requirement.count, context .. ".count")
     else
         validateComparison(requirement, context)
         validateCountSet(requirement, context)

@@ -69,6 +69,22 @@ local function countSetRequirement(requirement, axis, actual, context)
     })
 end
 
+local function minimumRequirement(requirement, axis, actual, context)
+    local expected = guard.expectNumber(requirement.count, context.path .. ".count")
+
+    if actual >= expected then
+        return nil
+    end
+
+    return numericFailure(requirement, axis, actual, expected, {
+        path = context.path,
+        phase = context.phase,
+        defaultMessage = context.defaultMessage,
+    }, {
+        comparison = ">=",
+    })
+end
+
 local function arrayPayload(values)
     local copy = {}
     for index, value in ipairs(values or {}) do
@@ -170,6 +186,13 @@ local function evaluate(requirement, context)
             guard.expectNumber(context.counters.biomeDepthCache, "validation.counters.biomeDepthCache"),
             context
         )
+    elseif kind == "EncounterDepth" then
+        return numericRequirement(
+            requirement,
+            "RunEncounterDepth",
+            guard.expectNumber(context.counters.runEncounterDepth, "validation.counters.runEncounterDepth"),
+            context
+        )
     elseif kind == "BiomeEncounterDepth" then
         return numericRequirement(
             requirement,
@@ -235,6 +258,22 @@ local function evaluate(requirement, context)
             name = name,
             actual = count,
         }, context)
+    elseif kind == "RequiredMinRoomsSinceEvent" then
+        local axis = guard.expectString(requirement.axis, context.path .. ".axis")
+        local roomsSinceEvent = guard.expectFunction(
+            context.queries.roomsSinceEvent,
+            "validation.queries.roomsSinceEvent"
+        )(requirement.event, axis)
+        if roomsSinceEvent == nil then
+            return nil
+        end
+        return minimumRequirement(requirement, axis, roomsSinceEvent, context)
+    elseif kind == "RequiredMinExits" then
+        local count = guard.expectFunction(
+            context.queries.countGeneratedDoors,
+            "validation.queries.countGeneratedDoors"
+        )()
+        return minimumRequirement(requirement, "GeneratedDoorCount", count, context)
     end
 
     guard.fail(context.path .. ".kind", "unsupported requirement kind '" .. kind .. "'")

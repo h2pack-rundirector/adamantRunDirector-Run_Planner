@@ -64,6 +64,7 @@ Recent child commits:
 - `029b8c7 refactor(validation): remove legacy force pressure`
 - `4c1fad6 feat(validation): rebuild force pressure`
 - `70f4b4b feat(validation): add reward entry queries`
+- `ce98f2a feat(planner): evaluate reward candidates`
 
 Recent shell pointer commits:
 
@@ -77,6 +78,7 @@ Recent shell pointer commits:
 - `15f8a1c chore: point planner to force cleanup`
 - `d4af051 chore: point planner to force rebuild`
 - `a71cede chore: point planner to reward queries`
+- `ef3c539 chore: point planner to reward candidates`
 
 ## What Is Implemented
 
@@ -186,18 +188,20 @@ F declarations
 + candidate feedback
 ```
 
-However, Phase 3 is not completely done because reward candidates are not yet
-exported/evaluated, and the current route authoring surface is only a minimal
-debug harness rather than final route controls.
+Phase 3 is complete enough for the current F/data-loop purpose: selected
+validation and candidate feedback are both wired. The route authoring surface
+is still only a minimal debug harness rather than final route controls.
 
 Phase 4 has not started in substance. The generic linear model exists in docs,
 but G/P/Q declarations and any shared linear builder abstraction are not yet
 implemented.
 
-Phase 5 has started across the first two layers. Generated-door reward offers
-now validate the offer domain and selected RunProgress-style counted bag entry
-requirements. Payload legality, reward candidates, shop acquisition timing,
-room-local offer points, and batch rules are still deferred.
+Phase 5 has started across selected legality, payload legality, and reward
+candidate evaluation. Generated-door reward offers validate offer domain,
+selected RunProgress-style counted bag entry requirements, Devotion payloads,
+and the first source-specific Devotion entry requirements. Shop acquisition
+timing, room-local offer points, batch rules, and bag simulation are still
+deferred.
 
 Phase 6 and later should remain blocked for now. H/O/I/N docs should guide
 schema decisions, but their special mechanics depend on a more complete common
@@ -212,6 +216,7 @@ Devotion source history:
 - `All`;
 - `Any`;
 - `Not`;
+- `EncounterDepth`;
 - `BiomeDepthCache`;
 - `BiomeEncounterDepth`;
 - `LootTypeHistory`;
@@ -219,11 +224,13 @@ Devotion source history:
 - `PriorDistinctLootSources`;
 - `CurrentLootSourcesSeen`;
 - `UniquePayloadValues`;
-- `RequiredNotInStore` against the current empty pending-store ledger.
+- `RequiredNotInStore` against the current empty pending-store ledger;
+- `RequiredMinRoomsSinceEvent`;
+- `RequiredMinExits`.
 
 The next requirement expansions should be demand-driven. `UseRecord`,
-`BiomeUseRecord`, `LootBiomeRecord`, spacing requirements, minimum exits, and
-prior distinct god loot are still deferred.
+`BiomeUseRecord`, `LootBiomeRecord`, and broader source/use-history predicates
+are still deferred.
 
 Reward validation checks whether a source can ever offer a reward type and
 whether a generated-door bag offer has at least one matching counted bag entry
@@ -231,12 +238,16 @@ whose requirements pass. It also validates the first payload rules:
 
 - declared boon source keys when a Boon offer carries a source payload;
 - Devotion source pairs are declared, distinct, and present in prior acquired
-  loot source history.
+  loot source history;
+- Devotion entry requirements for run encounter depth, biome encounter depth,
+  rooms since prior Devotion acquisition on `RoomHistoryOrdinal`, and minimum
+  generated exits.
 
 This is still not bag depletion/refill simulation.
 
-Reward candidate policy is not implemented. The only semantic candidate kind
-is `nextRoom`.
+Reward candidate policy is implemented for `nextRoom`, offer `rewardType`, and
+Devotion payload source options. Additional reward candidate kinds remain
+demand-driven.
 
 Room-local offer points are not implemented. Current reward validation is
 limited to generated-door offer points at `room.generate_next`, and selected
@@ -267,16 +278,16 @@ Completed payload targets:
 
 Payload completeness remains a form concern. Payload legality is validation.
 
-### 2. Add Reward Candidate Export And Evaluation
+### 2. Reward Candidate Export And Evaluation Completed
 
-After selected reward legality works, add candidate semantics for reward forms:
+Reward candidate semantics now cover:
 
-- `rewardType`;
-- payload candidates such as devotion source;
-- eventually `shopOption`.
+- offer-owned `rewardType`;
+- Devotion source payload choices;
+- structural `nextRoom` candidates in the structural validator.
 
-Candidates should reuse the same rule functions as selected reward findings.
-They should not trigger a separate validator walk per control.
+Candidates reuse selected-rule helpers by projecting the edited offer/payload
+through selected legality and translating findings back to provider results.
 
 ### 3. Keep The Minimal UI Harness Active While Continuing Model Work
 
@@ -302,18 +313,21 @@ generic linear model:
 - keep Q deterministic choices as structure metadata and generated doors, not
   a special route engine.
 
-### 5. Extend The Reward Requirement Surface
+### 5. Reward Requirement Surface Expanded
 
-Add more requirement predicates only when a selected validation or candidate
-slice needs them.
+This checkpoint adds the next predicates needed by Devotion selected legality
+and reward candidates:
 
-Likely next predicates:
+- `EncounterDepth`;
+- `RequiredMinRoomsSinceEvent`;
+- `RequiredMinExits`.
+
+Continue adding more requirement predicates only when a selected validation or
+candidate slice needs them. Likely deferred predicates:
 
 - `UseRecord`;
 - `BiomeUseRecord`;
-- `LootBiomeRecord`;
-- `RequiredMinRoomsSinceEvent`;
-- `RequiredMinExits`.
+- `LootBiomeRecord`.
 
 Keep `RequiredNotInStore` on the explicit pending-store ledger. It should start
 blocking only when shop offer intervals are materialized into history.
@@ -401,28 +415,40 @@ Implemented in the current working checkpoint:
   Devotion source candidate providers so advisory reward feedback can be tested
   in game.
 
+## Completed Reward Requirement Surface Slice
+
+Implemented in the current working checkpoint:
+
+- Devotion entry requirements are now an `All` block covering run encounter
+  depth, biome encounter depth, prior distinct god sources, rooms since prior
+  Devotion acquisition, and minimum generated exits;
+- reward validation passes event-bound counters into requirement evaluation;
+- history query helpers expose event-bound generated-door counts and
+  `RoomHistoryOrdinal` event-distance checks;
+- reward offer and acquisition events now carry the counter snapshot needed by
+  entry requirements and spacing checks;
+- tests cover early Devotion encounter-depth failure, recent-Devotion spacing
+  failure, one-exit Devotion failure, and a valid fully qualified Devotion.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Reward requirement surface expansion
+Room-local reward offer timing
 ```
 
 Concrete scope:
 
-- add only the next requirement predicates needed by selected reward legality
-  and reward candidates;
-- likely first targets are `RequiredMinExits`, `RequiredMinRoomsSinceEvent`,
-  and the run encounter-depth predicate needed by Devotion;
-- keep the predicates as game-language history queries, not reward-type-global
-  shortcuts;
-- continue deferring bag depletion/refill until offer timing and source
-  legality are broader.
+- materialize non-generated-door offer points needed by shops/preboss surfaces;
+- distinguish shop offers that are bought from shop offers that merely appeared;
+- begin making `RequiredNotInStore` meaningful by populating the pending-store
+  ledger from real offer intervals;
+- keep bag depletion/refill deferred until offer timing is explicit.
 
-This lets the current reward candidate path expose real source-specific
-requirement failures before the model moves into bag simulation or broader
-linear biome declarations.
+This continues Phase 5 without jumping to bag simulation. It gives selected
+legality and candidate feedback a more honest offer timeline before broader
+linear biome declarations or special biome reward surfaces are added.
 
 ## Validation Baseline
 
@@ -437,7 +463,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 82 passed;
+- child tests: 85 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.

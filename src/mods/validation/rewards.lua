@@ -376,7 +376,7 @@ local function entryRequirementViolation(catalog, history, offer, entry)
     local violation = requirements.evaluate(entry.requirements, {
         path = "rewardValidation.entries." .. offer.store .. "." .. offer.rewardType,
         namedRequirements = catalog.requirements,
-        counters = {},
+        counters = historyQuery.countersForEvent(history, offer.eventIndex),
         queries = historyQuery.requirementQueries(history, offer.eventIndex),
         phase = offer.phase,
         defaultMessage = "Reward offer does not satisfy any matching reward entry requirements.",

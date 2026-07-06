@@ -160,6 +160,10 @@ local function emitDoorAcquisitions(history, catalog, routeKey, biomeIndex, biom
                 rewardType = offer.rewardType,
                 acquiredLootType = acquiredLootType(catalog, offer),
                 payload = offer.payload,
+                runEncounterDepth = history.counters.runEncounterDepth,
+                biomeEncounterDepth = history.counters.biomeEncounterDepth[biomeKey],
+                biomeDepthCache = history.counters.biomeDepthCache[biomeKey],
+                roomHistoryOrdinal = history.counters.roomHistoryOrdinal,
             })
             history.lootHistory[#history.lootHistory + 1] = acquireEvent
         end
@@ -208,6 +212,10 @@ local function emitGeneratedDoorOffers(history, routeKey, biomeIndex, biomeKey, 
         doorIndex = doorIndex,
         offerPointKind = door.offerPoint.kind,
         batchKey = door.offerPoint.batchKey,
+        runEncounterDepth = history.counters.runEncounterDepth,
+        biomeEncounterDepth = history.counters.biomeEncounterDepth[biomeKey],
+        biomeDepthCache = history.counters.biomeDepthCache[biomeKey],
+        roomHistoryOrdinal = history.counters.roomHistoryOrdinal,
     })
 
     for offerIndex, offer in ipairs(door.offerPoint.offers or {}) do
@@ -224,6 +232,10 @@ local function emitGeneratedDoorOffers(history, routeKey, biomeIndex, biomeKey, 
             rewardType = offer.rewardType,
             acquired = offer.acquired,
             payload = offer.payload,
+            runEncounterDepth = history.counters.runEncounterDepth,
+            biomeEncounterDepth = history.counters.biomeEncounterDepth[biomeKey],
+            biomeDepthCache = history.counters.biomeDepthCache[biomeKey],
+            roomHistoryOrdinal = history.counters.roomHistoryOrdinal,
         })
         history.rewardOfferHistory[#history.rewardOfferHistory + 1] = offerEvent
     end

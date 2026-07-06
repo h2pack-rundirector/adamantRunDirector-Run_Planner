@@ -112,10 +112,18 @@ function TestDeclarationCatalog.testNamedRequirementRegistryUsesExplicitPredicat
         lu.assertEquals(lateHammer.requirements[3].countOf, { "WeaponUpgrade" })
 
         local devotion = catalog.requirements.DevotionLootRequirements
-        lu.assertEquals(devotion.kind, "PriorDistinctLootSources")
-        lu.assertEquals(devotion.comparison, ">=")
-        lu.assertEquals(devotion.value, 2)
-        lu.assertEquals(devotion.sourceValues[1], "AphroditeUpgrade")
+        lu.assertEquals(devotion.kind, "All")
+        lu.assertEquals(devotion.requirements[1].kind, "EncounterDepth")
+        lu.assertEquals(devotion.requirements[1].comparison, ">=")
+        lu.assertEquals(devotion.requirements[1].value, 7)
+        lu.assertEquals(devotion.requirements[2].kind, "BiomeEncounterDepth")
+        lu.assertEquals(devotion.requirements[3].kind, "PriorDistinctLootSources")
+        lu.assertEquals(devotion.requirements[3].sourceValues[1], "AphroditeUpgrade")
+        lu.assertEquals(devotion.requirements[4].kind, "RequiredMinRoomsSinceEvent")
+        lu.assertEquals(devotion.requirements[4].axis, "RoomHistoryOrdinal")
+        lu.assertEquals(devotion.requirements[4].count, 15)
+        lu.assertEquals(devotion.requirements[5].kind, "RequiredMinExits")
+        lu.assertEquals(devotion.requirements[5].count, 2)
     end)
 end
 

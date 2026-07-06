@@ -279,20 +279,11 @@ Biome-local room-depth cache:
 }
 ```
 
-### `RunDepthCache`
+### Route-Wide Room Spacing
 
-Route-wide room-depth cache:
-
-```lua
-{
-    kind = "RunDepthCache",
-    comparison = ">=",
-    value = 12,
-}
-```
-
-Prefer event-distance requirements over absolute depth when the game uses
-spacing.
+The current planner does not use a standalone `RunDepthCache` predicate for
+route-wide room spacing. Use event-distance requirements with the
+`RoomHistoryOrdinal` axis when the game checks rooms since a prior event.
 
 ## Event Distance Predicates
 
@@ -307,14 +298,13 @@ Spacing from a prior event:
         kind = "reward.acquire",
         rewardType = "Devotion",
     },
-    axis = "RunDepthCache",
+    axis = "RoomHistoryOrdinal",
     count = 15,
 }
 ```
 
 The `axis` must be explicit. Valid axes should be named game counters or
-history views, such as `RunDepthCache`, `BiomeDepthCache`, or room-history
-ordinal.
+history views, such as `RoomHistoryOrdinal` or `BiomeDepthCache`.
 
 ### Related Event Selectors
 
@@ -324,7 +314,7 @@ Requirements can include related selectors for feedback:
 {
     kind = "RequiredMinRoomsSinceEvent",
     event = { kind = "reward.acquire", rewardType = "Devotion" },
-    axis = "RunDepthCache",
+    axis = "RoomHistoryOrdinal",
     count = 15,
     related = {
         { kind = "lastMatchingEvent" },
@@ -711,7 +701,7 @@ Normalized:
         {
             kind = "RequiredMinRoomsSinceEvent",
             event = { kind = "reward.acquire", rewardType = "Devotion" },
-            axis = "RunDepthCache",
+            axis = "RoomHistoryOrdinal",
             count = 15,
         },
         { kind = "RequiredMinExits", count = 2 },
