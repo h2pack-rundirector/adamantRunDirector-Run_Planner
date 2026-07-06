@@ -1,14 +1,7 @@
 local data = {}
 
 function data.loadCatalog()
-    return {
-        ordered = {},
-        lookup = {},
-        routes = {
-            ordered = {},
-            lookup = {},
-        },
-    }
+    return import("mods/declarations/loader.lua").load()
 end
 
 return data
