@@ -90,10 +90,13 @@ function TestDeclarationCatalog.testRewardBagsRemainCountedAndStoresAreDerived()
             "Boon",
             "HermesUpgrade",
             "WeaponUpgrade",
+            "Devotion",
             "MaxHealthDrop",
             "MaxManaDrop",
             "RoomMoneyDrop",
         })
+        lu.assertEquals(catalog.rewards.sources.boon.ordered[1].key, "AphroditeUpgrade")
+        lu.assertEquals(catalog.rewards.sources.boon.lookup.ZeusUpgrade.label, "Zeus")
     end)
 end
 
@@ -107,6 +110,12 @@ function TestDeclarationCatalog.testNamedRequirementRegistryUsesExplicitPredicat
         lu.assertEquals(lateHammer.requirements[2].comparison, ">")
         lu.assertEquals(lateHammer.requirements[3].kind, "LootTypeHistory")
         lu.assertEquals(lateHammer.requirements[3].countOf, { "WeaponUpgrade" })
+
+        local devotion = catalog.requirements.DevotionLootRequirements
+        lu.assertEquals(devotion.kind, "PriorDistinctLootSources")
+        lu.assertEquals(devotion.comparison, ">=")
+        lu.assertEquals(devotion.value, 2)
+        lu.assertEquals(devotion.sourceValues[1], "AphroditeUpgrade")
     end)
 end
 

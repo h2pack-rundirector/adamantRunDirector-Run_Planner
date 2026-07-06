@@ -17,8 +17,55 @@ local function countSet(values)
     return set
 end
 
+local function orderedStringSet(values, context)
+    guard.expectNonEmptyArray(values, context)
+    local ordered = {}
+    local set = {}
+    for _, value in ipairs(values) do
+        local source = guard.expectString(value, context .. "[]")
+        if not set[source] then
+            set[source] = true
+            ordered[#ordered + 1] = source
+        end
+    end
+    return ordered, set
+end
+
 local function before(event, eventIndex)
     return guard.expectNumber(event.eventIndex, "history.query.event.eventIndex") < eventIndex
+end
+
+local function addPayloadSources(out, event)
+    local payload = event.payload
+    if type(payload) ~= "table" then
+        return
+    end
+
+    if type(payload.source) == "string" then
+        out[payload.source] = true
+    end
+
+    if type(payload.sources) == "table" then
+        for _, source in ipairs(payload.sources) do
+            if type(source) == "string" then
+                out[source] = true
+            end
+        end
+    end
+end
+
+local function acquiredLootSourceSetBefore(history, eventIndex)
+    expectHistory(history)
+    local beforeEventIndex = guard.expectNumber(eventIndex, "history.query.eventIndex")
+    local seen = {}
+
+    for _, event in ipairs(history.lootHistory) do
+        if before(event, beforeEventIndex) then
+            addPayloadSources(seen, event)
+        end
+    end
+
+    return seen
 end
 
 function query.countAcquiredLootTypesBefore(history, lootTypes, eventIndex)
@@ -70,6 +117,34 @@ function query.countPendingStoreOffersBefore(history, rewardTypes, eventIndex)
     return count
 end
 
+function query.countDistinctAcquiredLootSourcesBefore(history, sourceValues, eventIndex)
+    local _, sourceSet = orderedStringSet(sourceValues, "history.query.sourceValues")
+    local seen = acquiredLootSourceSetBefore(history, eventIndex)
+    local count = 0
+
+    for source, _ in pairs(seen) do
+        if sourceSet[source] then
+            count = count + 1
+        end
+    end
+
+    return count
+end
+
+function query.missingAcquiredLootSourcesBefore(history, sourceValues, eventIndex)
+    local ordered = orderedStringSet(sourceValues, "history.query.sourceValues")
+    local seen = acquiredLootSourceSetBefore(history, eventIndex)
+    local missing = {}
+
+    for _, source in ipairs(ordered) do
+        if not seen[source] then
+            missing[#missing + 1] = source
+        end
+    end
+
+    return missing
+end
+
 function query.requirementQueries(history, eventIndex)
     guard.expectNumber(eventIndex, "history.query.eventIndex")
     return {
@@ -81,6 +156,12 @@ function query.requirementQueries(history, eventIndex)
         end,
         countPendingStoreOffers = function(rewardTypes)
             return query.countPendingStoreOffersBefore(history, rewardTypes, eventIndex)
+        end,
+        countDistinctLootSources = function(sourceValues)
+            return query.countDistinctAcquiredLootSourcesBefore(history, sourceValues, eventIndex)
+        end,
+        missingLootSources = function(sourceValues)
+            return query.missingAcquiredLootSourcesBefore(history, sourceValues, eventIndex)
         end,
     }
 end

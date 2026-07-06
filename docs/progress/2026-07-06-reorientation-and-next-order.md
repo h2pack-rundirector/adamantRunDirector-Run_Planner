@@ -206,7 +206,8 @@ reward and room spine.
 ## Important Gaps
 
 Requirement evaluation is still intentionally small. It now covers the timing
-predicates and the first reward-history predicates needed by Hammer:
+predicates and the first reward-history predicates needed by Hammer and
+Devotion source history:
 
 - `All`;
 - `Any`;
@@ -215,6 +216,9 @@ predicates and the first reward-history predicates needed by Hammer:
 - `BiomeEncounterDepth`;
 - `LootTypeHistory`;
 - `ClearedBiomes`;
+- `PriorDistinctLootSources`;
+- `CurrentLootSourcesSeen`;
+- `UniquePayloadValues`;
 - `RequiredNotInStore` against the current empty pending-store ledger.
 
 The next requirement expansions should be demand-driven. `UseRecord`,
@@ -223,7 +227,13 @@ prior distinct god loot are still deferred.
 
 Reward validation checks whether a source can ever offer a reward type and
 whether a generated-door bag offer has at least one matching counted bag entry
-whose requirements pass. This is still not bag depletion/refill simulation.
+whose requirements pass. It also validates the first payload rules:
+
+- declared boon source keys when a Boon offer carries a source payload;
+- Devotion source pairs are declared, distinct, and present in prior acquired
+  loot source history.
+
+This is still not bag depletion/refill simulation.
 
 Reward candidate policy is not implemented. The only semantic candidate kind
 is `nextRoom`.
@@ -244,17 +254,16 @@ the fresh history. This is correct for now.
 
 ## Recommended Next Order
 
-### 1. Add Reward Payload Validation
+### 1. Reward Payload Validation Completed
 
-Entry requirements can now query acquired loot history, so the next narrow
-Phase 5 slice is payload legality for reward types that need it.
+Entry requirements can now query acquired loot-source history, and the first
+Phase 5 payload legality slice is implemented.
 
-Likely first payload targets:
+Completed payload targets:
 
 - Devotion source pair uniqueness;
 - selected Devotion sources must have prior acquired god loot;
-- Boon source payload completeness if the form starts materializing boon
-  sources.
+- declared Boon source keys when the form materializes a Boon source payload.
 
 Payload completeness remains a form concern. Payload legality is validation.
 
@@ -304,8 +313,7 @@ Likely next predicates:
 - `BiomeUseRecord`;
 - `LootBiomeRecord`;
 - `RequiredMinRoomsSinceEvent`;
-- `RequiredMinExits`;
-- prior distinct god loot sources for Devotion.
+- `RequiredMinExits`.
 
 Keep `RequiredNotInStore` on the explicit pending-store ledger. It should start
 blocking only when shop offer intervals are materialized into history.
@@ -357,26 +365,43 @@ Implemented in the current working checkpoint:
 - Hammer tests cover first Hammer, blocked second Hammer before cleared biomes,
   and allowed late Hammer with one prior Hammer plus cleared biomes.
 
+## Completed Reward Payload Slice
+
+Implemented in the current working checkpoint:
+
+- declared Olympian boon source keys/labels under the reward catalog;
+- RunProgress Devotion is present as a counted bag entry with
+  `DevotionLootRequirements`;
+- form completion requires Devotion payloads to provide exactly two concrete
+  source keys;
+- reward validation rejects unknown Boon/Devotion payload sources;
+- reward validation rejects duplicate Devotion source pairs;
+- reward validation rejects Devotion source pairs whose selected sources were
+  not acquired earlier in loot history;
+- the minimal debug harness exposes Boon and Devotion source controls so the
+  payload loop can be tested in game.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Reward payload validation
+Reward candidate export and evaluation
 ```
 
 Concrete scope:
 
-- define the first payload contract for reward offers that need payload;
-- validate Devotion source pair uniqueness;
-- validate selected Devotion sources against prior acquired god loot once the
-  god loot-source representation is declared;
-- keep payload completeness in forms and payload legality in validation.
+- add candidate providers for generated-door reward type choices;
+- add candidate providers for payload choices such as Devotion source;
+- reuse selected reward-domain, entry-requirement, and payload-legality rule
+  functions for candidate results;
+- keep candidate results advisory and routed through provider feedback rather
+  than changing selected route validity.
 
-This keeps Phase 5 moving on selected reward legality before broadening into
-reward candidates or bag simulation. The minimal harness should remain wired
-while this happens so payload findings can be tested against a live mutable
-draft instead of only synthetic route fixtures.
+This keeps Phase 5 moving from selected legality into feedback ergonomics
+before broadening into bag simulation. The minimal harness should remain wired
+while this happens so reward and payload candidates can be tested against a
+live mutable draft instead of only synthetic route fixtures.
 
 ## Validation Baseline
 
@@ -391,7 +416,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 71 passed;
+- child tests: 76 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.

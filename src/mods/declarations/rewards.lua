@@ -1,3 +1,5 @@
+local godSources = import("mods/declarations/god_sources.lua")
+
 local function entry(rewardType, opts)
     opts = opts or {}
 
@@ -10,6 +12,10 @@ local function entry(rewardType, opts)
 end
 
 return {
+    sources = {
+        boon = godSources.boon,
+    },
+
     primitives = {
         Boon = {
             label = "Boon",
@@ -62,6 +68,9 @@ return {
                 entry("WeaponUpgrade", {
                     requirements = { named = "LateHammerLootRequirements" },
                     acquiredLootType = "WeaponUpgrade",
+                }),
+                entry("Devotion", {
+                    requirements = { named = "DevotionLootRequirements" },
                 }),
                 entry("MaxHealthDrop"),
                 entry("MaxManaDrop"),

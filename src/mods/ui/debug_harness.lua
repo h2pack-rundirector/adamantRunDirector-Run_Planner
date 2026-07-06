@@ -103,13 +103,50 @@ local function buildRewardTypeOptions(catalog)
     return byStore
 end
 
+local function buildSourceOptions(catalog, sourceSetKey)
+    local sourceSet = catalog.rewards.sources[sourceSetKey]
+    local values = {}
+    local labels = {}
+    for index, source in ipairs((sourceSet and sourceSet.ordered) or {}) do
+        values[index] = source.key
+        labels[index] = source.label .. " (" .. source.key .. ")"
+    end
+    return {
+        values = values,
+        labels = labels,
+    }
+end
+
+local function sourceKey(catalog, sourceSetKey, index)
+    local sourceSet = catalog.rewards.sources[sourceSetKey]
+    local source = sourceSet and sourceSet.ordered and sourceSet.ordered[index] or nil
+    return source and source.key or nil
+end
+
+local function defaultPayloadForRewardType(catalog, rewardType)
+    if rewardType == "Boon" then
+        return {
+            source = sourceKey(catalog, "boon", 1),
+        }
+    elseif rewardType == "Devotion" then
+        return {
+            sources = {
+                sourceKey(catalog, "boon", 1),
+                sourceKey(catalog, "boon", 2),
+            },
+        }
+    end
+    return {}
+end
+
 local function defaultOffer(catalog, storeKey)
     storeKey = storeKey or "RunProgress"
+    local rewardType = first(rewardTypesForStore(catalog, storeKey), "Boon")
     return {
         store = storeKey,
-        rewardType = first(rewardTypesForStore(catalog, storeKey), "Boon"),
+        rewardType = rewardType,
         acquired = false,
-        payload = {},
+        payload = defaultPayloadForRewardType(catalog, rewardType),
     }
 end
 
@@ -180,7 +217,9 @@ function debugHarness.defaultDraft()
                                                 store = "RunProgress",
                                                 rewardType = "Boon",
                                                 acquired = true,
-                                                payload = {},
+                                                payload = {
+                                                    source = "AphroditeUpgrade",
+                                                },
                                             },
                                         },
                                     },
@@ -417,6 +456,7 @@ local function setRewardStore(state, roomIndex, doorIndex, storeKey)
     end
     offer.store = storeKey
     offer.rewardType = first(rewardTypesForStore(state.catalog, storeKey), offer.rewardType)
+    offer.payload = defaultPayloadForRewardType(state.catalog, offer.rewardType)
     markDirty(state)
     return true
 end
@@ -427,6 +467,30 @@ local function setRewardType(state, roomIndex, doorIndex, rewardType)
         return false
     end
     offer.rewardType = rewardType
+    offer.payload = defaultPayloadForRewardType(state.catalog, rewardType)
+    markDirty(state)
+    return true
+end
+
+local function setBoonSource(state, roomIndex, doorIndex, source)
+    local offer = ensureOffer(state.catalog, currentBiome(state).rooms[roomIndex].generatedDoors.doors[doorIndex])
+    offer.payload = offer.payload or {}
+    if offer.payload.source == source then
+        return false
+    end
+    offer.payload.source = source
+    markDirty(state)
+    return true
+end
+
+local function setDevotionSource(state, roomIndex, doorIndex, sourceIndex, source)
+    local offer = ensureOffer(state.catalog, currentBiome(state).rooms[roomIndex].generatedDoors.doors[doorIndex])
+    offer.payload = offer.payload or defaultPayloadForRewardType(state.catalog, "Devotion")
+    offer.payload.sources = offer.payload.sources or {}
+    if offer.payload.sources[sourceIndex] == source then
+        return false
+    end
+    offer.payload.sources[sourceIndex] = source
     markDirty(state)
     return true
 end
@@ -493,6 +557,35 @@ local function drawFeedback(imgui, label, feedback)
     end
 end
 
+local function drawRewardPayload(state, imgui, roomIndex, doorIndex, offer)
+    if offer.rewardType == "Boon" then
+        offer.payload = offer.payload or defaultPayloadForRewardType(state.catalog, "Boon")
+        local nextSource, changed = drawChoice(
+            imgui,
+            "Source##room" .. roomIndex .. "_door" .. doorIndex,
+            offer.payload.source,
+            state.boonSourceOptions
+        )
+        if changed then
+            setBoonSource(state, roomIndex, doorIndex, nextSource)
+        end
+    elseif offer.rewardType == "Devotion" then
+        offer.payload = offer.payload or defaultPayloadForRewardType(state.catalog, "Devotion")
+        offer.payload.sources = offer.payload.sources or defaultPayloadForRewardType(state.catalog, "Devotion").sources
+        for sourceIndex = 1, 2 do
+            local nextSource, changed = drawChoice(
+                imgui,
+                "Source " .. tostring(sourceIndex) .. "##room" .. roomIndex .. "_door" .. doorIndex,
+                offer.payload.sources[sourceIndex],
+                state.boonSourceOptions
+            )
+            if changed then
+                setDevotionSource(state, roomIndex, doorIndex, sourceIndex, nextSource)
+            end
+        end
+    end
+end
+
 local function drawStatus(imgui, evaluation)
     pushText(imgui, "State: " .. tostring(evaluation.state))
     pushText(imgui, "Complete: " .. tostring(evaluation.complete) .. "  Valid: " .. tostring(evaluation.valid))
@@ -534,7 +627,10 @@ local function drawDoor(state, imgui, evaluation, roomIndex, doorIndex, door)
     )
     if rewardChanged then
         setRewardType(state, roomIndex, doorIndex, nextRewardType)
+        offer = ensureOffer(state.catalog, door)
     end
+
+    drawRewardPayload(state, imgui, roomIndex, doorIndex, offer)
 
     if imgui ~= nil and imgui.Checkbox ~= nil then
         local nextAcquired, acquiredChanged = imgui.Checkbox("Acquired##room" .. roomIndex .. "_door" .. doorIndex, offer.acquired == true)
@@ -635,6 +731,7 @@ function debugHarness.create(opts)
         roomOptions = buildRoomOptions(catalog, "F"),
         storeOptions = buildStoreOptions(catalog),
         rewardTypeOptions = buildRewardTypeOptions(catalog),
+        boonSourceOptions = buildSourceOptions(catalog, "boon"),
     }
 
     state.drawTab = function(_, ctx)
@@ -669,6 +766,12 @@ function debugHarness.create(opts)
     end
     state.setRewardAcquired = function(roomIndex, doorIndex, acquired)
         return setRewardAcquired(state, roomIndex, doorIndex, acquired)
+    end
+    state.setBoonSource = function(roomIndex, doorIndex, source)
+        return setBoonSource(state, roomIndex, doorIndex, source)
+    end
+    state.setDevotionSource = function(roomIndex, doorIndex, sourceIndex, source)
+        return setDevotionSource(state, roomIndex, doorIndex, sourceIndex, source)
     end
 
     return state

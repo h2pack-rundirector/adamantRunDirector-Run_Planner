@@ -10,6 +10,9 @@ local KNOWN_REQUIREMENT_KINDS = {
     BiomeEncounterDepth = true,
     ClearedBiomes = true,
     LootTypeHistory = true,
+    PriorDistinctLootSources = true,
+    CurrentLootSourcesSeen = true,
+    UniquePayloadValues = true,
     RequiredNotInStore = true,
 }
 
@@ -50,6 +53,13 @@ local function validateCountSet(requirement, context)
     end
 end
 
+local function validateStringArray(values, context)
+    guard.expectNonEmptyArray(values, context)
+    for index, value in ipairs(values) do
+        guard.expectString(value, context .. "[" .. tostring(index) .. "]")
+    end
+end
+
 local function validateComparison(requirement, context)
     if requirement.comparison ~= nil then
         guard.expectString(requirement.comparison, context .. ".comparison")
@@ -85,6 +95,13 @@ function requirementsValidator.validateRequirement(requirement, namedRequirement
         end
     elseif kind == "Not" then
         requirementsValidator.validateRequirement(requirement.requirement, namedRequirements, context .. ".requirement")
+    elseif kind == "PriorDistinctLootSources" then
+        validateStringArray(requirement.sourceValues, context .. ".sourceValues")
+        validateComparison(requirement, context)
+    elseif kind == "CurrentLootSourcesSeen" then
+        validateStringArray(requirement.sourceValues, context .. ".sourceValues")
+    elseif kind == "UniquePayloadValues" then
+        validateStringArray(requirement.values, context .. ".values")
     else
         validateComparison(requirement, context)
         validateCountSet(requirement, context)

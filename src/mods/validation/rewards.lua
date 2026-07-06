@@ -12,6 +12,7 @@ local function expectCatalog(catalog)
     guard.expectTable(catalog.offerProfiles, "rewardValidation.catalog.offerProfiles")
     guard.expectTable(catalog.rewards, "rewardValidation.catalog.rewards")
     guard.expectTable(catalog.rewards.bags, "rewardValidation.catalog.rewards.bags")
+    guard.expectTable(catalog.rewards.sources, "rewardValidation.catalog.rewards.sources")
     guard.expectTable(catalog.rewards.stores, "rewardValidation.catalog.rewards.stores")
     guard.expectTable(catalog.rewards.shops, "rewardValidation.catalog.rewards.shops")
     guard.expectTable(catalog.requirements, "rewardValidation.catalog.requirements")
@@ -228,6 +229,118 @@ local function validateOfferDomain(result, catalog, indexed, offer)
     return storeKnown
 end
 
+local function boonSourceCatalog(catalog)
+    local boon = catalog.rewards.sources.boon
+    guard.expectTable(boon, "rewardValidation.catalog.rewards.sources.boon")
+    guard.expectTable(boon.lookup, "rewardValidation.catalog.rewards.sources.boon.lookup")
+    return boon
+end
+
+local function sourceExists(catalog, source)
+    return boonSourceCatalog(catalog).lookup[source] ~= nil
+end
+
+local function copyArray(values)
+    local copy = {}
+    for index, value in ipairs(values or {}) do
+        copy[index] = value
+    end
+    return copy
+end
+
+local function invalidPayload(result, offer, code, payload, message)
+    payload.store = offer.store
+    payload.rewardType = offer.rewardType
+    validationResult.invalid(result, code, offer.phase, offer.sourceAddress, payload, message)
+    return false
+end
+
+local function validateBoonPayload(result, catalog, offer)
+    local payload = offer.payload or {}
+    local source = payload.source
+    if source == nil then
+        return true
+    end
+
+    guard.expectString(source, "rewardValidation.boon.payload.source")
+    if sourceExists(catalog, source) then
+        return true
+    end
+
+    return invalidPayload(result, offer, "reward_payload_source_unknown", {
+        source = source,
+    }, "Reward payload references an undeclared boon source.")
+end
+
+local function devotionSources(offer)
+    local payload = guard.expectTable(offer.payload, "rewardValidation.devotion.payload")
+    local sources = guard.expectArray(payload.sources, "rewardValidation.devotion.payload.sources")
+    if #sources ~= 2 then
+        guard.fail("rewardValidation.devotion.payload.sources", "Devotion payload must contain exactly two sources")
+    end
+    for index, source in ipairs(sources) do
+        guard.expectString(source, "rewardValidation.devotion.payload.sources[" .. tostring(index) .. "]")
+    end
+    return sources
+end
+
+local function validateDeclaredSources(result, catalog, offer, sources)
+    local unknown = {}
+    for _, source in ipairs(sources) do
+        if not sourceExists(catalog, source) then
+            unknown[#unknown + 1] = source
+        end
+    end
+
+    if #unknown == 0 then
+        return true
+    end
+
+    return invalidPayload(result, offer, "reward_payload_source_unknown", {
+        unknownSources = unknown,
+        sources = copyArray(sources),
+    }, "Reward payload references an undeclared boon source.")
+end
+
+local function validateDistinctSources(result, offer, sources)
+    if sources[1] ~= sources[2] then
+        return true
+    end
+
+    return invalidPayload(result, offer, "devotion_sources_not_distinct", {
+        duplicateSource = sources[1],
+        sources = copyArray(sources),
+    }, "Devotion sources must be distinct.")
+end
+
+local function validatePriorSources(result, history, offer, sources)
+    local missing = historyQuery.missingAcquiredLootSourcesBefore(history, sources, offer.eventIndex)
+    if #missing == 0 then
+        return true
+    end
+
+    return invalidPayload(result, offer, "devotion_sources_not_acquired", {
+        missingSources = missing,
+        sources = copyArray(sources),
+    }, "Devotion sources must already exist in acquired loot history.")
+end
+
+local function validateDevotionPayload(result, catalog, history, offer)
+    local sources = devotionSources(offer)
+    local declared = validateDeclaredSources(result, catalog, offer, sources)
+    local distinct = declared and validateDistinctSources(result, offer, sources)
+    return distinct and validatePriorSources(result, history, offer, sources)
+end
+
+local function validatePayload(result, catalog, history, offer)
+    if offer.rewardType == "Boon" then
+        return validateBoonPayload(result, catalog, offer)
+    elseif offer.rewardType == "Devotion" then
+        return validateDevotionPayload(result, catalog, history, offer)
+    end
+    return true
+end
+
 local function addRewardContext(violation, offer)
     violation.payload.store = offer.store
     violation.payload.rewardType = offer.rewardType
@@ -292,12 +405,15 @@ function rewardValidation.append(result, history, context)
 
     local indexed = indexHistory(history)
     local domainValidByEventIndex = {}
+    local payloadValidByEventIndex = {}
     for _, offer in ipairs(history.rewardOfferHistory) do
         domainValidByEventIndex[offer.eventIndex] = validateOfferDomain(result, context.catalog, indexed, offer)
+        payloadValidByEventIndex[offer.eventIndex] = domainValidByEventIndex[offer.eventIndex]
+            and validatePayload(result, context.catalog, history, offer)
     end
 
     for _, offer in ipairs(history.rewardOfferHistory) do
-        if domainValidByEventIndex[offer.eventIndex] then
+        if domainValidByEventIndex[offer.eventIndex] and payloadValidByEventIndex[offer.eventIndex] then
             validateBagEntryRequirements(result, context.catalog, history, offer)
         end
     end

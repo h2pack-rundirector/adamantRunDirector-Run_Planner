@@ -75,7 +75,7 @@ local function validateOffer(result, offer, offerAddress)
     end
 
     addConcreteStringFinding(result, offer.store, offerAddress, "reward_store_required", "Reward store must be concrete.", "store")
-    addConcreteStringFinding(result, offer.rewardType, offerAddress, "reward_type_required", "Reward type must be concrete.", "rewardType")
+    local hasConcreteRewardType = addConcreteStringFinding(result, offer.rewardType, offerAddress, "reward_type_required", "Reward type must be concrete.", "rewardType")
 
     if type(offer.acquired) ~= "boolean" then
         completion.add(result, offerAddress, "reward_acquired_required", "Reward acquisition flag must be set.", "acquired")
@@ -83,6 +83,26 @@ local function validateOffer(result, offer, offerAddress)
 
     if offer.payload ~= nil and type(offer.payload) ~= "table" then
         completion.add(result, offerAddress, "reward_payload_invalid", "Reward payload must be a table when present.", "payload")
+        return
+    end
+
+    if hasConcreteRewardType and offer.rewardType == "Devotion" then
+        local payload = offer.payload
+        if type(payload) ~= "table" or not isArray(payload.sources) or #payload.sources ~= 2 then
+            completion.add(result, offerAddress, "devotion_sources_required", "Devotion requires two concrete source gods.", "payload.sources")
+            return
+        end
+
+        for index, source in ipairs(payload.sources) do
+            addConcreteStringFinding(
+                result,
+                source,
+                offerAddress,
+                "devotion_source_required",
+                "Devotion source must be concrete.",
+                "payload.sources[" .. tostring(index) .. "]"
+            )
+        end
     end
 end
 

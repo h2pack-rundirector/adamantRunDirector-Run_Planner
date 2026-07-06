@@ -169,6 +169,24 @@ function TestRouteForm.testUnresolvedRewardValuesStayIncomplete()
     end)
 end
 
+function TestRouteForm.testPartialDevotionPayloadStaysIncomplete()
+    h.withTestImport(function()
+        local routeForm = h.testImport("mods/forms/route.lua")
+        local draft = completeDraft()
+        local offer = draft.biomes[1].rooms[1].generatedDoors.doors[1].offerPoint.offers[1]
+        offer.rewardType = "Devotion"
+        offer.payload = {
+            sources = { "ApolloUpgrade" },
+        }
+
+        local result = routeForm.isComplete(draft, loadContext())
+
+        lu.assertFalse(result.complete)
+        lu.assertEquals(result.findings[1].code, "devotion_sources_required")
+        lu.assertEquals(result.findings[1].field, "payload.sources")
+    end)
+end
+
 function TestRouteForm.testConfiguredBiomesMustFollowRoutePrefix()
     h.withTestImport(function()
         local routeForm = h.testImport("mods/forms/route.lua")

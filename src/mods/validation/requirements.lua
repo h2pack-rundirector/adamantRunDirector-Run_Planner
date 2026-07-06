@@ -69,6 +69,27 @@ local function countSetRequirement(requirement, axis, actual, context)
     })
 end
 
+local function arrayPayload(values)
+    local copy = {}
+    for index, value in ipairs(values or {}) do
+        copy[index] = value
+    end
+    return copy
+end
+
+local function uniqueValues(values)
+    local seen = {}
+    local duplicates = {}
+    for _, value in ipairs(values) do
+        if seen[value] then
+            duplicates[#duplicates + 1] = value
+        else
+            seen[value] = true
+        end
+    end
+    return duplicates
+end
+
 local function resolveNamed(requirement, context)
     local name = guard.expectString(requirement.named, context.path .. ".named")
     local registry = guard.expectTable(context.namedRequirements, "validation.namedRequirements")
@@ -162,6 +183,38 @@ local function evaluate(requirement, context)
             "validation.queries.countLootTypeHistory"
         )(requirement.countOf)
         return countSetRequirement(requirement, "LootTypeHistory", count, context)
+    elseif kind == "PriorDistinctLootSources" then
+        guard.expectNonEmptyArray(requirement.sourceValues, context.path .. ".sourceValues")
+        local count = guard.expectFunction(
+            context.queries.countDistinctLootSources,
+            "validation.queries.countDistinctLootSources"
+        )(requirement.sourceValues)
+        return numericRequirement(requirement, "LootSourceHistory", count, context)
+    elseif kind == "CurrentLootSourcesSeen" then
+        guard.expectNonEmptyArray(requirement.sourceValues, context.path .. ".sourceValues")
+        local missing = guard.expectFunction(
+            context.queries.missingLootSources,
+            "validation.queries.missingLootSources"
+        )(requirement.sourceValues)
+        if #missing == 0 then
+            return nil
+        end
+        return failure(requirement, {
+            kind = requirement.kind,
+            missingSources = missing,
+            sourceValues = arrayPayload(requirement.sourceValues),
+        }, context)
+    elseif kind == "UniquePayloadValues" then
+        guard.expectNonEmptyArray(requirement.values, context.path .. ".values")
+        local duplicates = uniqueValues(requirement.values)
+        if #duplicates == 0 then
+            return nil
+        end
+        return failure(requirement, {
+            kind = requirement.kind,
+            duplicateValues = duplicates,
+            values = arrayPayload(requirement.values),
+        }, context)
     elseif kind == "ClearedBiomes" then
         local count = guard.expectFunction(
             context.queries.countClearedBiomes,

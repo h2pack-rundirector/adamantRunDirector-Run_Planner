@@ -24,6 +24,27 @@ local function validatePrimitive(key, primitive, context)
     guard.expectOptionalString(primitive.acquiredLootType, context .. ".acquiredLootType")
 end
 
+local function validateSource(source, context)
+    guard.expectTable(source, context)
+    guard.expectString(source.key, context .. ".key")
+    guard.expectString(source.label, context .. ".label")
+end
+
+local function validateSourceRegistry(sources)
+    guard.expectTable(sources, "rewards.sources")
+
+    local normalized = {}
+    for sourceSetKey, sourceSet in pairs(sources) do
+        guard.expectString(sourceSetKey, "rewards.sources key")
+        guard.expectNonEmptyArray(sourceSet, "rewards.sources." .. sourceSetKey)
+        for index, source in ipairs(sourceSet) do
+            validateSource(source, "rewards.sources." .. sourceSetKey .. "[" .. tostring(index) .. "]")
+        end
+        normalized[sourceSetKey] = common.packageOrderedMap(sourceSet, "rewards.sources." .. sourceSetKey)
+    end
+    return normalized
+end
+
 function rewardsValidator.validateRewardEntry(entry, primitives, namedRequirements, context)
     guard.expectTable(entry, context)
     guard.expectString(entry.rewardType, context .. ".rewardType")
@@ -39,9 +60,12 @@ end
 
 function rewardsValidator.validate(rewards, namedRequirements)
     guard.expectTable(rewards, "rewards")
+    guard.expectTable(rewards.sources, "rewards.sources")
     guard.expectTable(rewards.primitives, "rewards.primitives")
     guard.expectTable(rewards.bags, "rewards.bags")
     guard.expectTable(rewards.shops, "rewards.shops")
+
+    local normalizedSources = validateSourceRegistry(rewards.sources)
 
     for key, primitive in pairs(rewards.primitives) do
         validatePrimitive(key, primitive, "rewards.primitives." .. key)
@@ -90,6 +114,7 @@ function rewardsValidator.validate(rewards, namedRequirements)
     end
 
     local normalized = common.shallowCopy(rewards)
+    normalized.sources = normalizedSources
     normalized.stores = stores
     return normalized
 end

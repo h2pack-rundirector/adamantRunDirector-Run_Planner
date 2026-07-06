@@ -1,3 +1,5 @@
+local godSources = import("mods/declarations/god_sources.lua")
+
 return {
     HammerLootRequirements = {
         kind = "All",
@@ -44,5 +46,14 @@ return {
                 presentation = "invalid",
             },
         },
+    },
+
+    DevotionLootRequirements = {
+        kind = "PriorDistinctLootSources",
+        sourceValues = godSources.boonKeys,
+        comparison = ">=",
+        value = 2,
+        code = "devotion_requires_prior_gods",
+        presentation = "invalid",
     },
 }

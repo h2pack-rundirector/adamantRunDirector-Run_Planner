@@ -67,6 +67,118 @@ local function completeDraft()
     }
 end
 
+local function devotionDraft()
+    return {
+        routeKey = "Underworld",
+        biomes = {
+            {
+                biomeKey = "F",
+                rooms = {
+                    {
+                        roomKey = "F_Opening01",
+                        generatedDoors = {
+                            batchRule = "Standard",
+                            selectedDoorIndex = 1,
+                            doors = {
+                                {
+                                    exitIndex = 1,
+                                    targetRoomKey = "F_Combat02",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "RunProgress",
+                                                rewardType = "Boon",
+                                                acquired = true,
+                                                payload = {
+                                                    source = "ApolloUpgrade",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    {
+                        roomKey = "F_Combat02",
+                        generatedDoors = {
+                            batchRule = "Standard",
+                            selectedDoorIndex = 1,
+                            doors = {
+                                {
+                                    exitIndex = 1,
+                                    targetRoomKey = "F_Combat01",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "RunProgress",
+                                                rewardType = "Boon",
+                                                acquired = true,
+                                                payload = {
+                                                    source = "PoseidonUpgrade",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                                {
+                                    exitIndex = 2,
+                                    targetRoomKey = "F_Combat01",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "RunProgress",
+                                                rewardType = "MaxHealthDrop",
+                                                acquired = false,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    {
+                        roomKey = "F_Combat01",
+                        generatedDoors = {
+                            batchRule = "Standard",
+                            selectedDoorIndex = 1,
+                            doors = {
+                                {
+                                    exitIndex = 1,
+                                    targetRoomKey = "F_Combat02",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "RunProgress",
+                                                rewardType = "Devotion",
+                                                acquired = false,
+                                                payload = {
+                                                    sources = {
+                                                        "ApolloUpgrade",
+                                                        "PoseidonUpgrade",
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+end
+
 local function loadCatalog()
     return h.testImport("mods/data.lua").loadCatalog()
 end
@@ -241,6 +353,70 @@ function TestRewardValidator.testAllowsLateHammerAfterFirstHammerAndClearedBiome
         local result = validateDraft(draft, {
             initialClearedBiomes = 3,
         })
+
+        lu.assertTrue(result.valid)
+        lu.assertEquals(result.findings, {})
+    end)
+end
+
+function TestRewardValidator.testRejectsUnknownBoonSourcePayload()
+    h.withTestImport(function()
+        local draft = completeDraft()
+        local offer = offerAt(draft, 1, 1, 1)
+        offer.payload = {
+            source = "MissingUpgrade",
+        }
+
+        local result = validateDraft(draft)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "reward_payload_source_unknown")
+        lu.assertEquals(result.findings[1].payload.source, "MissingUpgrade")
+        lu.assertEquals(result.findings[1].payload.rewardType, "Boon")
+    end)
+end
+
+function TestRewardValidator.testRejectsDuplicateDevotionSources()
+    h.withTestImport(function()
+        local draft = devotionDraft()
+        local offer = offerAt(draft, 3, 1, 1)
+        offer.payload.sources = {
+            "ApolloUpgrade",
+            "ApolloUpgrade",
+        }
+
+        local result = validateDraft(draft)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "devotion_sources_not_distinct")
+        lu.assertEquals(result.findings[1].payload.duplicateSource, "ApolloUpgrade")
+        lu.assertEquals(result.findings[1].payload.sources, {
+            "ApolloUpgrade",
+            "ApolloUpgrade",
+        })
+    end)
+end
+
+function TestRewardValidator.testRejectsDevotionSourcesWithoutPriorLoot()
+    h.withTestImport(function()
+        local draft = devotionDraft()
+        local offer = offerAt(draft, 3, 1, 1)
+        offer.payload.sources = {
+            "ApolloUpgrade",
+            "ZeusUpgrade",
+        }
+
+        local result = validateDraft(draft)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "devotion_sources_not_acquired")
+        lu.assertEquals(result.findings[1].payload.missingSources, { "ZeusUpgrade" })
+    end)
+end
+
+function TestRewardValidator.testAllowsDevotionAfterPriorSourceLoot()
+    h.withTestImport(function()
+        local result = validateDraft(devotionDraft())
 
         lu.assertTrue(result.valid)
         lu.assertEquals(result.findings, {})
