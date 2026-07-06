@@ -1,28 +1,23 @@
 local ui = {}
 
-local deps = ... or {}
-local routePanelFactory = deps.routePanel
-    or import("mods/ui/route_panel.lua")
-local decorations = deps.decorations
-    or import("mods/ui/decorations.lua")
-local routeStatus = deps.routeStatus
-    or import("mods/ui/route_status.lua", nil, {
-        decorations = decorations,
-    })
-local routePanel = routePanelFactory.create({
-    catalog = deps.catalog,
-    routes = deps.routes,
-    biomes = deps.biomes,
-    npcs = deps.npcs,
-    features = deps.features,
-    routeContext = deps.routeContext,
-    routeControlTabs = deps.routeControlTabs,
-    routeStatus = routeStatus,
-    decorations = decorations,
-})
+local TITLE = "Run Planner fresh start"
+local BODY = "Legacy planner code is unwired on this branch. The fresh planner spine will be rebuilt from docs/fresh_start."
+
+local function drawText(imgui, text)
+    if imgui ~= nil and imgui.Text ~= nil then
+        imgui.Text(text)
+    end
+end
 
 function ui.drawTab(_, ctx)
-    routePanel.drawTab(ctx)
+    local draw = ctx and ctx.draw or nil
+    local imgui = draw and draw.imgui or nil
+
+    drawText(imgui, TITLE)
+    if imgui ~= nil and imgui.Spacing ~= nil then
+        imgui.Spacing()
+    end
+    drawText(imgui, BODY)
 end
 
 return ui
