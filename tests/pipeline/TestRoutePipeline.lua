@@ -41,7 +41,7 @@ local function completeDraft()
                         roomKey = "F_Combat02",
                         generatedDoors = {
                             batchRule = "Standard",
-                            selectedDoorIndex = 2,
+                            selectedDoorIndex = 1,
                             doors = {
                                 {
                                     exitIndex = 1,
@@ -60,7 +60,7 @@ local function completeDraft()
                                 },
                                 {
                                     exitIndex = 2,
-                                    targetRoomKey = "F_PreBoss01",
+                                    targetRoomKey = "F_Combat02",
                                     offerPoint = {
                                         kind = "generatedDoorRewards",
                                         batchKey = "nextDoors",
@@ -75,9 +75,6 @@ local function completeDraft()
                                 },
                             },
                         },
-                    },
-                    {
-                        roomKey = "F_PreBoss01",
                     },
                 },
             },
@@ -133,7 +130,7 @@ function TestRoutePipeline.testValidDraftBuildsPlanHistoryAndValidation()
         lu.assertEquals(result.feedback, {})
         lu.assertEquals(result.status.feedbackCount, 0)
         lu.assertEquals(result.plan.routeKey, "Underworld")
-        lu.assertEquals(#result.history.events, 20)
+        lu.assertEquals(#result.history.events, 17)
         lu.assertTrue(result.validation.valid)
     end)
 end
@@ -148,7 +145,7 @@ function TestRoutePipeline.testStructurallyInvalidDraftReturnsValidatorFeedback(
             doors = {
                 {
                     exitIndex = 2,
-                    targetRoomKey = "F_PreBoss01",
+                    targetRoomKey = "F_Combat01",
                     offerPoint = {
                         kind = "generatedDoorRewards",
                         batchKey = "nextDoors",
@@ -181,6 +178,28 @@ function TestRoutePipeline.testStructurallyInvalidDraftReturnsValidatorFeedback(
         lu.assertEquals(result.feedback[1].phase, "room.generate_next")
         lu.assertEquals(result.feedback[1].payload.expectedCount, 2)
         lu.assertEquals(result.status.firstIssue.code, "generated_door_count_mismatch")
+    end)
+end
+
+function TestRoutePipeline.testTimingInvalidDraftReturnsRequirementFeedback()
+    h.withTestImport(function()
+        local pipeline = h.testImport("mods/pipeline/route.lua")
+        local draft = completeDraft()
+        draft.biomes[1].rooms[2].generatedDoors.doors[1].targetRoomKey = "F_PreBoss01"
+
+        local result = pipeline.evaluate(draft, context())
+
+        lu.assertEquals(result.state, "invalid")
+        lu.assertEquals(result.feedback[1].code, "f_preboss_too_early")
+        lu.assertEquals(result.feedback[1].payload.axis, "BiomeDepthCache")
+        lu.assertEquals(result.feedback[1].payload.actual, 0)
+        lu.assertEquals(result.feedback[1].payload.expected, 10)
+        lu.assertEquals(result.feedback[1].address, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+            doorIndex = 1,
+        })
     end)
 end
 
@@ -253,5 +272,41 @@ function TestRoutePipeline.testCandidateResultsDoNotInvalidateSelectedRoute()
         })
         lu.assertEquals(provider.messages[2], "Generated door target room is not declared.")
         lu.assertFalse(provider.hidden[2])
+    end)
+end
+
+function TestRoutePipeline.testCandidateResultsUseTimingEligibility()
+    h.withTestImport(function()
+        local candidateProvider = h.testImport("mods/forms/candidate_provider.lua")
+        local pipeline = h.testImport("mods/pipeline/route.lua")
+        local draft = completeDraft()
+        draft.biomes[1].rooms[2].generatedDoors.doors[1].candidateProviders = {
+            nextDoorTarget = candidateProvider.create({
+                key = "nextDoorTarget",
+                version = 10,
+                values = { "F_Combat01", "F_PreBoss01" },
+                labels = { "Combat", "Preboss" },
+                semanticForValue = function(value, _index, _formAddress, candidateContext)
+                    return {
+                        kind = "nextRoom",
+                        biomeKey = candidateContext.candidate.biomeKey,
+                        sourceRoomKey = candidateContext.candidate.sourceRoomKey,
+                        exitIndex = candidateContext.candidate.exitIndex,
+                        targetRoomKey = value,
+                    }
+                end,
+            }),
+        }
+
+        local result = pipeline.evaluate(draft, context())
+
+        lu.assertEquals(result.state, "valid")
+        lu.assertEquals(#result.candidateResults, 1)
+        lu.assertEquals(result.candidateResults[1].code, "f_preboss_too_early")
+        lu.assertEquals(result.candidateResults[1].presentation, "hide")
+        lu.assertEquals(result.candidateResults[1].payload.axis, "BiomeDepthCache")
+        lu.assertEquals(result.candidateResults[1].payload.actual, 0)
+        lu.assertEquals(result.candidateResults[1].payload.expected, 10)
+        lu.assertEquals(result.candidateResults[1].candidateKey, "F_PreBoss01")
     end)
 end

@@ -1,5 +1,6 @@
 local guard = import("mods/declarations/guard.lua")
 local validationResult = import("mods/validation/result.lua")
+local requirements = import("mods/validation/requirements.lua")
 
 local structural = {}
 
@@ -126,12 +127,67 @@ local function addSelectedViolation(result, sourceAddress, violation)
     end
 end
 
+local function generateNextForRoom(indexed, biomeKey, roomIndex, context)
+    local generateNextEvent = indexed.generateNextByRoom[roomKey(biomeKey, roomIndex)]
+    if generateNextEvent == nil then
+        guard.fail(context, "generated-door eligibility requires room.generate_next history")
+    end
+    return generateNextEvent
+end
+
+local function eligibilityCounters(generateNextEvent)
+    return {
+        biomeDepthCache = generateNextEvent.biomeDepthCache,
+        biomeEncounterDepth = generateNextEvent.biomeEncounterDepth,
+        runEncounterDepth = generateNextEvent.runEncounterDepth,
+        roomHistoryOrdinal = generateNextEvent.roomHistoryOrdinal,
+    }
+end
+
+local function roomEligibilityViolation(catalog, generateNextEvent, targetRoomKey, context)
+    local targetRoom = getRoom(catalog, generateNextEvent.biomeKey, targetRoomKey)
+    if targetRoom == nil or targetRoom.eligibility == nil then
+        return nil
+    end
+
+    local violation = requirements.evaluate(targetRoom.eligibility, {
+        path = context .. ".eligibility",
+        namedRequirements = catalog.requirements,
+        counters = eligibilityCounters(generateNextEvent),
+    })
+
+    if violation ~= nil then
+        violation.payload.targetRoomKey = targetRoomKey
+        violation.payload.sourceRoomKey = generateNextEvent.roomKey
+    end
+
+    return violation
+end
+
 local function validateDoorExit(result, catalog, door)
     addSelectedViolation(result, door.sourceAddress, doorExitViolation(catalog, door.biomeKey, door.roomKey, door.exitIndex))
 end
 
 local function validateDoorTarget(result, catalog, door)
     addSelectedViolation(result, door.sourceAddress, doorTargetViolation(catalog, door.biomeKey, door.targetRoomKey))
+end
+
+local function validateDoorEligibility(result, catalog, indexed, door)
+    if getRoom(catalog, door.biomeKey, door.targetRoomKey) == nil then
+        return
+    end
+
+    local generateNextEvent = generateNextForRoom(
+        indexed,
+        door.biomeKey,
+        door.roomIndex,
+        "validation.generatedDoors[" .. tostring(door.eventIndex) .. "]"
+    )
+    addSelectedViolation(
+        result,
+        door.sourceAddress,
+        roomEligibilityViolation(catalog, generateNextEvent, door.targetRoomKey, "validation.generatedDoors[" .. tostring(door.eventIndex) .. "].targetRoom")
+    )
 end
 
 local function validateDoorCount(result, catalog, roomEvent, doors)
@@ -185,6 +241,7 @@ local function validateGeneratedDoors(result, catalog, history, indexed)
     for _, door in ipairs(history.generatedDoorHistory) do
         validateDoorExit(result, catalog, door)
         validateDoorTarget(result, catalog, door)
+        validateDoorEligibility(result, catalog, indexed, door)
     end
 
     for _, roomEvent in ipairs(history.roomHistory) do
@@ -263,9 +320,12 @@ local function evaluateNextRoomCandidate(result, catalog, indexed, record, seman
     local biomeKey, sourceRoomKey = sourceForNextRoomCandidate(indexed, record, semantic, context)
     local exitIndex = guard.expectNumber(semantic.exitIndex, context .. ".semantic.exitIndex")
     local targetRoomKey = guard.expectString(semantic.targetRoomKey, context .. ".semantic.targetRoomKey")
+    local sourceRoomIndex = guard.expectNumber(record.formAddress.roomIndex, context .. ".formAddress.roomIndex")
+    local generateNextEvent = generateNextForRoom(indexed, biomeKey, sourceRoomIndex, context .. ".formAddress")
 
     addCandidateViolation(result, record, doorExitViolation(catalog, biomeKey, sourceRoomKey, exitIndex))
     addCandidateViolation(result, record, doorTargetViolation(catalog, biomeKey, targetRoomKey))
+    addCandidateViolation(result, record, roomEligibilityViolation(catalog, generateNextEvent, targetRoomKey, context .. ".semantic"))
 end
 
 local function expectCandidateRecord(record, context)

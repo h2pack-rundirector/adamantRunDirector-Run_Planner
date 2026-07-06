@@ -3,7 +3,8 @@
 ## Status
 
 The fresh planner branch now has a clean active planning spine through route
-evaluation, candidate feedback export, and candidate feedback application.
+evaluation, candidate feedback export/application, and first-pass
+requirement-backed room timing checks.
 
 Completed child commits:
 
@@ -17,6 +18,7 @@ Completed child commits:
 - `42b8dab feat(validation): add structural checks`
 - `f1594e3 feat(pipeline): wire route evaluation`
 - `56cfe9c feat(pipeline): add candidate feedback`
+- `ed4ffd4 feat(feedback): apply candidate results`
 
 Completed shell commits:
 
@@ -27,6 +29,7 @@ Completed shell commits:
 - `6b1a842 chore: point planner to structural validation`
 - `37be6be chore: point planner to route pipeline`
 - `1d843cc chore: point planner to candidate feedback`
+- `60d1379 chore: point planner to feedback bridge`
 
 ## What Changed
 
@@ -79,6 +82,16 @@ Completed shell commits:
   applies validator candidate results back to matching provider versions.
 - Stale candidate results and missing providers are skipped with an explicit
   summary so route-context rebuild code can decide how to respond.
+- History `room.generate_next` events now carry the timing counter snapshot
+  used for generated next-room validation.
+- Requirement-backed room eligibility now evaluates generated room targets at
+  `room.generate_next` using explicit timing axes:
+  - `BiomeDepthCache`;
+  - `BiomeEncounterDepth`.
+- Requirement composition supports `All`, `Any`, `Not`, and named requirement
+  lookup at the validation boundary.
+- Selected generated-door targets and next-room candidate records share the
+  same room eligibility evaluation path.
 
 ## Validation
 
@@ -98,7 +111,7 @@ lua tests/smoke.lua
 
 Latest observed results:
 
-- `lua tests/all.lua`: 42 tests passed.
+- `lua tests/all.lua`: 46 tests passed.
 - `luacheck src tests`: 0 warnings, 0 errors.
 - `git diff --check`: passed.
 - `lua tests/smoke.lua`: smoke passed for 4 module entrypoints and 1
@@ -122,6 +135,11 @@ application bridge, but the only implemented semantic candidate kind is
 generated next-room target validation. Reward candidate policies and broader
 timing/eligibility candidate policies are still deferred.
 
+Room eligibility currently supports only the explicit timing predicates needed
+by the F/Erebus declarations: `BiomeDepthCache` and `BiomeEncounterDepth`.
+Force pressure, room creation caps, exit-tag compatibility, reward
+requirements, and bag simulation are still deferred.
+
 ## Next Slices
 
 The next implementation work should continue from
@@ -129,8 +147,8 @@ The next implementation work should continue from
 
 Near-term slices:
 
-- expand room/timing legality from structural checks into requirement-backed
-  eligibility checks;
+- expand room/timing legality to force windows, creation caps, and exit-tag
+  compatibility;
 - expand candidate export/evaluation beyond generated next-room targets;
 - extend reward offer validation toward offer domains and reward bag
   simulation;

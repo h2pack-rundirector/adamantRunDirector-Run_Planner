@@ -190,6 +190,10 @@ local function emitGenerateNext(history, routeKey, biomeIndex, biomeKey, roomInd
         roomKey = roomNode.roomKey,
         batchRule = generatedDoors.batchRule,
         selectedDoorIndex = generatedDoors.selectedDoorIndex,
+        biomeDepthCache = history.counters.biomeDepthCache[biomeKey],
+        biomeEncounterDepth = history.counters.biomeEncounterDepth[biomeKey],
+        runEncounterDepth = history.counters.runEncounterDepth,
+        roomHistoryOrdinal = history.counters.roomHistoryOrdinal,
     })
 
     for doorIndex, door in ipairs(generatedDoors.doors or {}) do

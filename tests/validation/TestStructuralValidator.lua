@@ -41,7 +41,7 @@ local function completeDraft()
                         roomKey = "F_Combat02",
                         generatedDoors = {
                             batchRule = "Standard",
-                            selectedDoorIndex = 2,
+                            selectedDoorIndex = 1,
                             doors = {
                                 {
                                     exitIndex = 1,
@@ -60,7 +60,7 @@ local function completeDraft()
                                 },
                                 {
                                     exitIndex = 2,
-                                    targetRoomKey = "F_PreBoss01",
+                                    targetRoomKey = "F_Combat02",
                                     offerPoint = {
                                         kind = "generatedDoorRewards",
                                         batchKey = "nextDoors",
@@ -75,9 +75,6 @@ local function completeDraft()
                                 },
                             },
                         },
-                    },
-                    {
-                        roomKey = "F_PreBoss01",
                     },
                 },
             },
@@ -117,6 +114,15 @@ local function findingCodes(result)
     return codes
 end
 
+local function findEvent(history, kind, roomIndex)
+    for _, event in ipairs(history.events) do
+        if event.kind == kind and event.roomIndex == roomIndex then
+            return event
+        end
+    end
+    return nil
+end
+
 function TestStructuralValidator.testValidMinimalHistoryPasses()
     h.withTestImport(function()
         local catalog = loadCatalog()
@@ -133,6 +139,7 @@ function TestStructuralValidator.testDetectsGeneratedDoorCountMismatch()
         local catalog = loadCatalog()
         local plan = materializePlan(completeDraft(), catalog)
         table.remove(plan.biomes[1].rooms[2].generatedDoors.doors, 1)
+        plan.biomes[1].rooms[2].generatedDoors.selectedDoorIndex = 2
 
         local result = validatePlan(plan, catalog)
 
@@ -182,7 +189,9 @@ function TestStructuralValidator.testDetectsSelectedDoorTargetMismatch()
     h.withTestImport(function()
         local catalog = loadCatalog()
         local plan = materializePlan(completeDraft(), catalog)
-        plan.biomes[1].rooms[2].generatedDoors.selectedDoorIndex = 1
+        plan.biomes[1].rooms[3] = {
+            roomKey = "F_PreBoss01",
+        }
 
         local result = validatePlan(plan, catalog)
 
@@ -196,6 +205,10 @@ function TestStructuralValidator.testDetectsTerminalRoomNotLast()
     h.withTestImport(function()
         local catalog = loadCatalog()
         local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[2].generatedDoors = nil
+        plan.biomes[1].rooms[3] = {
+            roomKey = "F_PreBoss01",
+        }
         plan.biomes[1].rooms[4] = {
             roomKey = "F_Combat01",
         }
@@ -215,6 +228,10 @@ function TestStructuralValidator.testDetectsTerminalGeneratedDoors()
     h.withTestImport(function()
         local catalog = loadCatalog()
         local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[2].generatedDoors = nil
+        plan.biomes[1].rooms[3] = {
+            roomKey = "F_PreBoss01",
+        }
         plan.biomes[1].rooms[3].generatedDoors = {
             batchRule = "Standard",
             selectedDoorIndex = 1,
@@ -243,6 +260,53 @@ function TestStructuralValidator.testDetectsTerminalGeneratedDoors()
             "generated_door_exit_unknown",
             "terminal_room_generates_doors",
         })
+    end)
+end
+
+function TestStructuralValidator.testDetectsRoomEligibilityAtGenerateNext()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[2].generatedDoors.doors[1].targetRoomKey = "F_PreBoss01"
+
+        local result = validatePlan(plan, catalog)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "f_preboss_too_early")
+        lu.assertEquals(result.findings[1].payload, {
+            kind = "BiomeDepthCache",
+            axis = "BiomeDepthCache",
+            actual = 0,
+            comparison = ">=",
+            expected = 10,
+            targetRoomKey = "F_PreBoss01",
+            sourceRoomKey = "F_Combat02",
+        })
+        lu.assertEquals(result.findings[1].sourceAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+            doorIndex = 1,
+        })
+    end)
+end
+
+function TestStructuralValidator.testRoomEligibilityUsesBiomeEncounterDepth()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        local history = buildHistory(plan, catalog)
+        findEvent(history, "room.generate_next", 2).biomeEncounterDepth = 6
+
+        local result = h.testImport("mods/validation/structural.lua").validate(history, {
+            catalog = catalog,
+        })
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "f_combat01_late")
+        lu.assertEquals(result.findings[1].payload.axis, "BiomeEncounterDepth")
+        lu.assertEquals(result.findings[1].payload.actual, 6)
+        lu.assertEquals(result.findings[1].payload.expected, 5)
     end)
 end
 
