@@ -40,6 +40,10 @@ function guard.expectNumber(value, context)
     return guard.expectType(value, "number", context)
 end
 
+function guard.expectFunction(value, context)
+    return guard.expectType(value, "function", context)
+end
+
 function guard.expectOptionalTable(value, context)
     if value ~= nil then
         guard.expectTable(value, context)

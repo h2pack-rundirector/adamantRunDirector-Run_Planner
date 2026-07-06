@@ -33,6 +33,7 @@ room.encounters
 room.offer_points
 room.generate_next
 room.commit
+biome.complete, when the committed room is the biome terminal
 ```
 
 ### `room.enter`
@@ -79,6 +80,15 @@ room's declaration data and game behavior.
 
 The selected generated door becomes the next physical room.
 
+### `biome.complete`
+
+When a committed room is the biome terminal room, the builder emits
+`biome.complete` after that room's `room.commit`.
+
+This advances the route's `ClearedBiomes` view for downstream reward entry
+requirements. It must not be inferred from configured biome index; only a
+completed terminal biome counts.
+
 ## Counter Views
 
 History should expose typed views instead of one blended step counter:
@@ -87,6 +97,7 @@ History should expose typed views instead of one blended step counter:
 - `BiomeDepthCache`: biome-local room progression.
 - `RunEncounterDepth`: route-wide counting encounter depth.
 - `BiomeEncounterDepth`: biome-local counting encounter depth.
+- `ClearedBiomes`: terminal biomes completed before the current event.
 - `RewardOfferHistory`: all generated reward offers.
 - `LootHistory`: acquired rewards only.
 - `GeneratedDoorHistory`: generated next-room doors.

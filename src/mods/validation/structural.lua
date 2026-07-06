@@ -197,6 +197,7 @@ local function roomEligibilityViolation(catalog, generateNextEvent, targetRoomKe
         path = context .. ".eligibility",
         namedRequirements = catalog.requirements,
         counters = eligibilityCounters(generateNextEvent),
+        defaultMessage = "Generated room target fails declared eligibility.",
     })
 
     if violation ~= nil then

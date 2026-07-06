@@ -3,17 +3,21 @@ local address = import("mods/forms/address.lua")
 
 local builder = {}
 
-local function newHistory(routeKey)
+local function newHistory(routeKey, initialClearedBiomes)
     return {
         routeKey = routeKey,
+        initialClearedBiomes = initialClearedBiomes or 0,
         events = {},
         roomHistory = {},
+        clearedBiomeHistory = {},
         encounterHistory = {},
         generatedDoorHistory = {},
         rewardOfferHistory = {},
         lootHistory = {},
+        pendingStoreOfferHistory = {},
         candidateRecords = {},
         counters = {
+            clearedBiomes = initialClearedBiomes or 0,
             runEncounterDepth = 0,
             roomHistoryOrdinal = 0,
             biomeDepthCache = {},
@@ -44,6 +48,10 @@ local function expectCatalog(catalog)
     guard.expectTable(catalog, "history.catalog")
     guard.expectTable(catalog.biomes, "history.catalog.biomes")
     guard.expectTable(catalog.biomes.lookup, "history.catalog.biomes.lookup")
+    guard.expectTable(catalog.rewards, "history.catalog.rewards")
+    guard.expectTable(catalog.rewards.primitives, "history.catalog.rewards.primitives")
+    guard.expectTable(catalog.rewards.bags, "history.catalog.rewards.bags")
+    guard.expectTable(catalog.rewards.shops, "history.catalog.rewards.shops")
 end
 
 local function getBiomeDeclaration(catalog, biomeKey, context)
@@ -60,6 +68,51 @@ local function getRoomDeclaration(biome, roomKey, context)
         guard.fail(context, "unknown room '" .. tostring(roomKey) .. "'")
     end
     return room
+end
+
+local function matchingBagEntry(catalog, storeKey, rewardType)
+    local bag = catalog.rewards.bags[storeKey]
+    if bag == nil then
+        return nil
+    end
+
+    for _, entry in ipairs(bag.entries or {}) do
+        if entry.rewardType == rewardType then
+            return entry
+        end
+    end
+    return nil
+end
+
+local function matchingShopOption(catalog, shopKey, rewardType)
+    local shop = catalog.rewards.shops[shopKey]
+    if shop == nil then
+        return nil
+    end
+
+    for _, slot in ipairs(shop.slots or {}) do
+        for _, option in ipairs(slot.options or {}) do
+            if option.rewardType == rewardType then
+                return option
+            end
+        end
+    end
+    return nil
+end
+
+local function acquiredLootType(catalog, offer)
+    local entry = matchingBagEntry(catalog, offer.store, offer.rewardType)
+        or matchingShopOption(catalog, offer.store, offer.rewardType)
+    if entry ~= nil and entry.acquiredLootType ~= nil then
+        return entry.acquiredLootType
+    end
+
+    local primitive = catalog.rewards.primitives[offer.rewardType]
+    if primitive ~= nil and primitive.acquiredLootType ~= nil then
+        return primitive.acquiredLootType
+    end
+
+    return offer.rewardType
 end
 
 local function ensureBiomeCounters(history, biomeKey)
@@ -82,7 +135,7 @@ local function emitRoomEnter(history, routeKey, biomeIndex, biomeKey, roomIndex,
     })
 end
 
-local function emitDoorAcquisitions(history, routeKey, biomeIndex, biomeKey, roomIndex, previousRoomNode)
+local function emitDoorAcquisitions(history, catalog, routeKey, biomeIndex, biomeKey, roomIndex, previousRoomNode)
     if previousRoomNode == nil or previousRoomNode.generatedDoors == nil then
         return
     end
@@ -105,6 +158,7 @@ local function emitDoorAcquisitions(history, routeKey, biomeIndex, biomeKey, roo
                 doorIndex = generatedDoors.selectedDoorIndex,
                 store = offer.store,
                 rewardType = offer.rewardType,
+                acquiredLootType = acquiredLootType(catalog, offer),
                 payload = offer.payload,
             })
             history.lootHistory[#history.lootHistory + 1] = acquireEvent
@@ -238,7 +292,23 @@ local function emitRoomCommit(history, routeKey, biomeIndex, biomeKey, roomIndex
     history.roomHistory[#history.roomHistory + 1] = event
 end
 
-local function materializeRoom(history, routeKey, biomeIndex, biome, biomePlan, roomIndex)
+local function emitBiomeComplete(history, routeKey, biomeIndex, biomeKey)
+    local before = history.counters.clearedBiomes
+    history.counters.clearedBiomes = before + 1
+
+    local event = pushEvent(history, {
+        kind = "biome.complete",
+        phase = "biome.complete",
+        sourceAddress = address.biome(routeKey, biomeIndex),
+        biomeKey = biomeKey,
+        biomeIndex = biomeIndex,
+        clearedBiomesBefore = before,
+        clearedBiomesAfter = history.counters.clearedBiomes,
+    })
+    history.clearedBiomeHistory[#history.clearedBiomeHistory + 1] = event
+end
+
+local function materializeRoom(history, catalog, routeKey, biomeIndex, biome, biomePlan, roomIndex)
     local roomNode = biomePlan.rooms[roomIndex]
     guard.expectTable(roomNode, "history.plan.biomes[" .. tostring(biomeIndex) .. "].rooms[" .. tostring(roomIndex) .. "]")
     guard.expectString(roomNode.roomKey, "history.plan.biomes[" .. tostring(biomeIndex) .. "].rooms[" .. tostring(roomIndex) .. "].roomKey")
@@ -247,7 +317,7 @@ local function materializeRoom(history, routeKey, biomeIndex, biome, biomePlan, 
     local previousRoomNode = biomePlan.rooms[roomIndex - 1]
 
     emitRoomEnter(history, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, roomNode)
-    emitDoorAcquisitions(history, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, previousRoomNode)
+    emitDoorAcquisitions(history, catalog, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, previousRoomNode)
     emitEncounter(history, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, roomNode, roomDeclaration)
     emitGenerateNext(history, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, roomNode)
     emitRoomCommit(history, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, roomNode, roomDeclaration)
@@ -262,7 +332,13 @@ local function materializeBiome(history, catalog, routeKey, biomeIndex, biomePla
     ensureBiomeCounters(history, biomeKey)
 
     for roomIndex, _ in ipairs(biomePlan.rooms) do
-        materializeRoom(history, routeKey, biomeIndex, biome, biomePlan, roomIndex)
+        materializeRoom(history, catalog, routeKey, biomeIndex, biome, biomePlan, roomIndex)
+    end
+
+    local finalRoom = biomePlan.rooms[#biomePlan.rooms]
+    local finalRoomDeclaration = finalRoom ~= nil and biome.rooms.lookup[finalRoom.roomKey] or nil
+    if finalRoomDeclaration ~= nil and finalRoomDeclaration.terminal then
+        emitBiomeComplete(history, routeKey, biomeIndex, biomeKey)
     end
 end
 
@@ -274,7 +350,7 @@ function builder.build(plan, context)
     local routeKey = guard.expectString(plan.routeKey, "history.plan.routeKey")
     guard.expectNonEmptyArray(plan.biomes, "history.plan.biomes")
 
-    local history = newHistory(routeKey)
+    local history = newHistory(routeKey, guard.expectOptionalNumber(context.initialClearedBiomes, "history.initialClearedBiomes"))
     if context.candidateRecords ~= nil then
         history.candidateRecords = guard.expectArray(context.candidateRecords, "history.candidateRecords")
     end

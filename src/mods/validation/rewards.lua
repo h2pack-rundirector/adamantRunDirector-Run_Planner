@@ -1,4 +1,6 @@
 local guard = import("mods/declarations/guard.lua")
+local historyQuery = import("mods/history/query.lua")
+local requirements = import("mods/validation/requirements.lua")
 local validationResult = import("mods/validation/result.lua")
 
 local rewardValidation = {}
@@ -9,8 +11,10 @@ local function expectCatalog(catalog)
     guard.expectTable(catalog.biomes.lookup, "rewardValidation.catalog.biomes.lookup")
     guard.expectTable(catalog.offerProfiles, "rewardValidation.catalog.offerProfiles")
     guard.expectTable(catalog.rewards, "rewardValidation.catalog.rewards")
+    guard.expectTable(catalog.rewards.bags, "rewardValidation.catalog.rewards.bags")
     guard.expectTable(catalog.rewards.stores, "rewardValidation.catalog.rewards.stores")
     guard.expectTable(catalog.rewards.shops, "rewardValidation.catalog.rewards.shops")
+    guard.expectTable(catalog.requirements, "rewardValidation.catalog.requirements")
 end
 
 local function expectHistory(history)
@@ -18,6 +22,7 @@ local function expectHistory(history)
     guard.expectArray(history.events, "rewardValidation.history.events")
     guard.expectArray(history.generatedDoorHistory, "rewardValidation.history.generatedDoorHistory")
     guard.expectArray(history.rewardOfferHistory, "rewardValidation.history.rewardOfferHistory")
+    guard.expectArray(history.lootHistory, "rewardValidation.history.lootHistory")
 end
 
 local function addressKey(formAddress)
@@ -159,7 +164,7 @@ local function validateGeneratedDoorDomain(result, catalog, indexed, offer, offe
             store = offer.store,
             rewardType = offer.rewardType,
         }, "Generated-door reward offer uses the wrong offer point kind.")
-        return
+        return false
     end
 
     local door = indexed.generatedDoorByAddress[doorAddressKey(offerPoint.sourceAddress)]
@@ -167,12 +172,12 @@ local function validateGeneratedDoorDomain(result, catalog, indexed, offer, offe
         validationResult.invalid(result, "reward_offer_generated_door_missing", offer.phase, offer.sourceAddress, {
             offerPointEventIndex = offer.offerPointEventIndex,
         }, "Reward offer point must resolve to generated-door history.")
-        return
+        return false
     end
 
     local targetRoom = getRoom(catalog, door.biomeKey, door.targetRoomKey)
     if targetRoom == nil then
-        return
+        return false
     end
 
     if targetRoom.offerProfile == nil then
@@ -181,12 +186,12 @@ local function validateGeneratedDoorDomain(result, catalog, indexed, offer, offe
             store = offer.store,
             rewardType = offer.rewardType,
         }, "Generated-door target room does not declare a reward offer profile.")
-        return
+        return false
     end
 
     local profile = catalog.offerProfiles[targetRoom.offerProfile]
     if profile == nil then
-        return
+        return false
     end
 
     if not profileAllowsOffer(catalog, profile, offer) then
@@ -197,7 +202,10 @@ local function validateGeneratedDoorDomain(result, catalog, indexed, offer, offe
             store = offer.store,
             rewardType = offer.rewardType,
         }, "Reward offer does not match the generated target room's offer domain.")
+        return false
     end
+
+    return true
 end
 
 local function validateOfferDomain(result, catalog, indexed, offer)
@@ -210,11 +218,70 @@ local function validateOfferDomain(result, catalog, indexed, offer)
             store = offer.store,
             rewardType = offer.rewardType,
         }, "Reward offer must reference a materialized offer point.")
-        return
+        return false
     end
 
     if storeKnown and offer.phase == "room.generate_next" then
-        validateGeneratedDoorDomain(result, catalog, indexed, offer, offerPoint)
+        return validateGeneratedDoorDomain(result, catalog, indexed, offer, offerPoint)
+    end
+
+    return storeKnown
+end
+
+local function addRewardContext(violation, offer)
+    violation.payload.store = offer.store
+    violation.payload.rewardType = offer.rewardType
+    return violation
+end
+
+local function entryRequirementViolation(catalog, history, offer, entry)
+    if entry.requirements == nil then
+        return nil
+    end
+
+    local violation = requirements.evaluate(entry.requirements, {
+        path = "rewardValidation.entries." .. offer.store .. "." .. offer.rewardType,
+        namedRequirements = catalog.requirements,
+        counters = {},
+        queries = historyQuery.requirementQueries(history, offer.eventIndex),
+        phase = offer.phase,
+        defaultMessage = "Reward offer does not satisfy any matching reward entry requirements.",
+    })
+
+    if violation ~= nil then
+        addRewardContext(violation, offer)
+    end
+    return violation
+end
+
+local function validateBagEntryRequirements(result, catalog, history, offer)
+    local bag = catalog.rewards.bags[offer.store]
+    if bag == nil then
+        return
+    end
+
+    local lastViolation
+    local hasMatchingEntry = false
+    for _, entry in ipairs(bag.entries or {}) do
+        if entry.rewardType == offer.rewardType then
+            hasMatchingEntry = true
+            local violation = entryRequirementViolation(catalog, history, offer, entry)
+            if violation == nil then
+                return
+            end
+            lastViolation = violation
+        end
+    end
+
+    if hasMatchingEntry and lastViolation ~= nil then
+        validationResult.invalid(
+            result,
+            lastViolation.code,
+            offer.phase,
+            offer.sourceAddress,
+            lastViolation.payload,
+            lastViolation.message
+        )
     end
 end
 
@@ -224,8 +291,15 @@ function rewardValidation.append(result, history, context)
     expectHistory(history)
 
     local indexed = indexHistory(history)
+    local domainValidByEventIndex = {}
     for _, offer in ipairs(history.rewardOfferHistory) do
-        validateOfferDomain(result, context.catalog, indexed, offer)
+        domainValidByEventIndex[offer.eventIndex] = validateOfferDomain(result, context.catalog, indexed, offer)
+    end
+
+    for _, offer in ipairs(history.rewardOfferHistory) do
+        if domainValidByEventIndex[offer.eventIndex] then
+            validateBagEntryRequirements(result, context.catalog, history, offer)
+        end
     end
 
     return result

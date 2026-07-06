@@ -127,6 +127,7 @@ function TestHistoryBuilder.testBuildsLifecycleEventsForMinimalFPlan()
             "room.enter",
             "reward.acquire",
             "room.commit",
+            "biome.complete",
         })
     end)
 end
@@ -161,9 +162,11 @@ function TestHistoryBuilder.testSelectedDoorAcquisitionsEnterLootHistory()
 
         lu.assertEquals(#history.lootHistory, 2)
         lu.assertEquals(history.lootHistory[1].rewardType, "Boon")
+        lu.assertEquals(history.lootHistory[1].acquiredLootType, "Boon")
         lu.assertEquals(history.lootHistory[1].targetRoomIndex, 2)
         lu.assertEquals(history.lootHistory[1].phase, "room.enter")
         lu.assertEquals(history.lootHistory[2].rewardType, "GiftDrop")
+        lu.assertEquals(history.lootHistory[2].acquiredLootType, "GiftDrop")
         lu.assertEquals(history.lootHistory[2].targetRoomIndex, 3)
     end)
 end
@@ -178,9 +181,13 @@ function TestHistoryBuilder.testHistoryCountersUseTypedAxes()
         lu.assertEquals(#history.roomHistory, 3)
         lu.assertEquals(#history.encounterHistory, 1)
         lu.assertEquals(history.counters.runEncounterDepth, 1)
+        lu.assertEquals(history.counters.clearedBiomes, 1)
         lu.assertEquals(history.counters.biomeEncounterDepth.F, 1)
         lu.assertEquals(history.counters.biomeDepthCache.F, 1)
         lu.assertEquals(history.counters.roomHistoryOrdinal, 3)
+        lu.assertEquals(#history.clearedBiomeHistory, 1)
+        lu.assertEquals(history.clearedBiomeHistory[1].clearedBiomesBefore, 0)
+        lu.assertEquals(history.clearedBiomeHistory[1].clearedBiomesAfter, 1)
 
         lu.assertEquals(history.roomHistory[1].biomeDepthCacheBefore, 0)
         lu.assertEquals(history.roomHistory[1].biomeDepthCacheAfter, 0)

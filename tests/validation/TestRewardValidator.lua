@@ -77,23 +77,29 @@ local function materializePlan(draft, catalog)
     })
 end
 
-local function buildHistory(plan, catalog)
+local function buildHistory(plan, catalog, opts)
+    opts = opts or {}
     return h.testImport("mods/history/builder.lua").build(plan, {
         catalog = catalog,
+        initialClearedBiomes = opts.initialClearedBiomes,
     })
 end
 
-local function validatePlan(plan, catalog)
-    local history = buildHistory(plan, catalog)
+local function validatePlan(plan, catalog, opts)
+    local history = buildHistory(plan, catalog, opts)
     return h.testImport("mods/validation/rewards.lua").validate(history, {
         catalog = catalog,
     })
 end
 
-local function validateDraft(draft)
+local function validateDraft(draft, opts)
     local catalog = loadCatalog()
     local plan = materializePlan(draft, catalog)
-    return validatePlan(plan, catalog)
+    return validatePlan(plan, catalog, opts)
+end
+
+local function offerAt(draft, roomIndex, doorIndex, offerIndex)
+    return draft.biomes[1].rooms[roomIndex].generatedDoors.doors[doorIndex].offerPoint.offers[offerIndex]
 end
 
 function TestRewardValidator.testValidGeneratedDoorOfferDomainsPass()
@@ -183,5 +189,60 @@ function TestRewardValidator.testRejectsGeneratedDoorOfferPointKindMismatch()
         lu.assertEquals(result.findings[1].code, "offer_point_kind_invalid")
         lu.assertEquals(result.findings[1].payload.offerPointKind, "shipWheel")
         lu.assertEquals(result.findings[1].payload.expectedOfferPointKind, "generatedDoorRewards")
+    end)
+end
+
+function TestRewardValidator.testAllowsFirstHammerWithoutPriorHammer()
+    h.withTestImport(function()
+        local draft = completeDraft()
+        local offer = offerAt(draft, 1, 1, 1)
+        offer.rewardType = "WeaponUpgrade"
+        offer.acquired = true
+
+        local result = validateDraft(draft)
+
+        lu.assertTrue(result.valid)
+        lu.assertEquals(result.findings, {})
+    end)
+end
+
+function TestRewardValidator.testRejectsSecondHammerBeforeClearedBiomes()
+    h.withTestImport(function()
+        local draft = completeDraft()
+        local firstHammer = offerAt(draft, 1, 1, 1)
+        firstHammer.rewardType = "WeaponUpgrade"
+        firstHammer.acquired = true
+        local secondHammer = offerAt(draft, 2, 1, 1)
+        secondHammer.rewardType = "WeaponUpgrade"
+        secondHammer.acquired = false
+
+        local result = validateDraft(draft)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "late_hammer_requires_cleared_biomes")
+        lu.assertEquals(result.findings[1].payload.store, "RunProgress")
+        lu.assertEquals(result.findings[1].payload.rewardType, "WeaponUpgrade")
+        lu.assertEquals(result.findings[1].payload.axis, "ClearedBiomes")
+        lu.assertEquals(result.findings[1].payload.actual, 0)
+        lu.assertEquals(result.findings[1].payload.expected, 2)
+    end)
+end
+
+function TestRewardValidator.testAllowsLateHammerAfterFirstHammerAndClearedBiomes()
+    h.withTestImport(function()
+        local draft = completeDraft()
+        local firstHammer = offerAt(draft, 1, 1, 1)
+        firstHammer.rewardType = "WeaponUpgrade"
+        firstHammer.acquired = true
+        local secondHammer = offerAt(draft, 2, 1, 1)
+        secondHammer.rewardType = "WeaponUpgrade"
+        secondHammer.acquired = false
+
+        local result = validateDraft(draft, {
+            initialClearedBiomes = 3,
+        })
+
+        lu.assertTrue(result.valid)
+        lu.assertEquals(result.findings, {})
     end)
 end

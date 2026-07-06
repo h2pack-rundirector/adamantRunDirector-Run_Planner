@@ -20,35 +20,53 @@ local function compare(actual, comparison, expected)
     guard.fail("validation.requirement.comparison", "unknown comparison '" .. tostring(comparison) .. "'")
 end
 
-local function failure(requirement, payload)
+local function failure(requirement, payload, context)
     return {
         code = requirement.code or "requirement_failed",
-        phase = "room.generate_next",
+        phase = context.phase or "room.generate_next",
         presentation = requirement.presentation or "invalid",
         payload = payload or {},
-        message = requirement.message or "Generated room target fails declared eligibility.",
+        message = requirement.message or context.defaultMessage or "Declared requirement is not satisfied.",
     }
 end
 
-local function numericFailure(requirement, axis, actual, expected)
-    return failure(requirement, {
+local function numericFailure(requirement, axis, actual, expected, context, extraPayload)
+    local payload = {
         kind = requirement.kind,
         axis = axis,
         actual = actual,
         comparison = requirement.comparison,
         expected = expected,
-    })
+    }
+    for key, value in pairs(extraPayload or {}) do
+        payload[key] = value
+    end
+    return failure(requirement, payload, context)
 end
 
 local function numericRequirement(requirement, axis, actual, context)
-    local comparison = guard.expectString(requirement.comparison, context .. ".comparison")
-    local expected = guard.expectNumber(requirement.value, context .. ".value")
+    local comparison = guard.expectString(requirement.comparison, context.path .. ".comparison")
+    local expected = guard.expectNumber(requirement.value, context.path .. ".value")
 
     if compare(actual, comparison, expected) then
         return nil
     end
 
-    return numericFailure(requirement, axis, actual, expected)
+    return numericFailure(requirement, axis, actual, expected, context)
+end
+
+local function countSetRequirement(requirement, axis, actual, context)
+    guard.expectNonEmptyArray(requirement.countOf, context.path .. ".countOf")
+    local comparison = guard.expectString(requirement.comparison, context.path .. ".comparison")
+    local expected = guard.expectNumber(requirement.value, context.path .. ".value")
+
+    if compare(actual, comparison, expected) then
+        return nil
+    end
+
+    return numericFailure(requirement, axis, actual, expected, context, {
+        countOf = requirement.countOf,
+    })
 end
 
 local function resolveNamed(requirement, context)
@@ -69,6 +87,9 @@ local function evaluate(requirement, context)
             path = context.path .. "." .. requirement.named,
             namedRequirements = context.namedRequirements,
             counters = context.counters,
+            queries = context.queries,
+            phase = context.phase,
+            defaultMessage = context.defaultMessage,
         })
     end
 
@@ -81,6 +102,9 @@ local function evaluate(requirement, context)
                 path = context.path .. ".requirements[" .. tostring(index) .. "]",
                 namedRequirements = context.namedRequirements,
                 counters = context.counters,
+                queries = context.queries,
+                phase = context.phase,
+                defaultMessage = context.defaultMessage,
             })
             if violation ~= nil then
                 return violation
@@ -95,37 +119,69 @@ local function evaluate(requirement, context)
                 path = context.path .. ".requirements[" .. tostring(index) .. "]",
                 namedRequirements = context.namedRequirements,
                 counters = context.counters,
+                queries = context.queries,
+                phase = context.phase,
+                defaultMessage = context.defaultMessage,
             })
             if violation == nil then
                 return nil
             end
             firstViolation = firstViolation or violation
         end
-        return failure(requirement, firstViolation and firstViolation.payload or {})
+        return failure(requirement, firstViolation and firstViolation.payload or {}, context)
     elseif kind == "Not" then
         local violation = evaluate(requirement.requirement, {
             path = context.path .. ".requirement",
             namedRequirements = context.namedRequirements,
             counters = context.counters,
+            queries = context.queries,
+            phase = context.phase,
+            defaultMessage = context.defaultMessage,
         })
         if violation ~= nil then
             return nil
         end
-        return failure(requirement)
+        return failure(requirement, nil, context)
     elseif kind == "BiomeDepthCache" then
         return numericRequirement(
             requirement,
             "BiomeDepthCache",
             guard.expectNumber(context.counters.biomeDepthCache, "validation.counters.biomeDepthCache"),
-            context.path
+            context
         )
     elseif kind == "BiomeEncounterDepth" then
         return numericRequirement(
             requirement,
             "BiomeEncounterDepth",
             guard.expectNumber(context.counters.biomeEncounterDepth, "validation.counters.biomeEncounterDepth"),
-            context.path
+            context
         )
+    elseif kind == "LootTypeHistory" then
+        local count = guard.expectFunction(
+            context.queries.countLootTypeHistory,
+            "validation.queries.countLootTypeHistory"
+        )(requirement.countOf)
+        return countSetRequirement(requirement, "LootTypeHistory", count, context)
+    elseif kind == "ClearedBiomes" then
+        local count = guard.expectFunction(
+            context.queries.countClearedBiomes,
+            "validation.queries.countClearedBiomes"
+        )()
+        return numericRequirement(requirement, "ClearedBiomes", count, context)
+    elseif kind == "RequiredNotInStore" then
+        local name = guard.expectString(requirement.name, context.path .. ".name")
+        local count = guard.expectFunction(
+            context.queries.countPendingStoreOffers,
+            "validation.queries.countPendingStoreOffers"
+        )({ name })
+        if count == 0 then
+            return nil
+        end
+        return failure(requirement, {
+            kind = requirement.kind,
+            name = name,
+            actual = count,
+        }, context)
     end
 
     guard.fail(context.path .. ".kind", "unsupported requirement kind '" .. kind .. "'")
@@ -136,7 +192,10 @@ function requirements.evaluate(requirement, context)
     return evaluate(requirement, {
         path = context.path or "validation.requirement",
         namedRequirements = context.namedRequirements or {},
-        counters = guard.expectTable(context.counters, "validation.counters"),
+        counters = context.counters or {},
+        queries = context.queries or {},
+        phase = context.phase,
+        defaultMessage = context.defaultMessage,
     })
 end
 

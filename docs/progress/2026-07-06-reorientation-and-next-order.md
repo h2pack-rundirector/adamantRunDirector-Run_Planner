@@ -3,7 +3,8 @@
 ## Purpose
 
 This note reorients the fresh planner work after the first route spine,
-feedback, timing, force-pressure rebuild, and reward-offer validation slices.
+feedback, timing, force-pressure rebuild, reward-offer validation, and reward
+entry requirement query slices.
 
 The stable design lane remains `docs/system_design/`. This file is a mutable
 progress checkpoint: it records what the branch actually does now, how that
@@ -115,9 +116,13 @@ Implemented history behavior:
 - offer-point events;
 - reward-offer events;
 - selected reward acquisition events;
+- terminal-biome completion events for `ClearedBiomes`;
 - room/encounter/reward ledgers;
+- normalized acquired loot types for loot-history queries;
 - typed counters for run encounter depth, biome encounter depth, biome depth
-  cache, and room-history ordinal.
+  cache, room-history ordinal, and cleared biomes;
+- event-bound history query helpers for acquired loot counts, cleared biomes,
+  and pending store offers.
 
 Implemented validation behavior:
 
@@ -138,6 +143,9 @@ Implemented validation behavior:
   - declared reward store or shop profile;
   - reward type membership in that store/profile;
   - generated target room offer-profile compatibility.
+- generated-door reward entry requirement checks against counted bag entries;
+- requirement evaluation for `LootTypeHistory`, `ClearedBiomes`, and the
+  current empty pending-store form of `RequiredNotInStore`.
 
 Implemented feedback behavior:
 
@@ -171,10 +179,10 @@ Phase 4 has not started in substance. The generic linear model exists in docs,
 but G/P/Q declarations and any shared linear builder abstraction are not yet
 implemented.
 
-Phase 5 has started but only at the first layer. Generated-door reward offers
-now validate the offer domain. Source-specific reward entry requirements,
-payload legality, shop acquisition timing, room-local offer points, and batch
-rules are still deferred.
+Phase 5 has started across the first two layers. Generated-door reward offers
+now validate the offer domain and selected RunProgress-style counted bag entry
+requirements. Payload legality, reward candidates, shop acquisition timing,
+room-local offer points, and batch rules are still deferred.
 
 Phase 6 and later should remain blocked for now. H/O/I/N docs should guide
 schema decisions, but their special mechanics depend on a more complete common
@@ -182,29 +190,33 @@ reward and room spine.
 
 ## Important Gaps
 
-Requirement evaluation is intentionally small today. The declaration catalog
-already contains named Hammer requirements using predicates such as
-`RequiredNotInStore`, `LootTypeHistory`, and `ClearedBiomes`, but
-`src/mods/validation/requirements.lua` currently evaluates only:
+Requirement evaluation is still intentionally small. It now covers the timing
+predicates and the first reward-history predicates needed by Hammer:
 
 - `All`;
 - `Any`;
 - `Not`;
 - `BiomeDepthCache`;
-- `BiomeEncounterDepth`.
+- `BiomeEncounterDepth`;
+- `LootTypeHistory`;
+- `ClearedBiomes`;
+- `RequiredNotInStore` against the current empty pending-store ledger.
 
-That means the next reward legality step must add real query support before
-entry requirements can honestly run.
+The next requirement expansions should be demand-driven. `UseRecord`,
+`BiomeUseRecord`, `LootBiomeRecord`, spacing requirements, minimum exits, and
+prior distinct god loot are still deferred.
 
-Reward validation currently checks whether a source can ever offer a reward
-type. It does not yet check whether a counted bag entry with satisfied
-requirements exists at that offer point.
+Reward validation checks whether a source can ever offer a reward type and
+whether a generated-door bag offer has at least one matching counted bag entry
+whose requirements pass. This is still not bag depletion/refill simulation.
 
 Reward candidate policy is not implemented. The only semantic candidate kind
 is `nextRoom`.
 
 Room-local offer points are not implemented. Current reward validation is
-limited to generated-door offer points at `room.generate_next`.
+limited to generated-door offer points at `room.generate_next`, and selected
+entry requirement validation is limited to reward bags rather than shop option
+requirements.
 
 Force pressure has been rebuilt for the current F surface from
 `docs/system_design/validation/FORCE_PRESSURE_MODEL.md`. The generic physical
@@ -217,43 +229,10 @@ the fresh history. This is correct for now.
 
 ## Recommended Next Order
 
-### 1. Finish The Reward Legality Substrate
+### 1. Add Reward Payload Validation
 
-Build the history query support needed by source-specific reward entry
-requirements before adding bag simulation.
-
-Suggested first predicates:
-
-- `LootTypeHistory`;
-- `ClearedBiomes`;
-- `RequiredNotInStore` as an explicit unsupported or empty-state query until
-  shop offer intervals exist;
-- possibly `UseRecord` and `BiomeUseRecord` only if needed by the first test
-  reward declarations.
-
-Keep the first slice focused on generated-door reward offers and existing
-`RunProgress` entries. Do not broaden into shops, O wheels, H cages, or N hub
-rewards yet.
-
-### 2. Add Selected Reward Entry Requirement Validation
-
-Once query support exists, validate that a configured generated-door offer has
-at least one matching counted bag/shop entry whose requirements pass at that
-offer point.
-
-This should distinguish:
-
-- `reward_type_not_in_store`: domain failure;
-- entry requirement failure such as `early_hammer_requires_no_prior_hammer`;
-- unsupported/profile-dependent requirement failure;
-- future bag-unavailable failure.
-
-This is Phase 5 source legality, not Phase 7 bag simulation.
-
-### 3. Add Reward Payload Validation
-
-After entry requirements can query acquired loot, add payload legality for
-reward types that need it.
+Entry requirements can now query acquired loot history, so the next narrow
+Phase 5 slice is payload legality for reward types that need it.
 
 Likely first payload targets:
 
@@ -264,7 +243,7 @@ Likely first payload targets:
 
 Payload completeness remains a form concern. Payload legality is validation.
 
-### 4. Add Reward Candidate Export And Evaluation
+### 2. Add Reward Candidate Export And Evaluation
 
 After selected reward legality works, add candidate semantics for reward forms:
 
@@ -275,7 +254,7 @@ After selected reward legality works, add candidate semantics for reward forms:
 Candidates should reuse the same rule functions as selected reward findings.
 They should not trigger a separate validator walk per control.
 
-### 5. Decide Whether To Complete Phase 3 UI Or Continue Model Work
+### 3. Decide Whether To Complete Phase 3 UI Or Continue Model Work
 
 At this point there will be a choice:
 
@@ -288,7 +267,7 @@ candidate arrays are ergonomic before expanding many more declarations. The
 reason is not visual polish; it is contract pressure on the form/feedback
 boundary.
 
-### 6. Generalize Linear Biomes
+### 4. Generalize Linear Biomes
 
 After reward legality and feedback semantics are stable on F, expand the
 generic linear model:
@@ -299,7 +278,24 @@ generic linear model:
 - keep Q deterministic choices as structure metadata and generated doors, not
   a special route engine.
 
-### 7. Defer Reward Bag Simulation
+### 5. Extend The Reward Requirement Surface
+
+Add more requirement predicates only when a selected validation or candidate
+slice needs them.
+
+Likely next predicates:
+
+- `UseRecord`;
+- `BiomeUseRecord`;
+- `LootBiomeRecord`;
+- `RequiredMinRoomsSinceEvent`;
+- `RequiredMinExits`;
+- prior distinct god loot sources for Devotion.
+
+Keep `RequiredNotInStore` on the explicit pending-store ledger. It should start
+blocking only when shop offer intervals are materialized into history.
+
+### 6. Defer Reward Bag Simulation
 
 Do not implement Phase 7 bag simulation until source-specific entry
 requirements, offer timing, reward candidates, and at least one real linear
@@ -317,7 +313,7 @@ Bag simulation depends on:
 Implementing it too early would risk baking incomplete history semantics into
 the simulator.
 
-### 8. Defer Special Biomes And Runtime
+### 7. Defer Special Biomes And Runtime
 
 H/O/I/N should remain design references until the common pieces exist:
 
@@ -331,26 +327,39 @@ H/O/I/N should remain design references until the common pieces exist:
 Runtime should wait until validated history can compile into concrete room and
 reward instructions without runtime re-solving legality.
 
+## Completed Reward Query Slice
+
+Implemented in the current working checkpoint:
+
+- acquired reward events carry normalized `acquiredLootType`;
+- terminal biomes emit `biome.complete`;
+- history query helpers expose event-bound acquired loot counts,
+  `ClearedBiomes`, and pending store offers;
+- `requirements.evaluate` handles `LootTypeHistory`, `ClearedBiomes`, and
+  `RequiredNotInStore`;
+- generated-door reward validation checks matching counted bag entry
+  requirements;
+- Hammer tests cover first Hammer, blocked second Hammer before cleared biomes,
+  and allowed late Hammer with one prior Hammer plus cleared biomes.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Reward entry requirement query substrate
+Reward payload validation
 ```
 
 Concrete scope:
 
-- add history query helpers for acquired loot counts and route counters;
-- extend requirement evaluation beyond timing counters with at least
-  `LootTypeHistory` and `ClearedBiomes`;
-- add tests proving early/late Hammer requirements fail/pass from selected
-  generated-door reward offers;
-- keep `RequiredNotInStore` explicit and honest if shop pending-offer
-  intervals are not implemented yet.
+- define the first payload contract for reward offers that need payload;
+- validate Devotion source pair uniqueness;
+- validate selected Devotion sources against prior acquired god loot once the
+  god loot-source representation is declared;
+- keep payload completeness in forms and payload legality in validation.
 
-This is the narrowest slice that moves Phase 5 forward without jumping to bag
-simulation.
+This keeps Phase 5 moving on selected reward legality before broadening into
+reward candidates or bag simulation.
 
 ## Validation Baseline
 
@@ -365,7 +374,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 64 passed;
+- child tests: 67 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.
