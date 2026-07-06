@@ -11,6 +11,11 @@ planner model.
 Edit these docs only when the intended system model changes. Do not use them as
 a running implementation log.
 
+Notable model authorities:
+
+- `system_design/validation/FORCE_PRESSURE_MODEL.md`: force-pressure
+  declaration and generated-door batch validation semantics.
+
 ## Progress
 
 `progress/` records implementation checkpoints, validation runs, known gaps,

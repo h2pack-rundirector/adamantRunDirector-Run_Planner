@@ -45,7 +45,10 @@ F_PreBoss = {
         biomeDepthCache = { min = 12 },
     },
     force = {
-        biomeDepthCache = { exact = 12 },
+        kind = "BiomeDepthWindow",
+        axis = "BiomeDepthCache",
+        start = 12,
+        deadline = 12,
     },
     exits = {},
     offerProfile = "PrebossShopOrFreeReward",
@@ -89,21 +92,17 @@ F_Shop01 = {
     kind = "Shop",
     eligibility = { ... },
     force = {
-        biomeDepthCache = { min = 4, max = 6 },
+        kind = "BiomeDepthWindow",
+        axis = "BiomeDepthCache",
+        start = 4,
+        deadline = 6,
     },
 }
 ```
 
-The validator interprets force over generated exits:
-
-- only currently eligible forced rooms apply;
-- forced rooms compete for physically available generated exits;
-- if a force window/deadline applies and enough exits exist, generated doors
-  must include the required forced rooms;
-- if not enough exits exist, the validator should require only what is
-  physically possible;
-- generated/entered forced rooms satisfy or remove their pressure according to
-  game semantics.
+Force pressure is interpreted over generated-door batches, not as local
+selected-room legality. See
+`../validation/FORCE_PRESSURE_MODEL.md` for the validation contract.
 
 Do not introduce planner-only deadline groups unless the game data has an
 equivalent concept that cannot be represented as room force metadata plus
@@ -122,7 +121,10 @@ F_MiniBoss02 = {
         notInRoomHistory = { "F_MiniBoss01", "F_MiniBoss03" },
     },
     force = {
-        biomeDepthCache = { min = 4, max = 6 },
+        kind = "BiomeDepthWindow",
+        axis = "BiomeDepthCache",
+        start = 4,
+        deadline = 6,
     },
 }
 ```

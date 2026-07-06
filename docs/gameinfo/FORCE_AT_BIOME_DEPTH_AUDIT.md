@@ -5,6 +5,10 @@ This note records the live-game probe around `ForceAtBiomeDepthMin` /
 Planner. It is intended to guide the next data cleanup pass before sibling-path
 topology for F/G/P.
 
+The normative planner model lives in
+`../system_design/validation/FORCE_PRESSURE_MODEL.md`. This file is a game-data
+reference and historical audit.
+
 ## Vanilla Semantics
 
 Source: `1GameData/Scripts/RunLogic.lua`, `IsRoomForced`.

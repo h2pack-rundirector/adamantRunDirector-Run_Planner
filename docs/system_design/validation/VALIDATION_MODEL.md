@@ -110,6 +110,8 @@ Timing validation checks game-rule conditions at the correct lifecycle phase:
 - previous-room exit requirements;
 - generated-door batch rules.
 
+Force-pressure details live in `FORCE_PRESSURE_MODEL.md`.
+
 The validator should name the counter axis it uses. `depth` alone is not a
 valid query.
 
@@ -242,7 +244,8 @@ phase and emits candidate results.
 Examples:
 
 - `semantic.kind = "nextRoom"` uses room eligibility, exit constraints,
-  force pressure, caps, and timing queries.
+  force pressure, caps, and timing queries. Force-pressure candidate projection
+  is defined in `FORCE_PRESSURE_MODEL.md`.
 - `semantic.kind = "rewardType"` uses offer domain, entry requirements, and
   reward bag state.
 - `semantic.kind = "devotionSource"` uses acquired god source history and

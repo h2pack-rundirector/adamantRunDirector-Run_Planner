@@ -67,7 +67,10 @@ H_MiniBoss01 = {
     kind = "Miniboss",
     eligibility = { ... },
     force = {
-        biomeDepthCache = { min = 2, max = 4 },
+        kind = "BiomeDepthWindow",
+        axis = "BiomeDepthCache",
+        start = 2,
+        deadline = 4,
     },
 }
 ```
@@ -200,7 +203,8 @@ force metadata:
   groups.
 
 The force-pressure validator walks generated-door batches. It should see the
-same batch facts used by reward offer derivation.
+same batch facts used by reward offer derivation. The generic force-pressure
+contract is defined in `../validation/FORCE_PRESSURE_MODEL.md`.
 
 ## Boundary
 
