@@ -90,6 +90,23 @@ local function indexDraftProviders(draft)
 
         for roomIndex, roomNode in ipairs(biomeDraft.rooms) do
             guard.expectTable(roomNode, "candidateFeedback.draft.biomes[" .. tostring(biomeIndex) .. "].rooms[" .. tostring(roomIndex) .. "]")
+            if roomNode.offerPoints ~= nil then
+                guard.expectArray(roomNode.offerPoints, "candidateFeedback.room.offerPoints")
+                for offerPointIndex, offerPoint in ipairs(roomNode.offerPoints) do
+                    guard.expectTable(offerPoint, "candidateFeedback.room.offerPoints[" .. tostring(offerPointIndex) .. "]")
+                    guard.expectArray(offerPoint.offers or {}, "candidateFeedback.room.offerPoints[" .. tostring(offerPointIndex) .. "].offers")
+                    for offerIndex, offer in ipairs(offerPoint.offers or {}) do
+                        guard.expectTable(offer, "candidateFeedback.room.offerPoints[" .. tostring(offerPointIndex) .. "].offers[" .. tostring(offerIndex) .. "]")
+                        indexProviderMap(
+                            indexed,
+                            address.roomOffer(routeKey, biomeIndex, roomIndex, offerPointIndex, offerIndex),
+                            offer.candidateProviders,
+                            "candidateFeedback.room.offerPoints[" .. tostring(offerPointIndex) .. "].offers[" .. tostring(offerIndex) .. "].candidateProviders"
+                        )
+                    end
+                end
+            end
+
             local generatedDoors = roomNode.generatedDoors
             if generatedDoors ~= nil then
                 guard.expectTable(generatedDoors, "candidateFeedback.generatedDoors")

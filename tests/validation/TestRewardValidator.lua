@@ -163,6 +163,124 @@ local function devotionDraft()
     }
 end
 
+local function shopRoomDraft(opts)
+    opts = opts or {}
+    local shopOffer = {
+        store = "WorldShop",
+        rewardType = opts.shopRewardType or "WeaponUpgradeDrop",
+        acquired = opts.shopAcquired or false,
+    }
+
+    local shopDoorOffer = {
+        store = "RunProgress",
+        rewardType = opts.generatedRewardType or "MaxHealthDrop",
+        acquired = false,
+    }
+
+    return {
+        routeKey = "Underworld",
+        biomes = {
+            {
+                biomeKey = "F",
+                rooms = {
+                    {
+                        roomKey = "F_Opening01",
+                        generatedDoors = {
+                            batchRule = "Standard",
+                            selectedDoorIndex = 1,
+                            doors = {
+                                {
+                                    exitIndex = 1,
+                                    targetRoomKey = "F_Shop01",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "WorldShop",
+                                                rewardType = "HermesUpgrade",
+                                                acquired = false,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    {
+                        roomKey = "F_Shop01",
+                        offerPoints = {
+                            {
+                                kind = opts.offerPointKind or "shop",
+                                batchKey = "worldShop",
+                                offers = {
+                                    shopOffer,
+                                },
+                            },
+                        },
+                        generatedDoors = {
+                            batchRule = "Standard",
+                            selectedDoorIndex = 1,
+                            doors = {
+                                {
+                                    exitIndex = 1,
+                                    targetRoomKey = "F_Combat01",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            shopDoorOffer,
+                                        },
+                                    },
+                                },
+                                {
+                                    exitIndex = 2,
+                                    targetRoomKey = "F_Combat02",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "RunProgress",
+                                                rewardType = "MaxManaDrop",
+                                                acquired = false,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    {
+                        roomKey = "F_Combat01",
+                        generatedDoors = {
+                            batchRule = "Standard",
+                            selectedDoorIndex = 1,
+                            doors = {
+                                {
+                                    exitIndex = 1,
+                                    targetRoomKey = "F_Combat02",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "RunProgress",
+                                                rewardType = opts.nextRoomRewardType or "MaxHealthDrop",
+                                                acquired = false,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+end
+
 local function loadCatalog()
     return h.testImport("mods/data.lua").loadCatalog()
 end
@@ -474,6 +592,58 @@ end
 function TestRewardValidator.testAllowsDevotionAfterPriorSourceLoot()
     h.withTestImport(function()
         local result = validateDraft(devotionDraft())
+
+        lu.assertTrue(result.valid)
+        lu.assertEquals(result.findings, {})
+    end)
+end
+
+function TestRewardValidator.testAllowsRoomLocalShopOffer()
+    h.withTestImport(function()
+        local result = validateDraft(shopRoomDraft())
+
+        lu.assertTrue(result.valid)
+        lu.assertEquals(result.findings, {})
+    end)
+end
+
+function TestRewardValidator.testRejectsRoomLocalOfferOutsideCurrentRoomProfile()
+    h.withTestImport(function()
+        local result = validateDraft(shopRoomDraft({
+            shopRewardType = "GiftDrop",
+        }))
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "reward_type_not_in_shop")
+        lu.assertEquals(result.findings[1].sourceAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+            offerPointIndex = 1,
+            offerIndex = 1,
+        })
+    end)
+end
+
+function TestRewardValidator.testPendingShopOfferBlocksSameRoomGeneratedReward()
+    h.withTestImport(function()
+        local result = validateDraft(shopRoomDraft({
+            generatedRewardType = "WeaponUpgrade",
+        }))
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "late_hammer_pending_in_shop")
+        lu.assertEquals(result.findings[1].payload.store, "RunProgress")
+        lu.assertEquals(result.findings[1].payload.rewardType, "WeaponUpgrade")
+        lu.assertEquals(result.findings[1].payload.name, "WeaponUpgradeDrop")
+    end)
+end
+
+function TestRewardValidator.testPendingShopOfferExpiresAfterRoomGeneration()
+    h.withTestImport(function()
+        local result = validateDraft(shopRoomDraft({
+            nextRoomRewardType = "WeaponUpgrade",
+        }))
 
         lu.assertTrue(result.valid)
         lu.assertEquals(result.findings, {})

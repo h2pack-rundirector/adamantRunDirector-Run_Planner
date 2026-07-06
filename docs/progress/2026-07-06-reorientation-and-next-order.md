@@ -65,6 +65,7 @@ Recent child commits:
 - `4c1fad6 feat(validation): rebuild force pressure`
 - `70f4b4b feat(validation): add reward entry queries`
 - `ce98f2a feat(planner): evaluate reward candidates`
+- `0953223 feat(validation): expand reward requirements`
 
 Recent shell pointer commits:
 
@@ -79,6 +80,7 @@ Recent shell pointer commits:
 - `d4af051 chore: point planner to force rebuild`
 - `a71cede chore: point planner to reward queries`
 - `ef3c539 chore: point planner to reward candidates`
+- `639a074 chore: point planner to reward requirements`
 
 ## What Is Implemented
 
@@ -148,8 +150,11 @@ Implemented validation behavior:
   - reward type membership in that store/profile;
   - generated target room offer-profile compatibility.
 - generated-door reward entry requirement checks against counted bag entries;
-- requirement evaluation for `LootTypeHistory`, `ClearedBiomes`, and the
-  current empty pending-store form of `RequiredNotInStore`.
+- room-local reward offer domain checks against the current room's offer
+  profile;
+- room-local shop option entry requirement checks;
+- requirement evaluation for `LootTypeHistory`, `ClearedBiomes`, and bounded
+  pending-store `RequiredNotInStore`.
 
 Implemented feedback behavior:
 
@@ -199,9 +204,8 @@ implemented.
 Phase 5 has started across selected legality, payload legality, and reward
 candidate evaluation. Generated-door reward offers validate offer domain,
 selected RunProgress-style counted bag entry requirements, Devotion payloads,
-and the first source-specific Devotion entry requirements. Shop acquisition
-timing, room-local offer points, batch rules, and bag simulation are still
-deferred.
+the first source-specific Devotion entry requirements, and room-local shop
+offer timing. Batch rules and bag simulation are still deferred.
 
 Phase 6 and later should remain blocked for now. H/O/I/N docs should guide
 schema decisions, but their special mechanics depend on a more complete common
@@ -224,7 +228,7 @@ Devotion source history:
 - `PriorDistinctLootSources`;
 - `CurrentLootSourcesSeen`;
 - `UniquePayloadValues`;
-- `RequiredNotInStore` against the current empty pending-store ledger;
+- `RequiredNotInStore` against bounded pending shop offers;
 - `RequiredMinRoomsSinceEvent`;
 - `RequiredMinExits`.
 
@@ -241,7 +245,9 @@ whose requirements pass. It also validates the first payload rules:
   loot source history;
 - Devotion entry requirements for run encounter depth, biome encounter depth,
   rooms since prior Devotion acquisition on `RoomHistoryOrdinal`, and minimum
-  generated exits.
+  generated exits;
+- room-local shop option requirements and generated reward blocking through
+  bounded pending shop offers.
 
 This is still not bag depletion/refill simulation.
 
@@ -249,10 +255,11 @@ Reward candidate policy is implemented for `nextRoom`, offer `rewardType`, and
 Devotion payload source options. Additional reward candidate kinds remain
 demand-driven.
 
-Room-local offer points are not implemented. Current reward validation is
-limited to generated-door offer points at `room.generate_next`, and selected
-entry requirement validation is limited to reward bags rather than shop option
-requirements.
+Room-local offer points are implemented in the canonical form, history builder,
+candidate feedback addressing, and reward validation. They emit at
+`room.offer_points`; bought room-local offers acquire after `room.generate_next`
+so same-room generated rewards cannot see the bought loot too early. The
+minimal debug harness does not yet expose room-local offer point controls.
 
 Force pressure has been rebuilt for the current F surface from
 `docs/system_design/validation/FORCE_PRESSURE_MODEL.md`. The generic physical
@@ -329,8 +336,9 @@ candidate slice needs them. Likely deferred predicates:
 - `BiomeUseRecord`;
 - `LootBiomeRecord`.
 
-Keep `RequiredNotInStore` on the explicit pending-store ledger. It should start
-blocking only when shop offer intervals are materialized into history.
+`RequiredNotInStore` now reads bounded pending shop offers. Future predicates
+should keep following that pattern: explicit game-language ledgers first,
+reward-type shortcuts last.
 
 ### 6. Defer Reward Bag Simulation
 
@@ -430,25 +438,45 @@ Implemented in the current working checkpoint:
 - tests cover early Devotion encounter-depth failure, recent-Devotion spacing
   failure, one-exit Devotion failure, and a valid fully qualified Devotion.
 
+## Completed Room-Local Reward Timing Slice
+
+Implemented in the current working checkpoint:
+
+- canonical room nodes can carry `offerPoints` in addition to generated-door
+  offer points;
+- room-local offer addresses use `offerPointIndex` and participate in
+  candidate export/feedback;
+- history emits room-local `offer_point.emit` and `reward.offer` events at
+  `room.offer_points`;
+- bought room-local offers emit `reward.acquire` after `room.generate_next`
+  and before `room.commit`, preserving same-room next-reward timing;
+- shop offers populate bounded pending-store records that expire after the
+  current room's next-door generation;
+- reward validation checks room-local offer domains against the current room's
+  offer profile and validates matching shop option requirements;
+- `RequiredNotInStore` now observes active pending shop offers instead of an
+  always-empty placeholder ledger.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Room-local reward offer timing
+Minimal room-offer harness wiring
 ```
 
 Concrete scope:
 
-- materialize non-generated-door offer points needed by shops/preboss surfaces;
-- distinguish shop offers that are bought from shop offers that merely appeared;
-- begin making `RequiredNotInStore` meaningful by populating the pending-store
-  ledger from real offer intervals;
-- keep bag depletion/refill deferred until offer timing is explicit.
+- expose one raw room-local offer point in the debug harness for shop/preboss
+  rooms;
+- keep the UI shape temporary and data-focused;
+- attach the same reward-type candidate providers used by generated-door
+  offers;
+- show pending-store validation feedback in the live UI loop.
 
-This continues Phase 5 without jumping to bag simulation. It gives selected
-legality and candidate feedback a more honest offer timeline before broader
-linear biome declarations or special biome reward surfaces are added.
+This keeps the in-game model-testing loop useful without starting the final UI
+pass. After this, the branch can either expand linear biome declarations or add
+the next reward batch/constraint rule with better live feedback coverage.
 
 ## Validation Baseline
 
@@ -463,7 +491,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 85 passed;
+- child tests: 94 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.

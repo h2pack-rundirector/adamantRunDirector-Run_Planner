@@ -26,18 +26,32 @@ local function expectHistory(history)
     guard.expectArray(history.lootHistory, "rewardValidation.history.lootHistory")
 end
 
-local function addressKey(formAddress)
-    return tostring(formAddress.routeKey)
-        .. ":" .. tostring(formAddress.biomeIndex)
-        .. ":" .. tostring(formAddress.roomIndex)
+local function stableAddressKey(formAddress, context)
+    guard.expectTable(formAddress, context)
+
+    local keys = {}
+    for key, value in pairs(formAddress) do
+        local valueType = type(value)
+        if valueType ~= "string" and valueType ~= "number" and valueType ~= "boolean" then
+            guard.fail(context .. "." .. tostring(key), "address values must be scalar")
+        end
+        keys[#keys + 1] = key
+    end
+    table.sort(keys)
+
+    local parts = {}
+    for index, key in ipairs(keys) do
+        parts[index] = tostring(key) .. "=" .. tostring(formAddress[key])
+    end
+    return table.concat(parts, "|")
 end
 
 local function doorAddressKey(formAddress)
-    return addressKey(formAddress) .. ":" .. tostring(formAddress.doorIndex)
+    return stableAddressKey(formAddress, "rewardValidation.doorAddress")
 end
 
 local function offerAddressKey(formAddress)
-    return doorAddressKey(formAddress) .. ":" .. tostring(formAddress.offerIndex)
+    return stableAddressKey(formAddress, "rewardValidation.offerAddress")
 end
 
 local function indexHistory(history)
@@ -218,6 +232,49 @@ local function validateGeneratedDoorDomain(result, catalog, indexed, offer, offe
     return true
 end
 
+local function validateRoomLocalDomain(result, catalog, offer, offerPoint)
+    if offerPoint.offerPointKind == "generatedDoorRewards" then
+        validationResult.invalid(result, "room_offer_point_kind_invalid", offer.phase, offer.sourceAddress, {
+            offerPointKind = offerPoint.offerPointKind,
+            store = offer.store,
+            rewardType = offer.rewardType,
+        }, "Room-local reward offer uses a generated-door offer point kind.")
+        return false
+    end
+
+    local room = getRoom(catalog, offer.biomeKey, offerPoint.roomKey or offer.roomKey)
+    if room == nil then
+        return false
+    end
+
+    if room.offerProfile == nil then
+        validationResult.invalid(result, "room_reward_offer_profile_missing", offer.phase, offer.sourceAddress, {
+            roomKey = room.key,
+            store = offer.store,
+            rewardType = offer.rewardType,
+        }, "Room-local reward offer requires the current room to declare an offer profile.")
+        return false
+    end
+
+    local profile = catalog.offerProfiles[room.offerProfile]
+    if profile == nil then
+        return false
+    end
+
+    if not profileAllowsOffer(catalog, profile, offer) then
+        validationResult.invalid(result, "room_reward_offer_domain_mismatch", offer.phase, offer.sourceAddress, {
+            roomKey = room.key,
+            offerProfile = room.offerProfile,
+            profileKind = profile.kind,
+            store = offer.store,
+            rewardType = offer.rewardType,
+        }, "Room-local reward offer does not match the current room's offer domain.")
+        return false
+    end
+
+    return true
+end
+
 local function validateOfferDomain(result, catalog, indexed, offer)
     local storeKnown = validateStoreMembership(result, catalog, offer)
 
@@ -233,6 +290,8 @@ local function validateOfferDomain(result, catalog, indexed, offer)
 
     if storeKnown and offer.phase == "room.generate_next" then
         return validateGeneratedDoorDomain(result, catalog, indexed, offer, offerPoint)
+    elseif storeKnown and offer.phase == "room.offer_points" then
+        return validateRoomLocalDomain(result, catalog, offer, offerPoint)
     end
 
     return storeKnown
@@ -419,6 +478,44 @@ local function validateBagEntryRequirements(result, catalog, history, offer)
     end
 end
 
+local function validateShopOptionRequirements(result, catalog, history, offer)
+    local shop = catalog.rewards.shops[offer.store]
+    if shop == nil then
+        return
+    end
+
+    local lastViolation
+    local hasMatchingOption = false
+    for _, slot in ipairs(shop.slots or {}) do
+        for _, option in ipairs(slot.options or {}) do
+            if option.rewardType == offer.rewardType then
+                hasMatchingOption = true
+                local violation = entryRequirementViolation(catalog, history, offer, option)
+                if violation == nil then
+                    return
+                end
+                lastViolation = violation
+            end
+        end
+    end
+
+    if hasMatchingOption and lastViolation ~= nil then
+        validationResult.invalid(
+            result,
+            lastViolation.code,
+            offer.phase,
+            offer.sourceAddress,
+            lastViolation.payload,
+            lastViolation.message
+        )
+    end
+end
+
+local function validateEntryRequirements(result, catalog, history, offer)
+    validateBagEntryRequirements(result, catalog, history, offer)
+    validateShopOptionRequirements(result, catalog, history, offer)
+end
+
 local function candidateRecords(context, history)
     local records = context.candidateRecords or history.candidateRecords
     if records == nil then
@@ -476,7 +573,7 @@ local function selectedFindingsForProjectedOffer(catalog, history, indexed, offe
     local payloadValid = domainValid and validatePayload(result, catalog, history, offer)
 
     if domainValid and payloadValid then
-        validateBagEntryRequirements(result, catalog, history, offer)
+        validateEntryRequirements(result, catalog, history, offer)
     end
 
     return result.findings
@@ -546,7 +643,7 @@ function rewardValidation.append(result, history, context)
 
     for _, offer in ipairs(history.rewardOfferHistory) do
         if domainValidByEventIndex[offer.eventIndex] and payloadValidByEventIndex[offer.eventIndex] then
-            validateBagEntryRequirements(result, context.catalog, history, offer)
+            validateEntryRequirements(result, context.catalog, history, offer)
         end
     end
 

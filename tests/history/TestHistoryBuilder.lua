@@ -91,6 +91,125 @@ local function loadPlan()
     return routeForm.materialize(completeDraft(), { catalog = catalog }), catalog
 end
 
+local function shopDraft(shopOfferAcquired)
+    return {
+        routeKey = "Underworld",
+        biomes = {
+            {
+                biomeKey = "F",
+                rooms = {
+                    {
+                        roomKey = "F_Opening01",
+                        generatedDoors = {
+                            batchRule = "Standard",
+                            selectedDoorIndex = 1,
+                            doors = {
+                                {
+                                    exitIndex = 1,
+                                    targetRoomKey = "F_Shop01",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "WorldShop",
+                                                rewardType = "HermesUpgrade",
+                                                acquired = false,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    {
+                        roomKey = "F_Shop01",
+                        offerPoints = {
+                            {
+                                kind = "shop",
+                                batchKey = "worldShop",
+                                offers = {
+                                    {
+                                        store = "WorldShop",
+                                        rewardType = "WeaponUpgradeDrop",
+                                        acquired = shopOfferAcquired,
+                                    },
+                                },
+                            },
+                        },
+                        generatedDoors = {
+                            batchRule = "Standard",
+                            selectedDoorIndex = 1,
+                            doors = {
+                                {
+                                    exitIndex = 1,
+                                    targetRoomKey = "F_Combat01",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "RunProgress",
+                                                rewardType = "MaxHealthDrop",
+                                                acquired = false,
+                                            },
+                                        },
+                                    },
+                                },
+                                {
+                                    exitIndex = 2,
+                                    targetRoomKey = "F_Combat02",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "RunProgress",
+                                                rewardType = "MaxManaDrop",
+                                                acquired = false,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    {
+                        roomKey = "F_Combat01",
+                        generatedDoors = {
+                            batchRule = "Standard",
+                            selectedDoorIndex = 1,
+                            doors = {
+                                {
+                                    exitIndex = 1,
+                                    targetRoomKey = "F_Combat02",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "RunProgress",
+                                                rewardType = "MaxHealthDrop",
+                                                acquired = false,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+end
+
+local function loadShopPlan(shopOfferAcquired)
+    local catalog = h.testImport("mods/data.lua").loadCatalog()
+    local routeForm = h.testImport("mods/forms/route.lua")
+    return routeForm.materialize(shopDraft(shopOfferAcquired), { catalog = catalog }), catalog
+end
+
 local function eventKinds(history)
     local kinds = {}
     for index, event in ipairs(history.events) do
@@ -215,6 +334,63 @@ function TestHistoryBuilder.testEventsCarryStructuredSourceAddresses()
             biomeIndex = 1,
             roomIndex = 2,
         })
+    end)
+end
+
+function TestHistoryBuilder.testRoomOfferPointsUseRoomOfferPhase()
+    h.withTestImport(function()
+        local plan, catalog = loadShopPlan(true)
+        local history = h.testImport("mods/history/builder.lua").build(plan, {
+            catalog = catalog,
+        })
+
+        local roomOffer
+        local roomAcquire
+        local generateNext
+        for _, event in ipairs(history.events) do
+            if event.kind == "reward.offer" and event.phase == "room.offer_points" then
+                roomOffer = event
+            elseif event.kind == "reward.acquire" and event.sourceAddress.offerPointIndex == 1 then
+                roomAcquire = event
+            elseif event.kind == "room.generate_next" and event.roomIndex == 2 then
+                generateNext = event
+            end
+        end
+
+        lu.assertNotNil(roomOffer)
+        lu.assertEquals(roomOffer.sourceAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+            offerPointIndex = 1,
+            offerIndex = 1,
+        })
+        lu.assertNotNil(roomAcquire)
+        lu.assertNotNil(generateNext)
+        lu.assertTrue(generateNext.eventIndex < roomAcquire.eventIndex)
+        lu.assertEquals(roomAcquire.phase, "room.commit")
+        lu.assertEquals(roomAcquire.acquiredLootType, "WeaponUpgrade")
+    end)
+end
+
+function TestHistoryBuilder.testRoomShopOffersCreateBoundedPendingStoreRecords()
+    h.withTestImport(function()
+        local plan, catalog = loadShopPlan(false)
+        local history = h.testImport("mods/history/builder.lua").build(plan, {
+            catalog = catalog,
+        })
+
+        lu.assertEquals(#history.pendingStoreOfferHistory, 1)
+        local pending = history.pendingStoreOfferHistory[1]
+        lu.assertEquals(pending.rewardType, "WeaponUpgradeDrop")
+        lu.assertEquals(pending.sourceAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+            offerPointIndex = 1,
+            offerIndex = 1,
+        })
+        lu.assertTrue(pending.activeFromEventIndex < pending.activeUntilEventIndex)
     end)
 end
 

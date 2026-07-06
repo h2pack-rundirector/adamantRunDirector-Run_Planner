@@ -158,7 +158,10 @@ function query.countPendingStoreOffersBefore(history, rewardTypes, eventIndex)
 
     for _, event in ipairs(pendingStoreOfferHistory) do
         local rewardType = event.rewardType or event.name
-        if before(event, beforeEventIndex) and rewardTypeSet[rewardType] then
+        local activeFrom = event.activeFromEventIndex or event.eventIndex
+        local activeUntil = event.activeUntilEventIndex
+        local active = activeFrom < beforeEventIndex and (activeUntil == nil or beforeEventIndex <= activeUntil)
+        if active and rewardTypeSet[rewardType] then
             count = count + 1
         end
     end

@@ -106,7 +106,7 @@ local function validateOffer(result, offer, offerAddress)
     end
 end
 
-local function validateOfferPoint(result, offerPoint, offerAddress)
+local function validateOfferPoint(result, offerPoint, offerAddress, offerAddressForIndex)
     if type(offerPoint) ~= "table" then
         completion.add(result, offerAddress, "offer_point_required", "Offer point must be filled.", "offerPoint")
         return
@@ -120,7 +120,30 @@ local function validateOfferPoint(result, offerPoint, offerAddress)
     end
 
     for offerIndex, offer in ipairs(offerPoint.offers) do
-        validateOffer(result, offer, address.offer(offerAddress.routeKey, offerAddress.biomeIndex, offerAddress.roomIndex, offerAddress.doorIndex, offerIndex))
+        validateOffer(result, offer, offerAddressForIndex(offerIndex))
+    end
+end
+
+local function validateRoomOfferPoints(result, roomNode, roomAddress)
+    if roomNode.offerPoints == nil then
+        return
+    end
+
+    if not isArray(roomNode.offerPoints) then
+        completion.add(result, roomAddress, "room_offer_points_invalid", "Room offer points must be an array.", "offerPoints")
+        return
+    end
+
+    for offerPointIndex, offerPoint in ipairs(roomNode.offerPoints) do
+        local offerPointAddress = address.roomOfferPoint(roomAddress.routeKey, roomAddress.biomeIndex, roomAddress.roomIndex, offerPointIndex)
+        validateOfferPoint(
+            result,
+            offerPoint,
+            offerPointAddress,
+            function(offerIndex)
+                return address.roomOffer(roomAddress.routeKey, roomAddress.biomeIndex, roomAddress.roomIndex, offerPointIndex, offerIndex)
+            end
+        )
     end
 end
 
@@ -155,7 +178,14 @@ local function validateGeneratedDoors(result, roomNode, nextRoomNode, roomAddres
                 completion.add(result, doorAddress, "generated_door_exit_required", "Generated door exit index must be filled.", "exitIndex")
             end
             addConcreteStringFinding(result, door.targetRoomKey, doorAddress, "generated_door_target_required", "Generated door target room must be concrete.", "targetRoomKey")
-            validateOfferPoint(result, door.offerPoint, doorAddress)
+            validateOfferPoint(
+                result,
+                door.offerPoint,
+                doorAddress,
+                function(offerIndex)
+                    return address.offer(roomAddress.routeKey, roomAddress.biomeIndex, roomAddress.roomIndex, doorIndex, offerIndex)
+                end
+            )
         end
     end
 
@@ -182,6 +212,8 @@ local function validateRoom(result, catalog, routeKey, biomeKey, biomeIndex, roo
     local roomDeclaration = getRoomDeclaration(catalog, biomeKey, roomNode.roomKey)
     local nextRoomNode = rooms[roomIndex + 1]
     local isTerminal = roomDeclaration ~= nil and roomDeclaration.terminal == true
+
+    validateRoomOfferPoints(result, roomNode, roomAddress)
 
     if not isTerminal then
         validateGeneratedDoors(result, roomNode, nextRoomNode, roomAddress)
@@ -308,10 +340,23 @@ local function materializeGeneratedDoors(generatedDoors)
     }
 end
 
+local function materializeRoomOfferPoints(offerPoints)
+    if offerPoints == nil then
+        return nil
+    end
+
+    local materialized = {}
+    for index, offerPoint in ipairs(offerPoints) do
+        materialized[index] = materializeOfferPoint(offerPoint)
+    end
+    return materialized
+end
+
 local function materializeRoom(roomNode)
     return {
         roomKey = roomNode.roomKey,
         roomState = copyTable(roomNode.roomState),
+        offerPoints = materializeRoomOfferPoints(roomNode.offerPoints),
         generatedDoors = materializeGeneratedDoors(roomNode.generatedDoors),
     }
 end
@@ -366,6 +411,25 @@ local function offerCandidateContext(context, draft, biomeDraft, biomeIndex, roo
     return exportContext
 end
 
+local function roomOfferCandidateContext(context, draft, biomeDraft, biomeIndex, roomNode, roomIndex, offerPoint, offerPointIndex, offer, offerIndex)
+    local exportContext = copyContext(context)
+    exportContext.candidate = {
+        routeKey = draft.routeKey,
+        biomeKey = biomeDraft.biomeKey,
+        biomeIndex = biomeIndex,
+        sourceRoomKey = roomNode.roomKey,
+        roomIndex = roomIndex,
+        offerPointIndex = offerPointIndex,
+        offerIndex = offerIndex,
+        store = offer.store,
+        rewardType = offer.rewardType,
+        acquired = offer.acquired,
+        payload = offer.payload,
+        offerPointKind = offerPoint.kind,
+    }
+    return exportContext
+end
+
 local function exportProvider(out, provider, formAddress, context, providerContext)
     guard.expectTable(provider, providerContext)
     if type(provider.exportCandidates) ~= "function" then
@@ -408,6 +472,19 @@ local function exportDoorCandidates(out, draft, biomeDraft, biomeIndex, roomNode
     end
 end
 
+local function exportRoomOfferCandidates(out, draft, biomeDraft, biomeIndex, roomNode, roomIndex, offerPoint, offerPointIndex, context)
+    for offerIndex, offer in ipairs(offerPoint.offers or {}) do
+        local offerAddress = address.roomOffer(draft.routeKey, biomeIndex, roomIndex, offerPointIndex, offerIndex)
+        exportProviderMap(
+            out,
+            offer.candidateProviders,
+            offerAddress,
+            roomOfferCandidateContext(context, draft, biomeDraft, biomeIndex, roomNode, roomIndex, offerPoint, offerPointIndex, offer, offerIndex),
+            "routeForm.biomes[" .. tostring(biomeIndex) .. "].rooms[" .. tostring(roomIndex) .. "].offerPoints[" .. tostring(offerPointIndex) .. "].offers[" .. tostring(offerIndex) .. "].candidateProviders"
+        )
+    end
+end
+
 function routeForm.exportCandidates(draft, context, out)
     context = context or {}
     out = out or {}
@@ -419,6 +496,10 @@ function routeForm.exportCandidates(draft, context, out)
 
     for biomeIndex, biomeDraft in ipairs(draft.biomes) do
         for roomIndex, roomNode in ipairs(biomeDraft.rooms) do
+            for offerPointIndex, offerPoint in ipairs(roomNode.offerPoints or {}) do
+                exportRoomOfferCandidates(out, draft, biomeDraft, biomeIndex, roomNode, roomIndex, offerPoint, offerPointIndex, context)
+            end
+
             if roomNode.generatedDoors ~= nil then
                 for doorIndex, door in ipairs(roomNode.generatedDoors.doors or {}) do
                     exportDoorCandidates(out, draft, biomeDraft, biomeIndex, roomNode, roomIndex, door, doorIndex, context)

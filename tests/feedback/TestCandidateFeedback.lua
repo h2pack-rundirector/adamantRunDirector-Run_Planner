@@ -61,6 +61,33 @@ local function draftWithOfferProvider(provider)
     }
 end
 
+local function draftWithRoomOfferProvider(provider)
+    return {
+        routeKey = "Underworld",
+        biomes = {
+            {
+                biomeKey = "F",
+                rooms = {
+                    {
+                        roomKey = "F_Shop01",
+                        offerPoints = {
+                            {
+                                offers = {
+                                    {
+                                        candidateProviders = {
+                                            rewardType = provider,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+end
+
 local function candidateResult(version, candidateIndex)
     return {
         formAddress = {
@@ -84,6 +111,16 @@ local function offerCandidateResult(version, candidateIndex)
     result.formAddress.offerIndex = 1
     result.providerKey = "rewardType"
     result.candidateKey = "GiftDrop"
+    return result
+end
+
+local function roomOfferCandidateResult(version, candidateIndex)
+    local result = candidateResult(version, candidateIndex)
+    result.formAddress.doorIndex = nil
+    result.formAddress.offerPointIndex = 1
+    result.formAddress.offerIndex = 1
+    result.providerKey = "rewardType"
+    result.candidateKey = "WeaponUpgradeDrop"
     return result
 end
 
@@ -193,6 +230,31 @@ function TestCandidateFeedback.testAppliesOfferCandidateFeedback()
 
         local summary = candidateFeedback.apply(draftWithOfferProvider(provider), {
             offerCandidateResult(8, 2),
+        })
+
+        lu.assertEquals(summary, {
+            cleared = 1,
+            applied = 1,
+            stale = 0,
+            missing = 0,
+        })
+        lu.assertTrue(provider.hidden[2])
+        lu.assertEquals(provider.messages[2], "Unavailable")
+    end)
+end
+
+function TestCandidateFeedback.testAppliesRoomOfferCandidateFeedback()
+    h.withTestImport(function()
+        local candidateFeedback = h.testImport("mods/feedback/candidates.lua")
+        local provider = h.testImport("mods/forms/candidate_provider.lua").create({
+            key = "rewardType",
+            version = 9,
+            values = { "HermesUpgrade", "WeaponUpgradeDrop" },
+            labels = { "Hermes", "Hammer" },
+        })
+
+        local summary = candidateFeedback.apply(draftWithRoomOfferProvider(provider), {
+            roomOfferCandidateResult(9, 2),
         })
 
         lu.assertEquals(summary, {

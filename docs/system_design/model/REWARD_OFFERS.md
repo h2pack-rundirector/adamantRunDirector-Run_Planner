@@ -64,6 +64,27 @@ Examples:
 This keeps O honest: one physical room can contain multiple encounter-local
 offer points without pretending the room itself has one reward surface.
 
+Room-local offer points are stored on the room node:
+
+```lua
+room = {
+    roomKey = "F_Shop01",
+    offerPoints = {
+        {
+            kind = "shop",
+            batchKey = "worldShop",
+            offers = {
+                { store = "WorldShop", rewardType = "WeaponUpgradeDrop", acquired = false },
+            },
+        },
+    },
+}
+```
+
+They emit at `room.offer_points`. Bought room-local offers acquire only after
+`room.generate_next`, so same-room generated next rewards do not see that
+bought loot too early.
+
 ## Offer Versus Acquisition
 
 Reward history has two separate concepts:

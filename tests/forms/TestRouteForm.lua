@@ -141,6 +141,34 @@ function TestRouteForm.testCompleteDraftMaterializesCanonicalPlan()
     end)
 end
 
+function TestRouteForm.testRoomOfferPointsMaterialize()
+    h.withTestImport(function()
+        local routeForm = h.testImport("mods/forms/route.lua")
+        local draft = completeDraft()
+        draft.biomes[1].rooms[3].offerPoints = {
+            {
+                kind = "prebossRewards",
+                batchKey = "preboss",
+                offers = {
+                    {
+                        store = "WorldShop",
+                        rewardType = "HermesUpgrade",
+                        acquired = false,
+                    },
+                },
+            },
+        }
+
+        local result = routeForm.isComplete(draft, loadContext())
+        lu.assertTrue(result.complete)
+
+        local plan = routeForm.materialize(draft, loadContext())
+        lu.assertEquals(plan.biomes[1].rooms[3].offerPoints[1].kind, "prebossRewards")
+        lu.assertEquals(plan.biomes[1].rooms[3].offerPoints[1].offers[1].store, "WorldShop")
+        lu.assertEquals(plan.biomes[1].rooms[3].offerPoints[1].offers[1].rewardType, "HermesUpgrade")
+    end)
+end
+
 function TestRouteForm.testMaterializeRejectsIncompleteDraft()
     h.withTestImport(function()
         local routeForm = h.testImport("mods/forms/route.lua")
@@ -328,6 +356,63 @@ function TestRouteForm.testRouteFormExportsOfferCandidateRecords()
             kind = "rewardType",
             store = "RunProgress",
             rewardType = "Boon",
+            payload = {},
+        })
+    end)
+end
+
+function TestRouteForm.testRouteFormExportsRoomOfferCandidateRecords()
+    h.withTestImport(function()
+        local candidateProvider = h.testImport("mods/forms/candidate_provider.lua")
+        local routeForm = h.testImport("mods/forms/route.lua")
+        local draft = completeDraft()
+        draft.biomes[1].rooms[3].offerPoints = {
+            {
+                kind = "prebossRewards",
+                batchKey = "preboss",
+                offers = {
+                    {
+                        store = "WorldShop",
+                        rewardType = "HermesUpgrade",
+                        acquired = false,
+                        candidateProviders = {
+                            rewardType = candidateProvider.create({
+                                key = "rewardType",
+                                version = 8,
+                                values = { "HermesUpgrade", "WeaponUpgradeDrop" },
+                                labels = { "Hermes", "Hammer" },
+                                semanticForValue = function(value, _index, _formAddress, context)
+                                    return {
+                                        kind = "rewardType",
+                                        store = context.candidate.store,
+                                        rewardType = value,
+                                        payload = {},
+                                    }
+                                end,
+                            }),
+                        },
+                    },
+                },
+            },
+        }
+
+        local records = routeForm.exportCandidates(draft, loadContext())
+
+        lu.assertEquals(#records, 2)
+        lu.assertEquals(records[1].formAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 3,
+            offerPointIndex = 1,
+            offerIndex = 1,
+        })
+        lu.assertEquals(records[1].providerKey, "rewardType")
+        lu.assertEquals(records[1].providerVersion, 8)
+        lu.assertEquals(records[1].candidateKey, "HermesUpgrade")
+        lu.assertEquals(records[1].semantic, {
+            kind = "rewardType",
+            store = "WorldShop",
+            rewardType = "HermesUpgrade",
             payload = {},
         })
     end)

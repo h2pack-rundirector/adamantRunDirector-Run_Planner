@@ -44,6 +44,14 @@ local function offerAddress(routeKey, biomeIndex, roomIndex, doorIndex, offerInd
     return address.offer(routeKey, biomeIndex, roomIndex, doorIndex, offerIndex)
 end
 
+local function roomOfferPointAddress(routeKey, biomeIndex, roomIndex, offerPointIndex)
+    return address.roomOfferPoint(routeKey, biomeIndex, roomIndex, offerPointIndex)
+end
+
+local function roomOfferAddress(routeKey, biomeIndex, roomIndex, offerPointIndex, offerIndex)
+    return address.roomOffer(routeKey, biomeIndex, roomIndex, offerPointIndex, offerIndex)
+end
+
 local function expectCatalog(catalog)
     guard.expectTable(catalog, "history.catalog")
     guard.expectTable(catalog.biomes, "history.catalog.biomes")
@@ -198,46 +206,148 @@ local function emitEncounter(history, routeKey, biomeIndex, biomeKey, roomIndex,
     history.encounterHistory[#history.encounterHistory + 1] = event
 end
 
-local function emitGeneratedDoorOffers(history, routeKey, biomeIndex, biomeKey, roomIndex, doorIndex, door)
+local function counterSnapshot(history, biomeKey)
+    return {
+        runEncounterDepth = history.counters.runEncounterDepth,
+        biomeEncounterDepth = history.counters.biomeEncounterDepth[biomeKey],
+        biomeDepthCache = history.counters.biomeDepthCache[biomeKey],
+        roomHistoryOrdinal = history.counters.roomHistoryOrdinal,
+    }
+end
+
+local function addCounterSnapshot(event, history, biomeKey)
+    local snapshot = counterSnapshot(history, biomeKey)
+    for key, value in pairs(snapshot) do
+        event[key] = value
+    end
+    return event
+end
+
+local function appendPendingStoreOffer(history, catalog, offerEvent, pendingRecords)
+    if catalog.rewards.shops[offerEvent.store] == nil then
+        return
+    end
+
+    local pending = {
+        kind = "store_offer.pending",
+        eventIndex = offerEvent.eventIndex,
+        activeFromEventIndex = offerEvent.eventIndex,
+        activeUntilEventIndex = nil,
+        phase = offerEvent.phase,
+        sourceAddress = offerEvent.sourceAddress,
+        biomeKey = offerEvent.biomeKey,
+        roomIndex = offerEvent.roomIndex,
+        store = offerEvent.store,
+        rewardType = offerEvent.rewardType,
+        name = offerEvent.rewardType,
+    }
+    history.pendingStoreOfferHistory[#history.pendingStoreOfferHistory + 1] = pending
+    pendingRecords[#pendingRecords + 1] = pending
+end
+
+local function emitGeneratedDoorOffers(history, routeKey, biomeIndex, biomeKey, roomIndex, roomKey, doorIndex, door)
     if door.offerPoint == nil then
         return
     end
 
-    local offerPointEvent = pushEvent(history, {
+    local offerPointEvent = pushEvent(history, addCounterSnapshot({
         kind = "offer_point.emit",
         phase = "room.generate_next",
         sourceAddress = doorAddress(routeKey, biomeIndex, roomIndex, doorIndex),
         biomeKey = biomeKey,
         roomIndex = roomIndex,
+        roomKey = roomKey,
         doorIndex = doorIndex,
         offerPointKind = door.offerPoint.kind,
         batchKey = door.offerPoint.batchKey,
-        runEncounterDepth = history.counters.runEncounterDepth,
-        biomeEncounterDepth = history.counters.biomeEncounterDepth[biomeKey],
-        biomeDepthCache = history.counters.biomeDepthCache[biomeKey],
-        roomHistoryOrdinal = history.counters.roomHistoryOrdinal,
-    })
+    }, history, biomeKey))
 
     for offerIndex, offer in ipairs(door.offerPoint.offers or {}) do
-        local offerEvent = pushEvent(history, {
+        local offerEvent = pushEvent(history, addCounterSnapshot({
             kind = "reward.offer",
             phase = "room.generate_next",
             sourceAddress = offerAddress(routeKey, biomeIndex, roomIndex, doorIndex, offerIndex),
             offerPointEventIndex = offerPointEvent.eventIndex,
             biomeKey = biomeKey,
             roomIndex = roomIndex,
+            roomKey = roomKey,
             doorIndex = doorIndex,
             offerIndex = offerIndex,
             store = offer.store,
             rewardType = offer.rewardType,
             acquired = offer.acquired,
             payload = offer.payload,
-            runEncounterDepth = history.counters.runEncounterDepth,
-            biomeEncounterDepth = history.counters.biomeEncounterDepth[biomeKey],
-            biomeDepthCache = history.counters.biomeDepthCache[biomeKey],
-            roomHistoryOrdinal = history.counters.roomHistoryOrdinal,
-        })
+        }, history, biomeKey))
         history.rewardOfferHistory[#history.rewardOfferHistory + 1] = offerEvent
+    end
+end
+
+local function emitRoomOfferPoints(history, catalog, routeKey, biomeIndex, biomeKey, roomIndex, roomNode)
+    local pendingRecords = {}
+
+    for offerPointIndex, offerPoint in ipairs(roomNode.offerPoints or {}) do
+        local offerPointEvent = pushEvent(history, addCounterSnapshot({
+            kind = "offer_point.emit",
+            phase = "room.offer_points",
+            sourceAddress = roomOfferPointAddress(routeKey, biomeIndex, roomIndex, offerPointIndex),
+            biomeKey = biomeKey,
+            roomIndex = roomIndex,
+            roomKey = roomNode.roomKey,
+            offerPointIndex = offerPointIndex,
+            offerPointKind = offerPoint.kind,
+            batchKey = offerPoint.batchKey,
+        }, history, biomeKey))
+
+        for offerIndex, offer in ipairs(offerPoint.offers or {}) do
+            local offerEvent = pushEvent(history, addCounterSnapshot({
+                kind = "reward.offer",
+                phase = "room.offer_points",
+                sourceAddress = roomOfferAddress(routeKey, biomeIndex, roomIndex, offerPointIndex, offerIndex),
+                offerPointEventIndex = offerPointEvent.eventIndex,
+                biomeKey = biomeKey,
+                roomIndex = roomIndex,
+                roomKey = roomNode.roomKey,
+                offerPointIndex = offerPointIndex,
+                offerIndex = offerIndex,
+                store = offer.store,
+                rewardType = offer.rewardType,
+                acquired = offer.acquired,
+                payload = offer.payload,
+            }, history, biomeKey))
+            history.rewardOfferHistory[#history.rewardOfferHistory + 1] = offerEvent
+            appendPendingStoreOffer(history, catalog, offerEvent, pendingRecords)
+        end
+    end
+
+    return pendingRecords
+end
+
+local function expirePendingStoreOffers(pendingRecords, eventIndex)
+    for _, pending in ipairs(pendingRecords or {}) do
+        pending.activeUntilEventIndex = eventIndex
+    end
+end
+
+local function emitRoomOfferAcquisitions(history, catalog, routeKey, biomeIndex, biomeKey, roomIndex, roomNode)
+    for offerPointIndex, offerPoint in ipairs(roomNode.offerPoints or {}) do
+        for offerIndex, offer in ipairs(offerPoint.offers or {}) do
+            if offer.acquired then
+                local acquireEvent = pushEvent(history, addCounterSnapshot({
+                    kind = "reward.acquire",
+                    phase = "room.commit",
+                    sourceAddress = roomOfferAddress(routeKey, biomeIndex, roomIndex, offerPointIndex, offerIndex),
+                    biomeKey = biomeKey,
+                    sourceRoomIndex = roomIndex,
+                    targetRoomIndex = roomIndex,
+                    offerPointIndex = offerPointIndex,
+                    store = offer.store,
+                    rewardType = offer.rewardType,
+                    acquiredLootType = acquiredLootType(catalog, offer),
+                    payload = offer.payload,
+                }, history, biomeKey))
+                history.lootHistory[#history.lootHistory + 1] = acquireEvent
+            end
+        end
     end
 end
 
@@ -276,7 +386,7 @@ local function emitGenerateNext(history, routeKey, biomeIndex, biomeKey, roomInd
             selected = generatedDoors.selectedDoorIndex == doorIndex,
         })
         history.generatedDoorHistory[#history.generatedDoorHistory + 1] = doorEvent
-        emitGeneratedDoorOffers(history, routeKey, biomeIndex, biomeKey, roomIndex, doorIndex, door)
+        emitGeneratedDoorOffers(history, routeKey, biomeIndex, biomeKey, roomIndex, roomNode.roomKey, doorIndex, door)
     end
 end
 
@@ -331,7 +441,10 @@ local function materializeRoom(history, catalog, routeKey, biomeIndex, biome, bi
     emitRoomEnter(history, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, roomNode)
     emitDoorAcquisitions(history, catalog, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, previousRoomNode)
     emitEncounter(history, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, roomNode, roomDeclaration)
+    local pendingRecords = emitRoomOfferPoints(history, catalog, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, roomNode)
     emitGenerateNext(history, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, roomNode)
+    expirePendingStoreOffers(pendingRecords, #history.events)
+    emitRoomOfferAcquisitions(history, catalog, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, roomNode)
     emitRoomCommit(history, routeKey, biomeIndex, biomePlan.biomeKey, roomIndex, roomNode, roomDeclaration)
 end
 

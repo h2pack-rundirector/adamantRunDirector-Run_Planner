@@ -48,6 +48,25 @@ function address.offer(routeKey, biomeIndex, roomIndex, doorIndex, offerIndex)
     }
 end
 
+function address.roomOfferPoint(routeKey, biomeIndex, roomIndex, offerPointIndex)
+    return {
+        routeKey = routeKey,
+        biomeIndex = biomeIndex,
+        roomIndex = roomIndex,
+        offerPointIndex = offerPointIndex,
+    }
+end
+
+function address.roomOffer(routeKey, biomeIndex, roomIndex, offerPointIndex, offerIndex)
+    return {
+        routeKey = routeKey,
+        biomeIndex = biomeIndex,
+        roomIndex = roomIndex,
+        offerPointIndex = offerPointIndex,
+        offerIndex = offerIndex,
+    }
+end
+
 function address.withField(base, field)
     local copy = clone(base)
     copy.field = field
