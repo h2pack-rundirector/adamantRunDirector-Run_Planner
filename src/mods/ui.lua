@@ -1,23 +1,17 @@
+local debugHarness = import("mods/ui/debug_harness.lua")
+
 local ui = {}
+local defaultInstance
 
-local TITLE = "Run Planner fresh start"
-local BODY = "Legacy planner code is unwired on this branch. The fresh planner spine will be rebuilt from docs/system_design."
-
-local function drawText(imgui, text)
-    if imgui ~= nil and imgui.Text ~= nil then
-        imgui.Text(text)
-    end
+function ui.create(opts)
+    return debugHarness.create(opts)
 end
 
 function ui.drawTab(_, ctx)
-    local draw = ctx and ctx.draw or nil
-    local imgui = draw and draw.imgui or nil
-
-    drawText(imgui, TITLE)
-    if imgui ~= nil and imgui.Spacing ~= nil then
-        imgui.Spacing()
+    if defaultInstance == nil then
+        defaultInstance = debugHarness.create()
     end
-    drawText(imgui, BODY)
+    return defaultInstance.drawTab(nil, ctx)
 end
 
 return ui

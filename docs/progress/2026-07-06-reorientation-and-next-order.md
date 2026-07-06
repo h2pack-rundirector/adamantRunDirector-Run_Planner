@@ -160,6 +160,19 @@ Implemented feedback behavior:
 - stale candidate results and missing providers are counted rather than
   silently applied.
 
+Implemented UI/model loop behavior:
+
+- `mods/ui.lua` now creates a minimal F debug harness when the module system
+  builds UI services;
+- the harness exposes editable room, selected-door, generated-door target, and
+  first generated-door reward offer fields;
+- every harness evaluation attaches real `nextRoom` candidate providers,
+  evaluates the mutable draft through `mods/pipeline/route.lua`, and applies
+  candidate feedback back to those providers;
+- the harness is deliberately raw and temporary. It exists to test the
+  draft/history/validation/feedback loop in game, not to settle final planner
+  layout, biome tabs, or control templates.
+
 ## Current Phase Alignment
 
 The branch has mostly satisfied the minimal Phase 3 spine from
@@ -174,8 +187,8 @@ F declarations
 ```
 
 However, Phase 3 is not completely done because reward candidates are not yet
-exported/evaluated, and the UI route controls are still skeletal rather than a
-real route authoring surface.
+exported/evaluated, and the current route authoring surface is only a minimal
+debug harness rather than final route controls.
 
 Phase 4 has not started in substance. The generic linear model exists in docs,
 but G/P/Q declarations and any shared linear builder abstraction are not yet
@@ -256,18 +269,18 @@ After selected reward legality works, add candidate semantics for reward forms:
 Candidates should reuse the same rule functions as selected reward findings.
 They should not trigger a separate validator walk per control.
 
-### 3. Decide Whether To Complete Phase 3 UI Or Continue Model Work
+### 3. Keep The Minimal UI Harness Active While Continuing Model Work
 
-At this point there will be a choice:
+The chosen near-term path is a minimal UI harness before the dedicated UI pass:
 
-- build the real F route controls around the current form/candidate contracts;
-- or continue deeper into Phase 5 source legality and Phase 4 linear
-  declarations.
+- keep the debug harness wired to the real pipeline;
+- use it for in-game route/model testing as more selected legality is added;
+- avoid investing in final biome panels and control templates until the F
+  reward legality surface is less volatile.
 
-The safer default is to build enough UI to prove that feedback application and
-candidate arrays are ergonomic before expanding many more declarations. The
-reason is not visual polish; it is contract pressure on the form/feedback
-boundary.
+The reason is contract pressure on the form/feedback boundary, not visual
+polish. Any issue found in the harness should be fixed in the data/model
+contract first unless it is clearly a drawing-only problem.
 
 ### 4. Generalize Linear Biomes
 
@@ -361,7 +374,9 @@ Concrete scope:
 - keep payload completeness in forms and payload legality in validation.
 
 This keeps Phase 5 moving on selected reward legality before broadening into
-reward candidates or bag simulation.
+reward candidates or bag simulation. The minimal harness should remain wired
+while this happens so payload findings can be tested against a live mutable
+draft instead of only synthetic route fixtures.
 
 ## Validation Baseline
 
@@ -376,7 +391,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 67 passed;
+- child tests: 71 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.

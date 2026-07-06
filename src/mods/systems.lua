@@ -1,7 +1,11 @@
 local systems = {}
 
-local function createUi(opts)
-    return opts.ui or import("mods/ui.lua")
+local function createUi(opts, services)
+    local ui = opts.ui or import("mods/ui.lua")
+    if type(ui.create) == "function" then
+        return ui.create(services)
+    end
+    return ui
 end
 
 local function createLogic(opts)
@@ -21,7 +25,12 @@ function systems.create(opts)
         routeControls = opts.routeControls or {},
         routeControlTabs = opts.routeControlTabs or {},
         logic = createLogic(opts),
-        ui = createUi(opts),
+        ui = createUi(opts, {
+            data = data,
+            catalog = catalog,
+            pipeline = opts.pipeline,
+            candidateProvider = opts.candidateProvider,
+        }),
     }
 end
 
