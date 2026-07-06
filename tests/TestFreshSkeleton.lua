@@ -41,6 +41,6 @@ function TestFreshSkeleton.testUiDrawsFreshStartStatus()
 
         local combined = table.concat(lines, "\n")
         lu.assertNotNil(combined:find("Run Planner fresh start", 1, true))
-        lu.assertNotNil(combined:find("docs/fresh_start", 1, true))
+        lu.assertNotNil(combined:find("docs/system_design", 1, true))
     end)
 end

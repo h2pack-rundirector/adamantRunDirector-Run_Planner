@@ -1,7 +1,7 @@
 local ui = {}
 
 local TITLE = "Run Planner fresh start"
-local BODY = "Legacy planner code is unwired on this branch. The fresh planner spine will be rebuilt from docs/fresh_start."
+local BODY = "Legacy planner code is unwired on this branch. The fresh planner spine will be rebuilt from docs/system_design."
 
 local function drawText(imgui, text)
     if imgui ~= nil and imgui.Text ~= nil then

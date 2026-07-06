@@ -1,25 +1,24 @@
 # Run Planner Docs
 
-This folder separates stable system contracts from active work-in-progress
-notes and raw game-data references.
+This folder separates stable system design from implementation progress and
+raw game-data references.
 
-## Stable System Design
+## System Design
 
-- `system/ROUTE_HISTORY_PIPELINE.md`: route-history ownership boundary and hard
-  invariants.
-- `system/ROUTE_TIMING_MODEL.md`: vanilla timing and counter phase authority.
-- `system/BIOME_DEPTH_AUDIT.md`: per-biome counter and room-cost reference.
+`system_design/` is the durable architecture source of truth for the fresh
+planner model.
 
-## Work In Progress
+Edit these docs only when the intended system model changes. Do not use them as
+a running implementation log.
 
-- `wip/DECLARATION_TOPOLOGY_BOUNDARY.md`: target boundary for room catalogs,
-  layout, generated-door topology, node snapshots, and feedback ownership.
-- `wip/REWARD_GENERATION_MODEL.md`: reward bag, topology, and deferred Chaos
-  design notes.
-- `wip/VALIDATION_MESSAGE_AUDIT.md`: route-status and validation-message
-  cleanup.
-- `wip/REWARD_BUNDLE_AUDIT.md`: reward primitive/bundle/shop declaration audit.
-- `wip/REWARD_CONDITION_AUDIT.md`: route-visible reward legality requirements.
+## Progress
+
+`progress/` records implementation checkpoints, validation runs, known gaps,
+and next slices.
+
+Progress docs may point back to system design docs. System design docs should
+only point to progress docs through intentional appendices or stable tracker
+links.
 
 ## Game Data References
 
