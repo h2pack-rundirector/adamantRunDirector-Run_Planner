@@ -38,11 +38,23 @@ function TestDeclarationCatalog.testCatalogLoadsRouteOrderAndMinimalFDeclaration
 
         local shop = f.rooms.lookup.F_Shop01
         lu.assertEquals(shop.offerProfile, "WorldShop")
-        lu.assertEquals(shop.force.kind, "All")
+        lu.assertEquals(shop.eligibility.kind, "All")
+        lu.assertEquals(shop.force, {
+            kind = "BiomeDepthWindow",
+            axis = "BiomeDepthCache",
+            start = 4,
+            deadline = 6,
+        })
 
         local preboss = f.rooms.lookup.F_PreBoss01
         lu.assertTrue(preboss.terminal)
         lu.assertEquals(#preboss.exits, 0)
+        lu.assertEquals(preboss.force, {
+            kind = "BiomeDepthWindow",
+            axis = "BiomeDepthCache",
+            start = 10,
+            deadline = 10,
+        })
     end)
 end
 

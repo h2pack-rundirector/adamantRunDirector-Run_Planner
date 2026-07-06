@@ -123,6 +123,20 @@ local function findEvent(history, kind, roomIndex)
     return nil
 end
 
+local function generatedDoorOffer(store, rewardType)
+    return {
+        kind = "generatedDoorRewards",
+        batchKey = "nextDoors",
+        offers = {
+            {
+                store = store,
+                rewardType = rewardType,
+                acquired = false,
+            },
+        },
+    }
+end
+
 function TestStructuralValidator.testValidMinimalHistoryPasses()
     h.withTestImport(function()
         local catalog = loadCatalog()
@@ -326,7 +340,22 @@ function TestStructuralValidator.testForceMetadataIsNotLocalTargetLegality()
     end)
 end
 
-function TestStructuralValidator.testLegacyForcePressureDoesNotBlockGeneratedBatch()
+function TestStructuralValidator.testForcePressureIgnoresUnstartedForceWindows()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        local history = buildHistory(plan, catalog)
+        findEvent(history, "room.generate_next", 2).biomeDepthCache = 3
+
+        local result = h.testImport("mods/validation/structural.lua").validate(history, {
+            catalog = catalog,
+        })
+
+        lu.assertTrue(result.valid)
+    end)
+end
+
+function TestStructuralValidator.testForcePressureDoesNotBlockBeforeDeadline()
     h.withTestImport(function()
         local catalog = loadCatalog()
         local plan = materializePlan(completeDraft(), catalog)
@@ -338,6 +367,122 @@ function TestStructuralValidator.testLegacyForcePressureDoesNotBlockGeneratedBat
         })
 
         lu.assertTrue(result.valid)
+    end)
+end
+
+function TestStructuralValidator.testForcePressureRequiresForcedTargetsAtDeadline()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        local history = buildHistory(plan, catalog)
+        findEvent(history, "room.generate_next", 2).biomeDepthCache = 6
+
+        local result = h.testImport("mods/validation/structural.lua").validate(history, {
+            catalog = catalog,
+        })
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "force_pressure_missing_room")
+        lu.assertEquals(result.findings[1].payload.roomKey, "F_Combat02")
+        lu.assertEquals(result.findings[1].payload.deadlineForceRoomKeys, { "F_Shop01" })
+        lu.assertEquals(result.findings[1].payload.eligibleUnresolvedForceRoomKeys, { "F_Shop01" })
+        lu.assertEquals(result.findings[1].payload.generatedForceRoomKeys, {})
+        lu.assertEquals(result.findings[1].payload.requiredForcedCount, 1)
+        lu.assertEquals(result.findings[1].payload.generatedDoorCount, 2)
+    end)
+end
+
+function TestStructuralValidator.testGeneratedForcedRoomSatisfiesPressure()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[2].generatedDoors.doors[1].targetRoomKey = "F_Shop01"
+        plan.biomes[1].rooms[2].generatedDoors.doors[1].offerPoint = generatedDoorOffer("WorldShop", "HermesUpgrade")
+        local history = buildHistory(plan, catalog)
+        findEvent(history, "room.generate_next", 2).biomeDepthCache = 6
+
+        local result = h.testImport("mods/validation/structural.lua").validate(history, {
+            catalog = catalog,
+        })
+
+        lu.assertTrue(result.valid)
+    end)
+end
+
+function TestStructuralValidator.testGeneratedForcedRoomRemovesFuturePressure()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[2].generatedDoors.selectedDoorIndex = 2
+        plan.biomes[1].rooms[2].generatedDoors.doors[1].targetRoomKey = "F_Shop01"
+        plan.biomes[1].rooms[2].generatedDoors.doors[1].offerPoint = generatedDoorOffer("WorldShop", "HermesUpgrade")
+        plan.biomes[1].rooms[2].generatedDoors.doors[2].targetRoomKey = "F_Combat01"
+        plan.biomes[1].rooms[2].generatedDoors.doors[2].offerPoint = generatedDoorOffer("RunProgress", "MaxHealthDrop")
+        plan.biomes[1].rooms[3] = {
+            roomKey = "F_Combat01",
+            generatedDoors = {
+                batchRule = "Standard",
+                selectedDoorIndex = 1,
+                doors = {
+                    {
+                        exitIndex = 1,
+                        targetRoomKey = "F_Opening01",
+                        offerPoint = generatedDoorOffer("MetaProgress", "GiftDrop"),
+                    },
+                },
+            },
+        }
+        local history = buildHistory(plan, catalog)
+        findEvent(history, "room.generate_next", 2).biomeDepthCache = 6
+        findEvent(history, "room.generate_next", 3).biomeDepthCache = 6
+
+        local result = h.testImport("mods/validation/structural.lua").validate(history, {
+            catalog = catalog,
+        })
+
+        lu.assertTrue(result.valid)
+    end)
+end
+
+function TestStructuralValidator.testCandidateForcePressureProjectsDoorTarget()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[2].generatedDoors.doors[1].targetRoomKey = "F_Shop01"
+        plan.biomes[1].rooms[2].generatedDoors.doors[1].offerPoint = generatedDoorOffer("WorldShop", "HermesUpgrade")
+        local history = buildHistory(plan, catalog)
+        findEvent(history, "room.generate_next", 2).biomeDepthCache = 6
+
+        local result = h.testImport("mods/validation/structural.lua").validate(history, {
+            catalog = catalog,
+            candidateRecords = {
+                {
+                    formAddress = {
+                        routeKey = "Underworld",
+                        biomeIndex = 1,
+                        roomIndex = 2,
+                        doorIndex = 1,
+                    },
+                    providerKey = "nextDoorTarget",
+                    providerVersion = 1,
+                    candidateKey = "F_Opening01",
+                    candidateIndex = 1,
+                    semantic = {
+                        kind = "nextRoom",
+                        biomeKey = "F",
+                        sourceRoomKey = "F_Combat02",
+                        exitIndex = 1,
+                        targetRoomKey = "F_Opening01",
+                    },
+                },
+            },
+        })
+
+        lu.assertTrue(result.valid)
+        lu.assertEquals(#result.candidateResults, 1)
+        lu.assertEquals(result.candidateResults[1].code, "force_pressure_conflict")
+        lu.assertEquals(result.candidateResults[1].payload.deadlineForceRoomKeys, { "F_Shop01" })
+        lu.assertEquals(result.candidateResults[1].payload.requiredForcedCount, 1)
     end)
 end
 

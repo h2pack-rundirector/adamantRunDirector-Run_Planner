@@ -62,11 +62,16 @@ current batch:
 
 - the room is still unresolved;
 - the room passes normal room eligibility at this `room.generate_next`;
+- the room's force window has started;
 - the room has remaining creation capacity before this generated batch;
 - at least one current generated exit can physically generate the room.
 
 Rooms that fail this filter do not participate in pressure for the current
 batch. They remain unresolved unless they were already generated.
+
+Normal eligibility and force-window start are separate gates. A room with force
+metadata does not count as force work before its force window starts, even if
+its normal room eligibility would otherwise allow it.
 
 When a generated door targets an unresolved force room, that room is removed
 from the unresolved force set after the current batch is evaluated. Generation

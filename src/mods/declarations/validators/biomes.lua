@@ -37,6 +37,26 @@ local function validateOfferProfile(room, offerProfiles, context)
     end
 end
 
+local function validateForce(force, context)
+    guard.expectTable(force, context)
+
+    local kind = guard.expectString(force.kind, context .. ".kind")
+    if kind ~= "BiomeDepthWindow" then
+        guard.fail(context .. ".kind", "unknown force kind '" .. kind .. "'")
+    end
+
+    local axis = guard.expectString(force.axis, context .. ".axis")
+    if axis ~= "BiomeDepthCache" then
+        guard.fail(context .. ".axis", "unknown force axis '" .. axis .. "'")
+    end
+
+    local start = guard.expectNumber(force.start, context .. ".start")
+    local deadline = guard.expectNumber(force.deadline, context .. ".deadline")
+    if deadline < start then
+        guard.fail(context .. ".deadline", "force deadline must be greater than or equal to start")
+    end
+end
+
 local function validateRoom(room, context)
     guard.expectTable(room, context)
     guard.expectString(room.key, context .. ".key")
@@ -113,7 +133,7 @@ function biomesValidator.validateList(biomes, namedRequirements, roomTemplates, 
                 requirementsValidator.validateRequirement(room.eligibility, namedRequirements, roomContext .. ".eligibility")
             end
             if room.force ~= nil then
-                requirementsValidator.validateRequirement(room.force, namedRequirements, roomContext .. ".force")
+                validateForce(room.force, roomContext .. ".force")
             end
         end
 

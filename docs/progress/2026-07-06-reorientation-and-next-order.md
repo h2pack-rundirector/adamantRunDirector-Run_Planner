@@ -3,8 +3,7 @@
 ## Purpose
 
 This note reorients the fresh planner work after the first route spine,
-feedback, timing, legacy force-pressure removal, and reward-offer validation
-slices.
+feedback, timing, force-pressure rebuild, and reward-offer validation slices.
 
 The stable design lane remains `docs/system_design/`. This file is a mutable
 progress checkpoint: it records what the branch actually does now, how that
@@ -61,6 +60,7 @@ Recent child commits:
 - `d03d212 feat(validation): validate reward offers`
 - `4cc75c7 docs(validation): define force pressure model`
 - `3e319dd fix(validation): bound cap checks by history time`
+- `029b8c7 refactor(validation): remove legacy force pressure`
 
 Recent shell pointer commits:
 
@@ -71,6 +71,7 @@ Recent shell pointer commits:
 - `82c1ea2 chore: point planner to room legality`
 - `b0d6103 chore: point planner to force pressure`
 - `d973210 chore: point planner to reward offers`
+- `15f8a1c chore: point planner to force cleanup`
 
 ## What Is Implemented
 
@@ -91,6 +92,7 @@ Implemented declaration behavior:
 - route order declarations for Underworld and Surface;
 - implemented-biome reporting, currently only F;
 - minimal concrete F room catalog;
+- explicit `BiomeDepthWindow` force metadata for F forced rooms;
 - room templates;
 - reward primitives, counted bags, derived stores, shop profiles, and offer
   profiles;
@@ -127,6 +129,8 @@ Implemented validation behavior:
   `BiomeEncounterDepth`;
 - per-run creation caps;
 - exit-tag compatibility;
+- batch-level force-pressure checks using unresolved force candidates, force
+  starts, and force deadlines;
 - generated-door reward offer domain checks:
   - offer point kind;
   - declared reward store or shop profile;
@@ -137,7 +141,9 @@ Implemented feedback behavior:
 
 - `nextRoom` candidate records can be exported by providers;
 - selected `nextRoom` and candidate `nextRoom` checks share the same local
-  target legality functions, excluding force pressure;
+  target legality functions, excluding force-as-local-legality;
+- `nextRoom` candidate feedback can project force-pressure conflicts for the
+  edited generated-door batch;
 - candidate feedback can be applied back to matching provider versions;
 - stale candidate results and missing providers are counted rather than
   silently applied.
@@ -198,41 +204,18 @@ is `nextRoom`.
 Room-local offer points are not implemented. Current reward validation is
 limited to generated-door offer points at `room.generate_next`.
 
-Legacy force-window and force-pressure validation have been intentionally
-removed from structural validation. The stable target model now lives in
-`docs/system_design/validation/FORCE_PRESSURE_MODEL.md`, but the implementation
-has not yet been rebuilt around unresolved force candidates, deadlines, and
-batch projection.
-
-F declarations still carry the old requirement-shaped `force` metadata. The
-next force slice should convert declarations and validators to the explicit
-force metadata shape before route validation consumes those fields again.
+Force pressure has been rebuilt for the current F surface from
+`docs/system_design/validation/FORCE_PRESSURE_MODEL.md`. The generic physical
+exit compatibility rule is implemented as "at least one compatible generated
+exit." A future biome with mutually exclusive forced candidates may require an
+exit matching pass.
 
 The branch still has no execution-plan compiler and no runtime consumption of
 the fresh history. This is correct for now.
 
 ## Recommended Next Order
 
-### 1. Rebuild Force Pressure From The Dedicated Model
-
-Rebuild force pressure from
-`docs/system_design/validation/FORCE_PRESSURE_MODEL.md` instead of mutating the
-removed implementation.
-
-Suggested scope:
-
-- convert force declarations to the explicit `BiomeDepthWindow` shape;
-- validate that shape at the declaration boundary;
-- keep force out of selected/candidate local target legality;
-- walk unresolved force candidates per biome;
-- apply batch pressure only after an eligible unresolved force candidate reaches
-  deadline;
-- project candidate target replacements through the same batch rule.
-
-This should be completed before broadening linear biome declarations, because
-miniboss/shop/preboss force semantics affect G/P/H/I modeling.
-
-### 2. Finish The Reward Legality Substrate
+### 1. Finish The Reward Legality Substrate
 
 Build the history query support needed by source-specific reward entry
 requirements before adding bag simulation.
@@ -250,7 +233,7 @@ Keep the first slice focused on generated-door reward offers and existing
 `RunProgress` entries. Do not broaden into shops, O wheels, H cages, or N hub
 rewards yet.
 
-### 3. Add Selected Reward Entry Requirement Validation
+### 2. Add Selected Reward Entry Requirement Validation
 
 Once query support exists, validate that a configured generated-door offer has
 at least one matching counted bag/shop entry whose requirements pass at that
@@ -265,7 +248,7 @@ This should distinguish:
 
 This is Phase 5 source legality, not Phase 7 bag simulation.
 
-### 4. Add Reward Payload Validation
+### 3. Add Reward Payload Validation
 
 After entry requirements can query acquired loot, add payload legality for
 reward types that need it.
@@ -279,7 +262,7 @@ Likely first payload targets:
 
 Payload completeness remains a form concern. Payload legality is validation.
 
-### 5. Add Reward Candidate Export And Evaluation
+### 4. Add Reward Candidate Export And Evaluation
 
 After selected reward legality works, add candidate semantics for reward forms:
 
@@ -290,7 +273,7 @@ After selected reward legality works, add candidate semantics for reward forms:
 Candidates should reuse the same rule functions as selected reward findings.
 They should not trigger a separate validator walk per control.
 
-### 6. Decide Whether To Complete Phase 3 UI Or Continue Model Work
+### 5. Decide Whether To Complete Phase 3 UI Or Continue Model Work
 
 At this point there will be a choice:
 
@@ -303,7 +286,7 @@ candidate arrays are ergonomic before expanding many more declarations. The
 reason is not visual polish; it is contract pressure on the form/feedback
 boundary.
 
-### 7. Generalize Linear Biomes
+### 6. Generalize Linear Biomes
 
 After reward legality and feedback semantics are stable on F, expand the
 generic linear model:
@@ -314,7 +297,7 @@ generic linear model:
 - keep Q deterministic choices as structure metadata and generated doors, not
   a special route engine.
 
-### 8. Defer Reward Bag Simulation
+### 7. Defer Reward Bag Simulation
 
 Do not implement Phase 7 bag simulation until source-specific entry
 requirements, offer timing, reward candidates, and at least one real linear
@@ -332,7 +315,7 @@ Bag simulation depends on:
 Implementing it too early would risk baking incomplete history semantics into
 the simulator.
 
-### 9. Defer Special Biomes And Runtime
+### 8. Defer Special Biomes And Runtime
 
 H/O/I/N should remain design references until the common pieces exist:
 
@@ -351,19 +334,21 @@ reward instructions without runtime re-solving legality.
 The next implementation slice should be:
 
 ```text
-Force pressure rebuild
+Reward entry requirement query substrate
 ```
 
 Concrete scope:
 
-- convert force metadata declarations to the explicit window shape;
-- add declaration validation for force metadata;
-- rebuild selected-route batch pressure using unresolved force candidates;
-- add candidate batch projection for `nextRoom` target candidates;
-- preserve the temporal history boundary from the cap fix.
+- add history query helpers for acquired loot counts and route counters;
+- extend requirement evaluation beyond timing counters with at least
+  `LootTypeHistory` and `ClearedBiomes`;
+- add tests proving early/late Hammer requirements fail/pass from selected
+  generated-door reward offers;
+- keep `RequiredNotInStore` explicit and honest if shop pending-offer
+  intervals are not implemented yet.
 
-This is the narrowest slice that replaces the removed implementation without
-mixing in reward legality or broader biome expansion.
+This is the narrowest slice that moves Phase 5 forward without jumping to bag
+simulation.
 
 ## Validation Baseline
 
@@ -378,7 +363,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 59 passed;
+- child tests: 64 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: not rerun for this child-only checkpoint.
