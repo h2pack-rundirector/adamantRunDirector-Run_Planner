@@ -4,7 +4,7 @@
 
 The fresh planner branch now has a clean active planning spine through route
 evaluation, candidate feedback export/application, and first-pass generated
-room legality checks.
+room legality plus force-pressure checks.
 
 Completed child commits:
 
@@ -19,6 +19,8 @@ Completed child commits:
 - `f1594e3 feat(pipeline): wire route evaluation`
 - `56cfe9c feat(pipeline): add candidate feedback`
 - `ed4ffd4 feat(feedback): apply candidate results`
+- `f973a51 feat(validation): add timing eligibility`
+- `602878e feat(validation): add room legality checks`
 
 Completed shell commits:
 
@@ -30,6 +32,8 @@ Completed shell commits:
 - `37be6be chore: point planner to route pipeline`
 - `1d843cc chore: point planner to candidate feedback`
 - `60d1379 chore: point planner to feedback bridge`
+- `c41db94 chore: point planner to timing eligibility`
+- `82c1ea2 chore: point planner to room legality`
 
 ## What Changed
 
@@ -98,6 +102,10 @@ Completed shell commits:
   - declared exit tag constraints against target room tags.
 - Candidate `nextRoom` results use the same force-window, cap, and exit-tag
   checks as selected generated doors.
+- Force-pressure validation now scans generated-door batches for active,
+  eligible forced rooms with physical exit compatibility and available creation
+  capacity, then requires those room targets to appear when enough exits are
+  available.
 
 ## Validation
 
@@ -117,7 +125,7 @@ lua tests/smoke.lua
 
 Latest observed results:
 
-- `lua tests/all.lua`: 50 tests passed.
+- `lua tests/all.lua`: 53 tests passed.
 - `luacheck src tests`: 0 warnings, 0 errors.
 - `git diff --check`: passed.
 - `lua tests/smoke.lua`: smoke passed for 4 module entrypoints and 1
@@ -133,8 +141,8 @@ validation/pipeline path. Runtime hooks still do not consume an execution plan.
 
 The active planning spine supports complete route drafts over the current
 declaration catalog and the F/Erebus test surface. It does not yet implement
-the full room eligibility model, force windows, reward bag simulation,
-multi-biome scope, NPC/feature planning, Chaos detours, or runtime compilation.
+the full room eligibility model, reward bag simulation, multi-biome scope,
+NPC/feature planning, Chaos detours, or runtime compilation.
 
 Candidate feedback is present as a validator output lane and a provider
 application bridge, but the only implemented semantic candidate kind is
@@ -143,13 +151,11 @@ timing/eligibility candidate policies are still deferred.
 
 Room eligibility currently supports only the explicit timing predicates needed
 by the F/Erebus declarations: `BiomeDepthCache` and `BiomeEncounterDepth`.
-Force-window validation, room creation caps, and exit-tag compatibility are
-implemented for generated room targets and `nextRoom` candidates.
-
-Full force-pressure validation is still deferred. The validator checks whether
-a generated forced room is inside its declared force window, but it does not
-yet require missing forced rooms to appear when pressure says they should.
-Reward requirements and bag simulation are still deferred.
+Force-window validation, room creation caps, exit-tag compatibility, and
+batch-level force-pressure validation are implemented for generated room
+targets. `nextRoom` candidates share the local generated-target checks, while
+missing forced rooms remain selected-route feedback on the generated-door
+batch. Reward requirements and bag simulation are still deferred.
 
 ## Next Slices
 
@@ -158,8 +164,6 @@ The next implementation work should continue from
 
 Near-term slices:
 
-- add force-pressure validation that requires eligible forced rooms to appear
-  in generated-door batches when physically possible;
 - expand candidate export/evaluation beyond generated next-room targets;
 - extend reward offer validation toward offer domains and reward bag
   simulation;

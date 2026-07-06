@@ -330,6 +330,60 @@ function TestStructuralValidator.testDetectsForceWindowAtGenerateNext()
     end)
 end
 
+function TestStructuralValidator.testDetectsMissingForcedRoomAtGenerateNext()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        local history = buildHistory(plan, catalog)
+        findEvent(history, "room.generate_next", 2).biomeDepthCache = 4
+
+        local result = h.testImport("mods/validation/structural.lua").validate(history, {
+            catalog = catalog,
+        })
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "force_pressure_missing_room")
+        lu.assertEquals(result.findings[1].payload.missingRoomKeys, { "F_Shop01" })
+        lu.assertEquals(result.findings[1].payload.requiredCount, 1)
+        lu.assertEquals(result.findings[1].sourceAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+        })
+    end)
+end
+
+function TestStructuralValidator.testForcedRoomSatisfiesPressureWhenGenerated()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[2].generatedDoors.doors[1].targetRoomKey = "F_Shop01"
+        local history = buildHistory(plan, catalog)
+        findEvent(history, "room.generate_next", 2).biomeDepthCache = 4
+
+        local result = h.testImport("mods/validation/structural.lua").validate(history, {
+            catalog = catalog,
+        })
+
+        lu.assertTrue(result.valid)
+    end)
+end
+
+function TestStructuralValidator.testForcePressureIgnoresInactiveWindows()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        local history = buildHistory(plan, catalog)
+        findEvent(history, "room.generate_next", 2).biomeDepthCache = 3
+
+        local result = h.testImport("mods/validation/structural.lua").validate(history, {
+            catalog = catalog,
+        })
+
+        lu.assertTrue(result.valid)
+    end)
+end
+
 function TestStructuralValidator.testDetectsRoomCreationCaps()
     h.withTestImport(function()
         local catalog = loadCatalog()
