@@ -61,6 +61,7 @@ Recent child commits:
 - `4cc75c7 docs(validation): define force pressure model`
 - `3e319dd fix(validation): bound cap checks by history time`
 - `029b8c7 refactor(validation): remove legacy force pressure`
+- `4c1fad6 feat(validation): rebuild force pressure`
 
 Recent shell pointer commits:
 
@@ -72,6 +73,7 @@ Recent shell pointer commits:
 - `b0d6103 chore: point planner to force pressure`
 - `d973210 chore: point planner to reward offers`
 - `15f8a1c chore: point planner to force cleanup`
+- `d4af051 chore: point planner to force rebuild`
 
 ## What Is Implemented
 
@@ -366,4 +368,4 @@ Observed results:
 - child tests: 64 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
-- shell smoke: not rerun for this child-only checkpoint.
+- shell smoke: passed.
