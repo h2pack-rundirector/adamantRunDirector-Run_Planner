@@ -63,6 +63,7 @@ Recent child commits:
 - `3e319dd fix(validation): bound cap checks by history time`
 - `029b8c7 refactor(validation): remove legacy force pressure`
 - `4c1fad6 feat(validation): rebuild force pressure`
+- `70f4b4b feat(validation): add reward entry queries`
 
 Recent shell pointer commits:
 
@@ -75,6 +76,7 @@ Recent shell pointer commits:
 - `d973210 chore: point planner to reward offers`
 - `15f8a1c chore: point planner to force cleanup`
 - `d4af051 chore: point planner to force rebuild`
+- `a71cede chore: point planner to reward queries`
 
 ## What Is Implemented
 
