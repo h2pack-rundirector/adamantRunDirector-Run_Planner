@@ -288,3 +288,47 @@ function TestRouteForm.testRouteFormExportsDoorCandidateRecords()
         })
     end)
 end
+
+function TestRouteForm.testRouteFormExportsOfferCandidateRecords()
+    h.withTestImport(function()
+        local candidateProvider = h.testImport("mods/forms/candidate_provider.lua")
+        local routeForm = h.testImport("mods/forms/route.lua")
+        local draft = completeDraft()
+        draft.biomes[1].rooms[1].generatedDoors.doors[1].offerPoint.offers[1].candidateProviders = {
+            rewardType = candidateProvider.create({
+                key = "rewardType",
+                version = 7,
+                values = { "Boon", "WeaponUpgrade" },
+                labels = { "Boon", "Hammer" },
+                semanticForValue = function(value, _index, _formAddress, context)
+                    return {
+                        kind = "rewardType",
+                        store = context.candidate.store,
+                        rewardType = value,
+                        payload = {},
+                    }
+                end,
+            }),
+        }
+
+        local records = routeForm.exportCandidates(draft, loadContext())
+
+        lu.assertEquals(#records, 2)
+        lu.assertEquals(records[1].formAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 1,
+            doorIndex = 1,
+            offerIndex = 1,
+        })
+        lu.assertEquals(records[1].providerKey, "rewardType")
+        lu.assertEquals(records[1].providerVersion, 7)
+        lu.assertEquals(records[1].candidateKey, "Boon")
+        lu.assertEquals(records[1].semantic, {
+            kind = "rewardType",
+            store = "RunProgress",
+            rewardType = "Boon",
+            payload = {},
+        })
+    end)
+end

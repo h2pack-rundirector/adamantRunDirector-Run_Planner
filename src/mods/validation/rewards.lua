@@ -36,10 +36,15 @@ local function doorAddressKey(formAddress)
     return addressKey(formAddress) .. ":" .. tostring(formAddress.doorIndex)
 end
 
+local function offerAddressKey(formAddress)
+    return doorAddressKey(formAddress) .. ":" .. tostring(formAddress.offerIndex)
+end
+
 local function indexHistory(history)
     local indexed = {
         generatedDoorByAddress = {},
         offerPointByEventIndex = {},
+        rewardOfferByAddress = {},
     }
 
     for _, event in ipairs(history.events) do
@@ -50,6 +55,10 @@ local function indexHistory(history)
 
     for _, door in ipairs(history.generatedDoorHistory) do
         indexed.generatedDoorByAddress[doorAddressKey(door.sourceAddress)] = door
+    end
+
+    for _, offer in ipairs(history.rewardOfferHistory) do
+        indexed.rewardOfferByAddress[offerAddressKey(offer.sourceAddress)] = offer
     end
 
     return indexed
@@ -248,6 +257,18 @@ local function copyArray(values)
     return copy
 end
 
+local function copyTable(source)
+    if type(source) ~= "table" then
+        return source
+    end
+
+    local copy = {}
+    for key, value in pairs(source) do
+        copy[key] = copyTable(value)
+    end
+    return copy
+end
+
 local function invalidPayload(result, offer, code, payload, message)
     payload.store = offer.store
     payload.rewardType = offer.rewardType
@@ -398,6 +419,117 @@ local function validateBagEntryRequirements(result, catalog, history, offer)
     end
 end
 
+local function candidateRecords(context, history)
+    local records = context.candidateRecords or history.candidateRecords
+    if records == nil then
+        return {}
+    end
+    return guard.expectArray(records, "rewardValidation.candidateRecords")
+end
+
+local function expectCandidateRecord(record, context)
+    guard.expectTable(record, context)
+    guard.expectTable(record.formAddress, context .. ".formAddress")
+    guard.expectString(record.providerKey, context .. ".providerKey")
+    guard.expectNumber(record.providerVersion, context .. ".providerVersion")
+    guard.expectString(record.candidateKey, context .. ".candidateKey")
+    guard.expectNumber(record.candidateIndex, context .. ".candidateIndex")
+    local semantic = guard.expectTable(record.semantic, context .. ".semantic")
+    local kind = guard.expectString(semantic.kind, context .. ".semantic.kind")
+    return kind, semantic
+end
+
+local function rewardOfferForRecord(indexed, record, context)
+    local offer = indexed.rewardOfferByAddress[offerAddressKey(record.formAddress)]
+    if offer == nil then
+        guard.fail(context .. ".formAddress", "reward candidate address must resolve to reward offer history")
+    end
+    return offer
+end
+
+local function addCandidateFindings(result, record, findings)
+    for _, finding in ipairs(findings or {}) do
+        validationResult.candidate(
+            result,
+            record,
+            finding.code,
+            finding.phase,
+            finding.presentation or "invalid",
+            finding.payload,
+            finding.message,
+            finding.color
+        )
+    end
+end
+
+local function projectOffer(baseOffer, fields)
+    local offer = copyTable(baseOffer)
+    for key, value in pairs(fields or {}) do
+        offer[key] = copyTable(value)
+    end
+    return offer
+end
+
+local function selectedFindingsForProjectedOffer(catalog, history, indexed, offer)
+    local result = validationResult.new()
+    local domainValid = validateOfferDomain(result, catalog, indexed, offer)
+    local payloadValid = domainValid and validatePayload(result, catalog, history, offer)
+
+    if domainValid and payloadValid then
+        validateBagEntryRequirements(result, catalog, history, offer)
+    end
+
+    return result.findings
+end
+
+local function evaluateRewardTypeCandidate(result, catalog, history, indexed, record, semantic, context)
+    local currentOffer = rewardOfferForRecord(indexed, record, context)
+    local rewardType = guard.expectString(semantic.rewardType, context .. ".semantic.rewardType")
+    local projectedOffer = projectOffer(currentOffer, {
+        store = semantic.store or currentOffer.store,
+        rewardType = rewardType,
+        payload = semantic.payload or currentOffer.payload,
+    })
+
+    addCandidateFindings(result, record, selectedFindingsForProjectedOffer(catalog, history, indexed, projectedOffer))
+end
+
+local function evaluateDevotionSourceCandidate(result, catalog, history, indexed, record, semantic, context)
+    local currentOffer = rewardOfferForRecord(indexed, record, context)
+    if currentOffer.rewardType ~= "Devotion" then
+        guard.fail(context .. ".semantic.kind", "devotionSource candidate requires a Devotion reward offer")
+    end
+
+    guard.expectString(semantic.source, context .. ".semantic.source")
+    guard.expectNumber(semantic.sourceIndex, context .. ".semantic.sourceIndex")
+    local sources = guard.expectArray(semantic.sources, context .. ".semantic.sources")
+    local projectedOffer = projectOffer(currentOffer, {
+        payload = {
+            sources = copyArray(sources),
+        },
+    })
+    local resultBuffer = validationResult.new()
+    validatePayload(resultBuffer, catalog, history, projectedOffer)
+    addCandidateFindings(result, record, resultBuffer.findings)
+end
+
+local function evaluateCandidateRecords(result, catalog, history, indexed, records)
+    for index, record in ipairs(records) do
+        local context = "rewardValidation.candidateRecords[" .. tostring(index) .. "]"
+        local kind, semantic = expectCandidateRecord(record, context)
+
+        if kind ~= "nextRoom" then
+            if kind == "rewardType" then
+                evaluateRewardTypeCandidate(result, catalog, history, indexed, record, semantic, context)
+            elseif kind == "devotionSource" then
+                evaluateDevotionSourceCandidate(result, catalog, history, indexed, record, semantic, context)
+            else
+                guard.fail(context .. ".semantic.kind", "unknown candidate kind '" .. kind .. "'")
+            end
+        end
+    end
+end
+
 function rewardValidation.append(result, history, context)
     context = context or {}
     expectCatalog(context.catalog)
@@ -417,6 +549,8 @@ function rewardValidation.append(result, history, context)
             validateBagEntryRequirements(result, context.catalog, history, offer)
         end
     end
+
+    evaluateCandidateRecords(result, context.catalog, history, indexed, candidateRecords(context, history))
 
     return result
 end

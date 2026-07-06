@@ -381,27 +381,48 @@ Implemented in the current working checkpoint:
 - the minimal debug harness exposes Boon and Devotion source controls so the
   payload loop can be tested in game.
 
+## Completed Reward Candidate Slice
+
+Implemented in the current working checkpoint:
+
+- form export now includes offer-owned candidate providers using structured
+  reward offer addresses;
+- candidate feedback application can route results back to offer-owned
+  providers, not only generated-door providers;
+- reward validation evaluates `rewardType` candidate semantics by projecting
+  the candidate offer through selected reward-domain, entry-requirement, and
+  payload-legality rules;
+- reward validation evaluates `devotionSource` candidate semantics by
+  projecting the selected Devotion payload source pair through payload legality;
+- structural validation owns `nextRoom` candidates while reward validation
+  owns reward candidate kinds, keeping unknown reward candidate semantics as
+  contract failures;
+- the minimal debug harness attaches reward-type candidate providers and
+  Devotion source candidate providers so advisory reward feedback can be tested
+  in game.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Reward candidate export and evaluation
+Reward requirement surface expansion
 ```
 
 Concrete scope:
 
-- add candidate providers for generated-door reward type choices;
-- add candidate providers for payload choices such as Devotion source;
-- reuse selected reward-domain, entry-requirement, and payload-legality rule
-  functions for candidate results;
-- keep candidate results advisory and routed through provider feedback rather
-  than changing selected route validity.
+- add only the next requirement predicates needed by selected reward legality
+  and reward candidates;
+- likely first targets are `RequiredMinExits`, `RequiredMinRoomsSinceEvent`,
+  and the run encounter-depth predicate needed by Devotion;
+- keep the predicates as game-language history queries, not reward-type-global
+  shortcuts;
+- continue deferring bag depletion/refill until offer timing and source
+  legality are broader.
 
-This keeps Phase 5 moving from selected legality into feedback ergonomics
-before broadening into bag simulation. The minimal harness should remain wired
-while this happens so reward and payload candidates can be tested against a
-live mutable draft instead of only synthetic route fixtures.
+This lets the current reward candidate path expose real source-specific
+requirement failures before the model moves into bag simulation or broader
+linear biome declarations.
 
 ## Validation Baseline
 
@@ -416,7 +437,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 76 passed;
+- child tests: 82 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.

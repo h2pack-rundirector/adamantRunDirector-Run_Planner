@@ -318,6 +318,59 @@ function TestRoutePipeline.testCandidateResultsDoNotInvalidateSelectedRoute()
     end)
 end
 
+function TestRoutePipeline.testRewardCandidateResultsDoNotInvalidateSelectedRoute()
+    h.withTestImport(function()
+        local candidateProvider = h.testImport("mods/forms/candidate_provider.lua")
+        local pipeline = h.testImport("mods/pipeline/route.lua")
+        local draft = completeDraft()
+        local provider = candidateProvider.create({
+            key = "rewardType",
+            version = 16,
+            values = { "Boon", "GiftDrop" },
+            labels = { "Boon", "Gift" },
+            semanticForValue = function(value, _index, _formAddress, candidateContext)
+                return {
+                    kind = "rewardType",
+                    store = candidateContext.candidate.store,
+                    rewardType = value,
+                    payload = {},
+                }
+            end,
+        })
+        draft.biomes[1].rooms[1].generatedDoors.doors[1].offerPoint.offers[1].candidateProviders = {
+            rewardType = provider,
+        }
+
+        local result = pipeline.evaluate(draft, context())
+
+        lu.assertEquals(result.state, "valid")
+        lu.assertTrue(result.valid)
+        lu.assertEquals(result.feedback, {})
+        lu.assertEquals(#result.candidateRecords, 2)
+        lu.assertEquals(#result.candidateResults, 1)
+        lu.assertEquals(result.candidateResults[1].code, "reward_type_not_in_store")
+        lu.assertEquals(result.candidateResults[1].providerKey, "rewardType")
+        lu.assertEquals(result.candidateResults[1].candidateKey, "GiftDrop")
+        lu.assertEquals(result.candidateResults[1].formAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 1,
+            doorIndex = 1,
+            offerIndex = 1,
+        })
+
+        local summary = pipeline.applyCandidateFeedback(draft, result)
+        lu.assertEquals(summary, {
+            cleared = 1,
+            applied = 1,
+            stale = 0,
+            missing = 0,
+        })
+        lu.assertEquals(provider.messages[2], "Reward type is not part of the selected reward store.")
+        lu.assertFalse(provider.hidden[2])
+    end)
+end
+
 function TestRoutePipeline.testCandidateResultsUseTimingEligibility()
     h.withTestImport(function()
         local candidateProvider = h.testImport("mods/forms/candidate_provider.lua")

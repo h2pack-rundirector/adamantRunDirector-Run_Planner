@@ -355,6 +355,17 @@ local function candidateContext(context, draft, biomeDraft, biomeIndex, roomNode
     return exportContext
 end
 
+local function offerCandidateContext(context, draft, biomeDraft, biomeIndex, roomNode, roomIndex, door, doorIndex, offer, offerIndex)
+    local exportContext = candidateContext(context, draft, biomeDraft, biomeIndex, roomNode, roomIndex, door, doorIndex)
+    exportContext.candidate.offerIndex = offerIndex
+    exportContext.candidate.store = offer.store
+    exportContext.candidate.rewardType = offer.rewardType
+    exportContext.candidate.acquired = offer.acquired
+    exportContext.candidate.payload = offer.payload
+    exportContext.candidate.offerPointKind = door.offerPoint and door.offerPoint.kind or nil
+    return exportContext
+end
+
 local function exportProvider(out, provider, formAddress, context, providerContext)
     guard.expectTable(provider, providerContext)
     if type(provider.exportCandidates) ~= "function" then
@@ -384,6 +395,17 @@ local function exportDoorCandidates(out, draft, biomeDraft, biomeIndex, roomNode
         exportContext,
         "routeForm.biomes[" .. tostring(biomeIndex) .. "].rooms[" .. tostring(roomIndex) .. "].generatedDoors.doors[" .. tostring(doorIndex) .. "].candidateProviders"
     )
+
+    for offerIndex, offer in ipairs((door.offerPoint and door.offerPoint.offers) or {}) do
+        local offerAddress = address.offer(draft.routeKey, biomeIndex, roomIndex, doorIndex, offerIndex)
+        exportProviderMap(
+            out,
+            offer.candidateProviders,
+            offerAddress,
+            offerCandidateContext(context, draft, biomeDraft, biomeIndex, roomNode, roomIndex, door, doorIndex, offer, offerIndex),
+            "routeForm.biomes[" .. tostring(biomeIndex) .. "].rooms[" .. tostring(roomIndex) .. "].generatedDoors.doors[" .. tostring(doorIndex) .. "].offerPoint.offers[" .. tostring(offerIndex) .. "].candidateProviders"
+        )
+    end
 end
 
 function routeForm.exportCandidates(draft, context, out)

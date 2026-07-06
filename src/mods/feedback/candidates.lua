@@ -103,6 +103,21 @@ local function indexDraftProviders(draft)
                         door.candidateProviders,
                         "candidateFeedback.generatedDoors.doors[" .. tostring(doorIndex) .. "].candidateProviders"
                     )
+
+                    local offerPoint = door.offerPoint
+                    if offerPoint ~= nil then
+                        guard.expectTable(offerPoint, "candidateFeedback.generatedDoors.doors[" .. tostring(doorIndex) .. "].offerPoint")
+                        guard.expectArray(offerPoint.offers or {}, "candidateFeedback.generatedDoors.doors[" .. tostring(doorIndex) .. "].offerPoint.offers")
+                        for offerIndex, offer in ipairs(offerPoint.offers or {}) do
+                            guard.expectTable(offer, "candidateFeedback.generatedDoors.doors[" .. tostring(doorIndex) .. "].offerPoint.offers[" .. tostring(offerIndex) .. "]")
+                            indexProviderMap(
+                                indexed,
+                                address.offer(routeKey, biomeIndex, roomIndex, doorIndex, offerIndex),
+                                offer.candidateProviders,
+                                "candidateFeedback.generatedDoors.doors[" .. tostring(doorIndex) .. "].offerPoint.offers[" .. tostring(offerIndex) .. "].candidateProviders"
+                            )
+                        end
+                    end
                 end
             end
         end

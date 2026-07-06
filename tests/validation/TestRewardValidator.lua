@@ -204,6 +204,14 @@ local function validatePlan(plan, catalog, opts)
     })
 end
 
+local function validatePlanWithCandidates(plan, catalog, candidateRecords)
+    local history = buildHistory(plan, catalog)
+    return h.testImport("mods/validation/rewards.lua").validate(history, {
+        catalog = catalog,
+        candidateRecords = candidateRecords,
+    })
+end
+
 local function validateDraft(draft, opts)
     local catalog = loadCatalog()
     local plan = materializePlan(draft, catalog)
@@ -420,5 +428,107 @@ function TestRewardValidator.testAllowsDevotionAfterPriorSourceLoot()
 
         lu.assertTrue(result.valid)
         lu.assertEquals(result.findings, {})
+    end)
+end
+
+function TestRewardValidator.testRewardTypeCandidateUsesSelectedRewardRules()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        local result = validatePlanWithCandidates(plan, catalog, {
+            {
+                formAddress = {
+                    routeKey = "Underworld",
+                    biomeIndex = 1,
+                    roomIndex = 1,
+                    doorIndex = 1,
+                    offerIndex = 1,
+                },
+                providerKey = "rewardType",
+                providerVersion = 13,
+                candidateKey = "GiftDrop",
+                candidateIndex = 2,
+                semantic = {
+                    kind = "rewardType",
+                    store = "RunProgress",
+                    rewardType = "GiftDrop",
+                    payload = {},
+                },
+            },
+        })
+
+        lu.assertTrue(result.valid)
+        lu.assertEquals(#result.candidateResults, 1)
+        lu.assertEquals(result.candidateResults[1].code, "reward_type_not_in_store")
+        lu.assertEquals(result.candidateResults[1].presentation, "invalid")
+        lu.assertEquals(result.candidateResults[1].providerKey, "rewardType")
+        lu.assertEquals(result.candidateResults[1].candidateKey, "GiftDrop")
+    end)
+end
+
+function TestRewardValidator.testDevotionSourceCandidateUsesPayloadRules()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(devotionDraft(), catalog)
+        local result = validatePlanWithCandidates(plan, catalog, {
+            {
+                formAddress = {
+                    routeKey = "Underworld",
+                    biomeIndex = 1,
+                    roomIndex = 3,
+                    doorIndex = 1,
+                    offerIndex = 1,
+                },
+                providerKey = "devotionSource2",
+                providerVersion = 14,
+                candidateKey = "ZeusUpgrade",
+                candidateIndex = 9,
+                semantic = {
+                    kind = "devotionSource",
+                    sourceIndex = 2,
+                    source = "ZeusUpgrade",
+                    sources = {
+                        "ApolloUpgrade",
+                        "ZeusUpgrade",
+                    },
+                },
+            },
+        })
+
+        lu.assertTrue(result.valid)
+        lu.assertEquals(#result.candidateResults, 1)
+        lu.assertEquals(result.candidateResults[1].code, "devotion_sources_not_acquired")
+        lu.assertEquals(result.candidateResults[1].payload.missingSources, { "ZeusUpgrade" })
+        lu.assertEquals(result.candidateResults[1].providerKey, "devotionSource2")
+    end)
+end
+
+function TestRewardValidator.testUnknownRewardCandidateKindFailsContract()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        local ok, err = pcall(function()
+            validatePlanWithCandidates(plan, catalog, {
+                {
+                    formAddress = {
+                        routeKey = "Underworld",
+                        biomeIndex = 1,
+                        roomIndex = 1,
+                        doorIndex = 1,
+                        offerIndex = 1,
+                    },
+                    providerKey = "rewardType",
+                    providerVersion = 15,
+                    candidateKey = "Boon",
+                    candidateIndex = 1,
+                    semantic = {
+                        kind = "missingKind",
+                    },
+                },
+            })
+        end)
+
+        lu.assertFalse(ok)
+        lu.assertStrContains(err, "unknown candidate kind 'missingKind'")
     end)
 end

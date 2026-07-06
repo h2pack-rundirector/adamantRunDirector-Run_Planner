@@ -755,8 +755,6 @@ local function evaluateCandidateRecords(result, catalog, history, indexed, recor
 
         if kind == "nextRoom" then
             evaluateNextRoomCandidate(result, catalog, history, indexed, record, semantic, context)
-        else
-            guard.fail(context .. ".semantic.kind", "unknown candidate kind '" .. kind .. "'")
         end
     end
 end

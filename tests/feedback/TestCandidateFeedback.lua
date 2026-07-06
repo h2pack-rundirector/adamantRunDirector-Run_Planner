@@ -30,6 +30,37 @@ local function draftWithProvider(provider)
     }
 end
 
+local function draftWithOfferProvider(provider)
+    return {
+        routeKey = "Underworld",
+        biomes = {
+            {
+                biomeKey = "F",
+                rooms = {
+                    {
+                        roomKey = "F_Combat02",
+                        generatedDoors = {
+                            doors = {
+                                {
+                                    offerPoint = {
+                                        offers = {
+                                            {
+                                                candidateProviders = {
+                                                    rewardType = provider,
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+end
+
 local function candidateResult(version, candidateIndex)
     return {
         formAddress = {
@@ -46,6 +77,14 @@ local function candidateResult(version, candidateIndex)
         color = { 1, 0, 0, 1 },
         message = "Unavailable",
     }
+end
+
+local function offerCandidateResult(version, candidateIndex)
+    local result = candidateResult(version, candidateIndex)
+    result.formAddress.offerIndex = 1
+    result.providerKey = "rewardType"
+    result.candidateKey = "GiftDrop"
+    return result
 end
 
 function TestCandidateFeedback.testAppliesMatchingVersionAndClearsOldState()
@@ -139,5 +178,30 @@ function TestCandidateFeedback.testMalformedResultsDoNotClearProviders()
         lu.assertStrContains(err, "candidateFeedback.candidateResults[1].formAddress")
         lu.assertTrue(provider.hidden[2])
         lu.assertEquals(provider.messages[2], "Keep")
+    end)
+end
+
+function TestCandidateFeedback.testAppliesOfferCandidateFeedback()
+    h.withTestImport(function()
+        local candidateFeedback = h.testImport("mods/feedback/candidates.lua")
+        local provider = h.testImport("mods/forms/candidate_provider.lua").create({
+            key = "rewardType",
+            version = 8,
+            values = { "Boon", "GiftDrop" },
+            labels = { "Boon", "Gift" },
+        })
+
+        local summary = candidateFeedback.apply(draftWithOfferProvider(provider), {
+            offerCandidateResult(8, 2),
+        })
+
+        lu.assertEquals(summary, {
+            cleared = 1,
+            applied = 1,
+            stale = 0,
+            missing = 0,
+        })
+        lu.assertTrue(provider.hidden[2])
+        lu.assertEquals(provider.messages[2], "Unavailable")
     end)
 end

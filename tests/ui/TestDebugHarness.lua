@@ -38,7 +38,7 @@ function TestDebugHarness.testDefaultDraftEvaluatesThroughRealPipeline()
         lu.assertTrue(result.complete)
         lu.assertTrue(result.valid)
         lu.assertNotNil(result.history)
-        lu.assertEquals(#result.candidateResults, 5)
+        lu.assertEquals(#result.candidateResults, 7)
         lu.assertEquals(result.candidateResults[1].code, "f_shop_too_early")
         lu.assertEquals(result.candidateResults[2].code, "f_preboss_too_early")
         lu.assertEquals(result.candidateResults[3].code, "room_creation_cap_exceeded")
@@ -46,6 +46,9 @@ function TestDebugHarness.testDefaultDraftEvaluatesThroughRealPipeline()
         local provider = harness.draft.biomes[1].rooms[2].generatedDoors.doors[1].candidateProviders.nextDoorTarget
         lu.assertEquals(provider.messages[2], "Generated room target exceeds its creation cap.")
         lu.assertTrue(provider.hidden[5])
+
+        local rewardProvider = harness.draft.biomes[1].rooms[2].generatedDoors.doors[1].offerPoint.offers[1].candidateProviders.rewardType
+        lu.assertEquals(rewardProvider.messages[4], "Devotion sources must already exist in acquired loot history.")
     end)
 end
 
@@ -92,6 +95,6 @@ function TestDebugHarness.testDrawTabEmitsStatusWithoutFullImguiSurface()
         lu.assertNotNil(combined:find("Run Planner debug harness", 1, true))
         lu.assertNotNil(combined:find("docs/system_design", 1, true))
         lu.assertNotNil(combined:find("State: valid", 1, true))
-        lu.assertNotNil(combined:find("Candidates: 5", 1, true))
+        lu.assertNotNil(combined:find("Candidates: 7", 1, true))
     end)
 end

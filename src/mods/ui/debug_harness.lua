@@ -373,6 +373,15 @@ local function feedbackFor(evaluation, address)
     return nil
 end
 
+local function projectedSources(sources, sourceIndex, value)
+    local projected = {}
+    for index, source in ipairs(sources or {}) do
+        projected[index] = source
+    end
+    projected[sourceIndex] = value
+    return projected
+end
+
 local function attachCandidateProviders(state)
     local biome = state.draft.biomes[1]
     for _, room in ipairs(biome.rooms or {}) do
@@ -396,6 +405,48 @@ local function attachCandidateProviders(state)
                         end,
                     }),
                 }
+
+                local offer = ensureOffer(state.catalog, door)
+                local rewardOptions = state.rewardTypeOptions[offer.store] or { values = {}, labels = {} }
+                offer.candidateProviders = {
+                    rewardType = state.candidateProvider.create({
+                        key = "rewardType",
+                        version = state.providerVersion,
+                        values = rewardOptions.values,
+                        labels = rewardOptions.labels,
+                        semanticForValue = function(value, _, _, context)
+                            return {
+                                kind = "rewardType",
+                                store = context.candidate.store,
+                                rewardType = value,
+                                payload = defaultPayloadForRewardType(state.catalog, value),
+                            }
+                        end,
+                    }),
+                }
+
+                if offer.rewardType == "Devotion" then
+                    offer.payload = offer.payload or defaultPayloadForRewardType(state.catalog, "Devotion")
+                    offer.payload.sources = offer.payload.sources or defaultPayloadForRewardType(state.catalog, "Devotion").sources
+                    for sourceIndex = 1, 2 do
+                        local slotIndex = sourceIndex
+                        local providerKey = "devotionSource" .. tostring(sourceIndex)
+                        offer.candidateProviders[providerKey] = state.candidateProvider.create({
+                            key = providerKey,
+                            version = state.providerVersion,
+                            values = state.boonSourceOptions.values,
+                            labels = state.boonSourceOptions.labels,
+                            semanticForValue = function(value, _, _, _context)
+                                return {
+                                    kind = "devotionSource",
+                                    sourceIndex = slotIndex,
+                                    source = value,
+                                    sources = projectedSources(offer.payload.sources, slotIndex, value),
+                                }
+                            end,
+                        })
+                    end
+                end
             end
         end
     end
@@ -573,11 +624,14 @@ local function drawRewardPayload(state, imgui, roomIndex, doorIndex, offer)
         offer.payload = offer.payload or defaultPayloadForRewardType(state.catalog, "Devotion")
         offer.payload.sources = offer.payload.sources or defaultPayloadForRewardType(state.catalog, "Devotion").sources
         for sourceIndex = 1, 2 do
+            local providers = offer.candidateProviders or {}
+            local providerKey = "devotionSource" .. tostring(sourceIndex)
+            local options = providers[providerKey] or state.boonSourceOptions
             local nextSource, changed = drawChoice(
                 imgui,
                 "Source " .. tostring(sourceIndex) .. "##room" .. roomIndex .. "_door" .. doorIndex,
                 offer.payload.sources[sourceIndex],
-                state.boonSourceOptions
+                options
             )
             if changed then
                 setDevotionSource(state, roomIndex, doorIndex, sourceIndex, nextSource)
@@ -612,13 +666,15 @@ local function drawDoor(state, imgui, evaluation, roomIndex, doorIndex, door)
     end
 
     local offer = ensureOffer(state.catalog, door)
+    local offerProviders = offer.candidateProviders or {}
     local nextStore, storeChanged = drawChoice(imgui, "Store##room" .. roomIndex .. "_door" .. doorIndex, offer.store, state.storeOptions)
     if storeChanged then
         setRewardStore(state, roomIndex, doorIndex, nextStore)
         offer = ensureOffer(state.catalog, door)
+        offerProviders = offer.candidateProviders or {}
     end
 
-    local rewardOptions = state.rewardTypeOptions[offer.store] or { values = {}, labels = {} }
+    local rewardOptions = offerProviders.rewardType or state.rewardTypeOptions[offer.store] or { values = {}, labels = {} }
     local nextRewardType, rewardChanged = drawChoice(
         imgui,
         "Reward##room" .. roomIndex .. "_door" .. doorIndex,
@@ -631,6 +687,13 @@ local function drawDoor(state, imgui, evaluation, roomIndex, doorIndex, door)
     end
 
     drawRewardPayload(state, imgui, roomIndex, doorIndex, offer)
+    drawFeedback(imgui, "Reward feedback", feedbackFor(evaluation, {
+        routeKey = state.draft.routeKey,
+        biomeIndex = 1,
+        roomIndex = roomIndex,
+        doorIndex = doorIndex,
+        offerIndex = 1,
+    }))
 
     if imgui ~= nil and imgui.Checkbox ~= nil then
         local nextAcquired, acquiredChanged = imgui.Checkbox("Acquired##room" .. roomIndex .. "_door" .. doorIndex, offer.acquired == true)
