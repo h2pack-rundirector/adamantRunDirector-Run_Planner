@@ -1,0 +1,62 @@
+-- luacheck: globals TestBiomePanels
+
+local lu = require("luaunit")
+local h = dofile("tests/support/import_harness.lua")
+
+TestBiomePanels = {}
+
+local function lineSink()
+    local lines = {}
+    return lines, {
+        draw = {
+            imgui = {
+                Text = function(text)
+                    lines[#lines + 1] = text
+                end,
+                Separator = function()
+                end,
+            },
+        },
+    }
+end
+
+local function createState()
+    local data = h.testImport("mods/data.lua")
+    local plannerState = h.testImport("mods/ui/planner/state.lua")
+    return plannerState.create({
+        catalog = data.loadCatalog(),
+    })
+end
+
+function TestBiomePanels.testRegistryDrawsFErebusPanel()
+    h.withTestImport(function()
+        local registry = h.testImport("mods/ui/biomes/registry.lua")
+        local state = createState()
+        local route = state.catalog.routes.lookup.Underworld
+        local lines, ctx = lineSink()
+
+        registry.draw(state, ctx, route, "F", state.ensureEvaluation())
+
+        local combined = table.concat(lines, "\n")
+        lu.assertNotNil(combined:find("Erebus (F)", 1, true))
+        lu.assertNotNil(combined:find("Room 1 - Opening 1 (F_Opening01)", 1, true))
+        lu.assertNil(combined:find("Placeholder biome panel", 1, true))
+    end)
+end
+
+function TestBiomePanels.testRegistryDrawsPlaceholderForUnimplementedBiome()
+    h.withTestImport(function()
+        local registry = h.testImport("mods/ui/biomes/registry.lua")
+        local state = createState()
+        local route = state.catalog.routes.lookup.Surface
+        local lines, ctx = lineSink()
+
+        registry.draw(state, ctx, route, "N", state.ensureEvaluation())
+
+        local combined = table.concat(lines, "\n")
+        lu.assertNotNil(combined:find("Placeholder biome panel", 1, true))
+        lu.assertNotNil(combined:find("Route: Surface", 1, true))
+        lu.assertNotNil(combined:find("Biome: N", 1, true))
+        lu.assertNil(combined:find("Room 1 - Opening 1 (F_Opening01)", 1, true))
+    end)
+end

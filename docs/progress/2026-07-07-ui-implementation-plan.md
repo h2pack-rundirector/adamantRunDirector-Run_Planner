@@ -4,6 +4,36 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-07 - UI Composition Boundaries Extracted
+
+The production route UI now has explicit composition boundaries instead of
+keeping route tabs, biome selection, placeholder rendering, and F-panel dispatch
+inside one route-shell file.
+
+Implemented behavior:
+
+- `route_shell.lua` is now the top-level planner tab orchestration layer:
+  bind UI context, evaluate route state, render status, and delegate layout;
+- `route_selection.lua` owns active route and active route-biome storage reads
+  and writes;
+- `route_nav.lua` owns route tabs, biome nav, and cached biome-tab lists;
+- `biomes/registry.lua` owns route/biome panel dispatch;
+- `biomes/placeholder_panel.lua` owns the explicit placeholder panel for
+  unimplemented biomes;
+- focused biome-panel tests pin that F/Erebus reaches the real panel and
+  unimplemented biomes reach the placeholder.
+
+Still deferred:
+
+- deciding whether route shell and panels should move to constructor-style DI;
+- expanding real editable panels beyond F/Erebus.
+
+Validation run:
+
+- `lua tests/all.lua` - 137 passed.
+- `luacheck src tests` - 0 warnings / 0 errors.
+- `git diff --check` - passed.
+
 ### 2026-07-07 - UI Rename Pass: F Panel Made Discoverable
 
 The production F surface is no longer named like a generic route editor.

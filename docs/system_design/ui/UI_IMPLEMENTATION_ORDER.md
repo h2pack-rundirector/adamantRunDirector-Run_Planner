@@ -72,9 +72,13 @@ src/mods/ui/planner/
   state.lua          -- draft state, dirty flags, cached evaluation
   options.lua        -- shared stable option/catalog helpers
   widgets.lua        -- low-level dropdown/checkbox/status wrappers
-  route_shell.lua    -- route tabs, biome nav, and active biome dispatch
+  route_selection.lua -- active route/biome storage helpers
+  route_nav.lua      -- route tabs and biome nav drawing
+  route_shell.lua    -- top-level planner tab orchestration
 
 src/mods/ui/biomes/
+  registry.lua       -- route/biome to panel dispatch
+  placeholder_panel.lua -- explicit placeholder for unimplemented biomes
   f_erebus_panel.lua -- F/Erebus biome panel composition
 
 src/mods/ui/forms/
@@ -94,6 +98,59 @@ application state, rebuild scheduling, and top-level composition.
 
 Avoid rebuilding biome-sized route templates. Biomes should compose room,
 generated-door, offer-point, and payload leaves.
+
+## Composition And Dependency Policy
+
+UI composition should be local, explicit, and layered.
+
+Each level composes only one level below it. The UI root should not wire every
+leaf form, and leaf forms should not reach upward to route-shell state except
+through the planner state and context values passed to their draw calls.
+
+Use `create(deps)` when a module returns a composed service or instance that
+holds collaborators:
+
+```text
+ui.create(...)
+  -> route_shell.create(...)
+       -> route_nav.create(...)
+       -> biomes.registry.create(...)
+            -> f_erebus_panel.create(...)
+                 -> room-form layer
+```
+
+Good `create(deps)` candidates are orchestration modules:
+
+- `ui.lua`, which owns the production UI graph and planner state instance;
+- `route_shell.lua`, which owns the planner tab shell and delegates route
+  layout;
+- `route_nav.lua`, which owns route tabs, biome navigation, and route-selection
+  storage helpers;
+- `ui/biomes/registry.lua`, which owns route/biome panel dispatch;
+- biome panels such as `f_erebus_panel.lua`, when their child form graph becomes
+  large enough to benefit from explicit construction.
+
+Use ENVY-style dependency modules, such as `local deps = ...`, for stateless
+modules where a dependency boundary is useful but no per-instance service is
+needed. This is appropriate for helper-like modules or leaves only when their
+dependencies are loaded by a known composer.
+
+Direct imports remain acceptable for stable pure helpers and simple leaf forms.
+Do not force constructor plumbing into every form just to remove imports. Move a
+leaf to dependency injection when it becomes a composition boundary, needs
+replaceable collaborators in focused tests, or starts obscuring ownership.
+
+Composition rules:
+
+- parent modules may compose direct children, but should not compose
+  grandchildren;
+- child modules may compose their own immediate leaves;
+- services should be returned explicitly from `create(deps)` rather than added
+  by mutating a passed service table;
+- default module-level `draw(...)` wrappers may remain during migration, but the
+  production graph should be constructed once through `ui.create(...)`;
+- route legality, history, reward legality, and force pressure stay outside the
+  UI composition graph and enter through planner state and validation feedback.
 
 ## Dirty Rebuild Lifecycle
 

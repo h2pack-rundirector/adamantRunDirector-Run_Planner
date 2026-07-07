@@ -54,8 +54,8 @@ reload the editable draft from storage on the next bind pass.
 
 | Form participant | Draft node | Owning mutators | Storage rows |
 | --- | --- | --- | --- |
-| route shell active route | public UI state, not route draft | route-shell storage helpers | `SelectedRoute` |
-| route shell active biome | public UI state, not route draft | route-shell storage helpers | `SelectedUnderworldBiome`, `SelectedSurfaceBiome` |
+| route active route | public UI state, not route draft | route-selection storage helpers | `SelectedRoute` |
+| route active biome | public UI state, not route draft | route-selection storage helpers | `SelectedUnderworldBiome`, `SelectedSurfaceBiome` |
 | F biome panel | `draft.biomes[1]` | current F panel composition | `Rooms.BiomeIndex`, `Rooms.BiomeKey`, plus child rows |
 | room unit | `draft.biomes[1].rooms[roomIndex]` | `setRoomKey`, `appendSelectedTarget`, `removeLastRoom` | `Rooms` |
 | generated door batch | `room.generatedDoors` | `setSelectedDoor`, room-key reset materialization | `Rooms.SelectedDoorIndex`, `Rooms.BatchRule` |
