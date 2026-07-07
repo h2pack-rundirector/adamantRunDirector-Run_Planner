@@ -472,26 +472,47 @@ Implemented in the current working checkpoint:
 - tests cover shop-room offer control creation and pending-store feedback from
   a shop offer blocking a same-room generated Hammer reward.
 
+## Completed UI Foundation Extraction Slice
+
+Implemented in the current working checkpoint:
+
+- `src/mods/ui/planner/options.lua` now owns catalog-derived option lists,
+  reward/store/source labels, default payloads, default offers, and simple
+  room materializers used by editable F draft state;
+- `src/mods/ui/planner/state.lua` now owns the mutable F draft, dirty
+  evaluation cache, candidate-provider attachment, provider-version handling,
+  and draft mutators;
+- the debug harness now delegates planner state and provider setup to the
+  production-facing state module and keeps only debug-specific drawing/status
+  output;
+- focused state coverage verifies that cached evaluation is reused until a
+  mutator marks the draft dirty.
+
+Current boundary:
+
+- this is still an F-only authoring state and rough debug layout;
+- generated selected-door options are still built by the harness draw helper;
+- production widgets and final biome panels have not started.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Generalize linear biome declarations
+Build low-level planner widgets
 ```
 
 Concrete scope:
 
-- start expanding beyond the F-only declaration surface with the next simple
-  linear biome, likely G;
-- keep the declarations concrete and conservative rather than introducing a
-  shared builder before duplication is visible;
-- use the existing route/history/validation loop unchanged;
-- keep special-biome mechanics and reward bag simulation deferred.
+- add dropdown, checkbox, section/status, and marker wrappers that consume
+  stable candidate provider state;
+- keep route validation out of draw helpers;
+- preserve text/no-imgui fallback rendering for tests and in-game debug use;
+- keep the debug harness active as the proof surface while production F editor
+  pieces come online.
 
-This starts Phase 4 without losing the useful F debug loop. If G exposes a
-missing common linear rule, add that rule in declarations/validation rather
-than branching the route engine.
+After the widgets exist, port the F room/generated-door/reward controls onto
+those widgets before expanding the linear declaration surface to G/P/Q.
 
 ## Validation Baseline
 
@@ -506,7 +527,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 97 passed;
+- child tests: 98 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.
