@@ -4,6 +4,31 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-07 - Route Shell Implemented
+
+The third UI implementation slice now wraps the F editor in the production
+route shell.
+
+Implemented behavior:
+
+- top-level planner status renders before route content;
+- route tabs expose Underworld and Surface through the declared route catalog;
+- each route has a biome navigation rail using `draw.nav.verticalTabs(...)`
+  when available and a text fallback in tests/no-imgui contexts;
+- F/Erebus renders the current integrated editor under Underworld;
+- G/H/I and N/O/P/Q render explicit placeholder panels that do not emit planner
+  snapshots;
+- active route and active route-biome selections read/write the public UI
+  storage fields added in the previous slice;
+- biome navigation tab lists are cached on planner state instead of rebuilt every
+  draw.
+
+Validation run:
+
+- `lua tests/all.lua` - 126 passed.
+- `luacheck src tests` - 0 warnings / 0 errors.
+- `git diff --check` - passed.
+
 ### 2026-07-07 - Storage And Control Registration Implemented
 
 The second UI implementation slice now adds the first production storage/control

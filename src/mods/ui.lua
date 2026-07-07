@@ -1,12 +1,12 @@
-local routeEditor = import("mods/ui/planner/route_editor.lua")
 local plannerState = import("mods/ui/planner/state.lua")
+local routeShell = import("mods/ui/planner/route_shell.lua")
 
 local ui = {}
 local defaultInstance
 
 local function attachDrawTab(state)
     state.drawTab = function(_, ctx)
-        return routeEditor.draw(state, ctx)
+        return routeShell.draw(state, ctx)
     end
     return state
 end

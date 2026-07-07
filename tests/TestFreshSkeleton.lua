@@ -44,7 +44,8 @@ function TestFreshSkeleton.testUiDrawsProductionEditorStatus()
         ui.drawTab(nil, ctx)
 
         local combined = table.concat(lines, "\n")
-        lu.assertNotNil(combined:find("F route editor", 1, true))
+        lu.assertNotNil(combined:find("Run Planner", 1, true))
+        lu.assertNotNil(combined:find("Erebus (F)", 1, true))
         lu.assertNil(combined:find("debug harness", 1, true))
     end)
 end

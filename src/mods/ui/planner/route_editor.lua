@@ -23,6 +23,7 @@ local function firstIssueRoomIndex(evaluation)
 end
 
 function routeEditor.draw(state, ctx, opts)
+    opts = opts or DEFAULT_OPTIONS
     local drawContext = ctx and ctx.draw or nil
     local imgui = drawContext and drawContext.imgui or nil
 
@@ -40,9 +41,11 @@ function routeEditor.draw(state, ctx, opts)
         state.removeLastRoom()
     end
 
-    local evaluation = state.ensureEvaluation()
-    widgets.separator(imgui)
-    widgets.status(imgui, evaluation, state.feedbackLocationLabel)
+    local evaluation = opts.evaluation or state.ensureEvaluation()
+    if opts.hideStatus ~= true then
+        widgets.separator(imgui)
+        widgets.status(imgui, evaluation, state.feedbackLocationLabel)
+    end
 
     local blockerRoomIndex = firstIssueRoomIndex(evaluation)
     for roomIndex, room in ipairs(state.currentBiome().rooms or {}) do
