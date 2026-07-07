@@ -613,22 +613,40 @@ Current boundary:
 - inactive presentation is room-horizon only, not field-level;
 - candidate coloring remains provider-owned and unchanged by this horizon pass.
 
+## Completed Production F Editor Surface Slice
+
+Implemented in the current working checkpoint:
+
+- `src/mods/ui.lua` now creates planner state and renders the production
+  `route_editor.lua` surface directly;
+- `debug_harness.lua` remains available as a proof/test wrapper with debug-only
+  title/detail text;
+- the skeleton UI smoke coverage now verifies that the module entrypoint renders
+  the neutral `F route editor` surface rather than debug harness copy.
+
+Current boundary:
+
+- the editor remains F-only and still uses rough route buttons/layout;
+- there is no final biome-panel/control-template surface yet;
+- persistence/storage handoff is not implemented; the current surface is still
+  for live UI/data/validation loop testing.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Wire the production F editor surface
+Run an F editor model-testing pass
 ```
 
 Concrete scope:
 
-- make `src/mods/ui.lua` create the production route-editor state directly
-  instead of routing through the debug harness by default;
-- keep `debug_harness.lua` available as a proof/test wrapper with debug-only
-  title/detail text;
-- keep F-only scope and avoid final biome-control templates until the route
-  editor surface is comfortable enough for in-game model testing;
+- boot the planner UI through the module entrypoint and exercise the F
+  room/reward/history/feedback loop manually;
+- record rough spots that block useful model testing separately from visual
+  polish that can wait for the dedicated UI pass;
+- decide whether the next code slice should be targeted F usability polish,
+  F data-model completion, or broader biome work;
 - keep G/P/Q deferred until the F UI/data/validation loop has been exercised.
 
 ## Validation Baseline
