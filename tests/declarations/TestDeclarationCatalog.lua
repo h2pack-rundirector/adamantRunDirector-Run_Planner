@@ -43,12 +43,17 @@ function TestDeclarationCatalog.testCatalogLoadsRouteOrderAndMinimalFDeclaration
         lu.assertNotNil(f)
         lu.assertEquals(f.label, "Erebus")
         lu.assertEquals(f.structure.kind, "linear")
-        lu.assertEquals(f.structure.startRoomKey, "F_Opening01")
+        lu.assertEquals(f.structure.start, {
+            roomKind = "Opening",
+        })
         lu.assertEquals(f.structure.terminal.prebossRoomKey, "F_PreBoss01")
 
         local opening = f.rooms.lookup.F_Opening01
         lu.assertEquals(opening.kind, "Opening")
+        lu.assertEquals(opening.roomTemplate, "FixedOpening")
         lu.assertEquals(#opening.exits, 1)
+        lu.assertEquals(f.rooms.lookup.F_Opening02.kind, "Opening")
+        lu.assertEquals(f.rooms.lookup.F_Opening03.kind, "Opening")
 
         local miniboss = f.rooms.lookup.F_MiniBoss01
         lu.assertEquals(miniboss.kind, "Miniboss")
@@ -280,9 +285,29 @@ function TestDeclarationCatalog.testLoaderDoesNotMutateRawDeclarationTables()
         })
 
         lu.assertNotNil(catalog.biomes.lookup.F.rooms.lookup.F_Opening01)
+        lu.assertNotNil(catalog.biomes.lookup.F.rooms.lookup.F_Opening02)
+        lu.assertNotNil(catalog.biomes.lookup.F.rooms.lookup.F_Opening03)
         lu.assertNil(rawBiomes[1].rooms.lookup)
         lu.assertNil(rawRewards.stores)
         lu.assertNil(rawRoomTemplates.StandardCombat.roomKindSet)
+    end)
+end
+
+function TestDeclarationCatalog.testLoaderRejectsStartKindWithoutRoom()
+    h.withTestImport(function()
+        local loader = h.testImport("mods/declarations/loader.lua")
+        local biomes = h.testImport("mods/declarations/biomes/init.lua")
+
+        biomes[1].structure.start.roomKind = "MissingStartKind"
+
+        local ok, err = pcall(function()
+            loader.load({
+                biomes = biomes,
+            })
+        end)
+
+        lu.assertFalse(ok)
+        lu.assertStrContains(err, "no declared room has kind 'MissingStartKind'")
     end)
 end
 

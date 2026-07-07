@@ -98,17 +98,25 @@ local function validateBiome(biome, context)
     guard.expectString(biome.routeKey, context .. ".routeKey")
     guard.expectTable(biome.structure, context .. ".structure")
     guard.expectString(biome.structure.kind, context .. ".structure.kind")
-    guard.expectString(biome.structure.startRoomKey, context .. ".structure.startRoomKey")
+    guard.expectTable(biome.structure.start, context .. ".structure.start")
+    local startRoomKind = guard.expectString(biome.structure.start.roomKind, context .. ".structure.start.roomKind")
     guard.expectTable(biome.structure.terminal, context .. ".structure.terminal")
     guard.expectString(biome.structure.terminal.prebossRoomKey, context .. ".structure.terminal.prebossRoomKey")
     guard.expectNonEmptyArray(biome.rooms, context .. ".rooms")
 
     local roomsByKey = guard.indexByKey(biome.rooms, context .. ".rooms")
-    if roomsByKey[biome.structure.startRoomKey] == nil then
-        guard.fail(context .. ".structure.startRoomKey", "room '" .. biome.structure.startRoomKey .. "' is not declared")
-    end
     if roomsByKey[biome.structure.terminal.prebossRoomKey] == nil then
         guard.fail(context .. ".structure.terminal.prebossRoomKey", "room '" .. biome.structure.terminal.prebossRoomKey .. "' is not declared")
+    end
+    local hasStartRoomKind = false
+    for _, room in ipairs(biome.rooms) do
+        if room.kind == startRoomKind then
+            hasStartRoomKind = true
+            break
+        end
+    end
+    if not hasStartRoomKind then
+        guard.fail(context .. ".structure.start.roomKind", "no declared room has kind '" .. startRoomKind .. "'")
     end
 
     return roomsByKey

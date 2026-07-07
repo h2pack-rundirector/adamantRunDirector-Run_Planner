@@ -226,7 +226,7 @@ function TestRoutePipeline.testStructurallyInvalidDraftReturnsValidatorFeedback(
         local draft = completeDraft()
         draft.biomes[1].rooms[2].generatedDoors.doors[2] = {
             exitIndex = 1,
-            targetRoomKey = "F_Opening01",
+            targetRoomKey = "F_Combat03",
             offerPoint = {
                 kind = "generatedDoorRewards",
                 batchKey = "nextDoors",

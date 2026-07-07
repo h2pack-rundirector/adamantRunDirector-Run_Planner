@@ -170,7 +170,9 @@ Biome structure owns biome-level framing and generated-door rules:
 
 ```lua
 structure = {
-    startRoomKey = "F_Intro",
+    start = {
+        roomKind = "Opening",
+    },
     terminal = {
         prebossRoomKey = "F_PreBoss",
         bossRoomKey = "F_Boss",
@@ -183,7 +185,7 @@ structure = {
 
 Structure owns:
 
-- start room;
+- start room role;
 - terminal/preboss/boss framing;
 - biome-local counter starts;
 - force-pressure interpretation across generated doors;

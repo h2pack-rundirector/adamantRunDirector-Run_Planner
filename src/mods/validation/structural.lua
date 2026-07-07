@@ -30,6 +30,14 @@ local function getRoom(catalog, biomeKey, roomKey)
     return biome.rooms.lookup[roomKey]
 end
 
+local function startRoomKind(catalog, biomeKey)
+    local biome = getBiome(catalog, biomeKey)
+    if biome == nil or biome.structure == nil or biome.structure.start == nil then
+        return nil
+    end
+    return biome.structure.start.roomKind
+end
+
 local function roomKey(biomeKey, roomIndex)
     return tostring(biomeKey) .. ":" .. tostring(roomIndex)
 end
@@ -93,6 +101,30 @@ local function validateRoomExistence(result, catalog, history)
     end
 end
 
+local function validateRoomPlacement(result, catalog, indexed)
+    for _, event in ipairs(indexed.roomEvents) do
+        local room = getRoom(catalog, event.biomeKey, event.roomKey)
+        local expectedStartKind = startRoomKind(catalog, event.biomeKey)
+        if room ~= nil and expectedStartKind ~= nil then
+            if event.roomIndex == 1 and room.kind ~= expectedStartKind then
+                validationResult.invalid(result, "biome_start_room_kind_mismatch", "room.enter", event.sourceAddress, {
+                    biomeKey = event.biomeKey,
+                    roomKey = event.roomKey,
+                    expectedRoomKind = expectedStartKind,
+                    actualRoomKind = room.kind,
+                }, "First biome room must match the declared start room kind.")
+            elseif event.roomIndex > 1 and room.kind == expectedStartKind then
+                validationResult.invalid(result, "start_room_kind_not_at_start", "room.enter", event.sourceAddress, {
+                    biomeKey = event.biomeKey,
+                    roomKey = event.roomKey,
+                    roomIndex = event.roomIndex,
+                    startRoomKind = expectedStartKind,
+                }, "Start-kind rooms are only valid as the first biome room.")
+            end
+        end
+    end
+end
+
 local function doorExitViolation(catalog, biomeKey, sourceRoomKey, exitIndex)
     local sourceRoom = getRoom(catalog, biomeKey, sourceRoomKey)
     if sourceRoom == nil then
@@ -129,6 +161,26 @@ local function doorTargetViolation(catalog, biomeKey, targetRoomKey)
             targetRoomKey = targetRoomKey,
         },
         message = "Generated door target room is not declared.",
+    }
+end
+
+local function doorTargetPlacementViolation(catalog, biomeKey, targetRoomKey)
+    local targetRoom = getRoom(catalog, biomeKey, targetRoomKey)
+    local expectedStartKind = startRoomKind(catalog, biomeKey)
+    if targetRoom == nil or expectedStartKind == nil or targetRoom.kind ~= expectedStartKind then
+        return nil
+    end
+
+    return {
+        code = "generated_door_target_start_room",
+        phase = "room.generate_next",
+        presentation = "invalid",
+        payload = {
+            targetRoomKey = targetRoomKey,
+            targetRoomKind = targetRoom.kind,
+            startRoomKind = expectedStartKind,
+        },
+        message = "Generated doors cannot target start-kind rooms.",
     }
 end
 
@@ -523,6 +575,7 @@ local function validateDoorLegality(result, catalog, history, indexed, door)
     local doors = indexed.generatedDoorsByRoom[roomKey(door.biomeKey, door.roomIndex)] or {}
     local context = "validation.generatedDoors[" .. tostring(door.eventIndex) .. "].targetRoom"
     local eligibilityViolation = roomEligibilityViolation(catalog, history, generateNextEvent, door.targetRoomKey, context)
+    addSelectedViolation(result, door.sourceAddress, doorTargetPlacementViolation(catalog, door.biomeKey, door.targetRoomKey))
     addSelectedViolation(result, door.sourceAddress, exitTagsViolation(catalog, door.biomeKey, door.roomKey, door.exitIndex, door.targetRoomKey))
     addSelectedViolation(result, door.sourceAddress, eligibilityViolation)
     addSelectedViolation(result, door.sourceAddress, selectedRoomCapViolation(catalog, indexed, generateNextEvent, door, doors))
@@ -713,18 +766,21 @@ local function evaluateNextRoomCandidate(result, catalog, history, indexed, reco
     local doors = indexed.generatedDoorsByRoom[roomKey(biomeKey, sourceRoomIndex)] or {}
     local exitViolation = doorExitViolation(catalog, biomeKey, sourceRoomKey, exitIndex)
     local targetViolation = doorTargetViolation(catalog, biomeKey, targetRoomKey)
+    local placementViolation = doorTargetPlacementViolation(catalog, biomeKey, targetRoomKey)
     local tagViolation = exitTagsViolation(catalog, biomeKey, sourceRoomKey, exitIndex, targetRoomKey)
     local eligibilityViolation = roomEligibilityViolation(catalog, history, generateNextEvent, targetRoomKey, context .. ".semantic")
     local capViolation = candidateRoomCapViolation(catalog, indexed, generateNextEvent, targetRoomKey, currentDoor, doors)
 
     addCandidateViolation(result, record, exitViolation)
     addCandidateViolation(result, record, targetViolation)
+    addCandidateViolation(result, record, placementViolation)
     addCandidateViolation(result, record, tagViolation)
     addCandidateViolation(result, record, eligibilityViolation)
     addCandidateViolation(result, record, capViolation)
 
     if exitViolation == nil
         and targetViolation == nil
+        and placementViolation == nil
         and tagViolation == nil
         and eligibilityViolation == nil
         and capViolation == nil then
@@ -772,6 +828,7 @@ function structural.validate(history, context)
     local indexed = indexHistory(history)
 
     validateRoomExistence(result, context.catalog, history)
+    validateRoomPlacement(result, context.catalog, indexed)
     validateGeneratedDoors(result, context.catalog, history, indexed)
     validateTerminalPlacement(result, context.catalog, history)
     evaluateCandidateRecords(result, context.catalog, history, indexed, candidateRecords(context, history))

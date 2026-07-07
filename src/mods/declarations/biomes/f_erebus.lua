@@ -105,6 +105,17 @@ local function minibossRoom(key, label, opts)
     })
 end
 
+local function openingRoom(key, label)
+    return room(key, label, {
+        kind = "Opening",
+        roomTemplate = "FixedOpening",
+        tags = { "Opening" },
+        exitCount = 1,
+        encounterProfile = "None",
+        counters = counters(1, 0, 0),
+    })
+end
+
 local function depthWindowEligibility(prefix, min, max)
     return {
         kind = "All",
@@ -128,14 +139,9 @@ local function depthWindowEligibility(prefix, min, max)
 end
 
 local rooms = {
-    room("F_Opening01", "Opening 1", {
-        kind = "Opening",
-        roomTemplate = "FixedOpening",
-        tags = { "Opening" },
-        exitCount = 1,
-        encounterProfile = "None",
-        counters = counters(1, 0, 0),
-    }),
+    openingRoom("F_Opening01", "Opening 1"),
+    openingRoom("F_Opening02", "Opening 2"),
+    openingRoom("F_Opening03", "Opening 3"),
 
     minibossRoom("F_MiniBoss01", "Root-Stalkers", {
         excludes = { "F_MiniBoss02", "F_MiniBoss03" },
@@ -312,7 +318,9 @@ return {
     routeKey = "Underworld",
     structure = {
         kind = "linear",
-        startRoomKey = "F_Opening01",
+        start = {
+            roomKind = "Opening",
+        },
         terminal = {
             prebossRoomKey = "F_PreBoss01",
         },

@@ -20,7 +20,7 @@ unknowable, or too expensive to represent.
 Linear biomes are authored as concrete room nodes:
 
 ```text
-fixed intro/opening
+start-kind room
 -> authored room nodes
 -> generated preboss room
 ```
@@ -31,6 +31,26 @@ route is legal.
 A preboss target at room 2 can be a complete snapshot if all fields are filled.
 The builder can materialize that history. The validator rejects it if preboss
 eligibility/force/terminal rules do not allow it at that point.
+
+## Start Is A Room Kind
+
+Biome starts should be declared by role when the game permits multiple concrete
+opening variants:
+
+```lua
+structure = {
+    kind = "linear",
+    start = {
+        roomKind = "Opening",
+    },
+}
+```
+
+For F, `F_Opening01`, `F_Opening02`, and `F_Opening03` are all concrete
+`Opening` rooms. The validator requires the first room to be an `Opening` and
+rejects `Opening` rooms anywhere after room 1. Generated doors cannot target
+opening rooms because openings are start-only rooms, not ordinary generated
+room candidates.
 
 ## Preboss Is A Room
 

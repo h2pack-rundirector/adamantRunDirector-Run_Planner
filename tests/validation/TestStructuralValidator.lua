@@ -60,7 +60,7 @@ local function completeDraft()
                                 },
                                 {
                                     exitIndex = 2,
-                                    targetRoomKey = "F_Opening01",
+                                    targetRoomKey = "F_Combat03",
                                     offerPoint = {
                                         kind = "generatedDoorRewards",
                                         batchKey = "nextDoors",
@@ -162,6 +162,73 @@ function TestStructuralValidator.testValidMinimalHistoryPasses()
 
         lu.assertTrue(result.valid)
         lu.assertEquals(result.findings, {})
+    end)
+end
+
+function TestStructuralValidator.testDetectsNonOpeningBiomeStart()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[1].roomKey = "F_Combat01"
+
+        local result = validatePlan(plan, catalog)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "biome_start_room_kind_mismatch")
+        lu.assertEquals(result.findings[1].payload, {
+            biomeKey = "F",
+            roomKey = "F_Combat01",
+            expectedRoomKind = "Opening",
+            actualRoomKind = "Combat",
+        })
+    end)
+end
+
+function TestStructuralValidator.testDetectsOpeningAfterBiomeStart()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[3] = oneDoorRoom("F_Opening02", "F_Combat01")
+
+        local result = validatePlan(plan, catalog)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "start_room_kind_not_at_start")
+        lu.assertEquals(result.findings[1].sourceAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 3,
+        })
+        lu.assertEquals(result.findings[1].payload, {
+            biomeKey = "F",
+            roomKey = "F_Opening02",
+            roomIndex = 3,
+            startRoomKind = "Opening",
+        })
+    end)
+end
+
+function TestStructuralValidator.testDetectsGeneratedOpeningTargets()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan(completeDraft(), catalog)
+        plan.biomes[1].rooms[2].generatedDoors.doors[2].targetRoomKey = "F_Opening03"
+
+        local result = validatePlan(plan, catalog)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "generated_door_target_start_room")
+        lu.assertEquals(result.findings[1].sourceAddress, {
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+            doorIndex = 2,
+        })
+        lu.assertEquals(result.findings[1].payload, {
+            targetRoomKey = "F_Opening03",
+            targetRoomKind = "Opening",
+            startRoomKind = "Opening",
+        })
     end)
 end
 
@@ -529,14 +596,14 @@ function TestStructuralValidator.testCandidateForcePressureProjectsDoorTarget()
                     },
                     providerKey = "nextDoorTarget",
                     providerVersion = 1,
-                    candidateKey = "F_Opening01",
+                    candidateKey = "F_Combat03",
                     candidateIndex = 1,
                     semantic = {
                         kind = "nextRoom",
                         biomeKey = "F",
                         sourceRoomKey = "F_Combat02",
                         exitIndex = 1,
-                        targetRoomKey = "F_Opening01",
+                        targetRoomKey = "F_Combat03",
                     },
                 },
             },

@@ -434,13 +434,13 @@ function TestRewardValidator.testRejectsTargetWithoutOfferProfile()
     h.withTestImport(function()
         local catalog = loadCatalog()
         local plan = materializePlan(completeDraft(), catalog)
-        plan.biomes[1].rooms[1].generatedDoors.doors[1].targetRoomKey = "F_Opening01"
+        plan.biomes[1].rooms[1].generatedDoors.doors[1].targetRoomKey = "F_Reprieve01"
 
         local result = validatePlan(plan, catalog)
 
         lu.assertFalse(result.valid)
         lu.assertEquals(result.findings[1].code, "reward_offer_profile_missing")
-        lu.assertEquals(result.findings[1].payload.targetRoomKey, "F_Opening01")
+        lu.assertEquals(result.findings[1].payload.targetRoomKey, "F_Reprieve01")
     end)
 end
 

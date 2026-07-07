@@ -648,8 +648,8 @@ Implemented in the current working checkpoint:
 
 Current boundary:
 
-- F is still not complete: opening variants, NPCs, and the remaining
-  feature/control-specific room rules are not declared;
+- F is still not complete: NPCs and the remaining feature/control-specific room
+  rules are not declared;
 - `F_Story01` assumes profile/meta gates are satisfied by planner scope:
   prior `F_Boss01`, Artemis text-line state, active bounty state, and
   `ForceIfUnseenForRuns` remain out-of-scope profile inputs rather than
@@ -691,12 +691,31 @@ Modeling notes:
 
 Current boundary:
 
-- remaining F declaration work is mostly opening variants, reprieve reward
-  behavior, and any NPC/feature room rules with route-local state;
-- opening variants need a short raw-data pass before declaring them, because the
-  planner should not model profile-only start variants as generated route rooms;
+- remaining F declaration work is mostly reprieve reward behavior and any
+  NPC/feature room rules with route-local state;
 - reprieve/fountain still needs an honest generated-door reward policy before
   the F declaration slice can be called complete enough for a dedicated UI pass.
+
+## Completed F Opening Start-Role Slice
+
+Implemented in the current working checkpoint:
+
+- replaced F's single `startRoomKey = "F_Opening01"` structure contract with
+  `structure.start.roomKind = "Opening"`;
+- declared `F_Opening01`, `F_Opening02`, and `F_Opening03` as concrete
+  `Opening` / `FixedOpening` rooms with one physical exit;
+- added structural validation that requires room 1 to match the declared start
+  room kind;
+- added structural validation that rejects start-kind rooms after room 1;
+- added generated-door and candidate feedback for generated targets that point
+  at start-kind rooms.
+
+Modeling notes:
+
+- F requires one opening room, not one specific opening key;
+- opening rooms are valid only as the first biome room;
+- generated doors cannot target opening rooms, so opening variants remain
+  start choices rather than route-generated rooms.
 
 ## Immediate Next Slice Recommendation
 
@@ -708,8 +727,6 @@ Finish remaining F declaration holes before the dedicated UI pass
 
 Concrete scope:
 
-- audit the remaining F opening rooms and decide which are route-visible rooms
-  versus profile/story variants of the fixed start;
 - decide the honest generated-door reward behavior for `F_Reprieve01`;
 - add any remaining F room declarations whose conditions can be represented by
   existing route-local counters/history;
@@ -729,7 +746,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 113 passed;
+- child tests: 117 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.
