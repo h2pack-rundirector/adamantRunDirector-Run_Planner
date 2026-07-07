@@ -15,6 +15,10 @@ end
 
 function generatedDoor.draw(state, imgui, evaluation, context, door)
     widgets.text(imgui, "Door " .. tostring(context.doorIndex) .. " / exit " .. tostring(door.exitIndex))
+    local address = doorAddress(state, context)
+    local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
+    local doorFeedback = feedback.forAddress(evaluation, address)
+
     local providers = door.candidateProviders or {}
     local targetOptions = providers.nextDoorTarget or state.roomOptions
     local nextTarget, targetChanged = widgets.dropdown(
@@ -28,7 +32,10 @@ function generatedDoor.draw(state, imgui, evaluation, context, door)
     end
 
     rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
-    widgets.feedback(imgui, "Door feedback", feedback.forAddress(evaluation, doorAddress(state, context)))
+    widgets.feedback(imgui, "Route blocker", routeBlocker)
+    if doorFeedback ~= routeBlocker then
+        widgets.feedback(imgui, "Door feedback", doorFeedback)
+    end
 end
 
 return generatedDoor

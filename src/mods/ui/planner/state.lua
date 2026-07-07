@@ -106,6 +106,36 @@ local function rewardTypeOptionsFor(state, storeKey)
     return state.rewardTypeOptions[storeKey] or plannerOptions.empty()
 end
 
+local function selectedDoorOptionsFor(state, generatedDoors)
+    if generatedDoors == nil then
+        return state.emptyOptions
+    end
+
+    local doors = generatedDoors.doors or state.emptyOptions.values
+    local doorCount = #doors
+    local cached = state.selectedDoorOptionCache[generatedDoors]
+    if cached ~= nil and cached.doorCount == doorCount then
+        return cached.options
+    end
+
+    local values = {}
+    local labels = {}
+    for index = 1, doorCount do
+        values[index] = index
+        labels[index] = "Door " .. tostring(index)
+    end
+
+    local optionSet = {
+        values = values,
+        labels = labels,
+    }
+    state.selectedDoorOptionCache[generatedDoors] = {
+        doorCount = doorCount,
+        options = optionSet,
+    }
+    return optionSet
+end
+
 local function attachRewardProvider(state, offer)
     local rewardOptions = rewardTypeOptionsFor(state, offer.store)
     offer.candidateProviders = {
@@ -381,6 +411,9 @@ function plannerState.create(opts)
         rewardTypeOptions = plannerOptions.rewardTypeOptions(catalog),
         boonSourceOptions = plannerOptions.sourceOptions(catalog, "boon"),
         emptyOptions = plannerOptions.empty(),
+        selectedDoorOptionCache = setmetatable({}, {
+            __mode = "k",
+        }),
     }
 
     function state.currentBiome()
@@ -394,6 +427,9 @@ function plannerState.create(opts)
     end
     function state.ensureRoomOffer(room)
         return ensureRoomOffer(state, room)
+    end
+    function state.selectedDoorOptions(generatedDoors)
+        return selectedDoorOptionsFor(state, generatedDoors)
     end
     function state.evaluate()
         return evaluate(state)

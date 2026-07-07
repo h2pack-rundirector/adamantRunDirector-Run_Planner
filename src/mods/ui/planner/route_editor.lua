@@ -3,16 +3,24 @@ local widgets = import("mods/ui/planner/widgets.lua")
 
 local routeEditor = {}
 
-local TITLE = "Run Planner debug harness"
-local HELP = "Minimal F route editor using the real form, history, validation, and feedback pipeline."
+local DEFAULT_OPTIONS = {
+    title = "F route editor",
+    notes = {},
+}
 
-function routeEditor.draw(state, ctx)
+local function drawHeader(imgui, opts)
+    opts = opts or DEFAULT_OPTIONS
+    widgets.text(imgui, opts.title or DEFAULT_OPTIONS.title)
+    for _, note in ipairs(opts.notes or DEFAULT_OPTIONS.notes) do
+        widgets.text(imgui, note)
+    end
+end
+
+function routeEditor.draw(state, ctx, opts)
     local drawContext = ctx and ctx.draw or nil
     local imgui = drawContext and drawContext.imgui or nil
 
-    widgets.text(imgui, TITLE)
-    widgets.text(imgui, HELP)
-    widgets.text(imgui, "Uses docs/system_design contracts; not the final planner UI.")
+    drawHeader(imgui, opts)
 
     if widgets.button(imgui, "Reset F sample") then
         state.resetDraft()

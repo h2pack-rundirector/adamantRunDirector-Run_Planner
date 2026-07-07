@@ -5,19 +5,6 @@ local widgets = import("mods/ui/planner/widgets.lua")
 
 local roomForm = {}
 
-local function selectedDoorOptions(generatedDoors)
-    local values = {}
-    local labels = {}
-    for index, _ in ipairs(generatedDoors.doors or {}) do
-        values[index] = index
-        labels[index] = "Door " .. tostring(index)
-    end
-    return {
-        values = values,
-        labels = labels,
-    }
-end
-
 local function roomAddress(state, context)
     return {
         routeKey = state.draft.routeKey,
@@ -28,6 +15,10 @@ end
 
 function roomForm.draw(state, imgui, evaluation, context, room)
     widgets.section(imgui, "Room " .. tostring(context.roomIndex))
+    local address = roomAddress(state, context)
+    local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
+    local roomFeedback = feedback.forAddress(evaluation, address)
+
     local nextRoomKey, roomChanged = widgets.dropdown(
         imgui,
         "Room##" .. tostring(context.roomIndex),
@@ -38,7 +29,10 @@ function roomForm.draw(state, imgui, evaluation, context, room)
         state.setRoomKey(context.roomIndex, nextRoomKey)
     end
 
-    widgets.feedback(imgui, "Room feedback", feedback.forAddress(evaluation, roomAddress(state, context)))
+    widgets.feedback(imgui, "Route blocker", routeBlocker)
+    if roomFeedback ~= routeBlocker then
+        widgets.feedback(imgui, "Room feedback", roomFeedback)
+    end
 
     if room.offerPoints ~= nil then
         roomOffer.draw(state, imgui, evaluation, context, room)
@@ -54,7 +48,7 @@ function roomForm.draw(state, imgui, evaluation, context, room)
         imgui,
         "Selected door##" .. tostring(context.roomIndex),
         generatedDoors.selectedDoorIndex,
-        selectedDoorOptions(generatedDoors)
+        state.selectedDoorOptions(generatedDoors)
     )
     if selectedChanged then
         state.setSelectedDoor(context.roomIndex, nextSelectedDoor)

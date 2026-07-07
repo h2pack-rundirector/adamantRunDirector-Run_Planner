@@ -16,6 +16,10 @@ end
 
 function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
     local offer = state.ensureOffer(door)
+    local address = offerAddress(state, context)
+    local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
+    local offerFeedback = feedback.forAddress(evaluation, address)
+
     local offerProviders = offer.candidateProviders or {}
     local nextStore, storeChanged = widgets.dropdown(
         imgui,
@@ -42,7 +46,10 @@ function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
     end
 
     payload.draw(state, imgui, context, offer)
-    widgets.feedback(imgui, "Reward feedback", feedback.forAddress(evaluation, offerAddress(state, context)))
+    widgets.feedback(imgui, "Route blocker", routeBlocker)
+    if offerFeedback ~= routeBlocker then
+        widgets.feedback(imgui, "Reward feedback", offerFeedback)
+    end
 
     local nextAcquired, acquiredChanged = widgets.checkbox(
         imgui,

@@ -59,3 +59,31 @@ function TestPlannerState.testEvaluationCacheInvalidatesAfterMutation()
         lu.assertEquals(calls.applyCandidateFeedback, 2)
     end)
 end
+
+function TestPlannerState.testSelectedDoorOptionsAreCachedByDoorBatch()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+        local generatedDoors = state.currentBiome().rooms[1].generatedDoors
+
+        local first = state.selectedDoorOptions(generatedDoors)
+        local second = state.selectedDoorOptions(generatedDoors)
+
+        lu.assertTrue(first == second)
+        lu.assertEquals(first.values, { 1 })
+        lu.assertEquals(first.labels, { "Door 1" })
+
+        generatedDoors.doors[#generatedDoors.doors + 1] = {
+            exitIndex = 2,
+            targetRoomKey = "F_Combat02",
+        }
+        local rebuilt = state.selectedDoorOptions(generatedDoors)
+
+        lu.assertFalse(rebuilt == first)
+        lu.assertEquals(rebuilt.values, { 1, 2 })
+        lu.assertEquals(rebuilt.labels, { "Door 1", "Door 2" })
+    end)
+end

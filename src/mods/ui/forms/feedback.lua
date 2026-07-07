@@ -26,4 +26,12 @@ function feedback.forAddress(evaluation, address)
     return nil
 end
 
+function feedback.firstIssueForAddress(evaluation, address)
+    local firstIssue = evaluation and evaluation.status and evaluation.status.firstIssue or nil
+    if firstIssue ~= nil and addressMatches(firstIssue.address, address) then
+        return firstIssue
+    end
+    return nil
+end
+
 return feedback

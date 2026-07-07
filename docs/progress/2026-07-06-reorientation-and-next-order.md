@@ -549,27 +549,65 @@ Implemented in the current working checkpoint:
 
 Current boundary:
 
-- the editor shell is still F-only and still labels itself as the debug
-  harness;
+- the editor shell is still F-only;
 - the production UI is not yet wired as a separate tab or biome-panel surface;
 - generated selected-door options are still built by the room form.
+
+## Completed F Editor Usability Foundation Slice
+
+Implemented in the current working checkpoint:
+
+- `src/mods/ui/planner/route_editor.lua` now has neutral shared editor copy,
+  while `src/mods/ui/debug_harness.lua` supplies debug-only title/detail text
+  when it wraps the editor;
+- selected-door option providers moved out of
+  `src/mods/ui/forms/room.lua` and into planner state;
+- selected-door options are cached per generated-door batch and rebuilt only
+  when the door count changes.
+
+Current boundary:
+
+- the editor still uses rough debug-era buttons and fallback text layout;
+- the production UI is still not wired as a separate tab or biome-panel
+  surface;
+- route status is still only the summary block, with no marker/inactive
+  downstream presentation pass yet.
+
+## Completed F Route Status Marker Slice
+
+Implemented in the current working checkpoint:
+
+- form feedback helpers can now identify the route's first blocking issue for
+  a specific form address;
+- F room, generated-door, generated reward, and room-local reward controls
+  render that first issue with a `Route blocker` label at the owning address;
+- route-editor fallback coverage verifies that an invalid selected F door
+  target surfaces the first blocking issue near the door controls.
+
+Current boundary:
+
+- the marker is exact-address only; it does not yet translate locations into
+  friendlier room/door labels in the top-level status summary;
+- downstream room forms after the first blocking issue are not greyed or
+  inactive yet;
+- candidate coloring remains provider-owned and unchanged by this marker pass.
 
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Stabilize F editor usability
+Add F error horizon presentation
 ```
 
 Concrete scope:
 
-- separate debug-only wording from the shared route editor while keeping the
-  harness as the proof wrapper;
-- move selected-door option construction out of per-room draw code into a
-  stable state/provider helper;
-- decide whether route status markers or inactive downstream presentation need
-  to land before broader biome work;
+- translate the first blocking feedback address into a concise room/door label
+  in route status;
+- keep context-invalid options visible and colored through existing candidate
+  feedback rather than hiding them in the editor layer;
+- decide whether downstream room forms after the first blocking invalid should
+  render inactive before broader biome work;
 - keep G/P/Q deferred until F can be exercised comfortably in-game.
 
 ## Validation Baseline
@@ -585,7 +623,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 103 passed;
+- child tests: 105 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.
