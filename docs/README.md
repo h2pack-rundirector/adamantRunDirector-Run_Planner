@@ -15,6 +15,8 @@ Notable model authorities:
 
 - `system_design/validation/FORCE_PRESSURE_MODEL.md`: force-pressure
   declaration and generated-door batch validation semantics.
+- `system_design/ui/UI_IMPLEMENTATION_ORDER.md`: production UI build order,
+  draw-state constraints, and control-layer rollout.
 
 ## Progress
 

@@ -360,6 +360,7 @@ is stable enough that new mechanics plug into it instead of reshaping it.
 - `../model/DECLARATION_OWNERSHIP.md` owns declaration boundaries.
 - `../pipeline/TIMELINE_EVENTS.md` owns lifecycle phases and counters.
 - `../ui/FORM_FEEDBACK_CONTRACT.md` owns form and feedback contracts.
+- `../ui/UI_IMPLEMENTATION_ORDER.md` owns production UI build order.
 - `../validation/VALIDATION_MODEL.md` owns validation and candidate flow.
 - `../validation/REQUIREMENTS_DSL.md` owns predicate language.
 - `../model/REWARD_MODEL.md` owns reward offer and bag concepts.

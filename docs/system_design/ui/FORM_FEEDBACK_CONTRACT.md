@@ -212,3 +212,11 @@ The form layer should not:
 - infer generated doors from compact role/group choices in the canonical plan;
 - expose row-based route coordinates as validation language;
 - require route feedback to know leaf-local widget aliases.
+
+## Supporting Docs
+
+- `UI_IMPLEMENTATION_ORDER.md` owns production UI build order and draw-state
+  constraints.
+- `../validation/VALIDATION_MODEL.md` owns candidate evaluation and feedback
+  semantics.
+- `../model/CANONICAL_PLAN.md` owns canonical plan shape.
