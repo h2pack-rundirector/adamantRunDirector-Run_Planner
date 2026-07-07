@@ -73,6 +73,85 @@ local function context()
     }
 end
 
+local BASIC_REWARD_TYPES = {
+    "MaxHealthDrop",
+    "MaxManaDrop",
+    "RoomMoneyDrop",
+}
+
+local function offerForTarget(exitIndex, targetRoomKey)
+    if targetRoomKey == "F_Shop01" then
+        return {
+            store = "WorldShop",
+            rewardType = "HermesUpgrade",
+            acquired = false,
+        }
+    end
+
+    return {
+        store = "RunProgress",
+        rewardType = BASIC_REWARD_TYPES[((exitIndex - 1) % #BASIC_REWARD_TYPES) + 1],
+        acquired = false,
+    }
+end
+
+local function generatedDoor(exitIndex, targetRoomKey)
+    return {
+        exitIndex = exitIndex,
+        targetRoomKey = targetRoomKey,
+        offerPoint = {
+            kind = "generatedDoorRewards",
+            batchKey = "nextDoors",
+            offers = {
+                offerForTarget(exitIndex, targetRoomKey),
+            },
+        },
+    }
+end
+
+local function roomWithDoors(roomKey, selectedDoorIndex, targetRoomKeys)
+    local doors = {}
+    for index, targetRoomKey in ipairs(targetRoomKeys) do
+        doors[index] = generatedDoor(index, targetRoomKey)
+    end
+    return {
+        roomKey = roomKey,
+        generatedDoors = {
+            batchRule = "Standard",
+            selectedDoorIndex = selectedDoorIndex or 1,
+            doors = doors,
+        },
+    }
+end
+
+local function longFRouteDraft()
+    return {
+        routeKey = "Underworld",
+        biomes = {
+            {
+                biomeKey = "F",
+                rooms = {
+                    roomWithDoors("F_Opening01", 1, { "F_Combat01" }),
+                    roomWithDoors("F_Combat01", 1, { "F_Combat02" }),
+                    roomWithDoors("F_Combat02", 1, { "F_Combat03", "F_Combat19" }),
+                    roomWithDoors("F_Combat03", 1, { "F_Combat04", "F_Combat21" }),
+                    roomWithDoors("F_Combat04", 1, { "F_Combat08", "F_Combat22" }),
+                    roomWithDoors("F_Combat08", 1, { "F_Combat05", "F_Combat11" }),
+                    roomWithDoors("F_Combat05", 1, { "F_Shop01", "F_Combat12" }),
+                    roomWithDoors("F_Shop01", 1, { "F_Combat06", "F_Combat13" }),
+                    roomWithDoors("F_Combat06", 1, { "F_Combat07", "F_Combat14" }),
+                    roomWithDoors("F_Combat07", 1, { "F_Combat15", "F_Combat16" }),
+                    roomWithDoors("F_Combat15", 1, { "F_Combat17", "F_Combat18" }),
+                    roomWithDoors("F_Combat17", 1, { "F_PreBoss01", "F_Combat20" }),
+                    {
+                        roomKey = "F_PreBoss01",
+                    },
+                },
+            },
+        },
+    }
+end
+
 function TestRoutePipeline.testIncompleteDraftStopsBeforeMaterialization()
     h.withTestImport(function()
         local pipeline = h.testImport("mods/pipeline/route.lua")
@@ -117,6 +196,19 @@ function TestRoutePipeline.testValidDraftBuildsPlanHistoryAndValidation()
         lu.assertEquals(result.plan.routeKey, "Underworld")
         lu.assertEquals(#result.history.events, 14)
         lu.assertTrue(result.validation.valid)
+    end)
+end
+
+function TestRoutePipeline.testExpandedFDeclarationSupportsLongRouteToPreboss()
+    h.withTestImport(function()
+        local pipeline = h.testImport("mods/pipeline/route.lua")
+        local result = pipeline.evaluate(longFRouteDraft(), context())
+
+        lu.assertEquals(result.state, "valid")
+        lu.assertTrue(result.complete)
+        lu.assertTrue(result.valid)
+        lu.assertEquals(result.feedback, {})
+        lu.assertEquals(result.history.roomHistory[#result.history.roomHistory].roomKey, "F_PreBoss01")
     end)
 end
 

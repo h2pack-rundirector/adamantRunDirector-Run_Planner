@@ -44,6 +44,25 @@ local function feedbackCodeAt(result, address)
     return nil
 end
 
+local function optionIndex(provider, value)
+    for index, candidate in ipairs(provider.values or {}) do
+        if candidate == value then
+            return index
+        end
+    end
+    return nil
+end
+
+local function candidateCodeCount(result, code)
+    local count = 0
+    for _, candidate in ipairs(result.candidateResults or {}) do
+        if candidate.code == code then
+            count = count + 1
+        end
+    end
+    return count
+end
+
 function TestDebugHarness.testDefaultDraftEvaluatesThroughRealPipeline()
     h.withTestImport(function()
         local harness = createHarness()
@@ -54,14 +73,19 @@ function TestDebugHarness.testDefaultDraftEvaluatesThroughRealPipeline()
         lu.assertTrue(result.complete)
         lu.assertTrue(result.valid)
         lu.assertNotNil(result.history)
-        lu.assertEquals(#result.candidateResults, 7)
-        lu.assertEquals(result.candidateResults[1].code, "f_shop_too_early")
-        lu.assertEquals(result.candidateResults[2].code, "f_preboss_too_early")
-        lu.assertEquals(result.candidateResults[3].code, "room_creation_cap_exceeded")
+        lu.assertEquals(#result.candidateResults, 27)
+        lu.assertEquals(candidateCodeCount(result, "f_combat05_early"), 2)
+        lu.assertEquals(candidateCodeCount(result, "f_story_arachne_too_early"), 2)
+        lu.assertEquals(candidateCodeCount(result, "f_preboss_too_early"), 2)
+        lu.assertEquals(candidateCodeCount(result, "room_creation_cap_exceeded"), 1)
 
         local provider = harness.draft.biomes[1].rooms[2].generatedDoors.doors[1].candidateProviders.nextDoorTarget
-        lu.assertEquals(provider.messages[2], "Generated room target exceeds its creation cap.")
-        lu.assertTrue(provider.hidden[5])
+        lu.assertEquals(provider.messages[optionIndex(provider, "F_Combat01")], "Generated room target exceeds its creation cap.")
+        lu.assertEquals(provider.messages[optionIndex(provider, "F_Combat05")], "Generated room target fails declared eligibility.")
+        lu.assertTrue(provider.hidden[optionIndex(provider, "F_Combat05")])
+        lu.assertEquals(provider.messages[optionIndex(provider, "F_Story01")], "Generated room target fails declared eligibility.")
+        lu.assertFalse(provider.hidden[optionIndex(provider, "F_Story01")])
+        lu.assertTrue(provider.hidden[optionIndex(provider, "F_PreBoss01")])
 
         local rewardProvider = harness.draft.biomes[1].rooms[2].generatedDoors.doors[1].offerPoint.offers[1].candidateProviders.rewardType
         lu.assertEquals(rewardProvider.messages[4], "Devotion sources must already exist in acquired loot history.")
@@ -147,7 +171,7 @@ function TestDebugHarness.testDrawTabEmitsStatusWithoutFullImguiSurface()
         lu.assertNotNil(combined:find("Run Planner debug harness", 1, true))
         lu.assertNotNil(combined:find("docs/system_design", 1, true))
         lu.assertNotNil(combined:find("State: valid", 1, true))
-        lu.assertNotNil(combined:find("Candidates: 7", 1, true))
+        lu.assertNotNil(combined:find("Candidates: 27", 1, true))
     end)
 end
 

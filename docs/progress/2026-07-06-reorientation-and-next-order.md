@@ -631,23 +631,51 @@ Current boundary:
 - persistence/storage handoff is not implemented; the current surface is still
   for live UI/data/validation loop testing.
 
+## Completed Simple F Declaration Expansion Slice
+
+Implemented in the current working checkpoint:
+
+- F combat declarations now cover `F_Combat01` through `F_Combat22`, using
+  physical exit counts from the topology audit and route-local
+  `BiomeEncounterDepth` early/late eligibility from raw game data;
+- `F_Reprieve01` is declared with an explicit `Fountain` room template;
+- `F_Story01` is declared with an explicit `Story` room template, two exits,
+  one creation per run, and only the modeled route-local `BiomeDepthCache`
+  `4..8` eligibility window;
+- declaration coverage checks the new combat, reprieve, and story metadata;
+- route-pipeline coverage verifies a longer F prefix can take the shop within
+  its force window and reach preboss without artificial combat cap noise.
+
+Current boundary:
+
+- F is still not complete: miniboss variants, NPCs, and the remaining
+  feature/control-specific room rules are not declared;
+- `F_Story01` assumes profile/meta gates are satisfied by planner scope:
+  prior `F_Boss01`, Artemis text-line state, active bounty state, and
+  `ForceIfUnseenForRuns` remain out-of-scope profile inputs rather than
+  route-local predicates;
+- miniboss variants still need room-history/not-in-history eligibility support
+  before they can be modeled honestly;
+- reprieve/fountain is declared structurally, but generated-door reward behavior
+  for non-reward rooms remains a separate modeling decision.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Run an F editor model-testing pass
+Complete remaining F room declarations
 ```
 
 Concrete scope:
 
-- boot the planner UI through the module entrypoint and exercise the F
-  room/reward/history/feedback loop manually;
-- record rough spots that block useful model testing separately from visual
-  polish that can wait for the dedicated UI pass;
-- decide whether the next code slice should be targeted F usability polish,
-  F data-model completion, or broader biome work;
-- keep G/P/Q deferred until the F UI/data/validation loop has been exercised.
+- add the missing requirement support needed for F miniboss mutual exclusion;
+- add the modeled `F_MiniBoss*` rooms from local audits with force/eligibility
+  split correctly between declaration metadata, profile-scope meta gates, and
+  validation;
+- decide the honest generated-door reward behavior for `F_Reprieve01`;
+- keep G/P/Q deferred until F room declarations are complete enough for the
+  UI/data/validation loop.
 
 ## Validation Baseline
 
@@ -662,7 +690,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 108 passed;
+- child tests: 109 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.

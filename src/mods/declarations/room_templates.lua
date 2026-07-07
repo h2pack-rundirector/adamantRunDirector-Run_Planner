@@ -13,6 +13,20 @@ return {
         stateKind = "StandardCombat",
     },
 
+    Fountain = {
+        key = "Fountain",
+        label = "Fountain",
+        roomKinds = { "Reprieve" },
+        stateKind = "Fountain",
+    },
+
+    Story = {
+        key = "Story",
+        label = "Story",
+        roomKinds = { "Story" },
+        stateKind = "Story",
+    },
+
     Shop = {
         key = "Shop",
         label = "Shop",

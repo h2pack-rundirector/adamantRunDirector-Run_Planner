@@ -60,7 +60,7 @@ Intro/preboss topology rooms were excluded from this list:
 - Eligibility adds mutual exclusion through `CurrentRun.RoomsEntered`, plus
   max creation/appearance limits.
 - `F_MiniBoss02` and `F_MiniBoss03` add meta-progression requirements.
-- `F_MiniBoss03` is `DebugOnly`.
+- `F_MiniBoss03` is not `DebugOnly` in the current raw game data.
 
 `F_Shop01`
 

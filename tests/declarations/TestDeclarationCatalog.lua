@@ -5,6 +5,16 @@ local h = dofile("tests/support/import_harness.lua")
 
 TestDeclarationCatalog = {}
 
+local function assertEligibility(requirement, comparison, value, code)
+    lu.assertEquals(requirement, {
+        kind = "BiomeEncounterDepth",
+        comparison = comparison,
+        value = value,
+        code = code,
+        presentation = "hide",
+    })
+end
+
 function TestDeclarationCatalog.testCatalogLoadsRouteOrderAndMinimalFDeclarations()
     h.withTestImport(function()
         local catalog = h.testImport("mods/data.lua").loadCatalog()
@@ -36,6 +46,64 @@ function TestDeclarationCatalog.testCatalogLoadsRouteOrderAndMinimalFDeclaration
         lu.assertEquals(combat.eligibility.kind, "BiomeEncounterDepth")
         lu.assertEquals(combat.offerProfile, "RunProgressMajorMinor")
 
+        assertEligibility(f.rooms.lookup.F_Combat03.eligibility, "<=", 5, "f_combat03_late")
+        assertEligibility(f.rooms.lookup.F_Combat05.eligibility, ">=", 5, "f_combat05_early")
+        lu.assertEquals(f.rooms.lookup.F_Combat08.kind, "Combat")
+        lu.assertEquals(#f.rooms.lookup.F_Combat08.exits, 2)
+        assertEligibility(f.rooms.lookup.F_Combat08.eligibility, "<=", 5, "f_combat08_late")
+        lu.assertEquals(f.rooms.lookup.F_Combat09.kind, "Combat")
+        lu.assertEquals(#f.rooms.lookup.F_Combat09.exits, 1)
+        assertEligibility(f.rooms.lookup.F_Combat09.eligibility, "<=", 4, "f_combat09_late")
+        lu.assertEquals(f.rooms.lookup.F_Combat10.kind, "Combat")
+        lu.assertEquals(#f.rooms.lookup.F_Combat10.exits, 1)
+        assertEligibility(f.rooms.lookup.F_Combat10.eligibility, "<=", 5, "f_combat10_late")
+        lu.assertEquals(f.rooms.lookup.F_Combat11.kind, "Combat")
+        lu.assertEquals(#f.rooms.lookup.F_Combat11.exits, 2)
+        assertEligibility(f.rooms.lookup.F_Combat11.eligibility, ">=", 5, "f_combat11_early")
+        lu.assertEquals(f.rooms.lookup.F_Combat18.kind, "Combat")
+        lu.assertEquals(#f.rooms.lookup.F_Combat18.exits, 2)
+        assertEligibility(f.rooms.lookup.F_Combat18.eligibility, ">=", 5, "f_combat18_early")
+        lu.assertEquals(f.rooms.lookup.F_Combat19.kind, "Combat")
+        lu.assertEquals(#f.rooms.lookup.F_Combat19.exits, 2)
+        assertEligibility(f.rooms.lookup.F_Combat19.eligibility, "<=", 5, "f_combat19_late")
+        lu.assertEquals(f.rooms.lookup.F_Combat20.kind, "Combat")
+        lu.assertEquals(#f.rooms.lookup.F_Combat20.exits, 2)
+        assertEligibility(f.rooms.lookup.F_Combat20.eligibility, ">=", 5, "f_combat20_early")
+        lu.assertEquals(f.rooms.lookup.F_Combat21.kind, "Combat")
+        lu.assertEquals(#f.rooms.lookup.F_Combat21.exits, 2)
+        assertEligibility(f.rooms.lookup.F_Combat21.eligibility, "<=", 5, "f_combat21_late")
+        lu.assertEquals(f.rooms.lookup.F_Combat22.kind, "Combat")
+        lu.assertEquals(#f.rooms.lookup.F_Combat22.exits, 2)
+        assertEligibility(f.rooms.lookup.F_Combat22.eligibility, "<=", 5, "f_combat22_late")
+
+        local reprieve = f.rooms.lookup.F_Reprieve01
+        lu.assertEquals(reprieve.kind, "Reprieve")
+        lu.assertEquals(reprieve.roomTemplate, "Fountain")
+        lu.assertEquals(#reprieve.exits, 2)
+        lu.assertEquals(reprieve.counters.biomeEncounterDepthCost, 0)
+
+        local story = f.rooms.lookup.F_Story01
+        lu.assertEquals(story.kind, "Story")
+        lu.assertEquals(story.roomTemplate, "Story")
+        lu.assertEquals(#story.exits, 2)
+        lu.assertEquals(story.eligibility.kind, "All")
+        lu.assertEquals(story.eligibility.requirements[1], {
+            kind = "BiomeDepthCache",
+            comparison = ">=",
+            value = 4,
+            code = "f_story_arachne_too_early",
+            presentation = "invalid",
+        })
+        lu.assertEquals(story.eligibility.requirements[2], {
+            kind = "BiomeDepthCache",
+            comparison = "<=",
+            value = 8,
+            code = "f_story_arachne_too_late",
+            presentation = "invalid",
+        })
+        lu.assertEquals(story.caps.maxCreationsThisRun, 1)
+        lu.assertNil(story.force)
+
         local shop = f.rooms.lookup.F_Shop01
         lu.assertEquals(shop.offerProfile, "WorldShop")
         lu.assertEquals(shop.eligibility.kind, "All")
@@ -64,6 +132,10 @@ function TestDeclarationCatalog.testRoomTemplatesAndOfferProfilesAreExplicitDecl
 
         lu.assertEquals(catalog.roomTemplates.StandardCombat.roomKinds, { "Combat" })
         lu.assertTrue(catalog.roomTemplates.StandardCombat.roomKindSet.Combat)
+        lu.assertEquals(catalog.roomTemplates.Fountain.roomKinds, { "Reprieve" })
+        lu.assertTrue(catalog.roomTemplates.Fountain.roomKindSet.Reprieve)
+        lu.assertEquals(catalog.roomTemplates.Story.roomKinds, { "Story" })
+        lu.assertTrue(catalog.roomTemplates.Story.roomKindSet.Story)
 
         local roomRewardProfile = catalog.offerProfiles.RunProgressMajorMinor
         lu.assertEquals(roomRewardProfile.kind, "storeChoice")
