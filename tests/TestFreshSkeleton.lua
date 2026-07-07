@@ -11,8 +11,12 @@ function TestFreshSkeleton.testSystemsCreateReturnsFreshSkeleton()
             data = h.testImport("mods/data.lua"),
         })
 
-        lu.assertEquals(systems.controlTemplates, {})
-        lu.assertEquals(systems.routeControls, {})
+        lu.assertEquals(systems.storage[1].alias, "SelectedRoute")
+        lu.assertEquals(systems.storage[1].default, "Underworld")
+        lu.assertIsFunction(systems.controlTemplates.PlannerDraft.createRuntime)
+        lu.assertEquals(systems.routeControls.PlannerDraft, {
+            template = "PlannerDraft",
+        })
         lu.assertEquals(systems.routeControlTabs, {})
         lu.assertNotNil(systems.catalog.routes.lookup.Underworld)
         lu.assertNotNil(systems.catalog.biomes.lookup.F)

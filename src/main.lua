@@ -37,6 +37,7 @@ local function init()
         return
     end
 
+    module.data.define(moduleSystems.storage)
     module.controls.defineTemplates(moduleSystems.controlTemplates)
     module.controls.define(moduleSystems.routeControls)
     module.ui.tab(moduleSystems.ui.drawTab)

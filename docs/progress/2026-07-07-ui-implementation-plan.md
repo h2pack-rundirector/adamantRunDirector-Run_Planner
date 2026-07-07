@@ -4,6 +4,31 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-07 - Storage And Control Registration Implemented
+
+The second UI implementation slice now adds the first production storage/control
+contract without replacing the current F editor state.
+
+Implemented behavior:
+
+- `module.data.define(...)` is wired through `moduleSystems.storage`;
+- public UI storage declares active route and active route-biome selections;
+- `data.buildControlTemplates()` and `data.buildControls()` register one
+  `PlannerDraft` control;
+- `PlannerDraft` owns flat normalized draft tables for rooms, generated doors,
+  generated-door offers, and room-local offers;
+- empty planner draft storage materializes the current minimal F sample through
+  the control adapter;
+- the existing in-memory F debug editor still runs unchanged;
+- the default F sample lives in `mods/forms/defaults.lua` so the debug editor
+  and storage adapter share one source.
+
+Validation run:
+
+- `lua tests/all.lua` - 122 passed;
+- `luacheck src tests` - 0 warnings / 0 errors.
+- focused ModpackLib activation harness - passed.
+
 ### 2026-07-07 - Dropdown Primitive Fix Implemented
 
 The first UI implementation slice now fixes the planner dropdown wrapper.
