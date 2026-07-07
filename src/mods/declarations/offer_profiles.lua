@@ -6,6 +6,14 @@ return {
         stores = { "RunProgress", "MetaProgress" },
     },
 
+    RunProgressBoonOnly = {
+        key = "RunProgressBoonOnly",
+        label = "Run Progress / Boon Only",
+        kind = "storeChoice",
+        stores = { "RunProgress" },
+        eligibleRewards = { "Boon" },
+    },
+
     WorldShop = {
         key = "WorldShop",
         label = "World Shop",

@@ -15,6 +15,17 @@ local function assertEligibility(requirement, comparison, value, code)
     })
 end
 
+local function assertRoomEnteredHistoryEligibility(requirement, roomKeys, code)
+    lu.assertEquals(requirement, {
+        kind = "RoomEnteredHistory",
+        roomKeys = roomKeys,
+        comparison = "==",
+        value = 0,
+        code = code,
+        presentation = "hide",
+    })
+end
+
 function TestDeclarationCatalog.testCatalogLoadsRouteOrderAndMinimalFDeclarations()
     h.withTestImport(function()
         local catalog = h.testImport("mods/data.lua").loadCatalog()
@@ -38,6 +49,32 @@ function TestDeclarationCatalog.testCatalogLoadsRouteOrderAndMinimalFDeclaration
         local opening = f.rooms.lookup.F_Opening01
         lu.assertEquals(opening.kind, "Opening")
         lu.assertEquals(#opening.exits, 1)
+
+        local miniboss = f.rooms.lookup.F_MiniBoss01
+        lu.assertEquals(miniboss.kind, "Miniboss")
+        lu.assertEquals(miniboss.roomTemplate, "Miniboss")
+        lu.assertEquals(#miniboss.exits, 1)
+        lu.assertEquals(miniboss.force, {
+            kind = "BiomeDepthWindow",
+            axis = "BiomeDepthCache",
+            start = 4,
+            deadline = 6,
+        })
+        lu.assertEquals(miniboss.caps.maxCreationsThisRun, 1)
+        lu.assertEquals(miniboss.offerProfile, "RunProgressBoonOnly")
+        assertRoomEnteredHistoryEligibility(miniboss.eligibility, {
+            "F_MiniBoss02",
+            "F_MiniBoss03",
+        }, "f_miniboss01_other_miniboss_entered")
+
+        assertRoomEnteredHistoryEligibility(f.rooms.lookup.F_MiniBoss02.eligibility, {
+            "F_MiniBoss01",
+            "F_MiniBoss03",
+        }, "f_miniboss02_other_miniboss_entered")
+        assertRoomEnteredHistoryEligibility(f.rooms.lookup.F_MiniBoss03.eligibility, {
+            "F_MiniBoss01",
+            "F_MiniBoss02",
+        }, "f_miniboss03_other_miniboss_entered")
 
         local combat = f.rooms.lookup.F_Combat02
         lu.assertEquals(combat.kind, "Combat")
@@ -136,15 +173,45 @@ function TestDeclarationCatalog.testRoomTemplatesAndOfferProfilesAreExplicitDecl
         lu.assertTrue(catalog.roomTemplates.Fountain.roomKindSet.Reprieve)
         lu.assertEquals(catalog.roomTemplates.Story.roomKinds, { "Story" })
         lu.assertTrue(catalog.roomTemplates.Story.roomKindSet.Story)
+        lu.assertEquals(catalog.roomTemplates.Miniboss.roomKinds, { "Miniboss" })
+        lu.assertTrue(catalog.roomTemplates.Miniboss.roomKindSet.Miniboss)
 
         local roomRewardProfile = catalog.offerProfiles.RunProgressMajorMinor
         lu.assertEquals(roomRewardProfile.kind, "storeChoice")
         lu.assertEquals(roomRewardProfile.stores, { "RunProgress", "MetaProgress" })
 
+        local minibossRewardProfile = catalog.offerProfiles.RunProgressBoonOnly
+        lu.assertEquals(minibossRewardProfile.kind, "storeChoice")
+        lu.assertEquals(minibossRewardProfile.stores, { "RunProgress" })
+        lu.assertEquals(minibossRewardProfile.eligibleRewards, { "Boon" })
+        lu.assertNil(minibossRewardProfile.ineligibleRewards)
+
         local prebossProfile = catalog.offerProfiles.PrebossShopOrFreeReward
         lu.assertEquals(prebossProfile.kind, "branch")
         lu.assertEquals(prebossProfile.branches[1].offerProfile, "WorldShop")
         lu.assertEquals(prebossProfile.branches[2].stores, { "RunProgress", "MetaProgress" })
+    end)
+end
+
+function TestDeclarationCatalog.testOfferProfileRejectsBothRewardFilters()
+    h.withTestImport(function()
+        local catalog = h.testImport("mods/data.lua").loadCatalog()
+        local validator = h.testImport("mods/declarations/validators/offer_profiles.lua")
+        local ok, err = pcall(function()
+            validator.validate({
+                BadFilterProfile = {
+                    key = "BadFilterProfile",
+                    label = "Bad Filter Profile",
+                    kind = "storeChoice",
+                    stores = { "RunProgress" },
+                    eligibleRewards = { "Boon" },
+                    ineligibleRewards = { "MaxHealthDrop" },
+                },
+            }, catalog.rewards)
+        end)
+
+        lu.assertFalse(ok)
+        lu.assertNotNil(string.find(tostring(err), "must not define both eligibleRewards and ineligibleRewards", 1, true))
     end)
 end
 

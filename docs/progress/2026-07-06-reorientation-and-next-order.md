@@ -648,32 +648,71 @@ Implemented in the current working checkpoint:
 
 Current boundary:
 
-- F is still not complete: miniboss variants, NPCs, and the remaining
+- F is still not complete: opening variants, NPCs, and the remaining
   feature/control-specific room rules are not declared;
 - `F_Story01` assumes profile/meta gates are satisfied by planner scope:
   prior `F_Boss01`, Artemis text-line state, active bounty state, and
   `ForceIfUnseenForRuns` remain out-of-scope profile inputs rather than
   route-local predicates;
-- miniboss variants still need room-history/not-in-history eligibility support
-  before they can be modeled honestly;
 - reprieve/fountain is declared structurally, but generated-door reward behavior
   for non-reward rooms remains a separate modeling decision.
+
+## Completed Room-History And F Miniboss Slice
+
+Implemented in the current working checkpoint:
+
+- added the `RoomEnteredHistory` requirement kind and validator support;
+- added history queries over prior `room.enter` events, so target eligibility at
+  `room.generate_next` can see the current entered room;
+- threaded temporal requirement queries into structural selected-target
+  eligibility and force-pressure eligibility;
+- declared `F_MiniBoss01`, `F_MiniBoss02`, and `F_MiniBoss03` with:
+  - `Miniboss` room kind/template;
+  - one physical exit;
+  - `BiomeDepthCache` force window `4..6`;
+  - one creation per run;
+  - mutual exclusion against the other miniboss variants via entered-room
+    history;
+  - `RunProgressBoonOnly` generated-door offer profile;
+- added reward-domain support for store-choice profiles with game-shaped
+  `eligibleRewards` / `ineligibleRewards` filters, used by miniboss Boon-only
+  generated offers;
+- updated the long F pipeline fixture to generate both a miniboss and the shop
+  inside the force window, enter one miniboss, then reach preboss at BDC 10.
+
+Modeling notes:
+
+- generating a forced miniboss satisfies generic force pressure for that
+  candidate, but does not make sibling minibosses ineligible by itself;
+- entering a miniboss is what makes the sibling minibosses fail their
+  `RoomEnteredHistory == 0` eligibility;
+- `F_MiniBoss02` and `F_MiniBoss03` profile/meta progression requirements remain
+  out-of-scope profile assumptions rather than route-local predicates.
+
+Current boundary:
+
+- remaining F declaration work is mostly opening variants, reprieve reward
+  behavior, and any NPC/feature room rules with route-local state;
+- opening variants need a short raw-data pass before declaring them, because the
+  planner should not model profile-only start variants as generated route rooms;
+- reprieve/fountain still needs an honest generated-door reward policy before
+  the F declaration slice can be called complete enough for a dedicated UI pass.
 
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Complete remaining F room declarations
+Finish remaining F declaration holes before the dedicated UI pass
 ```
 
 Concrete scope:
 
-- add the missing requirement support needed for F miniboss mutual exclusion;
-- add the modeled `F_MiniBoss*` rooms from local audits with force/eligibility
-  split correctly between declaration metadata, profile-scope meta gates, and
-  validation;
+- audit the remaining F opening rooms and decide which are route-visible rooms
+  versus profile/story variants of the fixed start;
 - decide the honest generated-door reward behavior for `F_Reprieve01`;
+- add any remaining F room declarations whose conditions can be represented by
+  existing route-local counters/history;
 - keep G/P/Q deferred until F room declarations are complete enough for the
   UI/data/validation loop.
 
@@ -690,7 +729,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 109 passed;
+- child tests: 113 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.

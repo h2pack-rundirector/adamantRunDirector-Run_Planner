@@ -27,6 +27,13 @@ return {
         stateKind = "Story",
     },
 
+    Miniboss = {
+        key = "Miniboss",
+        label = "Miniboss",
+        roomKinds = { "Miniboss" },
+        stateKind = "Miniboss",
+    },
+
     Shop = {
         key = "Shop",
         label = "Shop",

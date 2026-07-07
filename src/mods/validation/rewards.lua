@@ -115,6 +115,27 @@ local function storeListContains(stores, storeKey)
     return false
 end
 
+local function rewardFilterContains(rewardFilter, rewardType)
+    for _, candidate in ipairs(rewardFilter or {}) do
+        if candidate == rewardType then
+            return true
+        end
+    end
+    return false
+end
+
+local function rewardFiltersAllowOffer(profile, rewardType)
+    if profile.eligibleRewards ~= nil then
+        return rewardFilterContains(profile.eligibleRewards, rewardType)
+    end
+
+    if profile.ineligibleRewards ~= nil then
+        return not rewardFilterContains(profile.ineligibleRewards, rewardType)
+    end
+
+    return true
+end
+
 local profileAllowsOffer
 
 local function branchAllowsOffer(catalog, branch, offer)
@@ -133,6 +154,7 @@ end
 function profileAllowsOffer(catalog, profile, offer)
     if profile.kind == "storeChoice" then
         return storeListContains(profile.stores, offer.store)
+            and rewardFiltersAllowOffer(profile, offer.rewardType)
     end
 
     if profile.kind == "shop" then

@@ -128,17 +128,20 @@ entered:
 
 ```lua
 F_MiniBoss01 = {
-    offerProfile = {
-        kind = "roomStore",
-        store = "RunProgress",
-        eligibleRewardTypes = { "Boon" },
-    },
+    offerProfile = "RunProgressBoonOnly",
+}
+
+RunProgressBoonOnly = {
+    kind = "storeChoice",
+    stores = { "RunProgress" },
+    eligibleRewards = { "Boon" },
 }
 ```
 
 Room reward filters should match game `EligibleRewards` and
-`IneligibleRewards`. Filters are source facts, not global reward primitive
-facts.
+`IneligibleRewards`. The planner models these as `eligibleRewards` or
+`ineligibleRewards` on the offer profile. Profiles must not define both filters
+because the game data does not use both at the same time.
 
 ### Shop Profiles
 

@@ -238,6 +238,27 @@ local function evaluate(requirement, context)
             duplicateValues = duplicates,
             values = arrayPayload(requirement.values),
         }, context)
+    elseif kind == "RoomEnteredHistory" then
+        guard.expectNonEmptyArray(requirement.roomKeys, context.path .. ".roomKeys")
+        local count = guard.expectFunction(
+            context.queries.countRoomEnteredHistory,
+            "validation.queries.countRoomEnteredHistory"
+        )(requirement.roomKeys)
+        local comparison = guard.expectString(requirement.comparison, context.path .. ".comparison")
+        local expected = guard.expectNumber(requirement.value, context.path .. ".value")
+        if compare(count, comparison, expected) then
+            return nil
+        end
+        return numericFailure(
+            requirement,
+            "RoomEnteredHistory",
+            count,
+            expected,
+            context,
+            {
+                roomKeys = arrayPayload(requirement.roomKeys),
+            }
+        )
     elseif kind == "ClearedBiomes" then
         local count = guard.expectFunction(
             context.queries.countClearedBiomes,

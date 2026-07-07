@@ -169,6 +169,22 @@ function query.countPendingStoreOffersBefore(history, rewardTypes, eventIndex)
     return count
 end
 
+function query.countEnteredRoomsBefore(history, roomKeys, eventIndex)
+    guard.expectTable(history, "history.query.history")
+    guard.expectArray(history.events, "history.query.history.events")
+    local roomKeySet = countSet(roomKeys)
+    local beforeEventIndex = guard.expectNumber(eventIndex, "history.query.eventIndex")
+    local count = 0
+
+    for _, event in ipairs(history.events) do
+        if event.kind == "room.enter" and before(event, beforeEventIndex) and roomKeySet[event.roomKey] then
+            count = count + 1
+        end
+    end
+
+    return count
+end
+
 function query.countDistinctAcquiredLootSourcesBefore(history, sourceValues, eventIndex)
     local _, sourceSet = orderedStringSet(sourceValues, "history.query.sourceValues")
     local seen = acquiredLootSourceSetBefore(history, eventIndex)
@@ -252,6 +268,9 @@ function query.requirementQueries(history, eventIndex)
         end,
         countPendingStoreOffers = function(rewardTypes)
             return query.countPendingStoreOffersBefore(history, rewardTypes, eventIndex)
+        end,
+        countRoomEnteredHistory = function(roomKeys)
+            return query.countEnteredRoomsBefore(history, roomKeys, eventIndex)
         end,
         countDistinctLootSources = function(sourceValues)
             return query.countDistinctAcquiredLootSourcesBefore(history, sourceValues, eventIndex)

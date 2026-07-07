@@ -88,6 +88,14 @@ local function offerForTarget(exitIndex, targetRoomKey)
         }
     end
 
+    if string.match(targetRoomKey, "^F_MiniBoss") ~= nil then
+        return {
+            store = "RunProgress",
+            rewardType = "Boon",
+            acquired = false,
+        }
+    end
+
     return {
         store = "RunProgress",
         rewardType = BASIC_REWARD_TYPES[((exitIndex - 1) % #BASIC_REWARD_TYPES) + 1],
@@ -137,8 +145,8 @@ local function longFRouteDraft()
                     roomWithDoors("F_Combat03", 1, { "F_Combat04", "F_Combat21" }),
                     roomWithDoors("F_Combat04", 1, { "F_Combat08", "F_Combat22" }),
                     roomWithDoors("F_Combat08", 1, { "F_Combat05", "F_Combat11" }),
-                    roomWithDoors("F_Combat05", 1, { "F_Shop01", "F_Combat12" }),
-                    roomWithDoors("F_Shop01", 1, { "F_Combat06", "F_Combat13" }),
+                    roomWithDoors("F_Combat05", 1, { "F_MiniBoss01", "F_Shop01" }),
+                    roomWithDoors("F_MiniBoss01", 1, { "F_Combat06" }),
                     roomWithDoors("F_Combat06", 1, { "F_Combat07", "F_Combat14" }),
                     roomWithDoors("F_Combat07", 1, { "F_Combat15", "F_Combat16" }),
                     roomWithDoors("F_Combat15", 1, { "F_Combat17", "F_Combat18" }),

@@ -563,6 +563,10 @@ Prior entered-room checks:
 }
 ```
 
+The count uses `room.enter` events before the evaluated event. For room target
+eligibility at `room.generate_next`, this means the current room has already
+entered and is visible to the requirement.
+
 Use this instead of invented miniboss groups when the game condition is
 expressed through room history.
 

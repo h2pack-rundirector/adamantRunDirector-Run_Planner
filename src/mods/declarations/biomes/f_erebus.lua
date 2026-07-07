@@ -54,6 +54,17 @@ local function lateCombatEligibility(code)
     return combatDepthEligibility(code, ">=", 5)
 end
 
+local function roomEnteredHistoryEligibility(code, roomKeys)
+    return {
+        kind = "RoomEnteredHistory",
+        roomKeys = roomKeys,
+        comparison = "==",
+        value = 0,
+        code = code,
+        presentation = "hide",
+    }
+end
+
 local function combatRoom(key, label, opts)
     opts = opts or {}
     return room(key, label, {
@@ -67,6 +78,29 @@ local function combatRoom(key, label, opts)
         },
         encounterProfile = "StandardCombat",
         offerProfile = "RunProgressMajorMinor",
+        counters = counters(1, 1, 1),
+    })
+end
+
+local function minibossRoom(key, label, opts)
+    opts = opts or {}
+    return room(key, label, {
+        kind = "Miniboss",
+        roomTemplate = "Miniboss",
+        tags = { "Miniboss" },
+        exitCount = 1,
+        eligibility = roomEnteredHistoryEligibility(opts.code, opts.excludes),
+        force = {
+            kind = "BiomeDepthWindow",
+            axis = "BiomeDepthCache",
+            start = 4,
+            deadline = 6,
+        },
+        caps = {
+            maxCreationsThisRun = 1,
+        },
+        encounterProfile = opts.encounterProfile,
+        offerProfile = "RunProgressBoonOnly",
         counters = counters(1, 1, 1),
     })
 end
@@ -101,6 +135,24 @@ local rooms = {
         exitCount = 1,
         encounterProfile = "None",
         counters = counters(1, 0, 0),
+    }),
+
+    minibossRoom("F_MiniBoss01", "Root-Stalkers", {
+        excludes = { "F_MiniBoss02", "F_MiniBoss03" },
+        code = "f_miniboss01_other_miniboss_entered",
+        encounterProfile = "MiniBossTreant",
+    }),
+
+    minibossRoom("F_MiniBoss02", "Shadow-Spillers", {
+        excludes = { "F_MiniBoss01", "F_MiniBoss03" },
+        code = "f_miniboss02_other_miniboss_entered",
+        encounterProfile = "MiniBossFogEmitter",
+    }),
+
+    minibossRoom("F_MiniBoss03", "Doomed Cutthroat", {
+        excludes = { "F_MiniBoss01", "F_MiniBoss02" },
+        code = "f_miniboss03_other_miniboss_entered",
+        encounterProfile = "MiniBossAssassin",
     }),
 
     combatRoom("F_Combat01", "C01", {

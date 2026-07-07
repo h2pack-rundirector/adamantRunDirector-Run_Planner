@@ -18,6 +18,28 @@ local function validateStores(stores, rewards, context)
     end
 end
 
+local function validateRewardFilter(rewardFilter, rewards, context)
+    if rewardFilter == nil then
+        return
+    end
+    guard.expectNonEmptyArray(rewardFilter, context)
+    for index, rewardType in ipairs(rewardFilter) do
+        guard.expectString(rewardType, context .. "[" .. tostring(index) .. "]")
+        if rewards.primitives[rewardType] == nil then
+            guard.fail(context .. "[" .. tostring(index) .. "]", "unknown reward type '" .. rewardType .. "'")
+        end
+    end
+end
+
+local function validateStoreChoiceFilters(profile, rewards, context)
+    if profile.eligibleRewards ~= nil and profile.ineligibleRewards ~= nil then
+        guard.fail(context, "storeChoice profile must not define both eligibleRewards and ineligibleRewards")
+    end
+
+    validateRewardFilter(profile.eligibleRewards, rewards, context .. ".eligibleRewards")
+    validateRewardFilter(profile.ineligibleRewards, rewards, context .. ".ineligibleRewards")
+end
+
 local function validateBranch(branch, offerProfiles, rewards, context)
     guard.expectTable(branch, context)
     guard.expectString(branch.key, context .. ".key")
@@ -53,6 +75,7 @@ function offerProfilesValidator.validate(offerProfiles, rewards)
 
         if kind == "storeChoice" then
             validateStores(profile.stores, rewards, context .. ".stores")
+            validateStoreChoiceFilters(profile, rewards, context)
         elseif kind == "shop" then
             guard.expectString(profile.shopKey, context .. ".shopKey")
             if rewards.shops[profile.shopKey] == nil then

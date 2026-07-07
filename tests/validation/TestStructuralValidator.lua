@@ -137,6 +137,23 @@ local function generatedDoorOffer(store, rewardType)
     }
 end
 
+local function oneDoorRoom(roomKey, targetRoomKey)
+    return {
+        roomKey = roomKey,
+        generatedDoors = {
+            batchRule = "Standard",
+            selectedDoorIndex = 1,
+            doors = {
+                {
+                    exitIndex = 1,
+                    targetRoomKey = targetRoomKey,
+                    offerPoint = generatedDoorOffer("RunProgress", "Boon"),
+                },
+            },
+        },
+    }
+end
+
 function TestStructuralValidator.testValidMinimalHistoryPasses()
     h.withTestImport(function()
         local catalog = loadCatalog()
@@ -324,11 +341,44 @@ function TestStructuralValidator.testRoomEligibilityUsesBiomeEncounterDepth()
     end)
 end
 
+function TestStructuralValidator.testRoomEnteredHistoryEligibilityIncludesCurrentRoomAtGenerateNext()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        local plan = materializePlan({
+            routeKey = "Underworld",
+            biomes = {
+                {
+                    biomeKey = "F",
+                    rooms = {
+                        oneDoorRoom("F_Opening01", "F_MiniBoss01"),
+                        oneDoorRoom("F_MiniBoss01", "F_MiniBoss02"),
+                        oneDoorRoom("F_MiniBoss02", "F_Combat01"),
+                    },
+                },
+            },
+        }, catalog)
+
+        local result = validatePlan(plan, catalog)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "f_miniboss02_other_miniboss_entered")
+        lu.assertEquals(result.findings[1].payload.axis, "RoomEnteredHistory")
+        lu.assertEquals(result.findings[1].payload.actual, 1)
+        lu.assertEquals(result.findings[1].payload.expected, 0)
+        lu.assertEquals(result.findings[1].payload.roomKeys, {
+            "F_MiniBoss01",
+            "F_MiniBoss03",
+        })
+    end)
+end
+
 function TestStructuralValidator.testForceMetadataIsNotLocalTargetLegality()
     h.withTestImport(function()
         local catalog = loadCatalog()
         local plan = materializePlan(completeDraft(), catalog)
         plan.biomes[1].rooms[2].generatedDoors.doors[1].targetRoomKey = "F_PreBoss01"
+        plan.biomes[1].rooms[2].generatedDoors.doors[2].targetRoomKey = "F_MiniBoss01"
+        plan.biomes[1].rooms[2].generatedDoors.doors[2].offerPoint = generatedDoorOffer("RunProgress", "Boon")
         local history = buildHistory(plan, catalog)
         findEvent(history, "room.generate_next", 2).biomeDepthCache = 11
 
@@ -384,10 +434,20 @@ function TestStructuralValidator.testForcePressureRequiresForcedTargetsAtDeadlin
         lu.assertFalse(result.valid)
         lu.assertEquals(result.findings[1].code, "force_pressure_missing_room")
         lu.assertEquals(result.findings[1].payload.roomKey, "F_Combat02")
-        lu.assertEquals(result.findings[1].payload.deadlineForceRoomKeys, { "F_Shop01" })
-        lu.assertEquals(result.findings[1].payload.eligibleUnresolvedForceRoomKeys, { "F_Shop01" })
+        lu.assertEquals(result.findings[1].payload.deadlineForceRoomKeys, {
+            "F_MiniBoss01",
+            "F_MiniBoss02",
+            "F_MiniBoss03",
+            "F_Shop01",
+        })
+        lu.assertEquals(result.findings[1].payload.eligibleUnresolvedForceRoomKeys, {
+            "F_MiniBoss01",
+            "F_MiniBoss02",
+            "F_MiniBoss03",
+            "F_Shop01",
+        })
         lu.assertEquals(result.findings[1].payload.generatedForceRoomKeys, {})
-        lu.assertEquals(result.findings[1].payload.requiredForcedCount, 1)
+        lu.assertEquals(result.findings[1].payload.requiredForcedCount, 2)
         lu.assertEquals(result.findings[1].payload.generatedDoorCount, 2)
     end)
 end
@@ -398,6 +458,8 @@ function TestStructuralValidator.testGeneratedForcedRoomSatisfiesPressure()
         local plan = materializePlan(completeDraft(), catalog)
         plan.biomes[1].rooms[2].generatedDoors.doors[1].targetRoomKey = "F_Shop01"
         plan.biomes[1].rooms[2].generatedDoors.doors[1].offerPoint = generatedDoorOffer("WorldShop", "HermesUpgrade")
+        plan.biomes[1].rooms[2].generatedDoors.doors[2].targetRoomKey = "F_MiniBoss01"
+        plan.biomes[1].rooms[2].generatedDoors.doors[2].offerPoint = generatedDoorOffer("RunProgress", "Boon")
         local history = buildHistory(plan, catalog)
         findEvent(history, "room.generate_next", 2).biomeDepthCache = 6
 
@@ -416,18 +478,18 @@ function TestStructuralValidator.testGeneratedForcedRoomRemovesFuturePressure()
         plan.biomes[1].rooms[2].generatedDoors.selectedDoorIndex = 2
         plan.biomes[1].rooms[2].generatedDoors.doors[1].targetRoomKey = "F_Shop01"
         plan.biomes[1].rooms[2].generatedDoors.doors[1].offerPoint = generatedDoorOffer("WorldShop", "HermesUpgrade")
-        plan.biomes[1].rooms[2].generatedDoors.doors[2].targetRoomKey = "F_Combat01"
-        plan.biomes[1].rooms[2].generatedDoors.doors[2].offerPoint = generatedDoorOffer("RunProgress", "MaxHealthDrop")
+        plan.biomes[1].rooms[2].generatedDoors.doors[2].targetRoomKey = "F_MiniBoss01"
+        plan.biomes[1].rooms[2].generatedDoors.doors[2].offerPoint = generatedDoorOffer("RunProgress", "Boon")
         plan.biomes[1].rooms[3] = {
-            roomKey = "F_Combat01",
+            roomKey = "F_MiniBoss01",
             generatedDoors = {
                 batchRule = "Standard",
                 selectedDoorIndex = 1,
                 doors = {
                     {
                         exitIndex = 1,
-                        targetRoomKey = "F_Opening01",
-                        offerPoint = generatedDoorOffer("MetaProgress", "GiftDrop"),
+                        targetRoomKey = "F_Combat01",
+                        offerPoint = generatedDoorOffer("RunProgress", "MaxHealthDrop"),
                     },
                 },
             },
@@ -450,6 +512,8 @@ function TestStructuralValidator.testCandidateForcePressureProjectsDoorTarget()
         local plan = materializePlan(completeDraft(), catalog)
         plan.biomes[1].rooms[2].generatedDoors.doors[1].targetRoomKey = "F_Shop01"
         plan.biomes[1].rooms[2].generatedDoors.doors[1].offerPoint = generatedDoorOffer("WorldShop", "HermesUpgrade")
+        plan.biomes[1].rooms[2].generatedDoors.doors[2].targetRoomKey = "F_MiniBoss01"
+        plan.biomes[1].rooms[2].generatedDoors.doors[2].offerPoint = generatedDoorOffer("RunProgress", "Boon")
         local history = buildHistory(plan, catalog)
         findEvent(history, "room.generate_next", 2).biomeDepthCache = 6
 
@@ -481,8 +545,13 @@ function TestStructuralValidator.testCandidateForcePressureProjectsDoorTarget()
         lu.assertTrue(result.valid)
         lu.assertEquals(#result.candidateResults, 1)
         lu.assertEquals(result.candidateResults[1].code, "force_pressure_conflict")
-        lu.assertEquals(result.candidateResults[1].payload.deadlineForceRoomKeys, { "F_Shop01" })
-        lu.assertEquals(result.candidateResults[1].payload.requiredForcedCount, 1)
+        lu.assertEquals(result.candidateResults[1].payload.deadlineForceRoomKeys, {
+            "F_MiniBoss01",
+            "F_MiniBoss02",
+            "F_MiniBoss03",
+            "F_Shop01",
+        })
+        lu.assertEquals(result.candidateResults[1].payload.requiredForcedCount, 2)
     end)
 end
 

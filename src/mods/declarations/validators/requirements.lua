@@ -14,6 +14,7 @@ local KNOWN_REQUIREMENT_KINDS = {
     PriorDistinctLootSources = true,
     CurrentLootSourcesSeen = true,
     UniquePayloadValues = true,
+    RoomEnteredHistory = true,
     RequiredNotInStore = true,
     RequiredMinRoomsSinceEvent = true,
     RequiredMinExits = true,
@@ -111,6 +112,9 @@ function requirementsValidator.validateRequirement(requirement, namedRequirement
         validateStringArray(requirement.sourceValues, context .. ".sourceValues")
     elseif kind == "UniquePayloadValues" then
         validateStringArray(requirement.values, context .. ".values")
+    elseif kind == "RoomEnteredHistory" then
+        validateStringArray(requirement.roomKeys, context .. ".roomKeys")
+        validateComparison(requirement, context)
     elseif kind == "RequiredMinRoomsSinceEvent" then
         validateEventSelector(requirement.event, context .. ".event")
         guard.expectString(requirement.axis, context .. ".axis")

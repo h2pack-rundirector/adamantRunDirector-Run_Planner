@@ -396,6 +396,40 @@ function TestRewardValidator.testRejectsOfferOutsideTargetProfile()
     end)
 end
 
+function TestRewardValidator.testRejectsNonBoonOfferForMinibossProfile()
+    h.withTestImport(function()
+        local draft = completeDraft()
+        local door = draft.biomes[1].rooms[1].generatedDoors.doors[1]
+        door.targetRoomKey = "F_MiniBoss01"
+        door.offerPoint.offers[1].rewardType = "MaxHealthDrop"
+        draft.biomes[1].rooms[2].roomKey = "F_MiniBoss01"
+
+        local result = validateDraft(draft)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "reward_offer_domain_mismatch")
+        lu.assertEquals(result.findings[1].payload.targetRoomKey, "F_MiniBoss01")
+        lu.assertEquals(result.findings[1].payload.offerProfile, "RunProgressBoonOnly")
+        lu.assertEquals(result.findings[1].payload.rewardType, "MaxHealthDrop")
+    end)
+end
+
+function TestRewardValidator.testRejectsOfferRemovedByIneligibleRewardFilter()
+    h.withTestImport(function()
+        local catalog = loadCatalog()
+        catalog.offerProfiles.RunProgressMajorMinor.ineligibleRewards = { "Boon" }
+        local plan = materializePlan(completeDraft(), catalog)
+
+        local result = validatePlan(plan, catalog)
+
+        lu.assertFalse(result.valid)
+        lu.assertEquals(result.findings[1].code, "reward_offer_domain_mismatch")
+        lu.assertEquals(result.findings[1].payload.targetRoomKey, "F_Combat01")
+        lu.assertEquals(result.findings[1].payload.offerProfile, "RunProgressMajorMinor")
+        lu.assertEquals(result.findings[1].payload.rewardType, "Boon")
+    end)
+end
+
 function TestRewardValidator.testRejectsTargetWithoutOfferProfile()
     h.withTestImport(function()
         local catalog = loadCatalog()
