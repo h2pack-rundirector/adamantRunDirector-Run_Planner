@@ -20,6 +20,8 @@ function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
     local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
     local offerFeedback = feedback.forAddress(evaluation, address)
 
+    widgets.subsection(imgui, "Generated reward offer")
+    local offerIndent = widgets.indent(imgui)
     local offerProviders = offer.candidateProviders or {}
     local nextStore, storeChanged = widgets.dropdown(
         imgui,
@@ -59,6 +61,7 @@ function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
     if acquiredChanged then
         state.setRewardAcquired(context.roomIndex, context.doorIndex, nextAcquired)
     end
+    widgets.unindent(imgui, offerIndent)
 end
 
 return rewardOffer

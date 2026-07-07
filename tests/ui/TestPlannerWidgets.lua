@@ -170,6 +170,42 @@ function TestPlannerWidgets.testDisabledFallbackRendersHorizonLabel()
     end)
 end
 
+function TestPlannerWidgets.testSubsectionAndLabelFallbackRenderText()
+    h.withTestImport(function()
+        local widgets = h.testImport("mods/ui/planner/widgets.lua")
+        local lines, imgui = textSink()
+
+        widgets.subsection(imgui, "Generated door batch")
+        widgets.labelValue(imgui, "Batch rule", "Standard")
+
+        lu.assertEquals(lines, {
+            "Generated door batch",
+            "Batch rule: Standard",
+        })
+    end)
+end
+
+function TestPlannerWidgets.testIndentUsesImguiPairWhenAvailable()
+    h.withTestImport(function()
+        local widgets = h.testImport("mods/ui/planner/widgets.lua")
+        local calls = {}
+        local imgui = {
+            Indent = function()
+                calls[#calls + 1] = "Indent"
+            end,
+            Unindent = function()
+                calls[#calls + 1] = "Unindent"
+            end,
+        }
+
+        local pushed = widgets.indent(imgui)
+        widgets.unindent(imgui, pushed)
+
+        lu.assertTrue(pushed)
+        lu.assertEquals(calls, { "Indent", "Unindent" })
+    end)
+end
+
 function TestPlannerWidgets.testStatusRendersFallbackSummary()
     h.withTestImport(function()
         local widgets = h.testImport("mods/ui/planner/widgets.lua")

@@ -20,7 +20,8 @@ function roomOffer.draw(state, imgui, evaluation, context, room)
     local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
     local offerFeedback = feedback.forAddress(evaluation, address)
 
-    widgets.text(imgui, "Room offer 1 / " .. tostring(offerPoint.kind))
+    widgets.subsection(imgui, "Room offer 1 / " .. tostring(offerPoint.kind))
+    local offerIndent = widgets.indent(imgui)
     local nextStore, storeChanged = widgets.dropdown(
         imgui,
         "Room store##room" .. context.roomIndex,
@@ -58,6 +59,7 @@ function roomOffer.draw(state, imgui, evaluation, context, room)
     if acquiredChanged then
         state.setRoomOfferAcquired(context.roomIndex, nextAcquired)
     end
+    widgets.unindent(imgui, offerIndent)
 end
 
 return roomOffer

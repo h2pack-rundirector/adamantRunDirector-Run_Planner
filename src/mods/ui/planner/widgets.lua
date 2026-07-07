@@ -33,6 +33,14 @@ function widgets.text(imgui, text)
     end
 end
 
+function widgets.textMuted(imgui, text)
+    if imgui ~= nil and imgui.TextDisabled ~= nil then
+        imgui.TextDisabled(text)
+        return
+    end
+    widgets.text(imgui, text)
+end
+
 function widgets.separator(imgui)
     if imgui ~= nil and imgui.Separator ~= nil then
         imgui.Separator()
@@ -151,6 +159,24 @@ function widgets.feedback(imgui, label, feedback)
     end
 end
 
+function widgets.labelValue(imgui, label, value)
+    widgets.text(imgui, label .. ": " .. tostring(value))
+end
+
+function widgets.indent(imgui)
+    if imgui ~= nil and imgui.Indent ~= nil then
+        imgui.Indent()
+        return true
+    end
+    return false
+end
+
+function widgets.unindent(imgui, pushed)
+    if pushed and imgui ~= nil and imgui.Unindent ~= nil then
+        imgui.Unindent()
+    end
+end
+
 function widgets.beginDisabled(imgui, disabled, fallbackLabel)
     if not disabled then
         return false
@@ -193,6 +219,10 @@ end
 function widgets.section(imgui, label)
     widgets.separator(imgui)
     widgets.text(imgui, label)
+end
+
+function widgets.subsection(imgui, label)
+    widgets.textMuted(imgui, label)
 end
 
 return widgets

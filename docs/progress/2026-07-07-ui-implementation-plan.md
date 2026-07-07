@@ -4,6 +4,36 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-07 - Integrated F Room Unit Mounted
+
+The fourth UI implementation slice now reshapes the F panel into an integrated
+room-unit editor while keeping the same in-memory draft owner.
+
+Implemented behavior:
+
+- each F room renders as one unit with room identity, generated door batch,
+  generated door targets, generated reward offer, acquired flag, payload leaves,
+  and feedback;
+- room-local offers render inside the owning room unit instead of in a separate
+  reward surface;
+- terminal rooms have an explicit generated-door batch state;
+- generated door batch metadata and selected door state are shown together;
+- route/editor tests now pin the integrated composition without changing route
+  validation or history behavior.
+
+Still deferred:
+
+- production state still reads/writes the in-memory planner state, not the
+  `PlannerDraft` storage adapter;
+- route/biome/room feedback coloring beyond candidate dropdown colors remains
+  in the route-status polish slice.
+
+Validation run:
+
+- `lua tests/all.lua` - 129 passed.
+- `luacheck src tests` - 0 warnings / 0 errors.
+- `git diff --check` - passed.
+
 ### 2026-07-07 - Route Shell Implemented
 
 The third UI implementation slice now wraps the F editor in the production

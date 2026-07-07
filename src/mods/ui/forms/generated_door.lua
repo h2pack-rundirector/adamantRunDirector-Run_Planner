@@ -14,7 +14,8 @@ local function doorAddress(state, context)
 end
 
 function generatedDoor.draw(state, imgui, evaluation, context, door)
-    widgets.text(imgui, "Door " .. tostring(context.doorIndex) .. " / exit " .. tostring(door.exitIndex))
+    widgets.subsection(imgui, "Door " .. tostring(context.doorIndex) .. " / exit " .. tostring(door.exitIndex))
+    local doorIndent = widgets.indent(imgui)
     local address = doorAddress(state, context)
     local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
     local doorFeedback = feedback.forAddress(evaluation, address)
@@ -36,6 +37,7 @@ function generatedDoor.draw(state, imgui, evaluation, context, door)
     if doorFeedback ~= routeBlocker then
         widgets.feedback(imgui, "Door feedback", doorFeedback)
     end
+    widgets.unindent(imgui, doorIndent)
 end
 
 return generatedDoor

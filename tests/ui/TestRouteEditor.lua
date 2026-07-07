@@ -36,7 +36,10 @@ function TestRouteEditor.testDrawsPlannerStateThroughForms()
         lu.assertNotNil(combined:find("F route editor", 1, true))
         lu.assertNil(combined:find("debug harness", 1, true))
         lu.assertNotNil(combined:find("State: valid", 1, true))
-        lu.assertNotNil(combined:find("Room 1", 1, true))
+        lu.assertNotNil(combined:find("Room 1 - Opening 1 (F_Opening01)", 1, true))
+        lu.assertNotNil(combined:find("Room identity", 1, true))
+        lu.assertNotNil(combined:find("Generated door batch", 1, true))
+        lu.assertNotNil(combined:find("Generated reward offer", 1, true))
         lu.assertNotNil(combined:find("Reward##room1_door1", 1, true))
     end)
 end
@@ -81,5 +84,27 @@ function TestRouteEditor.testDrawsDownstreamRoomsInactiveAfterFirstIssue()
         local combined = table.concat(lines, "\n")
         lu.assertNotNil(combined:find("Inactive after route blocker", 1, true))
         lu.assertNotNil(combined:find("Room 3", 1, true))
+    end)
+end
+
+function TestRouteEditor.testDrawsRoomLocalOfferInsideRoomUnit()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local routeEditor = h.testImport("mods/ui/planner/route_editor.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+        state.setDoorTarget(1, 1, "F_Shop01")
+        state.setRoomKey(2, "F_Shop01")
+        local lines, ctx = lineSink()
+
+        routeEditor.draw(state, ctx)
+
+        local combined = table.concat(lines, "\n")
+        lu.assertNotNil(combined:find("Room 2 - Shop (F_Shop01)", 1, true))
+        lu.assertNotNil(combined:find("Room-local offers", 1, true))
+        lu.assertNotNil(combined:find("Room offer 1 / shop", 1, true))
+        lu.assertNotNil(combined:find("Room reward##room2", 1, true))
     end)
 end

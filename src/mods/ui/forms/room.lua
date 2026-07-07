@@ -13,12 +13,19 @@ local function roomAddress(state, context)
     }
 end
 
+local function roomTitle(state, context, room)
+    return "Room " .. tostring(context.roomIndex) .. " - " .. widgets.preview(state.roomOptions, room.roomKey)
+end
+
 function roomForm.draw(state, imgui, evaluation, context, room)
-    widgets.section(imgui, "Room " .. tostring(context.roomIndex))
+    widgets.section(imgui, roomTitle(state, context, room))
+    local roomIndent = widgets.indent(imgui)
     local address = roomAddress(state, context)
     local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
     local roomFeedback = feedback.forAddress(evaluation, address)
 
+    widgets.subsection(imgui, "Room identity")
+    local identityIndent = widgets.indent(imgui)
     local nextRoomKey, roomChanged = widgets.dropdown(
         imgui,
         "Room##" .. tostring(context.roomIndex),
@@ -33,17 +40,28 @@ function roomForm.draw(state, imgui, evaluation, context, room)
     if roomFeedback ~= routeBlocker then
         widgets.feedback(imgui, "Room feedback", roomFeedback)
     end
+    widgets.unindent(imgui, identityIndent)
 
     if room.offerPoints ~= nil then
+        widgets.subsection(imgui, "Room-local offers")
+        local roomOfferIndent = widgets.indent(imgui)
         roomOffer.draw(state, imgui, evaluation, context, room)
+        widgets.unindent(imgui, roomOfferIndent)
     end
 
     local generatedDoors = room.generatedDoors
     if generatedDoors == nil then
-        widgets.text(imgui, "Terminal/no generated doors")
+        widgets.subsection(imgui, "Generated door batch")
+        local terminalIndent = widgets.indent(imgui)
+        widgets.text(imgui, "Terminal room")
+        widgets.unindent(imgui, terminalIndent)
+        widgets.unindent(imgui, roomIndent)
         return
     end
 
+    widgets.subsection(imgui, "Generated door batch")
+    local batchIndent = widgets.indent(imgui)
+    widgets.labelValue(imgui, "Batch rule", generatedDoors.batchRule or "Standard")
     local nextSelectedDoor, selectedChanged = widgets.dropdown(
         imgui,
         "Selected door##" .. tostring(context.roomIndex),
@@ -62,6 +80,8 @@ function roomForm.draw(state, imgui, evaluation, context, room)
             doorIndex = doorIndex,
         }, door)
     end
+    widgets.unindent(imgui, batchIndent)
+    widgets.unindent(imgui, roomIndent)
 end
 
 return roomForm
