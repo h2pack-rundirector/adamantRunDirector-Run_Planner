@@ -1,9 +1,9 @@
--- luacheck: globals TestRouteEditor
+-- luacheck: globals TestFErebusPanel
 
 local lu = require("luaunit")
 local h = dofile("tests/support/import_harness.lua")
 
-TestRouteEditor = {}
+TestFErebusPanel = {}
 
 local function lineSink()
     local lines = {}
@@ -20,20 +20,20 @@ local function lineSink()
     }
 end
 
-function TestRouteEditor.testDrawsPlannerStateThroughForms()
+function TestFErebusPanel.testDrawsPlannerStateThroughForms()
     h.withTestImport(function()
         local data = h.testImport("mods/data.lua")
         local plannerState = h.testImport("mods/ui/planner/state.lua")
-        local routeEditor = h.testImport("mods/ui/planner/route_editor.lua")
+        local fErebusPanel = h.testImport("mods/ui/biomes/f_erebus_panel.lua")
         local state = plannerState.create({
             catalog = data.loadCatalog(),
         })
         local lines, ctx = lineSink()
 
-        routeEditor.draw(state, ctx)
+        fErebusPanel.draw(state, ctx)
 
         local combined = table.concat(lines, "\n")
-        lu.assertNotNil(combined:find("F route editor", 1, true))
+        lu.assertNotNil(combined:find("F / Erebus", 1, true))
         lu.assertNil(combined:find("debug harness", 1, true))
         lu.assertNotNil(combined:find("State: valid", 1, true))
         lu.assertNotNil(combined:find("Room 1 - Opening 1 (F_Opening01)", 1, true))
@@ -44,18 +44,18 @@ function TestRouteEditor.testDrawsPlannerStateThroughForms()
     end)
 end
 
-function TestRouteEditor.testDrawsFirstBlockingIssueMarker()
+function TestFErebusPanel.testDrawsFirstBlockingIssueMarker()
     h.withTestImport(function()
         local data = h.testImport("mods/data.lua")
         local plannerState = h.testImport("mods/ui/planner/state.lua")
-        local routeEditor = h.testImport("mods/ui/planner/route_editor.lua")
+        local fErebusPanel = h.testImport("mods/ui/biomes/f_erebus_panel.lua")
         local state = plannerState.create({
             catalog = data.loadCatalog(),
         })
         state.setDoorTarget(2, 1, "F_PreBoss01")
         local lines, ctx = lineSink()
 
-        routeEditor.draw(state, ctx)
+        fErebusPanel.draw(state, ctx)
 
         local combined = table.concat(lines, "\n")
         lu.assertNotNil(combined:find(
@@ -67,11 +67,11 @@ function TestRouteEditor.testDrawsFirstBlockingIssueMarker()
     end)
 end
 
-function TestRouteEditor.testDrawsDownstreamRoomsInactiveAfterFirstIssue()
+function TestFErebusPanel.testDrawsDownstreamRoomsInactiveAfterFirstIssue()
     h.withTestImport(function()
         local data = h.testImport("mods/data.lua")
         local plannerState = h.testImport("mods/ui/planner/state.lua")
-        local routeEditor = h.testImport("mods/ui/planner/route_editor.lua")
+        local fErebusPanel = h.testImport("mods/ui/biomes/f_erebus_panel.lua")
         local state = plannerState.create({
             catalog = data.loadCatalog(),
         })
@@ -79,7 +79,7 @@ function TestRouteEditor.testDrawsDownstreamRoomsInactiveAfterFirstIssue()
         state.appendSelectedTarget()
         local lines, ctx = lineSink()
 
-        routeEditor.draw(state, ctx)
+        fErebusPanel.draw(state, ctx)
 
         local combined = table.concat(lines, "\n")
         lu.assertNotNil(combined:find("Inactive after route blocker", 1, true))
@@ -87,11 +87,11 @@ function TestRouteEditor.testDrawsDownstreamRoomsInactiveAfterFirstIssue()
     end)
 end
 
-function TestRouteEditor.testDrawsRoomLocalOfferInsideRoomUnit()
+function TestFErebusPanel.testDrawsRoomLocalOfferInsideRoomUnit()
     h.withTestImport(function()
         local data = h.testImport("mods/data.lua")
         local plannerState = h.testImport("mods/ui/planner/state.lua")
-        local routeEditor = h.testImport("mods/ui/planner/route_editor.lua")
+        local fErebusPanel = h.testImport("mods/ui/biomes/f_erebus_panel.lua")
         local state = plannerState.create({
             catalog = data.loadCatalog(),
         })
@@ -99,7 +99,7 @@ function TestRouteEditor.testDrawsRoomLocalOfferInsideRoomUnit()
         state.setRoomKey(2, "F_Shop01")
         local lines, ctx = lineSink()
 
-        routeEditor.draw(state, ctx)
+        fErebusPanel.draw(state, ctx)
 
         local combined = table.concat(lines, "\n")
         lu.assertNotNil(combined:find("Room 2 - Shop (F_Shop01)", 1, true))

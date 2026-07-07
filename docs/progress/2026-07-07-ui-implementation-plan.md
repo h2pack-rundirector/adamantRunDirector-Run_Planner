@@ -4,6 +4,31 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-07 - UI Rename Pass: F Panel Made Discoverable
+
+The production F surface is no longer named like a generic route editor.
+
+Implemented behavior:
+
+- `src/mods/ui/biomes/f_erebus_panel.lua` now owns the F/Erebus biome panel;
+- route shell imports the F panel by biome name while keeping the existing
+  inline dispatch behavior;
+- the debug harness delegates to the F panel explicitly;
+- focused panel tests moved from `TestRouteEditor` to `TestFErebusPanel`;
+- the UI implementation-order doc now lists route-shell dispatch separately
+  from biome panel composition.
+
+Still deferred:
+
+- extracting placeholder panels or biome dispatch into a composition registry;
+- deciding the DI boundary for route shell, biome panels, and leaf forms.
+
+Validation run:
+
+- `lua tests/all.lua` - 135 passed.
+- `luacheck src tests` - 0 warnings / 0 errors.
+- `git diff --check` - passed.
+
 ### 2026-07-07 - Phase 5 Cleanup: Draft Roundtrip Hardened
 
 The fifth UI implementation slice now has a stronger storage/control cleanup

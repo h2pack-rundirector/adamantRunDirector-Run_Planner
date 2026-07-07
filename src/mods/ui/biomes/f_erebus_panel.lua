@@ -1,10 +1,10 @@
 local roomForm = import("mods/ui/forms/room.lua")
 local widgets = import("mods/ui/planner/widgets.lua")
 
-local routeEditor = {}
+local fErebusPanel = {}
 
 local DEFAULT_OPTIONS = {
-    title = "F route editor",
+    title = "F / Erebus",
     notes = {},
 }
 
@@ -22,7 +22,7 @@ local function firstIssueRoomIndex(evaluation)
     return address and address.roomIndex or nil
 end
 
-function routeEditor.draw(state, ctx, opts)
+function fErebusPanel.draw(state, ctx, opts)
     opts = opts or DEFAULT_OPTIONS
     local drawContext = ctx and ctx.draw or nil
     local imgui = drawContext and drawContext.imgui or nil
@@ -64,4 +64,4 @@ function routeEditor.draw(state, ctx, opts)
     end
 end
 
-return routeEditor
+return fErebusPanel

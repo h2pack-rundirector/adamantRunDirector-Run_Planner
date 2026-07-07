@@ -1,4 +1,4 @@
-local routeEditor = import("mods/ui/planner/route_editor.lua")
+local fErebusPanel = import("mods/ui/biomes/f_erebus_panel.lua")
 local widgets = import("mods/ui/planner/widgets.lua")
 
 local routeShell = {}
@@ -171,7 +171,7 @@ end
 local function drawBiomePanel(state, ctx, route, biomeKey, evaluation)
     local imgui = ctx and ctx.draw and ctx.draw.imgui or nil
     if route ~= nil and route.key == "Underworld" and biomeKey == "F" then
-        routeEditor.draw(state, ctx, {
+        fErebusPanel.draw(state, ctx, {
             title = biomeLabel(state.catalog, "F"),
             hideStatus = true,
             evaluation = evaluation,

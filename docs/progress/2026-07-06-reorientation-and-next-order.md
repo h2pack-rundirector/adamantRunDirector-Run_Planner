@@ -533,18 +533,18 @@ Current boundary:
 
 - the form modules are still F-only and operate directly on planner state;
 - generated selected-door options are still local to the room form;
-- there is no production route-editor composition module yet.
+- there is no production F/Erebus panel composition module yet.
 
 ## Completed Route Editor Shell Slice
 
 Implemented in the current working checkpoint:
 
-- `src/mods/ui/planner/route_editor.lua` now owns the top-level F editor
+- `src/mods/ui/biomes/f_erebus_panel.lua` now owns the top-level F/Erebus panel
   composition: debug header/actions, cached evaluation/status, and room-form
   loop;
 - `src/mods/ui/debug_harness.lua` is now a thin proof wrapper that creates
-  planner state and delegates drawing to the route editor;
-- focused route-editor coverage verifies the no-imgui fallback output through
+  planner state and delegates drawing to the F/Erebus panel;
+- focused F/Erebus panel coverage verifies the no-imgui fallback output through
   the same form modules used by the harness.
 
 Current boundary:
@@ -557,9 +557,9 @@ Current boundary:
 
 Implemented in the current working checkpoint:
 
-- `src/mods/ui/planner/route_editor.lua` now has neutral shared editor copy,
+- `src/mods/ui/biomes/f_erebus_panel.lua` now has neutral shared panel copy,
   while `src/mods/ui/debug_harness.lua` supplies debug-only title/detail text
-  when it wraps the editor;
+  when it wraps the panel;
 - selected-door option providers moved out of
   `src/mods/ui/forms/room.lua` and into planner state;
 - selected-door options are cached per generated-door batch and rebuilt only
@@ -581,7 +581,7 @@ Implemented in the current working checkpoint:
   a specific form address;
 - F room, generated-door, generated reward, and room-local reward controls
   render that first issue with a `Route blocker` label at the owning address;
-- route-editor fallback coverage verifies that an invalid selected F door
+- F/Erebus panel fallback coverage verifies that an invalid selected F door
   target surfaces the first blocking issue near the door controls.
 
 Current boundary:
@@ -618,11 +618,11 @@ Current boundary:
 Implemented in the current working checkpoint:
 
 - `src/mods/ui.lua` now creates planner state and renders the production
-  `route_editor.lua` surface directly;
+  `f_erebus_panel.lua` surface directly;
 - `debug_harness.lua` remains available as a proof/test wrapper with debug-only
   title/detail text;
 - the skeleton UI smoke coverage now verifies that the module entrypoint renders
-  the neutral `F route editor` surface rather than debug harness copy.
+  the neutral F/Erebus panel surface rather than debug harness copy.
 
 Current boundary:
 

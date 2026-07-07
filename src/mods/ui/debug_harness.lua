@@ -1,4 +1,4 @@
-local routeEditor = import("mods/ui/planner/route_editor.lua")
+local fErebusPanel = import("mods/ui/biomes/f_erebus_panel.lua")
 local plannerState = import("mods/ui/planner/state.lua")
 
 local debugHarness = {}
@@ -6,7 +6,7 @@ local debugHarness = {}
 local ROUTE_EDITOR_OPTIONS = {
     title = "Run Planner debug harness",
     notes = {
-        "Minimal F route editor using the real form, history, validation, and feedback pipeline.",
+        "Minimal F/Erebus panel using the real form, history, validation, and feedback pipeline.",
         "Uses docs/system_design contracts; not the final planner UI.",
     },
 }
@@ -18,7 +18,7 @@ end
 function debugHarness.create(opts)
     local state = plannerState.create(opts)
     state.drawTab = function(_, ctx)
-        return routeEditor.draw(state, ctx, ROUTE_EDITOR_OPTIONS)
+        return fErebusPanel.draw(state, ctx, ROUTE_EDITOR_OPTIONS)
     end
     return state
 end

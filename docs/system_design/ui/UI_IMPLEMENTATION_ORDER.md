@@ -72,7 +72,10 @@ src/mods/ui/planner/
   state.lua          -- draft state, dirty flags, cached evaluation
   options.lua        -- shared stable option/catalog helpers
   widgets.lua        -- low-level dropdown/checkbox/status wrappers
-  route_editor.lua   -- top-level route editor composition
+  route_shell.lua    -- route tabs, biome nav, and active biome dispatch
+
+src/mods/ui/biomes/
+  f_erebus_panel.lua -- F/Erebus biome panel composition
 
 src/mods/ui/forms/
   route.lua
