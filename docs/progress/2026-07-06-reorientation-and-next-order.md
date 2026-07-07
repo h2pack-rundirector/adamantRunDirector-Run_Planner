@@ -515,26 +515,42 @@ Current boundary:
 - generated selected-door options are still created in harness draw code;
 - F form leaves and production route editor composition have not started.
 
+## Completed F Control Form Extraction Slice
+
+Implemented in the current working checkpoint:
+
+- F room drawing moved into `src/mods/ui/forms/room.lua`;
+- generated-door target and generated reward controls moved into
+  `src/mods/ui/forms/generated_door.lua` and
+  `src/mods/ui/forms/reward_offer.lua`;
+- room-local offer controls moved into `src/mods/ui/forms/room_offer.lua`;
+- Boon and Devotion payload controls moved into `src/mods/ui/forms/payload/`;
+- feedback address lookup moved into `src/mods/ui/forms/feedback.lua`;
+- the debug harness now owns only the debug header/actions/status loop and
+  composes the room form for the active F draft.
+
+Current boundary:
+
+- the form modules are still F-only and operate directly on planner state;
+- generated selected-door options are still local to the room form;
+- there is no production route-editor composition module yet.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Port F controls onto planner widgets
+Add production route-editor composition
 ```
 
 Concrete scope:
 
-- move F room, generated-door, generated reward, room-local offer, and payload
-  draw routines out of the debug harness into small form/view modules;
-- keep those modules as editors over planner state, not validators;
-- preserve the current debug harness output by composing the new modules;
-- keep the first pass F-only.
-
-After the F controls are separated from the harness, the next choice is either
-production route-editor composition or G/P/Q linear declaration expansion,
-depending on whether the F UI surface is usable enough for in-game model
-testing.
+- move the debug header/actions/status loop into a production-facing
+  `src/mods/ui/planner/route_editor.lua`;
+- keep the debug harness as a thin proof wrapper around the same editor;
+- keep F-only scope and the existing planner state/evaluation cache;
+- avoid adding G/P/Q until the F editor shell is usable enough for in-game
+  model testing.
 
 ## Validation Baseline
 
