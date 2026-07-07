@@ -6,6 +6,12 @@ local plannerOptions = import("mods/ui/planner/options.lua")
 
 local plannerState = {}
 
+local function selectedDoorOptionCache()
+    return setmetatable({}, {
+        __mode = "k",
+    })
+end
+
 function plannerState.defaultDraft()
     return defaultDrafts.fSampleDraft()
 end
@@ -222,6 +228,42 @@ local function markDirty(state)
     state.dirty = true
 end
 
+local function persistDraft(state)
+    local control = state.draftControl
+    if control ~= nil then
+        return control:writeDraft(plannerOptions.deepCopy(state.draft))
+    end
+    return false
+end
+
+local function draftChanged(state)
+    markDirty(state)
+    persistDraft(state)
+end
+
+local function bindDraftControl(state, control)
+    if control == nil or control == state.draftControl then
+        return false
+    end
+    if type(control.readDraft) ~= "function" or type(control.writeDraft) ~= "function" then
+        error("PlannerDraft control must expose readDraft() and writeDraft()")
+    end
+
+    state.draftControl = control
+    state.draft = plannerOptions.deepCopy(control:readDraft())
+    state.selectedDoorOptionCache = selectedDoorOptionCache()
+    markDirty(state)
+    return true
+end
+
+local function bindUiContext(state, ctx)
+    local controls = ctx and ctx.controls or nil
+    if controls == nil or type(controls.get) ~= "function" then
+        return false
+    end
+    return bindDraftControl(state, controls.get(state.draftControlName))
+end
+
 local function setRoomKey(state, roomIndex, roomKey)
     local biome = state.currentBiome()
     local room = biome.rooms[roomIndex]
@@ -231,7 +273,7 @@ local function setRoomKey(state, roomIndex, roomKey)
     room.roomKey = roomKey
     room.offerPoints = plannerOptions.materializedRoomOfferPoints(state.catalog, biome.biomeKey, roomKey, room.offerPoints)
     room.generatedDoors = plannerOptions.materializedGeneratedDoors(state.catalog, biome.biomeKey, roomKey, room.generatedDoors)
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
@@ -241,7 +283,7 @@ local function setDoorTarget(state, roomIndex, doorIndex, targetRoomKey)
         return false
     end
     door.targetRoomKey = targetRoomKey
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
@@ -253,7 +295,7 @@ local function setRewardStore(state, roomIndex, doorIndex, storeKey)
     offer.store = storeKey
     offer.rewardType = plannerOptions.first(plannerOptions.rewardTypesForStore(state.catalog, storeKey), offer.rewardType)
     offer.payload = defaultPayloadForRewardType(state, offer.rewardType)
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
@@ -264,7 +306,7 @@ local function setRewardType(state, roomIndex, doorIndex, rewardType)
     end
     offer.rewardType = rewardType
     offer.payload = defaultPayloadForRewardType(state, rewardType)
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
@@ -275,7 +317,7 @@ local function setBoonSource(state, roomIndex, doorIndex, source)
         return false
     end
     offer.payload.source = source
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
@@ -287,7 +329,7 @@ local function setDevotionSource(state, roomIndex, doorIndex, sourceIndex, sourc
         return false
     end
     offer.payload.sources[sourceIndex] = source
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
@@ -297,7 +339,7 @@ local function setRewardAcquired(state, roomIndex, doorIndex, acquired)
         return false
     end
     offer.acquired = acquired
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
@@ -309,7 +351,7 @@ local function setRoomOfferStore(state, roomIndex, storeKey)
     offer.store = storeKey
     offer.rewardType = plannerOptions.first(plannerOptions.rewardTypesForStore(state.catalog, storeKey), offer.rewardType)
     offer.payload = defaultPayloadForRewardType(state, offer.rewardType)
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
@@ -320,7 +362,7 @@ local function setRoomOfferType(state, roomIndex, rewardType)
     end
     offer.rewardType = rewardType
     offer.payload = defaultPayloadForRewardType(state, rewardType)
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
@@ -330,7 +372,7 @@ local function setRoomOfferAcquired(state, roomIndex, acquired)
         return false
     end
     offer.acquired = acquired
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
@@ -340,7 +382,7 @@ local function setSelectedDoor(state, roomIndex, selectedDoorIndex)
         return false
     end
     generatedDoors.selectedDoorIndex = selectedDoorIndex
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
@@ -362,7 +404,7 @@ local function appendSelectedTarget(state)
     room.offerPoints = plannerOptions.materializedRoomOfferPoints(state.catalog, biome.biomeKey, room.roomKey, nil)
     room.generatedDoors = plannerOptions.materializedGeneratedDoors(state.catalog, biome.biomeKey, room.roomKey, nil)
     biome.rooms[#biome.rooms + 1] = room
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
@@ -372,13 +414,14 @@ local function removeLastRoom(state)
         return false
     end
     rooms[#rooms] = nil
-    markDirty(state)
+    draftChanged(state)
     return true
 end
 
 local function resetDraft(state)
     state.draft = plannerState.defaultDraft()
-    markDirty(state)
+    state.selectedDoorOptionCache = selectedDoorOptionCache()
+    draftChanged(state)
 end
 
 function plannerState.create(opts)
@@ -392,14 +435,13 @@ function plannerState.create(opts)
         dirty = true,
         evaluation = nil,
         providerVersion = 1,
+        draftControlName = opts.draftControlName or dataModule.PLANNER_DRAFT_CONTROL,
         roomOptions = plannerOptions.roomOptions(catalog, "F"),
         storeOptions = plannerOptions.storeOptions(catalog),
         rewardTypeOptions = plannerOptions.rewardTypeOptions(catalog),
         boonSourceOptions = plannerOptions.sourceOptions(catalog, "boon"),
         emptyOptions = plannerOptions.empty(),
-        selectedDoorOptionCache = setmetatable({}, {
-            __mode = "k",
-        }),
+        selectedDoorOptionCache = selectedDoorOptionCache(),
     }
 
     function state.currentBiome()
@@ -431,6 +473,12 @@ function plannerState.create(opts)
     end
     function state.markDirty()
         return markDirty(state)
+    end
+    function state.bindDraftControl(control)
+        return bindDraftControl(state, control)
+    end
+    function state.bindUiContext(ctx)
+        return bindUiContext(state, ctx)
     end
     function state.resetDraft()
         return resetDraft(state)
@@ -473,6 +521,10 @@ function plannerState.create(opts)
     end
     function state.setSelectedDoor(roomIndex, selectedDoorIndex)
         return setSelectedDoor(state, roomIndex, selectedDoorIndex)
+    end
+
+    if opts.draftControl ~= nil then
+        bindDraftControl(state, opts.draftControl)
     end
 
     return state

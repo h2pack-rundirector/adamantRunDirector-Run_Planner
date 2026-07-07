@@ -217,6 +217,8 @@ The form layer should not:
 
 - `UI_IMPLEMENTATION_ORDER.md` owns production UI build order and draw-state
   constraints.
+- `FORM_STORAGE_ROUNDTRIP.md` owns the form-to-draft-to-storage mapping and
+  serialization rules.
 - `../validation/VALIDATION_MODEL.md` owns candidate evaluation and feedback
   semantics.
 - `../model/CANONICAL_PLAN.md` owns canonical plan shape.

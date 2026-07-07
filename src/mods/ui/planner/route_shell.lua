@@ -250,6 +250,7 @@ end
 
 function routeShell.draw(state, ctx)
     local imgui = ctx and ctx.draw and ctx.draw.imgui or nil
+    state.bindUiContext(ctx)
     local evaluation = state.ensureEvaluation()
     widgets.text(imgui, "Run Planner")
     widgets.status(imgui, evaluation, state.feedbackLocationLabel)

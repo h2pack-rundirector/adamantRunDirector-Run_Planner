@@ -28,6 +28,43 @@ local function createState()
     })
 end
 
+local function copyTable(source)
+    if source == nil then
+        return nil
+    end
+
+    local copy = {}
+    for key, value in pairs(source) do
+        if type(value) == "table" then
+            copy[key] = copyTable(value)
+        else
+            copy[key] = value
+        end
+    end
+    return copy
+end
+
+local function fakeDraftControl(draft)
+    local control = {
+        reads = 0,
+        writes = {},
+        draft = copyTable(draft),
+    }
+
+    function control:readDraft()
+        self.reads = self.reads + 1
+        return copyTable(self.draft)
+    end
+
+    function control:writeDraft(nextDraft)
+        self.draft = copyTable(nextDraft)
+        self.writes[#self.writes + 1] = copyTable(nextDraft)
+        return true
+    end
+
+    return control
+end
+
 function TestRouteShell.testFallbackDrawsRouteStatusAndFPanel()
     h.withTestImport(function()
         local routeShell = h.testImport("mods/ui/planner/route_shell.lua")
@@ -44,6 +81,32 @@ function TestRouteShell.testFallbackDrawsRouteStatusAndFPanel()
         lu.assertNotNil(combined:find("Erebus (F)", 1, true))
         lu.assertNotNil(combined:find("Room 1", 1, true))
         lu.assertNil(combined:find("debug harness", 1, true))
+    end)
+end
+
+function TestRouteShell.testDrawBindsPlannerDraftControlFromUiContext()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local routeShell = h.testImport("mods/ui/planner/route_shell.lua")
+        local storedDraft = h.testImport("mods/forms/defaults.lua").fSampleDraft()
+        storedDraft.biomes[1].rooms[1].generatedDoors.doors[1].targetRoomKey = "F_Combat02"
+        local control = fakeDraftControl(storedDraft)
+        local requestedControl
+        local state = createState()
+        local lines, ctx = lineSink()
+        ctx.controls = {
+            get = function(name)
+                requestedControl = name
+                return control
+            end,
+        }
+
+        routeShell.draw(state, ctx)
+
+        local combined = table.concat(lines, "\n")
+        lu.assertEquals(requestedControl, data.PLANNER_DRAFT_CONTROL)
+        lu.assertEquals(control.reads, 1)
+        lu.assertNotNil(combined:find("Target##room1_door1: C02 (F_Combat02)", 1, true))
     end)
 end
 

@@ -17,6 +17,8 @@ Notable model authorities:
   declaration and generated-door batch validation semantics.
 - `system_design/ui/UI_IMPLEMENTATION_ORDER.md`: production UI build order,
   draw-state constraints, and control-layer rollout.
+- `system_design/ui/FORM_STORAGE_ROUNDTRIP.md`: form-to-draft-to-storage
+  serialization boundaries for production UI forms.
 
 ## Progress
 

@@ -320,6 +320,8 @@ early.
 ## Supporting Docs
 
 - `FORM_FEEDBACK_CONTRACT.md` owns form, leaf, address, and feedback contracts.
+- `FORM_STORAGE_ROUNDTRIP.md` owns form-to-draft-to-storage serialization
+  boundaries.
 - `../validation/VALIDATION_MODEL.md` owns candidate evaluation and
   presentation policy.
 - `../migration/IMPLEMENTATION_SEQUENCE.md` owns the full implementation order.

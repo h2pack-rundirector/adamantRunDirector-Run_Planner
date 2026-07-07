@@ -4,6 +4,53 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-07 - Form Storage Roundtrip Contract Added
+
+Added a stable UI contract for the form/object model:
+
+```text
+form participant -> planner-state mutator -> draft node -> PlannerDraft storage rows
+```
+
+The new contract records the current F/Erebus form-to-storage map, clarifies that
+`PlannerDraft` is the serialization boundary, and lists non-serialized derived
+state such as feedback, history, candidate provider decoration, and UI caches.
+
+Validation run:
+
+- `git diff --check` - passed.
+
+### 2026-07-07 - Planner Draft Storage Ownership Wired
+
+The fifth UI implementation slice now lets the production route shell use the
+`PlannerDraft` control as the owner of editable draft data.
+
+Implemented behavior:
+
+- planner state binds to `ui.controls.get("PlannerDraft")` when the production
+  route shell receives a Lib UI context;
+- the bound state reads the stored draft once from `PlannerDraft:readDraft()`;
+- existing room/reward mutators remain the only write surface and now persist
+  changes through `PlannerDraft:writeDraft(...)`;
+- reset, append/remove room, selected-door, room target, generated reward, room
+  offer, acquired flag, and payload source edits all write the normalized flat
+  draft tables through the adapter;
+- no-controls contexts, including tests and the debug harness, keep the existing
+  in-memory fallback.
+
+Still deferred:
+
+- external reset/reload detection after a state has already bound to a control;
+- broader route/biome feedback coloring and inactive-tab polish;
+- expanding production storage ownership beyond the current editable F panel.
+
+Validation run:
+
+- `lua tests/all.lua` - 132 passed.
+- `luacheck src tests` - 0 warnings / 0 errors.
+- `git diff --check` - passed.
+- focused ModpackLib activation/draw harness - passed.
+
 ### 2026-07-07 - Integrated F Room Unit Mounted
 
 The fourth UI implementation slice now reshapes the F panel into an integrated
