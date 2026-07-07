@@ -535,22 +535,42 @@ Current boundary:
 - generated selected-door options are still local to the room form;
 - there is no production route-editor composition module yet.
 
+## Completed Route Editor Shell Slice
+
+Implemented in the current working checkpoint:
+
+- `src/mods/ui/planner/route_editor.lua` now owns the top-level F editor
+  composition: debug header/actions, cached evaluation/status, and room-form
+  loop;
+- `src/mods/ui/debug_harness.lua` is now a thin proof wrapper that creates
+  planner state and delegates drawing to the route editor;
+- focused route-editor coverage verifies the no-imgui fallback output through
+  the same form modules used by the harness.
+
+Current boundary:
+
+- the editor shell is still F-only and still labels itself as the debug
+  harness;
+- the production UI is not yet wired as a separate tab or biome-panel surface;
+- generated selected-door options are still built by the room form.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Add production route-editor composition
+Stabilize F editor usability
 ```
 
 Concrete scope:
 
-- move the debug header/actions/status loop into a production-facing
-  `src/mods/ui/planner/route_editor.lua`;
-- keep the debug harness as a thin proof wrapper around the same editor;
-- keep F-only scope and the existing planner state/evaluation cache;
-- avoid adding G/P/Q until the F editor shell is usable enough for in-game
-  model testing.
+- separate debug-only wording from the shared route editor while keeping the
+  harness as the proof wrapper;
+- move selected-door option construction out of per-room draw code into a
+  stable state/provider helper;
+- decide whether route status markers or inactive downstream presentation need
+  to land before broader biome work;
+- keep G/P/Q deferred until F can be exercised comfortably in-game.
 
 ## Validation Baseline
 
@@ -565,7 +585,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 102 passed;
+- child tests: 103 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.
