@@ -592,23 +592,44 @@ Current boundary:
   inactive yet;
 - candidate coloring remains provider-owned and unchanged by this marker pass.
 
+## Completed F Error Horizon Presentation Slice
+
+Implemented in the current working checkpoint:
+
+- planner state now translates feedback addresses into concise route locations,
+  including room keys, generated doors, generated rewards, and room-local
+  offers;
+- route status now renders the first blocking issue with that translated
+  room/door location while preserving the validator phase;
+- downstream rooms after the first blocking room render inactive through the
+  widget layer when the host ImGui surface supports disabled scopes, with a
+  text fallback for test/debug output;
+- focused coverage verifies translated status output, address-label generation,
+  and downstream inactive fallback output.
+
+Current boundary:
+
+- the production module entrypoint still goes through `debug_harness.lua`;
+- inactive presentation is room-horizon only, not field-level;
+- candidate coloring remains provider-owned and unchanged by this horizon pass.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Add F error horizon presentation
+Wire the production F editor surface
 ```
 
 Concrete scope:
 
-- translate the first blocking feedback address into a concise room/door label
-  in route status;
-- keep context-invalid options visible and colored through existing candidate
-  feedback rather than hiding them in the editor layer;
-- decide whether downstream room forms after the first blocking invalid should
-  render inactive before broader biome work;
-- keep G/P/Q deferred until F can be exercised comfortably in-game.
+- make `src/mods/ui.lua` create the production route-editor state directly
+  instead of routing through the debug harness by default;
+- keep `debug_harness.lua` available as a proof/test wrapper with debug-only
+  title/detail text;
+- keep F-only scope and avoid final biome-control templates until the route
+  editor surface is comfortable enough for in-game model testing;
+- keep G/P/Q deferred until the F UI/data/validation loop has been exercised.
 
 ## Validation Baseline
 
@@ -623,7 +644,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 105 passed;
+- child tests: 108 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.

@@ -128,7 +128,25 @@ function widgets.feedback(imgui, label, feedback)
     end
 end
 
-function widgets.status(imgui, evaluation)
+function widgets.beginDisabled(imgui, disabled, fallbackLabel)
+    if not disabled then
+        return false
+    end
+    if imgui ~= nil and imgui.BeginDisabled ~= nil then
+        imgui.BeginDisabled(true)
+        return true
+    end
+    widgets.text(imgui, fallbackLabel)
+    return false
+end
+
+function widgets.endDisabled(imgui, pushed)
+    if pushed and imgui ~= nil and imgui.EndDisabled ~= nil then
+        imgui.EndDisabled()
+    end
+end
+
+function widgets.status(imgui, evaluation, locationForAddress)
     widgets.text(imgui, "State: " .. tostring(evaluation.state))
     widgets.text(imgui, "Complete: " .. tostring(evaluation.complete) .. "  Valid: " .. tostring(evaluation.valid))
     widgets.text(imgui, "Feedback: " .. tostring(evaluation.status.feedbackCount)
@@ -139,8 +157,13 @@ function widgets.status(imgui, evaluation)
             .. "  Offers: " .. tostring(#evaluation.history.rewardOfferHistory))
     end
     if evaluation.status.firstIssue ~= nil then
+        local location = locationForAddress and locationForAddress(evaluation.status.firstIssue.address) or nil
+        local issueLocation = tostring(evaluation.status.firstIssue.phase)
+        if location ~= nil then
+            issueLocation = location .. " (" .. issueLocation .. ")"
+        end
         widgets.text(imgui, "First issue: " .. tostring(evaluation.status.firstIssue.code)
-            .. " at " .. tostring(evaluation.status.firstIssue.phase))
+            .. " at " .. issueLocation)
     end
 end
 

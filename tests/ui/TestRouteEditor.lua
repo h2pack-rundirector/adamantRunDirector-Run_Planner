@@ -55,6 +55,31 @@ function TestRouteEditor.testDrawsFirstBlockingIssueMarker()
         routeEditor.draw(state, ctx)
 
         local combined = table.concat(lines, "\n")
+        lu.assertNotNil(combined:find(
+            "First issue: f_preboss_too_early at Room 2 (F_Combat01) door 1 (room.generate_next)",
+            1,
+            true
+        ))
         lu.assertNotNil(combined:find("Route blocker: f_preboss_too_early", 1, true))
+    end)
+end
+
+function TestRouteEditor.testDrawsDownstreamRoomsInactiveAfterFirstIssue()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local routeEditor = h.testImport("mods/ui/planner/route_editor.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+        state.setDoorTarget(2, 1, "F_PreBoss01")
+        state.appendSelectedTarget()
+        local lines, ctx = lineSink()
+
+        routeEditor.draw(state, ctx)
+
+        local combined = table.concat(lines, "\n")
+        lu.assertNotNil(combined:find("Inactive after route blocker", 1, true))
+        lu.assertNotNil(combined:find("Room 3", 1, true))
     end)
 end

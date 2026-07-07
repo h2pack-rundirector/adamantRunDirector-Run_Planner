@@ -87,3 +87,34 @@ function TestPlannerState.testSelectedDoorOptionsAreCachedByDoorBatch()
         lu.assertEquals(rebuilt.labels, { "Door 1", "Door 2" })
     end)
 end
+
+function TestPlannerState.testFeedbackLocationLabelsUseCurrentDraft()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+
+        lu.assertEquals(state.feedbackLocationLabel({
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+            doorIndex = 1,
+        }), "Room 2 (F_Combat01) door 1")
+        lu.assertEquals(state.feedbackLocationLabel({
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 1,
+            doorIndex = 1,
+            offerIndex = 1,
+        }), "Room 1 (F_Opening01) door 1 reward 1")
+        lu.assertEquals(state.feedbackLocationLabel({
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+            offerPointIndex = 1,
+            offerIndex = 1,
+        }), "Room 2 (F_Combat01) offer point 1 offer 1")
+    end)
+end

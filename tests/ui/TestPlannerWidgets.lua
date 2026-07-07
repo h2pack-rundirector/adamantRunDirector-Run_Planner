@@ -115,6 +115,21 @@ function TestPlannerWidgets.testCheckboxFallbackRendersText()
     end)
 end
 
+function TestPlannerWidgets.testDisabledFallbackRendersHorizonLabel()
+    h.withTestImport(function()
+        local widgets = h.testImport("mods/ui/planner/widgets.lua")
+        local lines, imgui = textSink()
+
+        local pushed = widgets.beginDisabled(imgui, true, "Inactive after route blocker")
+        widgets.endDisabled(imgui, pushed)
+
+        lu.assertFalse(pushed)
+        lu.assertEquals(lines, {
+            "Inactive after route blocker",
+        })
+    end)
+end
+
 function TestPlannerWidgets.testStatusRendersFallbackSummary()
     h.withTestImport(function()
         local widgets = h.testImport("mods/ui/planner/widgets.lua")

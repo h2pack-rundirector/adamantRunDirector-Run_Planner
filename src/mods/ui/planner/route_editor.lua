@@ -16,6 +16,12 @@ local function drawHeader(imgui, opts)
     end
 end
 
+local function firstIssueRoomIndex(evaluation)
+    local firstIssue = evaluation and evaluation.status and evaluation.status.firstIssue or nil
+    local address = firstIssue and firstIssue.address or nil
+    return address and address.roomIndex or nil
+end
+
 function routeEditor.draw(state, ctx, opts)
     local drawContext = ctx and ctx.draw or nil
     local imgui = drawContext and drawContext.imgui or nil
@@ -36,14 +42,18 @@ function routeEditor.draw(state, ctx, opts)
 
     local evaluation = state.ensureEvaluation()
     widgets.separator(imgui)
-    widgets.status(imgui, evaluation)
+    widgets.status(imgui, evaluation, state.feedbackLocationLabel)
 
+    local blockerRoomIndex = firstIssueRoomIndex(evaluation)
     for roomIndex, room in ipairs(state.currentBiome().rooms or {}) do
+        local downstream = blockerRoomIndex ~= nil and roomIndex > blockerRoomIndex
+        local disabled = widgets.beginDisabled(imgui, downstream, "Inactive after route blocker")
         roomForm.draw(state, imgui, evaluation, {
             routeKey = state.draft.routeKey,
             biomeIndex = 1,
             roomIndex = roomIndex,
         }, room)
+        widgets.endDisabled(imgui, disabled)
     end
 
     if state.dirty then
