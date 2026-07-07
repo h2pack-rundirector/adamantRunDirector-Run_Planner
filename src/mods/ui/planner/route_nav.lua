@@ -2,6 +2,7 @@ local routeSelection = import("mods/ui/planner/route_selection.lua")
 local widgets = import("mods/ui/planner/widgets.lua")
 
 local routeNav = {}
+local defaultInstance
 
 local EMPTY_LIST = {}
 
@@ -53,15 +54,15 @@ local function cachedTabListForRoute(state, route)
     return tabs
 end
 
-local function drawFallbackBiomeNav(imgui, catalog, route, activeBiome)
-    widgets.text(imgui, "Biomes")
+local function drawFallbackBiomeNav(service, imgui, catalog, route, activeBiome)
+    service.widgets.text(imgui, "Biomes")
     for _, biomeKey in ipairs(route and route.biomeKeys or EMPTY_LIST) do
         local marker = biomeKey == activeBiome and "* " or "  "
-        widgets.text(imgui, marker .. biomeLabel(catalog, biomeKey))
+        service.widgets.text(imgui, marker .. biomeLabel(catalog, biomeKey))
     end
 end
 
-local function drawBiomeNav(state, ctx, route, activeBiome)
+local function drawBiomeNav(service, state, ctx, route, activeBiome)
     local draw = ctx and ctx.draw or nil
     local nav = draw and draw.nav or nil
     if nav ~= nil and type(nav.verticalTabs) == "function" then
@@ -72,54 +73,71 @@ local function drawBiomeNav(state, ctx, route, activeBiome)
             tabs = cachedTabListForRoute(state, route),
         })
         if selected ~= nil and selected ~= activeBiome then
-            routeSelection.setActiveBiome(ctx, route.key, selected)
+            service.routeSelection.setActiveBiome(ctx, route.key, selected)
             return selected
         end
         return activeBiome
     end
 
     local imgui = draw and draw.imgui or nil
-    drawFallbackBiomeNav(imgui, state.catalog, route, activeBiome)
+    drawFallbackBiomeNav(service, imgui, state.catalog, route, activeBiome)
     return activeBiome
 end
 
-local function drawRouteContent(state, ctx, route, evaluation, biomePanels)
+local function drawRouteContent(service, state, ctx, route, evaluation, biomePanels)
     local imgui = ctx and ctx.draw and ctx.draw.imgui or nil
-    local biomeKey = routeSelection.activeBiomeKey(ctx, route)
-    widgets.text(imgui, "Route: " .. routeLabel(route))
-    biomeKey = drawBiomeNav(state, ctx, route, biomeKey)
-    widgets.separator(imgui)
+    local biomeKey = service.routeSelection.activeBiomeKey(ctx, route)
+    service.widgets.text(imgui, "Route: " .. routeLabel(route))
+    biomeKey = drawBiomeNav(service, state, ctx, route, biomeKey)
+    service.widgets.separator(imgui)
     biomePanels.draw(state, ctx, route, biomeKey, evaluation)
 end
 
-local function drawFallbackRoutes(state, ctx, evaluation, biomePanels)
-    drawRouteContent(state, ctx, routeSelection.activeRoute(state, ctx), evaluation, biomePanels)
+local function drawFallbackRoutes(service, state, ctx, evaluation, biomePanels)
+    drawRouteContent(service, state, ctx, service.routeSelection.activeRoute(state, ctx), evaluation, biomePanels)
 end
 
-local function drawRouteTabs(state, ctx, evaluation, biomePanels)
+local function drawRouteTabs(service, state, ctx, evaluation, biomePanels)
     local imgui = ctx and ctx.draw and ctx.draw.imgui or nil
     if imgui == nil or imgui.BeginTabBar == nil or imgui.BeginTabItem == nil or imgui.EndTabItem == nil or imgui.EndTabBar == nil then
-        drawFallbackRoutes(state, ctx, evaluation, biomePanels)
+        drawFallbackRoutes(service, state, ctx, evaluation, biomePanels)
         return
     end
 
     if not imgui.BeginTabBar("RunPlannerRouteTabs") then
-        drawFallbackRoutes(state, ctx, evaluation, biomePanels)
+        drawFallbackRoutes(service, state, ctx, evaluation, biomePanels)
         return
     end
 
-    for _, route in ipairs(routeSelection.routeDefinitions(state.catalog)) do
+    for _, route in ipairs(service.routeSelection.routeDefinitions(state.catalog)) do
         if imgui.BeginTabItem(routeLabel(route)) then
-            routeSelection.setActiveRoute(ctx, route.key)
-            drawRouteContent(state, ctx, route, evaluation, biomePanels)
+            service.routeSelection.setActiveRoute(ctx, route.key)
+            drawRouteContent(service, state, ctx, route, evaluation, biomePanels)
             imgui.EndTabItem()
         end
     end
     imgui.EndTabBar()
 end
 
+function routeNav.create(deps)
+    deps = deps or {}
+    local service = {
+        routeSelection = deps.routeSelection or routeSelection,
+        widgets = deps.widgets or widgets,
+    }
+
+    function service.draw(state, ctx, evaluation, biomePanels)
+        return drawRouteTabs(service, state, ctx, evaluation, biomePanels)
+    end
+
+    return service
+end
+
 function routeNav.draw(state, ctx, evaluation, biomePanels)
-    return drawRouteTabs(state, ctx, evaluation, biomePanels)
+    if defaultInstance == nil then
+        defaultInstance = routeNav.create()
+    end
+    return defaultInstance.draw(state, ctx, evaluation, biomePanels)
 end
 
 return routeNav

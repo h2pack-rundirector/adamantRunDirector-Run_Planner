@@ -60,3 +60,51 @@ function TestBiomePanels.testRegistryDrawsPlaceholderForUnimplementedBiome()
         lu.assertNil(combined:find("Room 1 - Opening 1 (F_Opening01)", 1, true))
     end)
 end
+
+function TestBiomePanels.testRegistryCreateUsesInjectedPanels()
+    h.withTestImport(function()
+        local registry = h.testImport("mods/ui/biomes/registry.lua")
+        local calls = {}
+        local panels = registry.create({
+            fErebusPanel = {
+                draw = function(_, _, opts)
+                    calls[#calls + 1] = {
+                        kind = "F",
+                        title = opts.title,
+                        hideStatus = opts.hideStatus,
+                    }
+                end,
+            },
+            placeholderPanel = {
+                draw = function(_, _, route, biomeKey)
+                    calls[#calls + 1] = {
+                        kind = "placeholder",
+                        routeKey = route.key,
+                        biomeKey = biomeKey,
+                    }
+                end,
+            },
+        })
+        local state = createState()
+
+        panels.draw(state, {}, state.catalog.routes.lookup.Underworld, "F", {
+            state = "valid",
+        })
+        panels.draw(state, {}, state.catalog.routes.lookup.Surface, "N", {
+            state = "valid",
+        })
+
+        lu.assertEquals(calls, {
+            {
+                kind = "F",
+                title = "Erebus (F)",
+                hideStatus = true,
+            },
+            {
+                kind = "placeholder",
+                routeKey = "Surface",
+                biomeKey = "N",
+            },
+        })
+    end)
+end

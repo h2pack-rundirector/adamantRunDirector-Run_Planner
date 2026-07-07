@@ -49,3 +49,30 @@ function TestFreshSkeleton.testUiDrawsProductionEditorStatus()
         lu.assertNil(combined:find("debug harness", 1, true))
     end)
 end
+
+function TestFreshSkeleton.testUiCreateUsesInjectedStateAndRouteShell()
+    h.withTestImport(function()
+        local ui = h.testImport("mods/ui.lua")
+        local state = {}
+        local ctx = {}
+        local calls = {}
+        local instance = ui.create({
+            state = state,
+            routeShell = {
+                draw = function(stateArg, ctxArg)
+                    calls[#calls + 1] = {
+                        state = stateArg,
+                        ctx = ctxArg,
+                    }
+                end,
+            },
+        })
+
+        instance.drawTab(nil, ctx)
+
+        lu.assertIs(instance, state)
+        lu.assertEquals(#calls, 1)
+        lu.assertIs(calls[1].state, state)
+        lu.assertIs(calls[1].ctx, ctx)
+    end)
+end

@@ -84,6 +84,94 @@ function TestRouteShell.testFallbackDrawsRouteStatusAndFPanel()
     end)
 end
 
+function TestRouteShell.testCreateUsesInjectedRouteGraph()
+    h.withTestImport(function()
+        local routeShell = h.testImport("mods/ui/planner/route_shell.lua")
+        local calls = {}
+        local evaluation = {
+            state = "valid",
+        }
+        local state = {
+            dirty = false,
+            feedbackLocationLabel = function()
+            end,
+            bindUiContext = function(ctxArg)
+                calls[#calls + 1] = {
+                    kind = "bind",
+                    ctx = ctxArg,
+                }
+            end,
+            ensureEvaluation = function()
+                calls[#calls + 1] = {
+                    kind = "evaluate",
+                }
+                return evaluation
+            end,
+        }
+        local ctx = {}
+        local panels = {
+            marker = "panels",
+        }
+        local shell = routeShell.create({
+            routeNav = {
+                draw = function(stateArg, ctxArg, evaluationArg, panelsArg)
+                    calls[#calls + 1] = {
+                        kind = "nav",
+                        state = stateArg,
+                        ctx = ctxArg,
+                        evaluation = evaluationArg,
+                        panels = panelsArg,
+                    }
+                end,
+            },
+            biomePanels = panels,
+            widgets = {
+                text = function(_, label)
+                    calls[#calls + 1] = {
+                        kind = "text",
+                        label = label,
+                    }
+                end,
+                status = function(_, evaluationArg)
+                    calls[#calls + 1] = {
+                        kind = "status",
+                        evaluation = evaluationArg,
+                    }
+                end,
+                separator = function()
+                    calls[#calls + 1] = {
+                        kind = "separator",
+                    }
+                end,
+            },
+        })
+
+        shell.draw(state, ctx)
+
+        lu.assertEquals(calls[1], {
+            kind = "bind",
+            ctx = ctx,
+        })
+        lu.assertEquals(calls[2], {
+            kind = "evaluate",
+        })
+        lu.assertEquals(calls[3], {
+            kind = "text",
+            label = "Run Planner",
+        })
+        lu.assertEquals(calls[4].kind, "status")
+        lu.assertIs(calls[4].evaluation, evaluation)
+        lu.assertEquals(calls[5], {
+            kind = "separator",
+        })
+        lu.assertEquals(calls[6].kind, "nav")
+        lu.assertIs(calls[6].state, state)
+        lu.assertIs(calls[6].ctx, ctx)
+        lu.assertIs(calls[6].evaluation, evaluation)
+        lu.assertIs(calls[6].panels, panels)
+    end)
+end
+
 function TestRouteShell.testDrawBindsPlannerDraftControlFromUiContext()
     h.withTestImport(function()
         local data = h.testImport("mods/data.lua")

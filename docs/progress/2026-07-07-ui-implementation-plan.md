@@ -4,6 +4,38 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-07 - UI DI Graph Wired
+
+The production UI graph now follows the layered composition policy recorded in
+the system-design doc.
+
+Implemented behavior:
+
+- `ui.create(...)` builds the route-shell service once and attaches the
+  resulting draw surface to planner state;
+- `route_shell.create(deps)` composes route navigation and biome-panel
+  dispatch services, while keeping the module-level `draw(...)` wrapper for
+  migration compatibility;
+- `route_nav.create(deps)` accepts injected route-selection and widget
+  collaborators;
+- `biomes/registry.create(deps)` accepts injected F/Erebus and placeholder
+  panels;
+- focused tests pin the `ui.create`, route-shell, route-nav, and biome-registry
+  injection surfaces.
+
+Still deferred:
+
+- deciding whether the F/Erebus panel should become a constructor-composed
+  service before broader panel expansion;
+- moving leaf form modules to dependency injection only when they become real
+  composition boundaries.
+
+Validation run:
+
+- `lua tests/all.lua` - 141 passed.
+- `luacheck src tests` - 0 warnings / 0 errors.
+- `git diff --check` - passed.
+
 ### 2026-07-07 - UI Composition Boundaries Extracted
 
 The production route UI now has explicit composition boundaries instead of
