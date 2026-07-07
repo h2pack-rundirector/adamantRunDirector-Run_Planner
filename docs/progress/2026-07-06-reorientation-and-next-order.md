@@ -494,25 +494,47 @@ Current boundary:
 - generated selected-door options are still built by the harness draw helper;
 - production widgets and final biome panels have not started.
 
+## Completed Low-Level Planner Widgets Slice
+
+Implemented in the current working checkpoint:
+
+- `src/mods/ui/planner/widgets.lua` now owns low-level text, separator,
+  button, dropdown, checkbox, feedback, status, and section wrappers;
+- dropdowns consume stable candidate provider state directly, including
+  hidden values, optional colors, and hover/detail messages when the host ImGui
+  surface exposes the needed hooks;
+- text/no-imgui fallback rendering is preserved for tests and current in-game
+  debug use;
+- the debug harness now uses planner widgets instead of local draw helpers;
+- focused widget coverage verifies fallback text rendering, hidden candidate
+  filtering, color/message propagation, checkbox fallback, and status output.
+
+Current boundary:
+
+- the debug harness still owns rough route layout and feedback-address lookup;
+- generated selected-door options are still created in harness draw code;
+- F form leaves and production route editor composition have not started.
+
 ## Immediate Next Slice Recommendation
 
 The next implementation slice should be:
 
 ```text
-Build low-level planner widgets
+Port F controls onto planner widgets
 ```
 
 Concrete scope:
 
-- add dropdown, checkbox, section/status, and marker wrappers that consume
-  stable candidate provider state;
-- keep route validation out of draw helpers;
-- preserve text/no-imgui fallback rendering for tests and in-game debug use;
-- keep the debug harness active as the proof surface while production F editor
-  pieces come online.
+- move F room, generated-door, generated reward, room-local offer, and payload
+  draw routines out of the debug harness into small form/view modules;
+- keep those modules as editors over planner state, not validators;
+- preserve the current debug harness output by composing the new modules;
+- keep the first pass F-only.
 
-After the widgets exist, port the F room/generated-door/reward controls onto
-those widgets before expanding the linear declaration surface to G/P/Q.
+After the F controls are separated from the harness, the next choice is either
+production route-editor composition or G/P/Q linear declaration expansion,
+depending on whether the F UI surface is usable enough for in-game model
+testing.
 
 ## Validation Baseline
 
@@ -527,7 +549,7 @@ lua tests/smoke.lua
 
 Observed results:
 
-- child tests: 98 passed;
+- child tests: 102 passed;
 - child luacheck: 0 warnings / 0 errors;
 - child diff check: passed;
 - shell smoke: passed.
