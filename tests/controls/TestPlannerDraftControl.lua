@@ -53,9 +53,26 @@ local function tableHandle(initialRows)
     return handle
 end
 
+local function scalarHandle(initialValue)
+    local value = initialValue or 0
+    local handle = {}
+
+    function handle:read()
+        return value
+    end
+
+    function handle:write(nextValue)
+        value = nextValue
+        return true
+    end
+
+    return handle
+end
+
 local function fields(initial)
     initial = initial or {}
     return {
+        Revision = scalarHandle(initial.Revision),
         Rooms = tableHandle(initial.Rooms),
         GeneratedDoors = tableHandle(initial.GeneratedDoors),
         GeneratedDoorOffers = tableHandle(initial.GeneratedDoorOffers),
@@ -63,8 +80,97 @@ local function fields(initial)
     }
 end
 
+local function nodeByKey(storage, key)
+    for _, node in ipairs(storage) do
+        if node.key == key then
+            return node
+        end
+    end
+    return nil
+end
+
 local function sampleDraft()
     return h.testImport("mods/forms/defaults.lua").fSampleDraft()
+end
+
+local function representativeDraft()
+    return {
+        routeKey = "Underworld",
+        biomes = {
+            {
+                biomeKey = "F",
+                rooms = {
+                    {
+                        roomKey = "F_Opening01",
+                        generatedDoors = {
+                            batchRule = "Standard",
+                            selectedDoorIndex = 2,
+                            doors = {
+                                {
+                                    exitIndex = 1,
+                                    targetRoomKey = "F_Combat01",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "RunProgress",
+                                                rewardType = "Boon",
+                                                acquired = true,
+                                                payload = {
+                                                    source = "AphroditeUpgrade",
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                                {
+                                    exitIndex = 2,
+                                    targetRoomKey = "F_Shop01",
+                                    offerPoint = {
+                                        kind = "generatedDoorRewards",
+                                        batchKey = "nextDoors",
+                                        offers = {
+                                            {
+                                                store = "RunProgress",
+                                                rewardType = "Devotion",
+                                                acquired = false,
+                                                payload = {
+                                                    sources = {
+                                                        "PoseidonUpgrade",
+                                                        "ApolloUpgrade",
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    {
+                        roomKey = "F_Shop01",
+                        offerPoints = {
+                            {
+                                kind = "roomRewards",
+                                batchKey = "room",
+                                offers = {
+                                    {
+                                        store = "WorldShop",
+                                        rewardType = "RoomRewardMoneyDrop",
+                                        acquired = true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    {
+                        roomKey = "F_PreBoss01",
+                    },
+                },
+            },
+        },
+    }
 end
 
 function TestPlannerDraftControl.testStorageDeclaresFlatDraftTables()
@@ -72,12 +178,12 @@ function TestPlannerDraftControl.testStorageDeclaresFlatDraftTables()
         local template = h.testImport("mods/controls/PlannerDraft/PlannerDraft.lua")
         local storage = template.storage()
 
-        lu.assertEquals(storage[1].key, "Rooms")
-        lu.assertEquals(storage[1].type, "table")
-        lu.assertEquals(storage[1].defaultRows, 0)
-        lu.assertEquals(storage[2].key, "GeneratedDoors")
-        lu.assertEquals(storage[3].key, "GeneratedDoorOffers")
-        lu.assertEquals(storage[4].key, "RoomOffers")
+        lu.assertEquals(nodeByKey(storage, "Revision").type, "int")
+        lu.assertEquals(nodeByKey(storage, "Rooms").type, "table")
+        lu.assertEquals(nodeByKey(storage, "Rooms").defaultRows, 0)
+        lu.assertEquals(nodeByKey(storage, "GeneratedDoors").type, "table")
+        lu.assertEquals(nodeByKey(storage, "GeneratedDoorOffers").type, "table")
+        lu.assertEquals(nodeByKey(storage, "RoomOffers").type, "table")
     end)
 end
 
@@ -88,6 +194,23 @@ function TestPlannerDraftControl.testEmptyStorageReadsDefaultFDraft()
         local control = template.createRuntime(fields(), instance)
 
         lu.assertEquals(control:readDraft(), sampleDraft())
+    end)
+end
+
+function TestPlannerDraftControl.testUiControlIncrementsRevisionOnWrite()
+    h.withTestImport(function()
+        local template = h.testImport("mods/controls/PlannerDraft/PlannerDraft.lua")
+        local instance = template.prepare({})
+        local currentFields = fields()
+        local control = template.createUi(currentFields, instance)
+
+        lu.assertEquals(control:revision(), 0)
+
+        lu.assertTrue(control:writeDraft(sampleDraft()))
+        lu.assertEquals(control:revision(), 1)
+
+        lu.assertTrue(control:writeDraft(sampleDraft()))
+        lu.assertEquals(control:revision(), 2)
     end)
 end
 
@@ -107,6 +230,28 @@ function TestPlannerDraftControl.testUiControlWritesAndReadsFlatDraftRows()
         lu.assertEquals(currentFields.Rooms:read(1, "RoomKey"), "F_Opening01")
         lu.assertEquals(currentFields.GeneratedDoorOffers:read(1, "PayloadSource"), "AphroditeUpgrade")
         lu.assertEquals(control:readDraft(), sampleDraft())
+    end)
+end
+
+function TestPlannerDraftControl.testUiControlRoundtripsRepresentativeFDraft()
+    h.withTestImport(function()
+        local template = h.testImport("mods/controls/PlannerDraft/PlannerDraft.lua")
+        local instance = template.prepare({})
+        local currentFields = fields()
+        local control = template.createUi(currentFields, instance)
+        local draft = representativeDraft()
+
+        lu.assertTrue(control:writeDraft(draft))
+
+        lu.assertEquals(currentFields.Rooms:count(), 3)
+        lu.assertEquals(currentFields.GeneratedDoors:count(), 2)
+        lu.assertEquals(currentFields.GeneratedDoorOffers:count(), 2)
+        lu.assertEquals(currentFields.RoomOffers:count(), 1)
+        lu.assertEquals(currentFields.Rooms:read(1, "SelectedDoorIndex"), 2)
+        lu.assertEquals(currentFields.GeneratedDoorOffers:read(2, "PayloadSourceA"), "PoseidonUpgrade")
+        lu.assertEquals(currentFields.GeneratedDoorOffers:read(2, "PayloadSourceB"), "ApolloUpgrade")
+        lu.assertEquals(currentFields.RoomOffers:read(1, "Store"), "WorldShop")
+        lu.assertEquals(control:readDraft(), draft)
     end)
 end
 

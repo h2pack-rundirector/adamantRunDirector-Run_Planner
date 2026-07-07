@@ -27,6 +27,7 @@ end
 
 local function fakeDraftControl(initialDraft)
     local stored = copyTable(initialDraft)
+    local revision = 0
     local control = {
         reads = 0,
         writes = {},
@@ -39,8 +40,18 @@ local function fakeDraftControl(initialDraft)
 
     function control:writeDraft(draft)
         stored = copyTable(draft)
+        revision = revision + 1
         self.writes[#self.writes + 1] = copyTable(draft)
         return true
+    end
+
+    function control.revision()
+        return revision
+    end
+
+    function control.replaceDraft(nextDraft)
+        stored = copyTable(nextDraft)
+        revision = revision + 1
     end
 
     function control.storedDraft()
@@ -96,6 +107,29 @@ function TestPlannerState.testBindingDraftControlLoadsStoredDraftOnce()
         lu.assertFalse(state.bindDraftControl(control))
 
         lu.assertEquals(control.reads, 1)
+        lu.assertEquals(state.draft.biomes[1].rooms[1].generatedDoors.doors[1].targetRoomKey, "F_Combat02")
+        lu.assertEquals(#control.writes, 0)
+    end)
+end
+
+function TestPlannerState.testBoundDraftControlReloadsWhenRevisionChanges()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local control = fakeDraftControl(sampleDraft())
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+            draftControl = control,
+        })
+        local externalDraft = sampleDraft()
+        externalDraft.biomes[1].rooms[1].generatedDoors.doors[1].targetRoomKey = "F_Combat02"
+
+        control.replaceDraft(externalDraft)
+
+        lu.assertTrue(state.bindDraftControl(control))
+        lu.assertFalse(state.bindDraftControl(control))
+
+        lu.assertEquals(control.reads, 2)
         lu.assertEquals(state.draft.biomes[1].rooms[1].generatedDoors.doors[1].targetRoomKey, "F_Combat02")
         lu.assertEquals(#control.writes, 0)
     end)

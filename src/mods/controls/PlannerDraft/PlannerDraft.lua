@@ -8,6 +8,7 @@ local MAX_ROOMS = 96
 local MAX_DOORS = 384
 local MAX_OFFERS = 768
 local MAX_PAYLOAD_LEN = 64
+local MAX_REVISION = 2147483647
 
 local function stringField(key, default, maxLen)
     return {
@@ -67,6 +68,22 @@ end
 
 local function concreteString(value)
     return type(value) == "string" and value ~= "" and value or nil
+end
+
+local function readRevision(fields)
+    return fields.Revision:read() or 0
+end
+
+local function nextRevision(currentRevision)
+    currentRevision = tonumber(currentRevision) or 0
+    if currentRevision >= MAX_REVISION then
+        return 1
+    end
+    return currentRevision + 1
+end
+
+local function bumpRevision(fields)
+    fields.Revision:write(nextRevision(readRevision(fields)))
 end
 
 local function payloadFromRow(row)
@@ -339,6 +356,7 @@ local function writeDraft(fields, draft)
         end
     end
 
+    bumpRevision(fields)
     return true
 end
 
@@ -349,6 +367,7 @@ end
 
 function PlannerDraft.storage()
     return {
+        intField("Revision", 0, 0, MAX_REVISION),
         {
             key = "Rooms",
             type = "table",
@@ -415,6 +434,10 @@ function PlannerDraft.createRuntime(fields, instance)
 
     function control:readDraft()
         return readDraft(fields, instance)
+    end
+
+    function control:revision()
+        return readRevision(fields)
     end
 
     return control

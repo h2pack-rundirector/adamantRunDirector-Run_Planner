@@ -231,7 +231,11 @@ end
 local function persistDraft(state)
     local control = state.draftControl
     if control ~= nil then
-        return control:writeDraft(plannerOptions.deepCopy(state.draft))
+        local changed = control:writeDraft(plannerOptions.deepCopy(state.draft))
+        if type(control.revision) == "function" then
+            state.draftControlRevision = control:revision()
+        end
+        return changed
     end
     return false
 end
@@ -241,19 +245,39 @@ local function draftChanged(state)
     persistDraft(state)
 end
 
+local function controlRevision(control)
+    if type(control.revision) == "function" then
+        return control:revision()
+    end
+    return nil
+end
+
+local function loadDraftFromControl(state, control, revision)
+    state.draftControl = control
+    state.draftControlRevision = revision
+    state.draft = plannerOptions.deepCopy(control:readDraft())
+    state.selectedDoorOptionCache = selectedDoorOptionCache()
+    markDirty(state)
+    return true
+end
+
 local function bindDraftControl(state, control)
-    if control == nil or control == state.draftControl then
+    if control == nil then
         return false
     end
     if type(control.readDraft) ~= "function" or type(control.writeDraft) ~= "function" then
         error("PlannerDraft control must expose readDraft() and writeDraft()")
     end
 
-    state.draftControl = control
-    state.draft = plannerOptions.deepCopy(control:readDraft())
-    state.selectedDoorOptionCache = selectedDoorOptionCache()
-    markDirty(state)
-    return true
+    local revision = controlRevision(control)
+    if control == state.draftControl then
+        if revision ~= nil and revision ~= state.draftControlRevision then
+            return loadDraftFromControl(state, control, revision)
+        end
+        return false
+    end
+
+    return loadDraftFromControl(state, control, revision)
 end
 
 local function bindUiContext(state, ctx)

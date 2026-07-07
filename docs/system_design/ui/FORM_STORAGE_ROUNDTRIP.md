@@ -36,6 +36,7 @@ It owns normalized storage tables and exposes:
 ```lua
 control:readDraft() -> draft
 control:writeDraft(draft) -> changed
+control:revision() -> integer
 ```
 
 Production draw code binds planner state to `ui.controls.get("PlannerDraft")`.
@@ -44,6 +45,10 @@ must not call `PlannerDraft:writeDraft(...)` directly.
 
 This keeps parent-child consistency in one mutable draft object before the draft
 is serialized.
+
+`revision()` is adapter metadata, not route draft data. It lets planner state
+detect that an already-bound control was externally reset or rewritten and then
+reload the editable draft from storage on the next bind pass.
 
 ## Current F Roundtrip Map
 

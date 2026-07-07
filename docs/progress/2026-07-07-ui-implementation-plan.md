@@ -4,6 +4,34 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-07 - Phase 5 Cleanup: Draft Roundtrip Hardened
+
+The fifth UI implementation slice now has a stronger storage/control cleanup
+checkpoint.
+
+Implemented behavior:
+
+- `PlannerDraft` exposes adapter-owned `revision()` metadata;
+- `writeDraft(...)` bumps the revision after serializing a coherent draft;
+- planner state tracks the bound revision and reloads from an already-bound
+  control when another path resets or rewrites the draft;
+- the storage adapter has a representative F/Erebus roundtrip test covering
+  selected doors, generated targets, Boon payloads, Devotion payloads,
+  room-local offers, and terminal rooms;
+- state tests pin that external control rewrites reload the draft without
+  writing back during the reload.
+
+Still deferred:
+
+- broader route/biome feedback coloring and inactive-tab polish;
+- expanding production storage ownership beyond the current editable F panel.
+
+Validation run:
+
+- `lua tests/all.lua` - 135 passed.
+- `luacheck src tests` - 0 warnings / 0 errors.
+- `git diff --check` - passed.
+
 ### 2026-07-07 - Form Storage Roundtrip Contract Added
 
 Added a stable UI contract for the form/object model:
