@@ -54,38 +54,21 @@ local function cachedTabListForRoute(state, route)
     return tabs
 end
 
-local function drawFallbackBiomeNav(service, imgui, catalog, route, activeBiome)
-    service.widgets.text(imgui, "Biomes")
-    for _, biomeKey in ipairs(route and route.biomeKeys or EMPTY_LIST) do
-        local marker = biomeKey == activeBiome and "* " or "  "
-        service.widgets.text(imgui, marker .. biomeLabel(catalog, biomeKey))
-    end
-end
-
 local function drawBiomeNav(service, state, ctx, route, activeBiome)
-    local draw = ctx and ctx.draw or nil
-    local nav = draw and draw.nav or nil
-    if nav ~= nil and type(nav.verticalTabs) == "function" then
-        local selected = nav.verticalTabs({
-            id = "RunPlanner" .. tostring(route.key) .. "BiomeTabs",
-            navWidth = 180,
-            activeKey = activeBiome,
-            tabs = cachedTabListForRoute(state, route),
-        })
-        if selected ~= nil and selected ~= activeBiome then
-            service.routeSelection.setActiveBiome(ctx, route.key, selected)
-            return selected
-        end
-        return activeBiome
+    local selected = ctx.draw.nav.verticalTabs({
+        id = "RunPlanner" .. tostring(route.key) .. "BiomeTabs",
+        navWidth = 180,
+        activeKey = activeBiome,
+        tabs = cachedTabListForRoute(state, route),
+    })
+    if selected ~= activeBiome then
+        service.routeSelection.setActiveBiome(ctx, route.key, selected)
     end
-
-    local imgui = draw and draw.imgui or nil
-    drawFallbackBiomeNav(service, imgui, state.catalog, route, activeBiome)
-    return activeBiome
+    return selected
 end
 
 local function drawRouteContent(service, state, ctx, route, evaluation, biomePanels)
-    local imgui = ctx and ctx.draw and ctx.draw.imgui or nil
+    local imgui = ctx.draw.imgui
     local biomeKey = service.routeSelection.activeBiomeKey(ctx, route)
     service.widgets.text(imgui, "Route: " .. routeLabel(route))
     biomeKey = drawBiomeNav(service, state, ctx, route, biomeKey)
@@ -98,11 +81,7 @@ local function drawFallbackRoutes(service, state, ctx, evaluation, biomePanels)
 end
 
 local function drawRouteTabs(service, state, ctx, evaluation, biomePanels)
-    local imgui = ctx and ctx.draw and ctx.draw.imgui or nil
-    if imgui == nil or imgui.BeginTabBar == nil or imgui.BeginTabItem == nil or imgui.EndTabItem == nil or imgui.EndTabBar == nil then
-        drawFallbackRoutes(service, state, ctx, evaluation, biomePanels)
-        return
-    end
+    local imgui = ctx.draw.imgui
 
     if not imgui.BeginTabBar("RunPlannerRouteTabs") then
         drawFallbackRoutes(service, state, ctx, evaluation, biomePanels)

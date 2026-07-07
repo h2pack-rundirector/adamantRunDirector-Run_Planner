@@ -4,6 +4,32 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-07 - UI Host Trust Boundary Tightened
+
+The production planner UI no longer models absent RoM/Lib/ImGui/game surfaces
+as supported draw modes.
+
+Implemented behavior:
+
+- low-level widgets call the required ImGui methods directly;
+- route shell, route nav, placeholder panels, and the F/Erebus panel trust the
+  constructed UI context instead of probing for partial draw surfaces;
+- route selection removed protective `pcall` wrappers around storage reads and
+  writes;
+- route-shell composition now trusts child modules to expose `create(deps)`;
+- draft-control revision remains optional, but the control boundary validates
+  its shape once when present;
+- UI tests now use `tests/support/fake_imgui.lua` as an explicit fake
+  RoM/Lib/ImGui host surface for text capture and interaction assertions;
+- stable UI docs record that production draw code should fail loudly for
+  missing trusted host APIs instead of adding hot-path fallbacks.
+
+Validation run:
+
+- `lua tests/all.lua` - 141 passed.
+- `luacheck src tests` - 0 warnings / 0 errors.
+- `git diff --check` - passed.
+
 ### 2026-07-07 - UI DI Graph Wired
 
 The production UI graph now follows the layered composition policy recorded in
@@ -150,8 +176,8 @@ Implemented behavior:
 - reset, append/remove room, selected-door, room target, generated reward, room
   offer, acquired flag, and payload source edits all write the normalized flat
   draft tables through the adapter;
-- no-controls contexts, including tests and the debug harness, keep the existing
-  in-memory fallback.
+- contexts without a bound `PlannerDraft` control, including tests and the debug
+  harness, keep the existing in-memory draft.
 
 Still deferred:
 
@@ -206,7 +232,7 @@ Implemented behavior:
 - top-level planner status renders before route content;
 - route tabs expose Underworld and Surface through the declared route catalog;
 - each route has a biome navigation rail using `draw.nav.verticalTabs(...)`
-  when available and a text fallback in tests/no-imgui contexts;
+  through the Lib draw context, with fake ImGui text capture in tests;
 - F/Erebus renders the current integrated editor under Underworld;
 - G/H/I and N/O/P/Q render explicit placeholder panels that do not emit planner
   snapshots;
@@ -519,7 +545,7 @@ Goal:
 
 - fix the current in-game bug where options above the current selection cannot
   be selected;
-- keep no-imgui fallback behavior working;
+- keep fake-ImGui text-capture coverage working;
 - keep provider-driven labels, hidden values, colors, and messages.
 
 Success checks:

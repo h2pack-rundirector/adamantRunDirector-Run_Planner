@@ -57,11 +57,34 @@ Control rules:
 - mutators mark the smallest practical dirty scope;
 - widget labels and IDs are stable and scoped so repeated leaf instances do not
   collide;
-- tests can render text or no-imgui fallbacks without route validation.
+- tests use explicit fake RoM/Lib/ImGui draw surfaces when they need text
+  capture or interaction assertions.
 
 Draw helpers may be shared, but they should not hide route state mutation. A
 helper that changes draft data should do so through an explicit mutator passed
 by the owning form.
+
+## Host Trust Boundary
+
+Run Planner production UI is hosted by RoM and ModpackLib. The module is not
+expected to load without RoM, Lib, ImGui, or the game globals/functions the pack
+declares as hard dependencies.
+
+After UI context construction, production draw code may call these surfaces
+directly:
+
+- `ctx.draw.imgui`;
+- `ctx.draw.nav`;
+- `ctx.data`;
+- `ctx.controls`;
+- game global/function surfaces consumed by runtime hooks.
+
+Missing host APIs or malformed internal services should fail loudly at the
+boundary that constructed them. Do not add `pcall`, missing-method probes, or
+text fallbacks inside hot draw paths for trusted RoM/Lib/ImGui/game surfaces.
+Optional domain data can still be represented as `nil` where the planner model
+allows it, such as no stored active tab, no candidate feedback message, or no
+optional reward payload field.
 
 ## Folder Shape
 

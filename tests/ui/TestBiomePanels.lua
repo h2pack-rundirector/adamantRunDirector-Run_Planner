@@ -2,22 +2,12 @@
 
 local lu = require("luaunit")
 local h = dofile("tests/support/import_harness.lua")
+local fakeImgui = dofile("tests/support/fake_imgui.lua")
 
 TestBiomePanels = {}
 
 local function lineSink()
-    local lines = {}
-    return lines, {
-        draw = {
-            imgui = {
-                Text = function(text)
-                    lines[#lines + 1] = text
-                end,
-                Separator = function()
-                end,
-            },
-        },
-    }
+    return fakeImgui.lineSink()
 end
 
 local function createState()

@@ -2,6 +2,7 @@
 
 local lu = require("luaunit")
 local h = dofile("tests/support/import_harness.lua")
+local fakeImgui = dofile("tests/support/fake_imgui.lua")
 
 TestFreshSkeleton = {}
 
@@ -28,18 +29,7 @@ end
 function TestFreshSkeleton.testUiDrawsProductionEditorStatus()
     h.withTestImport(function()
         local ui = h.testImport("mods/ui.lua")
-        local lines = {}
-        local ctx = {
-            draw = {
-                imgui = {
-                    Text = function(text)
-                        lines[#lines + 1] = text
-                    end,
-                    Spacing = function()
-                    end,
-                },
-            },
-        }
+        local lines, ctx = fakeImgui.lineSink()
 
         ui.drawTab(nil, ctx)
 

@@ -232,7 +232,7 @@ local function persistDraft(state)
     local control = state.draftControl
     if control ~= nil then
         local changed = control:writeDraft(plannerOptions.deepCopy(state.draft))
-        if type(control.revision) == "function" then
+        if control.revision ~= nil then
             state.draftControlRevision = control:revision()
         end
         return changed
@@ -246,10 +246,10 @@ local function draftChanged(state)
 end
 
 local function controlRevision(control)
-    if type(control.revision) == "function" then
-        return control:revision()
+    if control.revision == nil then
+        return nil
     end
-    return nil
+    return control:revision()
 end
 
 local function loadDraftFromControl(state, control, revision)
@@ -268,6 +268,9 @@ local function bindDraftControl(state, control)
     if type(control.readDraft) ~= "function" or type(control.writeDraft) ~= "function" then
         error("PlannerDraft control must expose readDraft() and writeDraft()")
     end
+    if control.revision ~= nil and type(control.revision) ~= "function" then
+        error("PlannerDraft control revision must be a function when provided")
+    end
 
     local revision = controlRevision(control)
     if control == state.draftControl then
@@ -281,11 +284,7 @@ local function bindDraftControl(state, control)
 end
 
 local function bindUiContext(state, ctx)
-    local controls = ctx and ctx.controls or nil
-    if controls == nil or type(controls.get) ~= "function" then
-        return false
-    end
-    return bindDraftControl(state, controls.get(state.draftControlName))
+    return bindDraftControl(state, ctx.controls.get(state.draftControlName))
 end
 
 local function setRoomKey(state, roomIndex, roomKey)

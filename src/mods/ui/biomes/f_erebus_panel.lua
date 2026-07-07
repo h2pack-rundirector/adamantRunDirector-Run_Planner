@@ -24,8 +24,7 @@ end
 
 function fErebusPanel.draw(state, ctx, opts)
     opts = opts or DEFAULT_OPTIONS
-    local drawContext = ctx and ctx.draw or nil
-    local imgui = drawContext and drawContext.imgui or nil
+    local imgui = ctx.draw.imgui
 
     drawHeader(imgui, opts)
 
@@ -50,7 +49,7 @@ function fErebusPanel.draw(state, ctx, opts)
     local blockerRoomIndex = firstIssueRoomIndex(evaluation)
     for roomIndex, room in ipairs(state.currentBiome().rooms or {}) do
         local downstream = blockerRoomIndex ~= nil and roomIndex > blockerRoomIndex
-        local disabled = widgets.beginDisabled(imgui, downstream, "Inactive after route blocker")
+        local disabled = widgets.beginDisabled(imgui, downstream)
         roomForm.draw(state, imgui, evaluation, {
             routeKey = state.draft.routeKey,
             biomeIndex = 1,

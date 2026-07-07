@@ -79,7 +79,7 @@ The following are derived and must not be serialized:
 - history ledgers and reward bag state;
 - option labels and catalog-derived candidate arrays;
 - UI caches such as selected-door option caches and route-shell tab caches;
-- no-imgui fallback text output;
+- test-only fake ImGui text-capture output;
 - inactive/downstream presentation state.
 
 These values rebuild from:

@@ -2,22 +2,12 @@
 
 local lu = require("luaunit")
 local h = dofile("tests/support/import_harness.lua")
+local fakeImgui = dofile("tests/support/fake_imgui.lua")
 
 TestRouteShell = {}
 
 local function lineSink(extraDraw)
-    local lines = {}
-    local draw = extraDraw or {}
-    draw.imgui = draw.imgui or {}
-    draw.imgui.Text = draw.imgui.Text or function(text)
-        lines[#lines + 1] = text
-    end
-    draw.imgui.Separator = draw.imgui.Separator or function()
-    end
-
-    return lines, {
-        draw = draw,
-    }
+    return fakeImgui.lineSink(extraDraw)
 end
 
 local function createState()
@@ -65,7 +55,7 @@ local function fakeDraftControl(draft)
     return control
 end
 
-function TestRouteShell.testFallbackDrawsRouteStatusAndFPanel()
+function TestRouteShell.testDefaultDrawsRouteStatusAndFPanel()
     h.withTestImport(function()
         local routeShell = h.testImport("mods/ui/planner/route_shell.lua")
         local state = createState()
@@ -108,7 +98,7 @@ function TestRouteShell.testCreateUsesInjectedRouteGraph()
                 return evaluation
             end,
         }
-        local ctx = {}
+        local _, ctx = lineSink()
         local panels = {
             marker = "panels",
         }
@@ -198,7 +188,7 @@ function TestRouteShell.testDrawBindsPlannerDraftControlFromUiContext()
     end)
 end
 
-function TestRouteShell.testFallbackUsesStoredSurfaceSelectionForPlaceholder()
+function TestRouteShell.testDefaultDrawUsesStoredSurfaceSelectionForPlaceholder()
     h.withTestImport(function()
         local routeShell = h.testImport("mods/ui/planner/route_shell.lua")
         local state = createState()

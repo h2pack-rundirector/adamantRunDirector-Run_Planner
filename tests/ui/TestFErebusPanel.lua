@@ -2,22 +2,12 @@
 
 local lu = require("luaunit")
 local h = dofile("tests/support/import_harness.lua")
+local fakeImgui = dofile("tests/support/fake_imgui.lua")
 
 TestFErebusPanel = {}
 
 local function lineSink()
-    local lines = {}
-    return lines, {
-        draw = {
-            imgui = {
-                Text = function(text)
-                    lines[#lines + 1] = text
-                end,
-                Separator = function()
-                end,
-            },
-        },
-    }
+    return fakeImgui.lineSink()
 end
 
 function TestFErebusPanel.testDrawsPlannerStateThroughForms()
@@ -82,7 +72,7 @@ function TestFErebusPanel.testDrawsDownstreamRoomsInactiveAfterFirstIssue()
         fErebusPanel.draw(state, ctx)
 
         local combined = table.concat(lines, "\n")
-        lu.assertNotNil(combined:find("Inactive after route blocker", 1, true))
+        lu.assertEquals(fakeImgui.countCalls(ctx.draw.imgui, "BeginDisabled"), 1)
         lu.assertNotNil(combined:find("Room 3", 1, true))
     end)
 end

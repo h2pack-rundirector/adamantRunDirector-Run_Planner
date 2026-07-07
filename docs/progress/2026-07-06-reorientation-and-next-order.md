@@ -503,11 +503,11 @@ Implemented in the current working checkpoint:
 - dropdowns consume stable candidate provider state directly, including
   hidden values, optional colors, and hover/detail messages when the host ImGui
   surface exposes the needed hooks;
-- text/no-imgui fallback rendering is preserved for tests and current in-game
+- fake-ImGui text-capture rendering is preserved for tests and current in-game
   debug use;
 - the debug harness now uses planner widgets instead of local draw helpers;
-- focused widget coverage verifies fallback text rendering, hidden candidate
-  filtering, color/message propagation, checkbox fallback, and status output.
+- focused widget coverage verifies text-capture rendering, hidden candidate
+  filtering, color/message propagation, checkbox state, and status output.
 
 Current boundary:
 
@@ -544,7 +544,7 @@ Implemented in the current working checkpoint:
   loop;
 - `src/mods/ui/debug_harness.lua` is now a thin proof wrapper that creates
   planner state and delegates drawing to the F/Erebus panel;
-- focused F/Erebus panel coverage verifies the no-imgui fallback output through
+- focused F/Erebus panel coverage verifies the fake-ImGui text-capture output through
   the same form modules used by the harness.
 
 Current boundary:

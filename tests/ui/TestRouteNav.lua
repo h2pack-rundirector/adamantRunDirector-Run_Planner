@@ -2,6 +2,7 @@
 
 local lu = require("luaunit")
 local h = dofile("tests/support/import_harness.lua")
+local fakeImgui = dofile("tests/support/fake_imgui.lua")
 
 TestRouteNav = {}
 
@@ -60,11 +61,25 @@ function TestRouteNav.testCreateUsesInjectedSelectionAndWidgets()
                 }
             end,
         }
+        local _, imgui = fakeImgui.surface()
 
         service.draw({
             catalog = {},
         }, {
-            draw = {},
+            draw = {
+                imgui = imgui,
+                nav = {
+                    verticalTabs = function(opts)
+                        calls[#calls + 1] = {
+                            kind = "nav",
+                            id = opts.id,
+                            activeKey = opts.activeKey,
+                            tabs = opts.tabs,
+                        }
+                        return opts.activeKey
+                    end,
+                },
+            },
         }, {
             state = "valid",
         }, panels)
@@ -78,23 +93,24 @@ function TestRouteNav.testCreateUsesInjectedSelectionAndWidgets()
             kind = "text",
             label = "Route: Underworld",
         })
-        lu.assertEquals(calls[4], {
-            kind = "text",
-            label = "Biomes",
+        lu.assertEquals(calls[4].kind, "nav")
+        lu.assertEquals(calls[4].id, "RunPlannerUnderworldBiomeTabs")
+        lu.assertEquals(calls[4].activeKey, "F")
+        lu.assertEquals(calls[4].tabs, {
+            {
+                key = "F",
+                label = "F",
+            },
+            {
+                key = "G",
+                label = "G",
+            },
         })
         lu.assertEquals(calls[5], {
-            kind = "text",
-            label = "* F",
-        })
-        lu.assertEquals(calls[6], {
-            kind = "text",
-            label = "  G",
-        })
-        lu.assertEquals(calls[7], {
             kind = "separator",
         })
-        lu.assertEquals(calls[8].kind, "panel")
-        lu.assertIs(calls[8].route, route)
-        lu.assertEquals(calls[8].biomeKey, "F")
+        lu.assertEquals(calls[6].kind, "panel")
+        lu.assertIs(calls[6].route, route)
+        lu.assertEquals(calls[6].biomeKey, "F")
     end)
 end

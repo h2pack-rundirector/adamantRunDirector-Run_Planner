@@ -15,7 +15,7 @@ local function routeLabel(route)
 end
 
 function placeholderPanel.draw(state, ctx, route, biomeKey)
-    local imgui = ctx and ctx.draw and ctx.draw.imgui or nil
+    local imgui = ctx.draw.imgui
     widgets.section(imgui, biomeLabel(state and state.catalog, biomeKey))
     widgets.text(imgui, "Placeholder biome panel")
     widgets.text(imgui, "Route: " .. routeLabel(route))

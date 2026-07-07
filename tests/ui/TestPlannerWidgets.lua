@@ -2,22 +2,14 @@
 
 local lu = require("luaunit")
 local h = dofile("tests/support/import_harness.lua")
+local fakeImgui = dofile("tests/support/fake_imgui.lua")
 
 TestPlannerWidgets = {}
 
-local function textSink()
-    local lines = {}
-    return lines, {
-        Text = function(text)
-            lines[#lines + 1] = text
-        end,
-    }
-end
-
-function TestPlannerWidgets.testDropdownFallbackUsesProviderLabel()
+function TestPlannerWidgets.testDropdownClosedUsesProviderPreview()
     h.withTestImport(function()
         local widgets = h.testImport("mods/ui/planner/widgets.lua")
-        local lines, imgui = textSink()
+        local lines, imgui = fakeImgui.surface()
 
         local value, changed = widgets.dropdown(imgui, "Target##room1", "B", {
             values = { "A", "B" },
@@ -26,6 +18,7 @@ function TestPlannerWidgets.testDropdownFallbackUsesProviderLabel()
 
         lu.assertEquals(value, "B")
         lu.assertFalse(changed)
+        lu.assertEquals(fakeImgui.countCalls(imgui, "BeginCombo"), 1)
         lu.assertEquals(lines, {
             "Target##room1: Beta",
         })
@@ -39,7 +32,7 @@ function TestPlannerWidgets.testDropdownUsesVisibleCandidateState()
         local colors = {}
         local tooltips = {}
         local popped = 0
-        local imgui = {
+        local _, imgui = fakeImgui.surface({
             BeginCombo = function()
                 return true
             end,
@@ -49,10 +42,12 @@ function TestPlannerWidgets.testDropdownUsesVisibleCandidateState()
             end,
             EndCombo = function()
             end,
-            PushStyleColor = function(kind, color)
+            CloseCurrentPopup = function()
+            end,
+            PushStyleColor = function(kind, r, g, b, a)
                 colors[#colors + 1] = {
                     kind = kind,
-                    color = color,
+                    color = { r, g, b, a },
                 }
             end,
             PopStyleColor = function()
@@ -64,7 +59,7 @@ function TestPlannerWidgets.testDropdownUsesVisibleCandidateState()
             SetTooltip = function(message)
                 tooltips[#tooltips + 1] = message
             end,
-        }
+        })
 
         local value, changed = widgets.dropdown(imgui, "Reward", "A", {
             values = { "A", "B", "C" },
@@ -103,9 +98,8 @@ end
 function TestPlannerWidgets.testDropdownCanSelectCandidateBeforeCurrentWithSelectableChangeReturn()
     h.withTestImport(function()
         local widgets = h.testImport("mods/ui/planner/widgets.lua")
-        local focused = 0
         local closed = 0
-        local imgui = {
+        local _, imgui = fakeImgui.surface({
             BeginCombo = function()
                 return true
             end,
@@ -118,15 +112,12 @@ function TestPlannerWidgets.testDropdownCanSelectCandidateBeforeCurrentWithSelec
                 end
                 return false, false
             end,
-            SetItemDefaultFocus = function()
-                focused = focused + 1
-            end,
             CloseCurrentPopup = function()
                 closed = closed + 1
             end,
             EndCombo = function()
             end,
-        }
+        })
 
         local value, changed = widgets.dropdown(imgui, "Reward", "C", {
             values = { "A", "B", "C" },
@@ -135,45 +126,75 @@ function TestPlannerWidgets.testDropdownCanSelectCandidateBeforeCurrentWithSelec
 
         lu.assertEquals(value, "A")
         lu.assertTrue(changed)
-        lu.assertEquals(focused, 1)
         lu.assertEquals(closed, 1)
     end)
 end
 
-function TestPlannerWidgets.testCheckboxFallbackRendersText()
+function TestPlannerWidgets.testCheckboxUsesImguiValue()
     h.withTestImport(function()
         local widgets = h.testImport("mods/ui/planner/widgets.lua")
-        local lines, imgui = textSink()
+        local checkboxCalls = {}
+        local _, imgui = fakeImgui.surface({
+            Checkbox = function(label, checked)
+                checkboxCalls[#checkboxCalls + 1] = {
+                    label = label,
+                    checked = checked,
+                }
+                return false, true
+            end,
+        })
 
         local value, changed = widgets.checkbox(imgui, "Acquired##1", true)
 
-        lu.assertTrue(value)
-        lu.assertFalse(changed)
-        lu.assertEquals(lines, {
-            "Acquired##1: true",
+        lu.assertFalse(value)
+        lu.assertTrue(changed)
+        lu.assertEquals(checkboxCalls, {
+            {
+                label = "Acquired##1",
+                checked = true,
+            },
         })
     end)
 end
 
-function TestPlannerWidgets.testDisabledFallbackRendersHorizonLabel()
+function TestPlannerWidgets.testDisabledUsesImguiScope()
     h.withTestImport(function()
         local widgets = h.testImport("mods/ui/planner/widgets.lua")
-        local lines, imgui = textSink()
+        local calls = {}
+        local _, imgui = fakeImgui.surface({
+            BeginDisabled = function(disabled)
+                calls[#calls + 1] = {
+                    kind = "BeginDisabled",
+                    disabled = disabled,
+                }
+            end,
+            EndDisabled = function()
+                calls[#calls + 1] = {
+                    kind = "EndDisabled",
+                }
+            end,
+        })
 
-        local pushed = widgets.beginDisabled(imgui, true, "Inactive after route blocker")
+        local pushed = widgets.beginDisabled(imgui, true)
         widgets.endDisabled(imgui, pushed)
 
-        lu.assertFalse(pushed)
-        lu.assertEquals(lines, {
-            "Inactive after route blocker",
+        lu.assertTrue(pushed)
+        lu.assertEquals(calls, {
+            {
+                kind = "BeginDisabled",
+                disabled = true,
+            },
+            {
+                kind = "EndDisabled",
+            },
         })
     end)
 end
 
-function TestPlannerWidgets.testSubsectionAndLabelFallbackRenderText()
+function TestPlannerWidgets.testSubsectionAndLabelRenderText()
     h.withTestImport(function()
         local widgets = h.testImport("mods/ui/planner/widgets.lua")
-        local lines, imgui = textSink()
+        local lines, imgui = fakeImgui.surface()
 
         widgets.subsection(imgui, "Generated door batch")
         widgets.labelValue(imgui, "Batch rule", "Standard")
@@ -206,10 +227,10 @@ function TestPlannerWidgets.testIndentUsesImguiPairWhenAvailable()
     end)
 end
 
-function TestPlannerWidgets.testStatusRendersFallbackSummary()
+function TestPlannerWidgets.testStatusRendersSummary()
     h.withTestImport(function()
         local widgets = h.testImport("mods/ui/planner/widgets.lua")
-        local lines, imgui = textSink()
+        local lines, imgui = fakeImgui.surface()
 
         widgets.status(imgui, {
             state = "invalid",

@@ -9,14 +9,11 @@ local function childService(explicit, module, deps)
     if explicit ~= nil then
         return explicit
     end
-    if type(module.create) == "function" then
-        return module.create(deps)
-    end
-    return module
+    return module.create(deps)
 end
 
 local function drawShell(service, state, ctx)
-    local imgui = ctx and ctx.draw and ctx.draw.imgui or nil
+    local imgui = ctx.draw.imgui
     state.bindUiContext(ctx)
     local evaluation = state.ensureEvaluation()
     service.widgets.text(imgui, "Run Planner")

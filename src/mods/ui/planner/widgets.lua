@@ -28,66 +28,41 @@ function widgets.preview(provider, value)
 end
 
 function widgets.text(imgui, text)
-    if imgui ~= nil and imgui.Text ~= nil then
-        imgui.Text(text)
-    end
+    imgui.Text(text)
 end
 
 function widgets.textMuted(imgui, text)
-    if imgui ~= nil and imgui.TextDisabled ~= nil then
-        imgui.TextDisabled(text)
-        return
-    end
-    widgets.text(imgui, text)
+    imgui.TextDisabled(text)
 end
 
 function widgets.separator(imgui)
-    if imgui ~= nil and imgui.Separator ~= nil then
-        imgui.Separator()
-    end
+    imgui.Separator()
 end
 
 function widgets.sameLine(imgui)
-    if imgui ~= nil and imgui.SameLine ~= nil then
-        imgui.SameLine()
-    end
+    imgui.SameLine()
 end
 
 function widgets.button(imgui, label)
-    if imgui == nil then
-        return false
-    end
-    if imgui.SmallButton ~= nil then
-        return imgui.SmallButton(label)
-    end
-    if imgui.Button ~= nil then
-        return imgui.Button(label)
-    end
-    return false
+    return imgui.SmallButton(label)
 end
 
 local function pushTextColor(imgui, color)
-    if color == nil or imgui == nil or imgui.PushStyleColor == nil then
+    if color == nil then
         return false
     end
-
-    local ok = pcall(imgui.PushStyleColor, "Text", color)
-    if ok then
-        return true
-    end
-
-    ok = pcall(imgui.PushStyleColor, "Text", color[1], color[2], color[3], color[4] or 1)
-    return ok == true
+    imgui.PushStyleColor(imgui.ImGuiCol.Text, color[1], color[2], color[3], color[4] or 1)
+    return true
 end
 
 local function popTextColor(imgui, pushed)
-    if pushed and imgui ~= nil and imgui.PopStyleColor ~= nil then
+    if pushed then
         imgui.PopStyleColor()
     end
 end
 
 local function showTooltip(imgui, message)
-    if message == nil or imgui == nil or imgui.IsItemHovered == nil or imgui.SetTooltip == nil then
+    if message == nil then
         return
     end
     if imgui.IsItemHovered() then
@@ -113,10 +88,6 @@ end
 
 function widgets.dropdown(imgui, label, value, provider)
     provider = providerOrEmpty(provider)
-    if imgui == nil or imgui.BeginCombo == nil or imgui.Selectable == nil or imgui.EndCombo == nil then
-        widgets.text(imgui, label .. ": " .. widgets.preview(provider, value))
-        return value, false
-    end
 
     local nextValue = value
     local changed = false
@@ -128,12 +99,7 @@ function widgets.dropdown(imgui, label, value, provider)
                 if selectableClicked(imgui, selectableId(provider, index, candidate), selected) then
                     nextValue = candidate
                     changed = nextValue ~= value
-                    if imgui.CloseCurrentPopup ~= nil then
-                        imgui.CloseCurrentPopup()
-                    end
-                end
-                if selected and imgui.SetItemDefaultFocus ~= nil then
-                    imgui.SetItemDefaultFocus()
+                    imgui.CloseCurrentPopup()
                 end
                 showTooltip(imgui, provider.messages and provider.messages[index])
                 popTextColor(imgui, pushed)
@@ -145,12 +111,7 @@ function widgets.dropdown(imgui, label, value, provider)
 end
 
 function widgets.checkbox(imgui, label, value)
-    local checked = value == true
-    if imgui ~= nil and imgui.Checkbox ~= nil then
-        return imgui.Checkbox(label, checked)
-    end
-    widgets.text(imgui, label .. ": " .. tostring(checked))
-    return checked, false
+    return imgui.Checkbox(label, value == true)
 end
 
 function widgets.feedback(imgui, label, feedback)
@@ -164,33 +125,26 @@ function widgets.labelValue(imgui, label, value)
 end
 
 function widgets.indent(imgui)
-    if imgui ~= nil and imgui.Indent ~= nil then
-        imgui.Indent()
-        return true
-    end
-    return false
+    imgui.Indent()
+    return true
 end
 
 function widgets.unindent(imgui, pushed)
-    if pushed and imgui ~= nil and imgui.Unindent ~= nil then
+    if pushed then
         imgui.Unindent()
     end
 end
 
-function widgets.beginDisabled(imgui, disabled, fallbackLabel)
+function widgets.beginDisabled(imgui, disabled)
     if not disabled then
         return false
     end
-    if imgui ~= nil and imgui.BeginDisabled ~= nil then
-        imgui.BeginDisabled(true)
-        return true
-    end
-    widgets.text(imgui, fallbackLabel)
-    return false
+    imgui.BeginDisabled(true)
+    return true
 end
 
 function widgets.endDisabled(imgui, pushed)
-    if pushed and imgui ~= nil and imgui.EndDisabled ~= nil then
+    if pushed then
         imgui.EndDisabled()
     end
 end

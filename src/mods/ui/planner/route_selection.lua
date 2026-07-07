@@ -6,57 +6,12 @@ local ROUTE_BIOME_SELECTION = {
     Surface = "SelectedSurfaceBiome",
 }
 
-local function fieldFor(data, alias)
-    if data == nil or type(data.get) ~= "function" then
-        return nil
-    end
-    local ok, field = pcall(data.get, alias)
-    if ok then
-        return field
-    end
-    return nil
-end
-
 local function readData(ctx, alias)
-    local data = ctx and ctx.data or nil
-    if data == nil then
-        return nil
-    end
-    if type(data.read) == "function" then
-        local ok, value = pcall(data.read, alias)
-        if ok then
-            return value
-        end
-    end
-    local field = fieldFor(data, alias)
-    if field ~= nil and type(field.read) == "function" then
-        local ok, value = pcall(field.read, field)
-        if ok then
-            return value
-        end
-    end
-    return nil
+    return ctx.data.read(alias)
 end
 
 local function writeData(ctx, alias, value)
-    local data = ctx and ctx.data or nil
-    if data == nil then
-        return false
-    end
-    if type(data.write) == "function" then
-        local ok, changed = pcall(data.write, alias, value)
-        if ok then
-            return changed ~= false
-        end
-    end
-    local field = fieldFor(data, alias)
-    if field ~= nil and type(field.write) == "function" then
-        local ok, changed = pcall(field.write, field, value)
-        if ok then
-            return changed ~= false
-        end
-    end
-    return false
+    return ctx.data.write(alias, value) ~= false
 end
 
 local function contains(list, value)
