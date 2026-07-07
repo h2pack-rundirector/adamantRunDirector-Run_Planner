@@ -45,7 +45,7 @@ function TestPlannerWidgets.testDropdownUsesVisibleCandidateState()
             end,
             Selectable = function(label)
                 selectableLabels[#selectableLabels + 1] = label
-                return label == "Gamma"
+                return label == "Gamma##3"
             end,
             EndCombo = function()
             end,
@@ -84,7 +84,7 @@ function TestPlannerWidgets.testDropdownUsesVisibleCandidateState()
 
         lu.assertEquals(value, "C")
         lu.assertTrue(changed)
-        lu.assertEquals(selectableLabels, { "Alpha", "Gamma" })
+        lu.assertEquals(selectableLabels, { "Alpha##1", "Gamma##3" })
         lu.assertEquals(colors, {
             {
                 kind = "Text",
@@ -97,6 +97,46 @@ function TestPlannerWidgets.testDropdownUsesVisibleCandidateState()
         })
         lu.assertEquals(popped, 2)
         lu.assertEquals(tooltips, { "Alpha message", "Gamma message" })
+    end)
+end
+
+function TestPlannerWidgets.testDropdownCanSelectCandidateBeforeCurrentWithSelectableChangeReturn()
+    h.withTestImport(function()
+        local widgets = h.testImport("mods/ui/planner/widgets.lua")
+        local focused = 0
+        local closed = 0
+        local imgui = {
+            BeginCombo = function()
+                return true
+            end,
+            Selectable = function(label, selected)
+                if label == "Alpha##1" then
+                    return true, true
+                end
+                if selected then
+                    return true, false
+                end
+                return false, false
+            end,
+            SetItemDefaultFocus = function()
+                focused = focused + 1
+            end,
+            CloseCurrentPopup = function()
+                closed = closed + 1
+            end,
+            EndCombo = function()
+            end,
+        }
+
+        local value, changed = widgets.dropdown(imgui, "Reward", "C", {
+            values = { "A", "B", "C" },
+            labels = { "Alpha", "Beta", "Gamma" },
+        })
+
+        lu.assertEquals(value, "A")
+        lu.assertTrue(changed)
+        lu.assertEquals(focused, 1)
+        lu.assertEquals(closed, 1)
     end)
 end
 

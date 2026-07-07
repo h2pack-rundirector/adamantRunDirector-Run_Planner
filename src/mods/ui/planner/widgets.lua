@@ -87,6 +87,22 @@ local function showTooltip(imgui, message)
     end
 end
 
+local function selectableId(provider, index, candidate)
+    local label = provider.labels and provider.labels[index] or nil
+    if label == nil then
+        label = candidate
+    end
+    return tostring(label) .. "##" .. tostring(index)
+end
+
+local function selectableClicked(imgui, label, selected)
+    local activated, changed = imgui.Selectable(label, selected)
+    if changed ~= nil then
+        return changed == true
+    end
+    return activated == true
+end
+
 function widgets.dropdown(imgui, label, value, provider)
     provider = providerOrEmpty(provider)
     if imgui == nil or imgui.BeginCombo == nil or imgui.Selectable == nil or imgui.EndCombo == nil then
@@ -100,9 +116,16 @@ function widgets.dropdown(imgui, label, value, provider)
         for index, candidate in ipairs(provider.values or EMPTY_PROVIDER.values) do
             if not (provider.hidden and provider.hidden[index]) then
                 local pushed = pushTextColor(imgui, provider.colors and provider.colors[index])
-                if imgui.Selectable(provider.labels[index], candidate == value) then
+                local selected = candidate == value
+                if selectableClicked(imgui, selectableId(provider, index, candidate), selected) then
                     nextValue = candidate
                     changed = nextValue ~= value
+                    if imgui.CloseCurrentPopup ~= nil then
+                        imgui.CloseCurrentPopup()
+                    end
+                end
+                if selected and imgui.SetItemDefaultFocus ~= nil then
+                    imgui.SetItemDefaultFocus()
                 end
                 showTooltip(imgui, provider.messages and provider.messages[index])
                 popTextColor(imgui, pushed)
