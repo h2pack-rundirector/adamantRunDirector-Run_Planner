@@ -4,6 +4,21 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Room Codec Extraction Started
+
+The first `PlannerDraft` serialization codec now owns the flat `Rooms` table
+mapping without changing the stored draft format.
+
+Implemented behavior:
+
+- `mods/controls/PlannerDraft/codecs/rooms.lua` declares the `Rooms` storage
+  node;
+- room rows materialize route, biome, room, and generated-door batch skeletons
+  during draft reads;
+- `PlannerDraft` delegates `Rooms` row appends to the room codec while keeping
+  generated door and reward rows in the root adapter for follow-up slices;
+- existing flat-row roundtrip tests continue to pin storage compatibility.
+
 ### 2026-07-09 - Planner State Responsibilities Split
 
 Planner state is now a thinner draft-owner facade instead of the owner of every

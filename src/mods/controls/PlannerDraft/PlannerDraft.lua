@@ -1,6 +1,7 @@
 -- luacheck: no unused args
 
 local defaults = import("mods/forms/defaults.lua")
+local roomCodec = import("mods/controls/PlannerDraft/codecs/rooms.lua")
 
 local PlannerDraft = {}
 
@@ -138,46 +139,7 @@ local function appendOffer(target, offerIndex, row)
     target[offerIndex] = offerFromRow(row)
 end
 
-local function ensureBiome(draft, biomeIndex, biomeKey)
-    local biome = draft.biomes[biomeIndex]
-    if biome == nil then
-        biome = {
-            biomeKey = biomeKey,
-            rooms = {},
-        }
-        draft.biomes[biomeIndex] = biome
-    elseif biome.biomeKey == nil or biome.biomeKey == "" then
-        biome.biomeKey = biomeKey
-    end
-    return biome
-end
-
-local function readRooms(fields, draft)
-    local rows = fields.Rooms
-    for index = 1, rows:count() do
-        local routeKey = rows:read(index, "RouteKey")
-        if draft.routeKey == nil or draft.routeKey == "" then
-            draft.routeKey = routeKey
-        end
-
-        local biomeIndex = rows:read(index, "BiomeIndex")
-        local biome = ensureBiome(draft, biomeIndex, rows:read(index, "BiomeKey"))
-        local roomIndex = rows:read(index, "RoomIndex")
-        biome.rooms[roomIndex] = {
-            roomKey = rows:read(index, "RoomKey"),
-        }
-
-        local batchRule = rows:read(index, "BatchRule")
-        local selectedDoorIndex = rows:read(index, "SelectedDoorIndex")
-        if batchRule ~= "" or selectedDoorIndex > 0 then
-            biome.rooms[roomIndex].generatedDoors = {
-                batchRule = batchRule,
-                selectedDoorIndex = selectedDoorIndex > 0 and selectedDoorIndex or nil,
-                doors = {},
-            }
-        end
-    end
-end
+local ensureBiome = roomCodec.ensureBiome
 
 local function readGeneratedDoors(fields, draft)
     local rows = fields.GeneratedDoors
@@ -255,7 +217,7 @@ local function readDraft(fields, instance)
         routeKey = "",
         biomes = {},
     }
-    readRooms(fields, draft)
+    roomCodec.read(fields, draft)
     readGeneratedDoors(fields, draft)
     readGeneratedDoorOffers(fields, draft)
     readRoomOffers(fields, draft)
@@ -322,17 +284,9 @@ local function writeDraft(fields, draft)
     for biomeIndex, biome in ipairs((draft and draft.biomes) or {}) do
         local biomeKey = biome.biomeKey or ""
         for roomIndex, room in ipairs(biome.rooms or {}) do
-            local generatedDoors = room.generatedDoors or {}
-            fields.Rooms:append({
-                RouteKey = routeKey,
-                BiomeIndex = biomeIndex,
-                BiomeKey = biomeKey,
-                RoomIndex = roomIndex,
-                RoomKey = room.roomKey or "",
-                SelectedDoorIndex = generatedDoors.selectedDoorIndex or 0,
-                BatchRule = generatedDoors.batchRule or "",
-            })
+            roomCodec.append(fields, routeKey, biomeIndex, biomeKey, roomIndex, room)
 
+            local generatedDoors = room.generatedDoors or {}
             for doorIndex, door in ipairs(generatedDoors.doors or {}) do
                 fields.GeneratedDoors:append({
                     RouteKey = routeKey,
@@ -368,17 +322,7 @@ end
 function PlannerDraft.storage()
     return {
         intField("Revision", 0, 0, MAX_REVISION),
-        {
-            key = "Rooms",
-            type = "table",
-            maxRows = MAX_ROOMS,
-            defaultRows = 0,
-            row = routeAddressRows({
-                stringField("RoomKey", "", 64),
-                intField("SelectedDoorIndex", 0, 0, 8),
-                stringField("BatchRule", "", 64),
-            }),
-        },
+        roomCodec.storageNode(),
         {
             key = "GeneratedDoors",
             type = "table",
