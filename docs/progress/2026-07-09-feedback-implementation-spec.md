@@ -4,6 +4,22 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Slice 4 Downstream Inactive Presentation Started
+
+Downstream inactive presentation is now explicit at the F panel boundary, where
+the first-route-issue room already determines whether later room forms should
+be inactive.
+
+Implemented behavior:
+
+- `mods/ui/biomes/f_erebus_panel.lua` emits one muted marker before the first
+  downstream disabled room;
+- inactive scoping still begins strictly after `status.firstIssue.address.roomIndex`,
+  so the participant that owns the first issue remains active and visible;
+- F panel tests assert no disabled scope exists for the valid default route;
+- F panel tests assert the blocker text renders before the inactive marker and
+  that the disabled scope begins before the downstream room.
+
 ### 2026-07-09 - Slice 3 Candidate Feedback Regression Tests Started
 
 Candidate feedback behavior is being locked with regression tests around the

@@ -10,6 +10,27 @@ local function lineSink()
     return fakeImgui.lineSink()
 end
 
+local function callIndex(imgui, predicate)
+    for index, call in ipairs(imgui._calls or {}) do
+        if predicate(call) then
+            return index
+        end
+    end
+    return nil
+end
+
+local function callIndexByName(imgui, name)
+    return callIndex(imgui, function(call)
+        return call.name == name
+    end)
+end
+
+local function textCallIndexContaining(imgui, text)
+    return callIndex(imgui, function(call)
+        return call.name == "Text" and tostring(call.args[1]):find(text, 1, true) ~= nil
+    end)
+end
+
 function TestFErebusPanel.testDrawsPlannerStateThroughForms()
     h.withTestImport(function()
         local data = h.testImport("mods/data.lua")
@@ -31,6 +52,8 @@ function TestFErebusPanel.testDrawsPlannerStateThroughForms()
         lu.assertNotNil(combined:find("Generated door batch", 1, true))
         lu.assertNotNil(combined:find("Generated reward offer", 1, true))
         lu.assertNotNil(combined:find("Reward##routeUnderworld_biome1_room1_door1_offer1_rewardType", 1, true))
+        lu.assertEquals(fakeImgui.countCalls(ctx.draw.imgui, "BeginDisabled"), 0)
+        lu.assertNil(combined:find("Downstream inactive", 1, true))
     end)
 end
 
@@ -72,8 +95,27 @@ function TestFErebusPanel.testDrawsDownstreamRoomsInactiveAfterFirstIssue()
         fErebusPanel.draw(state, ctx)
 
         local combined = table.concat(lines, "\n")
+        local imgui = ctx.draw.imgui
+        local blockerIndex = textCallIndexContaining(imgui, "Route blocker: f_preboss_too_early")
+        local markerIndex = textCallIndexContaining(imgui, "Downstream inactive after first issue")
+        local disabledIndex = callIndexByName(imgui, "BeginDisabled")
+        local room3Index = textCallIndexContaining(imgui, "Room 3")
+
         lu.assertEquals(fakeImgui.countCalls(ctx.draw.imgui, "BeginDisabled"), 1)
+        lu.assertEquals(fakeImgui.countCalls(ctx.draw.imgui, "EndDisabled"), 1)
         lu.assertNotNil(combined:find("Room 3", 1, true))
+        lu.assertNotNil(combined:find(
+            "Downstream inactive after first issue: Room 2 (F_Combat01) door 1",
+            1,
+            true
+        ))
+        lu.assertNotNil(blockerIndex)
+        lu.assertNotNil(markerIndex)
+        lu.assertNotNil(disabledIndex)
+        lu.assertNotNil(room3Index)
+        lu.assertTrue(blockerIndex < markerIndex)
+        lu.assertTrue(markerIndex < disabledIndex)
+        lu.assertTrue(disabledIndex < room3Index)
     end)
 end
 
