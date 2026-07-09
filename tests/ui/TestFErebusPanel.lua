@@ -216,13 +216,17 @@ function TestFErebusPanel.testRoomOfferAndDevotionReadParticipantProviders()
             values = { roomOffer.rewardType },
             labels = { "Participant room reward" },
         }
-        generatedOffer.candidateProviders.devotionSource1 = {
-            values = { generatedOffer.payload.sources[1] },
-            labels = { "Bridge devotion source" },
+        generatedOffer.candidateProviders = {
+            devotionSource1 = {
+                values = { generatedOffer.payload.sources[1] },
+                labels = { "Bridge devotion source" },
+            },
         }
-        roomOffer.candidateProviders.rewardType = {
-            values = { roomOffer.rewardType },
-            labels = { "Bridge room reward" },
+        roomOffer.candidateProviders = {
+            rewardType = {
+                values = { roomOffer.rewardType },
+                labels = { "Bridge room reward" },
+            },
         }
         local lines, ctx = lineSink()
 

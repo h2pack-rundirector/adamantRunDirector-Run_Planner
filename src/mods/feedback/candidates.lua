@@ -74,7 +74,18 @@ local function indexProviderMap(indexed, formAddress, providers, context)
     end
 end
 
-local function indexDraftProviders(draft)
+local function providersForAddress(context, formAddress, fallbackProviders)
+    local registry = context.participants
+    if registry ~= nil then
+        local participantProviders = registry:providersForAddress(formAddress)
+        if participantProviders ~= nil then
+            return participantProviders
+        end
+    end
+    return fallbackProviders
+end
+
+local function indexDraftProviders(draft, context)
     guard.expectTable(draft, "candidateFeedback.draft")
     local routeKey = guard.expectString(draft.routeKey, "candidateFeedback.draft.routeKey")
     guard.expectArray(draft.biomes, "candidateFeedback.draft.biomes")
@@ -97,10 +108,11 @@ local function indexDraftProviders(draft)
                     guard.expectArray(offerPoint.offers or {}, "candidateFeedback.room.offerPoints[" .. tostring(offerPointIndex) .. "].offers")
                     for offerIndex, offer in ipairs(offerPoint.offers or {}) do
                         guard.expectTable(offer, "candidateFeedback.room.offerPoints[" .. tostring(offerPointIndex) .. "].offers[" .. tostring(offerIndex) .. "]")
+                        local formAddress = address.roomOffer(routeKey, biomeIndex, roomIndex, offerPointIndex, offerIndex)
                         indexProviderMap(
                             indexed,
-                            address.roomOffer(routeKey, biomeIndex, roomIndex, offerPointIndex, offerIndex),
-                            offer.candidateProviders,
+                            formAddress,
+                            providersForAddress(context, formAddress, offer.candidateProviders),
                             "candidateFeedback.room.offerPoints[" .. tostring(offerPointIndex) .. "].offers[" .. tostring(offerIndex) .. "].candidateProviders"
                         )
                     end
@@ -114,10 +126,11 @@ local function indexDraftProviders(draft)
 
                 for doorIndex, door in ipairs(generatedDoors.doors) do
                     guard.expectTable(door, "candidateFeedback.generatedDoors.doors[" .. tostring(doorIndex) .. "]")
+                    local doorAddress = address.door(routeKey, biomeIndex, roomIndex, doorIndex)
                     indexProviderMap(
                         indexed,
-                        address.door(routeKey, biomeIndex, roomIndex, doorIndex),
-                        door.candidateProviders,
+                        doorAddress,
+                        providersForAddress(context, doorAddress, door.candidateProviders),
                         "candidateFeedback.generatedDoors.doors[" .. tostring(doorIndex) .. "].candidateProviders"
                     )
 
@@ -127,10 +140,11 @@ local function indexDraftProviders(draft)
                         guard.expectArray(offerPoint.offers or {}, "candidateFeedback.generatedDoors.doors[" .. tostring(doorIndex) .. "].offerPoint.offers")
                         for offerIndex, offer in ipairs(offerPoint.offers or {}) do
                             guard.expectTable(offer, "candidateFeedback.generatedDoors.doors[" .. tostring(doorIndex) .. "].offerPoint.offers[" .. tostring(offerIndex) .. "]")
+                            local offerAddress = address.offer(routeKey, biomeIndex, roomIndex, doorIndex, offerIndex)
                             indexProviderMap(
                                 indexed,
-                                address.offer(routeKey, biomeIndex, roomIndex, doorIndex, offerIndex),
-                                offer.candidateProviders,
+                                offerAddress,
+                                providersForAddress(context, offerAddress, offer.candidateProviders),
                                 "candidateFeedback.generatedDoors.doors[" .. tostring(doorIndex) .. "].offerPoint.offers[" .. tostring(offerIndex) .. "].candidateProviders"
                             )
                         end
@@ -163,9 +177,10 @@ local function expectResults(candidateResults)
     return results
 end
 
-function candidates.apply(draft, candidateResults)
+function candidates.apply(draft, candidateResults, context)
+    context = context or {}
     local results = expectResults(candidateResults)
-    local indexed = indexDraftProviders(draft)
+    local indexed = indexDraftProviders(draft, context)
     local summary = {
         cleared = #indexed.all,
         applied = 0,

@@ -106,8 +106,8 @@ function routePipeline.evaluate(draft, context)
     }
 end
 
-function routePipeline.applyCandidateFeedback(draft, evaluation)
-    return candidateFeedback.apply(draft, evaluation.candidateResults or {})
+function routePipeline.applyCandidateFeedback(draft, evaluation, context)
+    return candidateFeedback.apply(draft, evaluation.candidateResults or {}, context)
 end
 
 return routePipeline

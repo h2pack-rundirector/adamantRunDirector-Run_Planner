@@ -449,12 +449,23 @@ local function exportProviderMap(out, providers, formAddress, context, providerM
     end
 end
 
+local function providersForAddress(context, formAddress, fallbackProviders)
+    local registry = context.participants
+    if registry ~= nil then
+        local participantProviders = registry:providersForAddress(formAddress)
+        if participantProviders ~= nil then
+            return participantProviders
+        end
+    end
+    return fallbackProviders
+end
+
 local function exportDoorCandidates(out, draft, biomeDraft, biomeIndex, roomNode, roomIndex, door, doorIndex, context)
     local formAddress = address.door(draft.routeKey, biomeIndex, roomIndex, doorIndex)
     local exportContext = candidateContext(context, draft, biomeDraft, biomeIndex, roomNode, roomIndex, door, doorIndex)
     exportProviderMap(
         out,
-        door.candidateProviders,
+        providersForAddress(context, formAddress, door.candidateProviders),
         formAddress,
         exportContext,
         "routeForm.biomes[" .. tostring(biomeIndex) .. "].rooms[" .. tostring(roomIndex) .. "].generatedDoors.doors[" .. tostring(doorIndex) .. "].candidateProviders"
@@ -464,7 +475,7 @@ local function exportDoorCandidates(out, draft, biomeDraft, biomeIndex, roomNode
         local offerAddress = address.offer(draft.routeKey, biomeIndex, roomIndex, doorIndex, offerIndex)
         exportProviderMap(
             out,
-            offer.candidateProviders,
+            providersForAddress(context, offerAddress, offer.candidateProviders),
             offerAddress,
             offerCandidateContext(context, draft, biomeDraft, biomeIndex, roomNode, roomIndex, door, doorIndex, offer, offerIndex),
             "routeForm.biomes[" .. tostring(biomeIndex) .. "].rooms[" .. tostring(roomIndex) .. "].generatedDoors.doors[" .. tostring(doorIndex) .. "].offerPoint.offers[" .. tostring(offerIndex) .. "].candidateProviders"
@@ -477,7 +488,7 @@ local function exportRoomOfferCandidates(out, draft, biomeDraft, biomeIndex, roo
         local offerAddress = address.roomOffer(draft.routeKey, biomeIndex, roomIndex, offerPointIndex, offerIndex)
         exportProviderMap(
             out,
-            offer.candidateProviders,
+            providersForAddress(context, offerAddress, offer.candidateProviders),
             offerAddress,
             roomOfferCandidateContext(context, draft, biomeDraft, biomeIndex, roomNode, roomIndex, offerPoint, offerPointIndex, offer, offerIndex),
             "routeForm.biomes[" .. tostring(biomeIndex) .. "].rooms[" .. tostring(roomIndex) .. "].offerPoints[" .. tostring(offerPointIndex) .. "].offers[" .. tostring(offerIndex) .. "].candidateProviders"

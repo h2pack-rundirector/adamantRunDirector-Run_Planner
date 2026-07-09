@@ -242,8 +242,8 @@ function TestPlannerState.testGeneratedDoorProviderIsOwnedByParticipant()
             roomIndex = 2,
             doorIndex = 1,
         })
-        lu.assertTrue(door.candidateProviders == participant.providers)
-        lu.assertTrue(door.candidateProviders.nextDoorTarget == participant.providers.nextDoorTarget)
+        lu.assertNil(door.candidateProviders)
+        lu.assertNotNil(participant.providers.nextDoorTarget)
         lu.assertEquals(participant.roomKey, "F_Combat01")
         lu.assertEquals(participant.exitIndex, 1)
 
@@ -291,9 +291,11 @@ function TestPlannerState.testEvaluationCreatesFormParticipants()
 
         local shopRoom = state.currentBiome().rooms[2]
         local roomOffer = shopRoom.offerPoints[1].offers[1]
+        local roomOfferParticipant = state.participants:find(identity.roomOffer(roomContext, 1, 1))
         lu.assertTrue(state.participants:find(identity.room(roomContext)).node == shopRoom)
-        lu.assertTrue(state.participants:find(identity.roomOffer(roomContext, 1, 1)).node == roomOffer)
-        lu.assertTrue(roomOffer.candidateProviders.rewardType ~= nil)
+        lu.assertTrue(roomOfferParticipant.node == roomOffer)
+        lu.assertNotNil(roomOfferParticipant.providers.rewardType)
+        lu.assertNil(roomOffer.candidateProviders)
     end)
 end
 
@@ -319,7 +321,7 @@ function TestPlannerState.testRewardTypeProvidersAreOwnedByParticipants()
         local generatedProvider = generatedParticipant.providers.rewardType
 
         lu.assertNotNil(generatedProvider)
-        lu.assertTrue(generatedOffer.candidateProviders.rewardType == generatedProvider)
+        lu.assertNil(generatedOffer.candidateProviders)
 
         state.markDirty()
         state.ensureEvaluation()
@@ -340,7 +342,7 @@ function TestPlannerState.testRewardTypeProvidersAreOwnedByParticipants()
         local roomOfferProvider = roomOfferParticipant.providers.rewardType
 
         lu.assertNotNil(roomOfferProvider)
-        lu.assertTrue(roomOffer.candidateProviders.rewardType == roomOfferProvider)
+        lu.assertNil(roomOffer.candidateProviders)
     end)
 end
 
@@ -371,8 +373,9 @@ function TestPlannerState.testDevotionSourceProvidersAreOwnedByGeneratedOfferPar
         local firstProvider = participant.providers.devotionSource1
         local secondProvider = participant.providers.devotionSource2
 
-        lu.assertTrue(materializedOffer.candidateProviders.devotionSource1 == firstProvider)
-        lu.assertTrue(materializedOffer.candidateProviders.devotionSource2 == secondProvider)
+        lu.assertNotNil(firstProvider)
+        lu.assertNotNil(secondProvider)
+        lu.assertNil(materializedOffer.candidateProviders)
 
         local exported = {}
         firstProvider.exportCandidates(exported, identity.address(identity.generatedOffer(context, 1)), {
@@ -396,6 +399,12 @@ function TestPlannerState.testDevotionSourceProvidersAreOwnedByGeneratedOfferPar
             },
         })
         lu.assertEquals(exported[1].semantic.sources[2], "HeraUpgrade")
+
+        state.setRewardType(1, 1, "Boon")
+        state.ensureEvaluation()
+
+        lu.assertNil(participant.providers.devotionSource1)
+        lu.assertNil(participant.providers.devotionSource2)
     end)
 end
 

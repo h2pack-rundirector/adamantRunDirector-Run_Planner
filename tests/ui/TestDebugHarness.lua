@@ -53,6 +53,35 @@ local function candidateCodeCount(result, code)
     return count
 end
 
+local function generatedDoorParticipant(harness, roomIndex, doorIndex)
+    local identity = h.testImport("mods/ui/forms/identity.lua")
+    return harness.participants:find(identity.generatedDoor({
+        routeKey = harness.draft.routeKey,
+        biomeIndex = 1,
+        roomIndex = roomIndex,
+        doorIndex = doorIndex,
+    }))
+end
+
+local function generatedOfferParticipant(harness, roomIndex, doorIndex, offerIndex)
+    local identity = h.testImport("mods/ui/forms/identity.lua")
+    return harness.participants:find(identity.generatedOffer({
+        routeKey = harness.draft.routeKey,
+        biomeIndex = 1,
+        roomIndex = roomIndex,
+        doorIndex = doorIndex,
+    }, offerIndex or 1))
+end
+
+local function roomOfferParticipant(harness, roomIndex, offerPointIndex, offerIndex)
+    local identity = h.testImport("mods/ui/forms/identity.lua")
+    return harness.participants:find(identity.roomOffer({
+        routeKey = harness.draft.routeKey,
+        biomeIndex = 1,
+        roomIndex = roomIndex,
+    }, offerPointIndex or 1, offerIndex or 1))
+end
+
 function TestDebugHarness.testDefaultDraftEvaluatesThroughRealPipeline()
     h.withTestImport(function()
         local harness = createHarness()
@@ -70,7 +99,8 @@ function TestDebugHarness.testDefaultDraftEvaluatesThroughRealPipeline()
         lu.assertEquals(candidateCodeCount(result, "f_preboss_too_early"), 2)
         lu.assertEquals(candidateCodeCount(result, "room_creation_cap_exceeded"), 1)
 
-        local provider = harness.draft.biomes[1].rooms[2].generatedDoors.doors[1].candidateProviders.nextDoorTarget
+        local provider = generatedDoorParticipant(harness, 2, 1).providers.nextDoorTarget
+        lu.assertNil(harness.draft.biomes[1].rooms[2].generatedDoors.doors[1].candidateProviders)
         lu.assertEquals(provider.messages[optionIndex(provider, "F_Opening01")], "Generated doors cannot target start-kind rooms.")
         lu.assertEquals(provider.messages[optionIndex(provider, "F_Combat01")], "Generated room target exceeds its creation cap.")
         lu.assertEquals(provider.messages[optionIndex(provider, "F_Combat05")], "Generated room target fails declared eligibility.")
@@ -79,7 +109,8 @@ function TestDebugHarness.testDefaultDraftEvaluatesThroughRealPipeline()
         lu.assertFalse(provider.hidden[optionIndex(provider, "F_Story01")])
         lu.assertTrue(provider.hidden[optionIndex(provider, "F_PreBoss01")])
 
-        local rewardProvider = harness.draft.biomes[1].rooms[2].generatedDoors.doors[1].offerPoint.offers[1].candidateProviders.rewardType
+        local rewardProvider = generatedOfferParticipant(harness, 2, 1, 1).providers.rewardType
+        lu.assertNil(harness.draft.biomes[1].rooms[2].generatedDoors.doors[1].offerPoint.offers[1].candidateProviders)
         lu.assertEquals(rewardProvider.messages[4], "Devotion sources must already exist in acquired loot history.")
     end)
 end
@@ -128,7 +159,8 @@ function TestDebugHarness.testShopRoomCreatesRoomOfferControls()
         lu.assertNotNil(room.offerPoints)
         lu.assertEquals(room.offerPoints[1].kind, "shop")
         lu.assertEquals(room.offerPoints[1].offers[1].store, "WorldShop")
-        lu.assertNotNil(room.offerPoints[1].offers[1].candidateProviders.rewardType)
+        lu.assertNotNil(roomOfferParticipant(harness, 2, 1, 1).providers.rewardType)
+        lu.assertNil(room.offerPoints[1].offers[1].candidateProviders)
         lu.assertTrue(result.complete)
     end)
 end

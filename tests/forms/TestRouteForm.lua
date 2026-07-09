@@ -317,6 +317,53 @@ function TestRouteForm.testRouteFormExportsDoorCandidateRecords()
     end)
 end
 
+function TestRouteForm.testRouteFormPrefersParticipantCandidateProviders()
+    h.withTestImport(function()
+        local candidateProvider = h.testImport("mods/forms/candidate_provider.lua")
+        local participants = h.testImport("mods/ui/forms/participants.lua")
+        local routeForm = h.testImport("mods/forms/route.lua")
+        local draft = completeDraft()
+        local registry = participants.create()
+        local context = loadContext()
+        context.participants = registry
+        draft.biomes[1].rooms[2].generatedDoors.doors[1].candidateProviders = {
+            nextDoorTarget = candidateProvider.create({
+                key = "nextDoorTarget",
+                version = 4,
+                values = { "F_Combat01" },
+                labels = { "Bridge Combat" },
+            }),
+        }
+        registry:generatedDoor({
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 2,
+            doorIndex = 1,
+        }).providers.nextDoorTarget = candidateProvider.create({
+            key = "nextDoorTarget",
+            version = 44,
+            values = { "F_PreBoss01" },
+            labels = { "Participant PreBoss" },
+            semanticForValue = function(value, _index, _formAddress, exportContext)
+                return {
+                    kind = "nextRoom",
+                    biomeKey = exportContext.candidate.biomeKey,
+                    sourceRoomKey = exportContext.candidate.sourceRoomKey,
+                    exitIndex = exportContext.candidate.exitIndex,
+                    targetRoomKey = value,
+                }
+            end,
+        })
+
+        local records = routeForm.exportCandidates(draft, context)
+
+        lu.assertEquals(#records, 1)
+        lu.assertEquals(records[1].providerVersion, 44)
+        lu.assertEquals(records[1].candidateKey, "F_PreBoss01")
+        lu.assertEquals(records[1].semantic.targetRoomKey, "F_PreBoss01")
+    end)
+end
+
 function TestRouteForm.testRouteFormExportsOfferCandidateRecords()
     h.withTestImport(function()
         local candidateProvider = h.testImport("mods/forms/candidate_provider.lua")

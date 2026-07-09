@@ -18,13 +18,37 @@ local function bindNode(participant, node)
     return participant
 end
 
+local function stableAddressKey(address)
+    local keys = {}
+    for key, _ in pairs(address) do
+        keys[#keys + 1] = key
+    end
+    table.sort(keys)
+
+    local parts = {}
+    for index, key in ipairs(keys) do
+        parts[index] = tostring(key) .. "=" .. tostring(address[key])
+    end
+    return table.concat(parts, "|")
+end
+
 function participants.create()
     local registry = {
         byId = {},
+        byAddress = {},
     }
 
     function registry:find(form)
         return self.byId[form.id]
+    end
+
+    function registry:findByAddress(formAddress)
+        return self.byAddress[stableAddressKey(formAddress)]
+    end
+
+    function registry:providersForAddress(formAddress)
+        local participant = self:findByAddress(formAddress)
+        return participant and participant.providers or nil
     end
 
     function registry:get(form)
@@ -32,6 +56,7 @@ function participants.create()
         if participant == nil then
             participant = createParticipant(form)
             self.byId[form.id] = participant
+            self.byAddress[stableAddressKey(participant.address)] = participant
         end
         return participant
     end
@@ -54,6 +79,7 @@ function participants.create()
 
     function registry:clear()
         self.byId = {}
+        self.byAddress = {}
     end
 
     return registry

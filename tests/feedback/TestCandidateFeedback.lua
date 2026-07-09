@@ -158,6 +158,41 @@ function TestCandidateFeedback.testAppliesMatchingVersionAndClearsOldState()
     end)
 end
 
+function TestCandidateFeedback.testAppliesParticipantProvidersWithoutDraftBridge()
+    h.withTestImport(function()
+        local candidateFeedback = h.testImport("mods/feedback/candidates.lua")
+        local participants = h.testImport("mods/ui/forms/participants.lua")
+        local provider = h.testImport("mods/forms/candidate_provider.lua").create({
+            key = "nextDoorTarget",
+            version = 7,
+            values = { "F_Combat01", "F_Missing01" },
+            labels = { "Combat", "Missing" },
+        })
+        local registry = participants.create()
+        registry:generatedDoor({
+            routeKey = "Underworld",
+            biomeIndex = 1,
+            roomIndex = 1,
+            doorIndex = 1,
+        }).providers.nextDoorTarget = provider
+
+        local summary = candidateFeedback.apply(draftWithProvider(nil), {
+            candidateResult(7, 2),
+        }, {
+            participants = registry,
+        })
+
+        lu.assertEquals(summary, {
+            cleared = 1,
+            applied = 1,
+            stale = 0,
+            missing = 0,
+        })
+        lu.assertTrue(provider.hidden[2])
+        lu.assertEquals(provider.messages[2], "Unavailable")
+    end)
+end
+
 function TestCandidateFeedback.testSkipsStaleVersionsAndMissingProviders()
     h.withTestImport(function()
         local candidateFeedback = h.testImport("mods/feedback/candidates.lua")

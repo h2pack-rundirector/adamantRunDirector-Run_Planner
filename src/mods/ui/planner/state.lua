@@ -186,13 +186,13 @@ local function attachRewardProvider(state, participant, offer)
     else
         provider.version = state.providerVersion
     end
-    offer.candidateProviders = {
-        rewardType = provider,
-    }
+    offer.candidateProviders = nil
 end
 
 local function attachDevotionSourceProviders(state, participant, offer)
     if offer.rewardType ~= "Devotion" then
+        participant.providers.devotionSource1 = nil
+        participant.providers.devotionSource2 = nil
         return
     end
 
@@ -222,7 +222,6 @@ local function attachDevotionSourceProviders(state, participant, offer)
         else
             provider.version = state.providerVersion
         end
-        offer.candidateProviders[providerKey] = provider
     end
 end
 
@@ -260,7 +259,7 @@ local function attachGeneratedDoorProvider(state, room, door, context)
     else
         provider.version = state.providerVersion
     end
-    door.candidateProviders = participant.providers
+    door.candidateProviders = nil
 end
 
 local function attachCandidateProviders(state)
@@ -302,10 +301,12 @@ end
 local function evaluate(state)
     materializeDraftForRebuild(state)
     attachCandidateProviders(state)
-    state.evaluation = state.pipeline.evaluate(state.draft, {
+    local context = {
         catalog = state.catalog,
-    })
-    state.pipeline.applyCandidateFeedback(state.draft, state.evaluation)
+        participants = state.participants,
+    }
+    state.evaluation = state.pipeline.evaluate(state.draft, context)
+    state.pipeline.applyCandidateFeedback(state.draft, state.evaluation, context)
     state.dirty = false
     return state.evaluation
 end

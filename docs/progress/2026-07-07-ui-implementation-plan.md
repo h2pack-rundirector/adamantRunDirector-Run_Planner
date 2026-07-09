@@ -4,6 +4,23 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Route Feedback Reads Participant Providers
+
+Route candidate export and feedback application now read provider maps from form
+participants when a participant registry is supplied.
+
+Implemented behavior:
+
+- planner state passes its participant registry into route evaluation and
+  candidate feedback application;
+- `routeForm.exportCandidates(...)` prefers participant providers and falls
+  back to draft-node providers for non-UI tests and callers;
+- `candidateFeedback.apply(...)` uses the same participant-provider lookup;
+- planner-state provider rebuild no longer writes generated-door or reward
+  `candidateProviders` bridges onto draft nodes;
+- non-Devotion generated-offer participants clear stale Devotion source
+  providers so only active participant providers are exported.
+
 ### 2026-07-09 - Forms Read Participant Providers
 
 Leaf form draw now treats participant providers as the UI source of truth while
