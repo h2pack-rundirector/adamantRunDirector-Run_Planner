@@ -179,6 +179,52 @@ function TestPlannerState.testEvaluationCacheInvalidatesAfterMutation()
     end)
 end
 
+function TestPlannerState.testEvaluationMaterializesGeneratedDoorOffers()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local draft = sampleDraft()
+        local door = draft.biomes[1].rooms[1].generatedDoors.doors[1]
+        door.offerPoint = nil
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+            draft = draft,
+        })
+
+        lu.assertNil(state.draft.biomes[1].rooms[1].generatedDoors.doors[1].offerPoint)
+
+        state.ensureEvaluation()
+
+        local materializedOfferPoint = state.draft.biomes[1].rooms[1].generatedDoors.doors[1].offerPoint
+        lu.assertNotNil(materializedOfferPoint)
+        lu.assertEquals(materializedOfferPoint.kind, "generatedDoorRewards")
+        lu.assertEquals(materializedOfferPoint.offers[1].store, "RunProgress")
+    end)
+end
+
+function TestPlannerState.testEvaluationMaterializesPayloadContainers()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local draft = sampleDraft()
+        local offer = draft.biomes[1].rooms[1].generatedDoors.doors[1].offerPoint.offers[1]
+        offer.rewardType = "Devotion"
+        offer.payload = nil
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+            draft = draft,
+        })
+
+        state.ensureEvaluation()
+
+        local materializedPayload = state.draft.biomes[1].rooms[1].generatedDoors.doors[1].offerPoint.offers[1].payload
+        lu.assertEquals(materializedPayload.sources, {
+            "AphroditeUpgrade",
+            "ApolloUpgrade",
+        })
+    end)
+end
+
 function TestPlannerState.testSelectedDoorOptionsAreCachedByDoorBatch()
     h.withTestImport(function()
         local data = h.testImport("mods/data.lua")

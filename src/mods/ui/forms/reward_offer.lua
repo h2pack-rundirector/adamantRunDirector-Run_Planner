@@ -7,7 +7,7 @@ local rewardOffer = {}
 
 function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
     local form = identity.generatedOffer(context, 1)
-    local offer = state.ensureOffer(door)
+    local offer = door.offerPoint.offers[1]
     local address = identity.address(form)
     local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
     local offerFeedback = feedback.forAddress(evaluation, address)
@@ -23,8 +23,8 @@ function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
     )
     if storeChanged then
         state.setRewardStore(context.roomIndex, context.doorIndex, nextStore)
-        offer = state.ensureOffer(door)
-        offerProviders = offer.candidateProviders or {}
+        offer = door.offerPoint.offers[1]
+        offerProviders = {}
     end
 
     local rewardOptions = offerProviders.rewardType or state.rewardTypeOptions[offer.store] or state.emptyOptions
@@ -36,7 +36,7 @@ function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
     )
     if rewardChanged then
         state.setRewardType(context.roomIndex, context.doorIndex, nextRewardType)
-        offer = state.ensureOffer(door)
+        offer = door.offerPoint.offers[1]
     end
 
     payload.draw(state, imgui, context, offer)

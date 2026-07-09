@@ -5,8 +5,6 @@ local devotion = {}
 
 function devotion.draw(state, imgui, context, offer)
     local form = identity.generatedOffer(context, 1)
-    offer.payload = offer.payload or state.defaultPayloadForRewardType("Devotion")
-    offer.payload.sources = offer.payload.sources or state.defaultPayloadForRewardType("Devotion").sources
     for sourceIndex = 1, 2 do
         local providers = offer.candidateProviders or {}
         local providerKey = "devotionSource" .. tostring(sourceIndex)

@@ -6,8 +6,8 @@ local roomOffer = {}
 
 function roomOffer.draw(state, imgui, evaluation, context, room)
     local form = identity.roomOffer(context, 1, 1)
-    local offer = state.ensureRoomOffer(room)
     local offerPoint = room.offerPoints[1]
+    local offer = offerPoint.offers[1]
     local address = identity.address(form)
     local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
     local offerFeedback = feedback.forAddress(evaluation, address)
@@ -22,7 +22,7 @@ function roomOffer.draw(state, imgui, evaluation, context, room)
     )
     if storeChanged then
         state.setRoomOfferStore(context.roomIndex, nextStore)
-        offer = state.ensureRoomOffer(room)
+        offer = room.offerPoints[1].offers[1]
     end
 
     local offerProviders = offer.candidateProviders or {}
@@ -35,7 +35,7 @@ function roomOffer.draw(state, imgui, evaluation, context, room)
     )
     if rewardChanged then
         state.setRoomOfferType(context.roomIndex, nextRewardType)
-        offer = state.ensureRoomOffer(room)
+        offer = room.offerPoints[1].offers[1]
     end
 
     widgets.feedback(imgui, "Route blocker", routeBlocker)

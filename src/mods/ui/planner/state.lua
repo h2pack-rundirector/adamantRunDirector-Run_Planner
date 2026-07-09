@@ -49,6 +49,41 @@ local function ensureRoomOffer(state, room)
     return room.offerPoints[1].offers[1]
 end
 
+local function materializeOfferPayload(state, offer)
+    if offer.payload == nil then
+        offer.payload = defaultPayloadForRewardType(state, offer.rewardType)
+    end
+    if offer.rewardType == "Devotion" then
+        offer.payload.sources = offer.payload.sources or defaultPayloadForRewardType(state, "Devotion").sources
+    end
+end
+
+local function materializeGeneratedDoorOffer(state, door)
+    local offer = ensureOffer(state, door)
+    materializeOfferPayload(state, offer)
+end
+
+local function materializeRoomOffer(state, room)
+    local offer = ensureRoomOffer(state, room)
+    materializeOfferPayload(state, offer)
+end
+
+local function materializeDraftForRebuild(state)
+    local biome = state.currentBiome()
+    for _, room in ipairs((biome and biome.rooms) or {}) do
+        if room.offerPoints ~= nil then
+            materializeRoomOffer(state, room)
+        end
+
+        local generatedDoors = room.generatedDoors
+        if generatedDoors ~= nil then
+            for _, door in ipairs(generatedDoors.doors or {}) do
+                materializeGeneratedDoorOffer(state, door)
+            end
+        end
+    end
+end
+
 local function rewardTypeOptionsFor(state, storeKey)
     return state.rewardTypeOptions[storeKey] or plannerOptions.empty()
 end
@@ -153,8 +188,6 @@ local function attachDevotionSourceProviders(state, offer)
         return
     end
 
-    offer.payload = offer.payload or defaultPayloadForRewardType(state, "Devotion")
-    offer.payload.sources = offer.payload.sources or defaultPayloadForRewardType(state, "Devotion").sources
     for sourceIndex = 1, 2 do
         local slotIndex = sourceIndex
         local providerKey = "devotionSource" .. tostring(sourceIndex)
@@ -205,7 +238,7 @@ local function attachCandidateProviders(state)
                     }),
                 }
 
-                local offer = ensureOffer(state, door)
+                local offer = door.offerPoint.offers[1]
                 attachRewardProvider(state, offer)
                 attachDevotionSourceProviders(state, offer)
             end
@@ -214,6 +247,7 @@ local function attachCandidateProviders(state)
 end
 
 local function evaluate(state)
+    materializeDraftForRebuild(state)
     attachCandidateProviders(state)
     state.evaluation = state.pipeline.evaluate(state.draft, {
         catalog = state.catalog,
@@ -469,15 +503,6 @@ function plannerState.create(opts)
 
     function state.currentBiome()
         return state.draft.biomes[1]
-    end
-    function state.defaultPayloadForRewardType(rewardType)
-        return defaultPayloadForRewardType(state, rewardType)
-    end
-    function state.ensureOffer(door)
-        return ensureOffer(state, door)
-    end
-    function state.ensureRoomOffer(room)
-        return ensureRoomOffer(state, room)
     end
     function state.selectedDoorOptions(generatedDoors)
         return selectedDoorOptionsFor(state, generatedDoors)

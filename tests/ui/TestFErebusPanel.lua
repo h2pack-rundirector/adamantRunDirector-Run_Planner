@@ -98,3 +98,33 @@ function TestFErebusPanel.testDrawsRoomLocalOfferInsideRoomUnit()
         lu.assertNotNil(combined:find("Room reward##routeUnderworld_biome1_room2_offerPoint1_offer1_rewardType", 1, true))
     end)
 end
+
+function TestFErebusPanel.testDrawDoesNotCallMaterializers()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local fErebusPanel = h.testImport("mods/ui/biomes/f_erebus_panel.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+        local evaluation = state.ensureEvaluation()
+        state.ensureOffer = function()
+            error("draw called generated offer materializer")
+        end
+        state.ensureRoomOffer = function()
+            error("draw called room offer materializer")
+        end
+        state.defaultPayloadForRewardType = function()
+            error("draw called payload materializer")
+        end
+        local lines, ctx = lineSink()
+
+        fErebusPanel.draw(state, ctx, {
+            hideStatus = true,
+            evaluation = evaluation,
+        })
+
+        local combined = table.concat(lines, "\n")
+        lu.assertNotNil(combined:find("Generated reward offer", 1, true))
+    end)
+end

@@ -4,6 +4,23 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Draw-Time Materialization Removed From Forms
+
+The form draw path no longer creates missing reward, room-offer, or payload
+nodes while rendering.
+
+Implemented behavior:
+
+- planner-state rebuild materializes generated-door reward offers and missing
+  payload containers before candidate providers and validation run;
+- room-local offer draw reads an already-prepared offer point instead of calling
+  a materializer;
+- generated reward draw reads the prepared door offer instead of calling a
+  materializer;
+- Boon and Devotion payload forms read prepared payload data instead of creating
+  defaults during draw;
+- explicit edit mutators still own parent-child resets and persistence.
+
 ### 2026-07-09 - Form Identity Boundary Started
 
 The first form-object stabilization slice now centralizes participant identity
