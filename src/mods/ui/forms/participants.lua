@@ -11,10 +11,21 @@ local function createParticipant(form)
     }
 end
 
+local function bindNode(participant, node)
+    if node ~= nil then
+        participant.node = node
+    end
+    return participant
+end
+
 function participants.create()
     local registry = {
         byId = {},
     }
+
+    function registry:find(form)
+        return self.byId[form.id]
+    end
 
     function registry:get(form)
         local participant = self.byId[form.id]
@@ -25,8 +36,20 @@ function participants.create()
         return participant
     end
 
-    function registry:generatedDoor(context)
-        return self:get(identity.generatedDoor(context))
+    function registry:room(context, node)
+        return bindNode(self:get(identity.room(context)), node)
+    end
+
+    function registry:generatedDoor(context, node)
+        return bindNode(self:get(identity.generatedDoor(context)), node)
+    end
+
+    function registry:generatedOffer(context, offerIndex, node)
+        return bindNode(self:get(identity.generatedOffer(context, offerIndex)), node)
+    end
+
+    function registry:roomOffer(context, offerPointIndex, offerIndex, node)
+        return bindNode(self:get(identity.roomOffer(context, offerPointIndex, offerIndex)), node)
     end
 
     function registry:clear()

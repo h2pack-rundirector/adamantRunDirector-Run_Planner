@@ -256,6 +256,47 @@ function TestPlannerState.testGeneratedDoorProviderIsOwnedByParticipant()
     end)
 end
 
+function TestPlannerState.testEvaluationCreatesFormParticipants()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local identity = h.testImport("mods/ui/forms/identity.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+
+        state.ensureEvaluation()
+
+        local roomContext = {
+            routeKey = state.draft.routeKey,
+            biomeIndex = 1,
+            roomIndex = 2,
+        }
+        local doorContext = {
+            routeKey = state.draft.routeKey,
+            biomeIndex = 1,
+            roomIndex = 2,
+            doorIndex = 1,
+        }
+        local room = state.currentBiome().rooms[2]
+        local door = room.generatedDoors.doors[1]
+        local offer = door.offerPoint.offers[1]
+
+        lu.assertTrue(state.participants:find(identity.room(roomContext)).node == room)
+        lu.assertTrue(state.participants:find(identity.generatedDoor(doorContext)).node == door)
+        lu.assertTrue(state.participants:find(identity.generatedOffer(doorContext, 1)).node == offer)
+
+        state.setRoomKey(2, "F_Shop01")
+        state.ensureEvaluation()
+
+        local shopRoom = state.currentBiome().rooms[2]
+        local roomOffer = shopRoom.offerPoints[1].offers[1]
+        lu.assertTrue(state.participants:find(identity.room(roomContext)).node == shopRoom)
+        lu.assertTrue(state.participants:find(identity.roomOffer(roomContext, 1, 1)).node == roomOffer)
+        lu.assertTrue(roomOffer.candidateProviders.rewardType ~= nil)
+    end)
+end
+
 function TestPlannerState.testSelectedDoorOptionsAreCachedByDoorBatch()
     h.withTestImport(function()
         local data = h.testImport("mods/data.lua")

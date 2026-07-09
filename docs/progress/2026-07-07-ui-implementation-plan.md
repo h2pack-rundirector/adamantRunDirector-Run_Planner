@@ -4,6 +4,23 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Form Participants Created Without Behavior Change
+
+The participant registry now creates object identities for the current F form
+leaves without changing draft mutation, persistence, validation, or draw
+behavior.
+
+Implemented behavior:
+
+- room, generated-door, generated-offer, and room-offer participants are cached
+  by the existing form identity IDs;
+- participants bind to the current draft node during planner-state rebuild;
+- existing forms still draw from draft nodes and call planner-state mutators;
+- generated-door target providers still use the compatibility
+  `door.candidateProviders` bridge introduced in the previous slice;
+- reward offer providers remain draft-attached and are only bound to
+  participants as node references for now.
+
 ### 2026-07-09 - Generated Door Participant Providers Started
 
 Provider ownership has started moving from draft nodes toward form

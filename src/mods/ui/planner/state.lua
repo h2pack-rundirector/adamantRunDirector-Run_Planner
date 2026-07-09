@@ -219,7 +219,7 @@ local function generatedDoorContext(state, biomeIndex, roomIndex, doorIndex)
 end
 
 local function attachGeneratedDoorProvider(state, room, door, context)
-    local participant = state.participants:generatedDoor(context)
+    local participant = state.participants:generatedDoor(context, door)
     participant.roomKey = room.roomKey
     participant.exitIndex = door.exitIndex
     local provider = participant.providers.nextDoorTarget
@@ -250,8 +250,16 @@ local function attachCandidateProviders(state)
     local biome = state.currentBiome()
     local biomeIndex = 1
     for roomIndex, room in ipairs((biome and biome.rooms) or {}) do
-        for _, offerPoint in ipairs(room.offerPoints or {}) do
-            for _, offer in ipairs(offerPoint.offers or {}) do
+        local roomContext = {
+            routeKey = state.draft.routeKey,
+            biomeIndex = biomeIndex,
+            roomIndex = roomIndex,
+        }
+        state.participants:room(roomContext, room)
+
+        for offerPointIndex, offerPoint in ipairs(room.offerPoints or {}) do
+            for offerIndex, offer in ipairs(offerPoint.offers or {}) do
+                state.participants:roomOffer(roomContext, offerPointIndex, offerIndex, offer)
                 attachRewardProvider(state, offer)
             end
         end
@@ -262,6 +270,11 @@ local function attachCandidateProviders(state)
                 attachGeneratedDoorProvider(state, room, door, generatedDoorContext(state, biomeIndex, roomIndex, doorIndex))
 
                 local offer = door.offerPoint.offers[1]
+                state.participants:generatedOffer(
+                    generatedDoorContext(state, biomeIndex, roomIndex, doorIndex),
+                    1,
+                    offer
+                )
                 attachRewardProvider(state, offer)
                 attachDevotionSourceProviders(state, offer)
             end
