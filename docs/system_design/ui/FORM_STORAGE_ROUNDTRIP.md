@@ -29,9 +29,10 @@ must not be serialized.
 
 ## Storage Boundary
 
-`PlannerDraft` is the serialization boundary for the editable route draft.
+`PlannerDraft` is the root control and serialization adapter for the editable
+route draft.
 
-It owns normalized storage tables and exposes:
+It exposes normalized storage tables through ModpackLib and provides:
 
 ```lua
 control:readDraft() -> draft
@@ -49,6 +50,39 @@ is serialized.
 `revision()` is adapter metadata, not route draft data. It lets planner state
 detect that an already-bound control was externally reset or rewritten and then
 reload the editable draft from storage on the next bind pass.
+
+## Serialization Codec Ownership
+
+`PlannerDraft` should orchestrate storage declarations, reads, and writes. It
+should not accumulate detailed knowledge of every room, reward, payload, and
+biome shape.
+
+Domain-owned codecs should live near the objects they serialize:
+
+- room-unit codecs own `Rooms` row mapping;
+- generated-door batch codecs own `GeneratedDoors` row mapping;
+- generated-door reward codecs own generated reward offer rows;
+- room-local reward codecs own room offer rows;
+- payload codecs own payload-specific columns for each reward kind.
+
+The storage format may remain flat and static because ModpackLib control storage
+is declared up front. The ownership rule is that the flat declaration and
+read/write functions are assembled from domain codecs instead of hand-coded in a
+single root file.
+
+The target shape is:
+
+```text
+PlannerDraft
+  -> room unit codec
+  -> generated door codec
+  -> generated-door reward codec
+  -> room-local reward codec
+  -> payload codecs
+```
+
+This keeps `PlannerDraft` as the common persistence interface while keeping
+serialization knowledge close to the form/domain objects that own the shape.
 
 ## Current F Roundtrip Map
 
@@ -123,6 +157,7 @@ Each new form participant should have focused tests that prove:
 - representative edits write back through `PlannerDraft:writeDraft(...)`;
 - storage rows can read back into the same draft shape;
 - parent changes clear or rematerialize incompatible child state;
+- codec extraction preserves the existing flat row format;
 - derived feedback/candidate/history data is absent from stored rows and rebuilds
   after evaluation.
 

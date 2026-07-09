@@ -46,6 +46,24 @@ The planner UI is a hot path. Draw code should assume it may be called often
 and should avoid table creation, option reshaping, or route validation during
 draw.
 
+ModpackLib remains the production host and root infrastructure. It provides the
+UI context, trusted ImGui surface, nav helpers, module storage/control
+registration, and commit lifecycle. Planner room, reward, door, and payload
+leaves are not top-level Lib controls because their count and shape are dynamic.
+They are form participants owned by the planner UI graph.
+
+Planner leaf widgets are custom planner widgets unless a Lib widget can be used
+without changing draft ownership. Public Lib widgets are appropriate for true
+Lib storage fields, route-shell selection fields, or UI-only transient state.
+They should not force route draft leaves into persistent or transient storage
+just to satisfy a widget binding contract.
+
+If the planner needs behavior already present in Lib widgets, such as colored
+dropdown previews or hidden choices, implement the minimal behavior in
+`mods/ui/planner/widgets.lua` or add a deliberate adapter layer. Any adapter must
+still call the owning form mutator for draft edits and must not write route draft
+storage rows directly from a leaf widget.
+
 Control rules:
 
 - candidate value arrays and labels are stable objects owned by the form
@@ -193,6 +211,17 @@ No dropdown should run route validation for itself.
 
 No incomplete form should be materialized into fake history. If completion
 fails, the rebuild produces local completion feedback and stops before history.
+
+Before adding broader feedback coloring, stabilize the draw and persistence
+boundaries:
+
+- planner widgets own provider presentation and do not own route legality;
+- draw code reads prepared state and does not materialize missing draft children;
+- parent mutators materialize or clear child shape before persistence;
+- planner state has explicit owners for draft mutation, persistence binding,
+  candidate preparation, and evaluation caching;
+- `PlannerDraft` delegates room, door, reward, and payload storage mapping to
+  domain-owned serialization codecs.
 
 ## Candidate Provider Interface
 

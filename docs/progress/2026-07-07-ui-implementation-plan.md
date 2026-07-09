@@ -4,6 +4,39 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - UI Stabilization Direction Recorded
+
+The next work is a stabilization pass before broader feedback coloring.
+
+Recorded decisions:
+
+- ModpackLib remains the production host and root infrastructure: UI context,
+  trusted ImGui surface, nav helpers, storage/control registration, and commit
+  lifecycle;
+- dynamic planner leaves are not top-level Lib controls because room, reward,
+  door, and payload shape is data-driven;
+- planner leaf widgets stay custom for now, with provider-backed dropdown,
+  coloring, hiding, message, tooltip, and stable-ID behavior implemented in the
+  planner widget layer as needed;
+- Lib widgets can still be used for true Lib fields or UI-only transient state,
+  but transient storage should not become a shadow route draft just to satisfy a
+  widget binding contract;
+- forms remain editable object views over draft nodes and must call explicit
+  planner mutators for route draft edits;
+- `PlannerDraft` remains the root control and persistence interface, but it
+  should delegate row declaration/read/write details to domain-owned codecs
+  instead of knowing every room, reward, door, and payload shape directly.
+
+Stabilization order before feedback coloring:
+
+1. harden the planner widget contract around provider presentation;
+2. remove draw-time materialization of draft children;
+3. split planner-state responsibilities into clearer draft, persistence,
+   provider, and evaluation owners;
+4. extract `PlannerDraft` serialization codecs while preserving the current flat
+   row format and roundtrip behavior;
+5. then implement feedback decoration over the stabilized provider/widget path.
+
 ### 2026-07-07 - UI Host Trust Boundary Tightened
 
 The production planner UI no longer models absent RoM/Lib/ImGui/game surfaces
