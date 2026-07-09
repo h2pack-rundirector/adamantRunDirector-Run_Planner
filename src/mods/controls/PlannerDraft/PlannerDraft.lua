@@ -1,55 +1,15 @@
 -- luacheck: no unused args
 
 local defaults = import("mods/forms/defaults.lua")
+local common = import("mods/controls/PlannerDraft/codecs/common.lua")
+local generatedDoorCodec = import("mods/controls/PlannerDraft/codecs/generated_doors.lua")
 local roomCodec = import("mods/controls/PlannerDraft/codecs/rooms.lua")
 
 local PlannerDraft = {}
 
-local MAX_ROOMS = 96
-local MAX_DOORS = 384
 local MAX_OFFERS = 768
 local MAX_PAYLOAD_LEN = 64
 local MAX_REVISION = 2147483647
-
-local function stringField(key, default, maxLen)
-    return {
-        key = key,
-        type = "string",
-        default = default or "",
-        maxLen = maxLen or 64,
-    }
-end
-
-local function intField(key, default, min, max)
-    return {
-        key = key,
-        type = "int",
-        default = default or 0,
-        min = min or 0,
-        max = max or 999,
-    }
-end
-
-local function boolField(key, default)
-    return {
-        key = key,
-        type = "bool",
-        default = default == true,
-    }
-end
-
-local function routeAddressRows(extra)
-    local row = {
-        stringField("RouteKey", "Underworld", 32),
-        intField("BiomeIndex", 1, 1, 16),
-        stringField("BiomeKey", "F", 32),
-        intField("RoomIndex", 1, 1, MAX_ROOMS),
-    }
-    for _, node in ipairs(extra or {}) do
-        row[#row + 1] = node
-    end
-    return row
-end
 
 local function copyTable(source)
     if source == nil then
@@ -139,33 +99,7 @@ local function appendOffer(target, offerIndex, row)
     target[offerIndex] = offerFromRow(row)
 end
 
-local ensureBiome = roomCodec.ensureBiome
-
-local function readGeneratedDoors(fields, draft)
-    local rows = fields.GeneratedDoors
-    for index = 1, rows:count() do
-        local biome = ensureBiome(draft, rows:read(index, "BiomeIndex"), rows:read(index, "BiomeKey"))
-        local roomIndex = rows:read(index, "RoomIndex")
-        local room = biome.rooms[roomIndex]
-        if room == nil then
-            room = {
-                roomKey = "",
-            }
-            biome.rooms[roomIndex] = room
-        end
-
-        room.generatedDoors = room.generatedDoors or {
-            batchRule = "Standard",
-            selectedDoorIndex = nil,
-            doors = {},
-        }
-        local doorIndex = rows:read(index, "DoorIndex")
-        room.generatedDoors.doors[doorIndex] = {
-            exitIndex = rows:read(index, "ExitIndex"),
-            targetRoomKey = rows:read(index, "TargetRoomKey"),
-        }
-    end
-end
+local ensureBiome = common.ensureBiome
 
 local function readGeneratedDoorOffers(fields, draft)
     local rows = fields.GeneratedDoorOffers
@@ -218,7 +152,7 @@ local function readDraft(fields, instance)
         biomes = {},
     }
     roomCodec.read(fields, draft)
-    readGeneratedDoors(fields, draft)
+    generatedDoorCodec.read(fields, draft)
     readGeneratedDoorOffers(fields, draft)
     readRoomOffers(fields, draft)
     return draft
@@ -288,15 +222,7 @@ local function writeDraft(fields, draft)
 
             local generatedDoors = room.generatedDoors or {}
             for doorIndex, door in ipairs(generatedDoors.doors or {}) do
-                fields.GeneratedDoors:append({
-                    RouteKey = routeKey,
-                    BiomeIndex = biomeIndex,
-                    BiomeKey = biomeKey,
-                    RoomIndex = roomIndex,
-                    DoorIndex = doorIndex,
-                    ExitIndex = door.exitIndex or 0,
-                    TargetRoomKey = door.targetRoomKey or "",
-                })
+                generatedDoorCodec.append(fields, routeKey, biomeIndex, biomeKey, roomIndex, doorIndex, door)
                 for offerIndex, offer in ipairs((door.offerPoint and door.offerPoint.offers) or {}) do
                     appendGeneratedDoorOfferRow(fields, routeKey, biomeIndex, biomeKey, roomIndex, doorIndex, door.offerPoint, offerIndex, offer)
                 end
@@ -321,35 +247,25 @@ end
 
 function PlannerDraft.storage()
     return {
-        intField("Revision", 0, 0, MAX_REVISION),
+        common.intField("Revision", 0, 0, MAX_REVISION),
         roomCodec.storageNode(),
-        {
-            key = "GeneratedDoors",
-            type = "table",
-            maxRows = MAX_DOORS,
-            defaultRows = 0,
-            row = routeAddressRows({
-                intField("DoorIndex", 1, 1, 16),
-                intField("ExitIndex", 1, 1, 16),
-                stringField("TargetRoomKey", "", 64),
-            }),
-        },
+        generatedDoorCodec.storageNode(),
         {
             key = "GeneratedDoorOffers",
             type = "table",
             maxRows = MAX_OFFERS,
             defaultRows = 0,
-            row = routeAddressRows({
-                intField("DoorIndex", 1, 1, 16),
-                intField("OfferIndex", 1, 1, 16),
-                stringField("OfferPointKind", "", 64),
-                stringField("BatchKey", "", 64),
-                stringField("Store", "", 64),
-                stringField("RewardType", "", 64),
-                boolField("Acquired", false),
-                stringField("PayloadSource", "", MAX_PAYLOAD_LEN),
-                stringField("PayloadSourceA", "", MAX_PAYLOAD_LEN),
-                stringField("PayloadSourceB", "", MAX_PAYLOAD_LEN),
+            row = common.routeAddressRows({
+                common.intField("DoorIndex", 1, 1, 16),
+                common.intField("OfferIndex", 1, 1, 16),
+                common.stringField("OfferPointKind", "", 64),
+                common.stringField("BatchKey", "", 64),
+                common.stringField("Store", "", 64),
+                common.stringField("RewardType", "", 64),
+                common.boolField("Acquired", false),
+                common.stringField("PayloadSource", "", MAX_PAYLOAD_LEN),
+                common.stringField("PayloadSourceA", "", MAX_PAYLOAD_LEN),
+                common.stringField("PayloadSourceB", "", MAX_PAYLOAD_LEN),
             }),
         },
         {
@@ -357,17 +273,17 @@ function PlannerDraft.storage()
             type = "table",
             maxRows = MAX_OFFERS,
             defaultRows = 0,
-            row = routeAddressRows({
-                intField("OfferPointIndex", 1, 1, 16),
-                intField("OfferIndex", 1, 1, 16),
-                stringField("OfferPointKind", "", 64),
-                stringField("BatchKey", "", 64),
-                stringField("Store", "", 64),
-                stringField("RewardType", "", 64),
-                boolField("Acquired", false),
-                stringField("PayloadSource", "", MAX_PAYLOAD_LEN),
-                stringField("PayloadSourceA", "", MAX_PAYLOAD_LEN),
-                stringField("PayloadSourceB", "", MAX_PAYLOAD_LEN),
+            row = common.routeAddressRows({
+                common.intField("OfferPointIndex", 1, 1, 16),
+                common.intField("OfferIndex", 1, 1, 16),
+                common.stringField("OfferPointKind", "", 64),
+                common.stringField("BatchKey", "", 64),
+                common.stringField("Store", "", 64),
+                common.stringField("RewardType", "", 64),
+                common.boolField("Acquired", false),
+                common.stringField("PayloadSource", "", MAX_PAYLOAD_LEN),
+                common.stringField("PayloadSourceA", "", MAX_PAYLOAD_LEN),
+                common.stringField("PayloadSourceB", "", MAX_PAYLOAD_LEN),
             }),
         },
     }

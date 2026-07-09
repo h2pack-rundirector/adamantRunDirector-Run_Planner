@@ -4,6 +4,22 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Generated Door Codec Extracted
+
+`GeneratedDoors` row mapping has moved behind the same codec boundary as
+`Rooms`, leaving `PlannerDraft` responsible for orchestration rather than door
+row details.
+
+Implemented behavior:
+
+- `mods/controls/PlannerDraft/codecs/generated_doors.lua` declares the
+  `GeneratedDoors` storage node;
+- generated door rows materialize room and door draft skeletons during reads;
+- generated door row appends are delegated from `PlannerDraft` to the generated
+  door codec;
+- shared storage field builders and draft skeleton helpers now live in
+  `mods/controls/PlannerDraft/codecs/common.lua`.
+
 ### 2026-07-09 - Room Codec Extraction Started
 
 The first `PlannerDraft` serialization codec now owns the flat `Rooms` table
