@@ -4,6 +4,23 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Slice 1 Feedback Presentation Started
+
+Feedback rendering is moving behind a planner-owned presentation helper while
+keeping validation, candidate feedback application, and provider ownership
+unchanged.
+
+Implemented behavior:
+
+- `mods/ui/forms/feedback_presentation.lua` owns local feedback text formatting
+  and severity colors;
+- `mods/ui/planner/widgets.lua` exposes a generic colored text helper for
+  presentation modules;
+- room, generated-door, generated-offer, and room-offer leaves route their
+  existing feedback findings through the centralized presentation helper;
+- focused fake-ImGui tests cover colored blocker rendering and incomplete field
+  formatting.
+
 ### 2026-07-09 - Spec Created From Live Code Review
 
 Current code already has the validation and candidate-feedback spine needed for

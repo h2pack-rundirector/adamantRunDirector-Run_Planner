@@ -1,4 +1,5 @@
 local feedback = import("mods/ui/forms/feedback.lua")
+local feedbackPresentation = import("mods/ui/forms/feedback_presentation.lua")
 local identity = import("mods/ui/forms/identity.lua")
 local widgets = import("mods/ui/planner/widgets.lua")
 
@@ -42,9 +43,9 @@ function roomOffer.draw(state, imgui, evaluation, context, room)
         offer = room.offerPoints[1].offers[1]
     end
 
-    widgets.feedback(imgui, "Route blocker", routeBlocker)
+    feedbackPresentation.draw(imgui, "Route blocker", routeBlocker, { role = "blocker" })
     if offerFeedback ~= routeBlocker then
-        widgets.feedback(imgui, "Room reward feedback", offerFeedback)
+        feedbackPresentation.draw(imgui, "Room reward feedback", offerFeedback)
     end
 
     local nextAcquired, acquiredChanged = widgets.checkbox(

@@ -1,4 +1,5 @@
 local feedback = import("mods/ui/forms/feedback.lua")
+local feedbackPresentation = import("mods/ui/forms/feedback_presentation.lua")
 local identity = import("mods/ui/forms/identity.lua")
 local payload = import("mods/ui/forms/payload/init.lua")
 local widgets = import("mods/ui/planner/widgets.lua")
@@ -41,9 +42,9 @@ function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
     end
 
     payload.draw(state, imgui, context, offer)
-    widgets.feedback(imgui, "Route blocker", routeBlocker)
+    feedbackPresentation.draw(imgui, "Route blocker", routeBlocker, { role = "blocker" })
     if offerFeedback ~= routeBlocker then
-        widgets.feedback(imgui, "Reward feedback", offerFeedback)
+        feedbackPresentation.draw(imgui, "Reward feedback", offerFeedback)
     end
 
     local nextAcquired, acquiredChanged = widgets.checkbox(

@@ -127,6 +127,12 @@ local function selectableClicked(imgui, label, selected)
     return activated == true
 end
 
+function widgets.textColored(imgui, text, color)
+    local pushed = pushTextColor(imgui, color)
+    widgets.text(imgui, text)
+    popTextColor(imgui, pushed)
+end
+
 function widgets.dropdown(imgui, label, value, provider)
     provider = providerOrEmpty(provider)
 

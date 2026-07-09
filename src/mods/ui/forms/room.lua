@@ -1,4 +1,5 @@
 local feedback = import("mods/ui/forms/feedback.lua")
+local feedbackPresentation = import("mods/ui/forms/feedback_presentation.lua")
 local generatedDoor = import("mods/ui/forms/generated_door.lua")
 local identity = import("mods/ui/forms/identity.lua")
 local roomOffer = import("mods/ui/forms/room_offer.lua")
@@ -30,9 +31,9 @@ function roomForm.draw(state, imgui, evaluation, context, room)
         state.setRoomKey(context.roomIndex, nextRoomKey)
     end
 
-    widgets.feedback(imgui, "Route blocker", routeBlocker)
+    feedbackPresentation.draw(imgui, "Route blocker", routeBlocker, { role = "blocker" })
     if roomFeedback ~= routeBlocker then
-        widgets.feedback(imgui, "Room feedback", roomFeedback)
+        feedbackPresentation.draw(imgui, "Room feedback", roomFeedback)
     end
     widgets.unindent(imgui, identityIndent)
 

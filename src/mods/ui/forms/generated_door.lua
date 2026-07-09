@@ -1,4 +1,5 @@
 local feedback = import("mods/ui/forms/feedback.lua")
+local feedbackPresentation = import("mods/ui/forms/feedback_presentation.lua")
 local identity = import("mods/ui/forms/identity.lua")
 local rewardOffer = import("mods/ui/forms/reward_offer.lua")
 local widgets = import("mods/ui/planner/widgets.lua")
@@ -27,9 +28,9 @@ function generatedDoor.draw(state, imgui, evaluation, context, door)
     end
 
     rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
-    widgets.feedback(imgui, "Route blocker", routeBlocker)
+    feedbackPresentation.draw(imgui, "Route blocker", routeBlocker, { role = "blocker" })
     if doorFeedback ~= routeBlocker then
-        widgets.feedback(imgui, "Door feedback", doorFeedback)
+        feedbackPresentation.draw(imgui, "Door feedback", doorFeedback)
     end
     widgets.unindent(imgui, doorIndent)
 end
