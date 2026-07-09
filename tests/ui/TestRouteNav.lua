@@ -45,11 +45,6 @@ function TestRouteNav.testCreateUsesInjectedSelectionAndWidgets()
                         label = label,
                     }
                 end,
-                separator = function()
-                    calls[#calls + 1] = {
-                        kind = "separator",
-                    }
-                end,
             },
         })
         local panels = {
@@ -106,11 +101,10 @@ function TestRouteNav.testCreateUsesInjectedSelectionAndWidgets()
                 label = "G",
             },
         })
-        lu.assertEquals(calls[5], {
-            kind = "separator",
-        })
-        lu.assertEquals(calls[6].kind, "panel")
-        lu.assertIs(calls[6].route, route)
-        lu.assertEquals(calls[6].biomeKey, "F")
+        lu.assertEquals(calls[5].kind, "panel")
+        lu.assertIs(calls[5].route, route)
+        lu.assertEquals(calls[5].biomeKey, "F")
+        lu.assertEquals(fakeImgui.countCalls(imgui, "BeginChild"), 1)
+        lu.assertEquals(fakeImgui.countCalls(imgui, "EndChild"), 1)
     end)
 end

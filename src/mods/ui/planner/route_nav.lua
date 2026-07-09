@@ -72,8 +72,9 @@ local function drawRouteContent(service, state, ctx, route, evaluation, biomePan
     local biomeKey = service.routeSelection.activeBiomeKey(ctx, route)
     service.widgets.text(imgui, "Route: " .. routeLabel(route))
     biomeKey = drawBiomeNav(service, state, ctx, route, biomeKey)
-    service.widgets.separator(imgui)
+    imgui.BeginChild("RunPlanner" .. tostring(route.key) .. "BiomeDetail", 0, 0, false)
     biomePanels.draw(state, ctx, route, biomeKey, evaluation)
+    imgui.EndChild()
 end
 
 local function drawFallbackRoutes(service, state, ctx, evaluation, biomePanels)

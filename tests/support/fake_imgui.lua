@@ -39,6 +39,15 @@ function fakeImgui.surface(overrides)
         record(imgui, "SameLine")
     end
 
+    function imgui.BeginChild(label, width, height, border)
+        record(imgui, "BeginChild", label, width, height, border)
+        return true
+    end
+
+    function imgui.EndChild()
+        record(imgui, "EndChild")
+    end
+
     function imgui.SmallButton(label)
         record(imgui, "SmallButton", label)
         return false
