@@ -128,3 +128,113 @@ function TestFErebusPanel.testDrawDoesNotCallMaterializers()
         lu.assertNotNil(combined:find("Generated reward offer", 1, true))
     end)
 end
+
+function TestFErebusPanel.testFormsReadProvidersFromParticipants()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local identity = h.testImport("mods/ui/forms/identity.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local fErebusPanel = h.testImport("mods/ui/biomes/f_erebus_panel.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+        local evaluation = state.ensureEvaluation()
+        local doorContext = {
+            routeKey = state.draft.routeKey,
+            biomeIndex = 1,
+            roomIndex = 2,
+            doorIndex = 1,
+        }
+        local door = state.currentBiome().rooms[2].generatedDoors.doors[1]
+        local offer = door.offerPoint.offers[1]
+        state.participants:find(identity.generatedDoor(doorContext)).providers.nextDoorTarget = {
+            values = { door.targetRoomKey },
+            labels = { "Participant target" },
+        }
+        state.participants:find(identity.generatedOffer(doorContext, 1)).providers.rewardType = {
+            values = { offer.rewardType },
+            labels = { "Participant reward" },
+        }
+        door.candidateProviders = {
+            nextDoorTarget = {
+                values = { door.targetRoomKey },
+                labels = { "Bridge target" },
+            },
+        }
+        offer.candidateProviders = {
+            rewardType = {
+                values = { offer.rewardType },
+                labels = { "Bridge reward" },
+            },
+        }
+        local lines, ctx = lineSink()
+
+        fErebusPanel.draw(state, ctx, {
+            hideStatus = true,
+            evaluation = evaluation,
+        })
+
+        local combined = table.concat(lines, "\n")
+        lu.assertNotNil(combined:find("Participant target", 1, true))
+        lu.assertNotNil(combined:find("Participant reward", 1, true))
+        lu.assertNil(combined:find("Bridge target", 1, true))
+        lu.assertNil(combined:find("Bridge reward", 1, true))
+    end)
+end
+
+function TestFErebusPanel.testRoomOfferAndDevotionReadParticipantProviders()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local identity = h.testImport("mods/ui/forms/identity.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local fErebusPanel = h.testImport("mods/ui/biomes/f_erebus_panel.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+        state.setRewardType(1, 1, "Devotion")
+        state.setDoorTarget(1, 1, "F_Shop01")
+        state.setRoomKey(2, "F_Shop01")
+        local evaluation = state.ensureEvaluation()
+        local generatedContext = {
+            routeKey = state.draft.routeKey,
+            biomeIndex = 1,
+            roomIndex = 1,
+            doorIndex = 1,
+        }
+        local roomContext = {
+            routeKey = state.draft.routeKey,
+            biomeIndex = 1,
+            roomIndex = 2,
+        }
+        local generatedOffer = state.currentBiome().rooms[1].generatedDoors.doors[1].offerPoint.offers[1]
+        local roomOffer = state.currentBiome().rooms[2].offerPoints[1].offers[1]
+        state.participants:find(identity.generatedOffer(generatedContext, 1)).providers.devotionSource1 = {
+            values = { generatedOffer.payload.sources[1] },
+            labels = { "Participant devotion source" },
+        }
+        state.participants:find(identity.roomOffer(roomContext, 1, 1)).providers.rewardType = {
+            values = { roomOffer.rewardType },
+            labels = { "Participant room reward" },
+        }
+        generatedOffer.candidateProviders.devotionSource1 = {
+            values = { generatedOffer.payload.sources[1] },
+            labels = { "Bridge devotion source" },
+        }
+        roomOffer.candidateProviders.rewardType = {
+            values = { roomOffer.rewardType },
+            labels = { "Bridge room reward" },
+        }
+        local lines, ctx = lineSink()
+
+        fErebusPanel.draw(state, ctx, {
+            hideStatus = true,
+            evaluation = evaluation,
+        })
+
+        local combined = table.concat(lines, "\n")
+        lu.assertNotNil(combined:find("Participant devotion source", 1, true))
+        lu.assertNotNil(combined:find("Participant room reward", 1, true))
+        lu.assertNil(combined:find("Bridge devotion source", 1, true))
+        lu.assertNil(combined:find("Bridge room reward", 1, true))
+    end)
+end

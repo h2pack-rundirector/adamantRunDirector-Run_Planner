@@ -4,6 +4,25 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Forms Read Participant Providers
+
+Leaf form draw now treats participant providers as the UI source of truth while
+leaving draft-node `candidateProviders` bridges available for route export and
+feedback application.
+
+Implemented behavior:
+
+- generated-door target dropdowns read `nextDoorTarget` from the generated-door
+  participant;
+- generated reward dropdowns read `rewardType` from the generated-offer
+  participant;
+- room-local reward dropdowns read `rewardType` from the room-offer
+  participant;
+- Devotion source dropdowns read `devotionSource1` and `devotionSource2` from
+  the generated-offer participant;
+- draw tests prove bridge tables can be replaced without changing form
+  provider presentation.
+
 ### 2026-07-09 - Reward Providers Moved To Participants
 
 Reward candidate provider ownership has moved from reward draft nodes to form

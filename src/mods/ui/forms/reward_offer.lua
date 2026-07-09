@@ -14,7 +14,8 @@ function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
 
     widgets.subsection(imgui, "Generated reward offer")
     local offerIndent = widgets.indent(imgui)
-    local offerProviders = offer.candidateProviders or {}
+    local participant = state.participants:find(form)
+    local offerProviders = participant and participant.providers or {}
     local nextStore, storeChanged = widgets.dropdown(
         imgui,
         identity.control(form, "Store", "store"),

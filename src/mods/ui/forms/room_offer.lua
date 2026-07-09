@@ -25,7 +25,11 @@ function roomOffer.draw(state, imgui, evaluation, context, room)
         offer = room.offerPoints[1].offers[1]
     end
 
-    local offerProviders = offer.candidateProviders or {}
+    local participant = state.participants:find(form)
+    local offerProviders = participant and participant.providers or {}
+    if storeChanged then
+        offerProviders = {}
+    end
     local rewardOptions = offerProviders.rewardType or state.rewardTypeOptions[offer.store] or state.emptyOptions
     local nextRewardType, rewardChanged = widgets.dropdown(
         imgui,

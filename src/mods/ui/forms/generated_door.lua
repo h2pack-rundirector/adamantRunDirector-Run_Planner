@@ -13,7 +13,8 @@ function generatedDoor.draw(state, imgui, evaluation, context, door)
     local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
     local doorFeedback = feedback.forAddress(evaluation, address)
 
-    local providers = door.candidateProviders or {}
+    local participant = state.participants:find(form)
+    local providers = participant and participant.providers or {}
     local targetOptions = providers.nextDoorTarget or state.roomOptions
     local nextTarget, targetChanged = widgets.dropdown(
         imgui,
