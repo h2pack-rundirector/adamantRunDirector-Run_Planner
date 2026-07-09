@@ -25,12 +25,81 @@ function TestPlannerWidgets.testDropdownClosedUsesProviderPreview()
     end)
 end
 
+function TestPlannerWidgets.testDropdownPreviewUsesProviderColorAndMessage()
+    h.withTestImport(function()
+        local widgets = h.testImport("mods/ui/planner/widgets.lua")
+        local tooltips = {}
+        local lines, imgui = fakeImgui.surface({
+            IsItemHovered = function()
+                return true
+            end,
+            SetTooltip = function(message)
+                tooltips[#tooltips + 1] = message
+            end,
+        })
+
+        local value, changed = widgets.dropdown(imgui, "Target##room1", "B", {
+            values = { "A", "B" },
+            labels = { "Alpha", "Beta" },
+            colors = {
+                nil,
+                { 0.9, 0.2, 0.1, 1 },
+            },
+            messages = {
+                nil,
+                "Beta message",
+            },
+        })
+
+        lu.assertEquals(value, "B")
+        lu.assertFalse(changed)
+        lu.assertEquals(lines, {
+            "Target##room1: Beta",
+        })
+        lu.assertEquals(fakeImgui.countCalls(imgui, "PushStyleColor"), 1)
+        lu.assertEquals(fakeImgui.countCalls(imgui, "PopStyleColor"), 1)
+        lu.assertEquals(tooltips, { "Beta message" })
+    end)
+end
+
+function TestPlannerWidgets.testProviderHelpersExposeChoiceState()
+    h.withTestImport(function()
+        local widgets = h.testImport("mods/ui/planner/widgets.lua")
+        local provider = {
+            values = { "A", "B" },
+            labels = { "Alpha" },
+            hidden = { false, true },
+            colors = {
+                nil,
+                { 0, 1, 0, 1 },
+            },
+            messages = {
+                nil,
+                "Hidden beta",
+            },
+        }
+
+        lu.assertEquals(widgets.valueIndex(provider, "B"), 2)
+        lu.assertEquals(widgets.choiceLabel(provider, 2, "B"), "B")
+        lu.assertFalse(widgets.choiceVisible(provider, 2))
+        lu.assertEquals(widgets.choiceColor(provider, 2), { 0, 1, 0, 1 })
+        lu.assertEquals(widgets.choiceMessage(provider, 2), "Hidden beta")
+        lu.assertEquals({ widgets.previewState(provider, "B") }, {
+            "B",
+            { 0, 1, 0, 1 },
+            "Hidden beta",
+            2,
+        })
+    end)
+end
+
 function TestPlannerWidgets.testDropdownUsesVisibleCandidateState()
     h.withTestImport(function()
         local widgets = h.testImport("mods/ui/planner/widgets.lua")
         local selectableLabels = {}
         local colors = {}
         local tooltips = {}
+        local hoverCalls = 0
         local popped = 0
         local _, imgui = fakeImgui.surface({
             BeginCombo = function()
@@ -54,7 +123,8 @@ function TestPlannerWidgets.testDropdownUsesVisibleCandidateState()
                 popped = popped + 1
             end,
             IsItemHovered = function()
-                return true
+                hoverCalls = hoverCalls + 1
+                return hoverCalls > 1
             end,
             SetTooltip = function(message)
                 tooltips[#tooltips + 1] = message
@@ -87,10 +157,14 @@ function TestPlannerWidgets.testDropdownUsesVisibleCandidateState()
             },
             {
                 kind = "Text",
+                color = { 1, 0, 0, 1 },
+            },
+            {
+                kind = "Text",
                 color = { 0, 1, 0, 1 },
             },
         })
-        lu.assertEquals(popped, 2)
+        lu.assertEquals(popped, 3)
         lu.assertEquals(tooltips, { "Alpha message", "Gamma message" })
     end)
 end

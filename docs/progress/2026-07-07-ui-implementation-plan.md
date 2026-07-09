@@ -4,6 +4,21 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Planner Widget Boundary Hardened
+
+The planner widget layer is now the explicit boundary for dynamic leaf controls.
+
+Implemented behavior:
+
+- provider helpers expose indexed value, label, visibility, color, message, and
+  preview state without introducing a Lib storage-field dependency;
+- dropdown collapsed previews use the same provider color/message state as the
+  selected candidate;
+- dropdown option rows use provider visibility, color, and message state through
+  one code path;
+- widgets still return `nextValue, changed` and leave draft mutation to owning
+  forms and planner-state mutators.
+
 ### 2026-07-09 - UI Stabilization Direction Recorded
 
 The next work is a stabilization pass before broader feedback coloring.

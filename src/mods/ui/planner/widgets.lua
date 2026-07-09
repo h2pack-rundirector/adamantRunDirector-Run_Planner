@@ -1,5 +1,13 @@
 local widgets = {}
 
+---@class PlannerDropdownProvider
+---@field values table
+---@field labels? table
+---@field hidden? table
+---@field colors? table
+---@field messages? table
+---@field version? integer
+
 local EMPTY_PROVIDER = {
     values = {},
     labels = {},
@@ -9,7 +17,8 @@ local function providerOrEmpty(provider)
     return provider or EMPTY_PROVIDER
 end
 
-local function valueIndex(provider, value)
+function widgets.valueIndex(provider, value)
+    provider = providerOrEmpty(provider)
     for index, candidate in ipairs(provider.values or EMPTY_PROVIDER.values) do
         if candidate == value then
             return index
@@ -18,13 +27,49 @@ local function valueIndex(provider, value)
     return nil
 end
 
+function widgets.choiceLabel(provider, index, candidate)
+    provider = providerOrEmpty(provider)
+    local label = provider.labels and provider.labels[index] or nil
+    if label == nil then
+        label = candidate
+    end
+    return tostring(label)
+end
+
+function widgets.choiceVisible(provider, index)
+    provider = providerOrEmpty(provider)
+    return not (provider.hidden and provider.hidden[index])
+end
+
+function widgets.choiceColor(provider, index)
+    provider = providerOrEmpty(provider)
+    return provider.colors and provider.colors[index] or nil
+end
+
+function widgets.choiceMessage(provider, index)
+    provider = providerOrEmpty(provider)
+    return provider.messages and provider.messages[index] or nil
+end
+
 function widgets.preview(provider, value)
     provider = providerOrEmpty(provider)
-    local index = valueIndex(provider, value)
+    local index = widgets.valueIndex(provider, value)
     if index == nil then
         return tostring(value)
     end
-    return provider.labels[index]
+    return widgets.choiceLabel(provider, index, provider.values[index])
+end
+
+function widgets.previewState(provider, value)
+    provider = providerOrEmpty(provider)
+    local index = widgets.valueIndex(provider, value)
+    if index == nil then
+        return tostring(value), nil, nil, nil
+    end
+    return widgets.choiceLabel(provider, index, provider.values[index]),
+        widgets.choiceColor(provider, index),
+        widgets.choiceMessage(provider, index),
+        index
 end
 
 function widgets.text(imgui, text)
@@ -71,11 +116,7 @@ local function showTooltip(imgui, message)
 end
 
 local function selectableId(provider, index, candidate)
-    local label = provider.labels and provider.labels[index] or nil
-    if label == nil then
-        label = candidate
-    end
-    return tostring(label) .. "##" .. tostring(index)
+    return widgets.choiceLabel(provider, index, candidate) .. "##" .. tostring(index)
 end
 
 local function selectableClicked(imgui, label, selected)
@@ -91,17 +132,23 @@ function widgets.dropdown(imgui, label, value, provider)
 
     local nextValue = value
     local changed = false
-    if imgui.BeginCombo(label, widgets.preview(provider, value)) then
+    local previewText, previewColor, previewMessage = widgets.previewState(provider, value)
+    local previewPushed = pushTextColor(imgui, previewColor)
+    local opened = imgui.BeginCombo(label, previewText)
+    popTextColor(imgui, previewPushed)
+    showTooltip(imgui, previewMessage)
+
+    if opened then
         for index, candidate in ipairs(provider.values or EMPTY_PROVIDER.values) do
-            if not (provider.hidden and provider.hidden[index]) then
-                local pushed = pushTextColor(imgui, provider.colors and provider.colors[index])
+            if widgets.choiceVisible(provider, index) then
+                local pushed = pushTextColor(imgui, widgets.choiceColor(provider, index))
                 local selected = candidate == value
                 if selectableClicked(imgui, selectableId(provider, index, candidate), selected) then
                     nextValue = candidate
                     changed = nextValue ~= value
                     imgui.CloseCurrentPopup()
                 end
-                showTooltip(imgui, provider.messages and provider.messages[index])
+                showTooltip(imgui, widgets.choiceMessage(provider, index))
                 popTextColor(imgui, pushed)
             end
         end
