@@ -30,7 +30,7 @@ function TestFErebusPanel.testDrawsPlannerStateThroughForms()
         lu.assertNotNil(combined:find("Room identity", 1, true))
         lu.assertNotNil(combined:find("Generated door batch", 1, true))
         lu.assertNotNil(combined:find("Generated reward offer", 1, true))
-        lu.assertNotNil(combined:find("Reward##room1_door1", 1, true))
+        lu.assertNotNil(combined:find("Reward##routeUnderworld_biome1_room1_door1_offer1_rewardType", 1, true))
     end)
 end
 
@@ -95,6 +95,6 @@ function TestFErebusPanel.testDrawsRoomLocalOfferInsideRoomUnit()
         lu.assertNotNil(combined:find("Room 2 - Shop (F_Shop01)", 1, true))
         lu.assertNotNil(combined:find("Room-local offers", 1, true))
         lu.assertNotNil(combined:find("Room offer 1 / shop", 1, true))
-        lu.assertNotNil(combined:find("Room reward##room2", 1, true))
+        lu.assertNotNil(combined:find("Room reward##routeUnderworld_biome1_room2_offerPoint1_offer1_rewardType", 1, true))
     end)
 end

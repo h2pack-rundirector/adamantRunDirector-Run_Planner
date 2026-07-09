@@ -1,26 +1,20 @@
 local feedback = import("mods/ui/forms/feedback.lua")
 local generatedDoor = import("mods/ui/forms/generated_door.lua")
+local identity = import("mods/ui/forms/identity.lua")
 local roomOffer = import("mods/ui/forms/room_offer.lua")
 local widgets = import("mods/ui/planner/widgets.lua")
 
 local roomForm = {}
-
-local function roomAddress(state, context)
-    return {
-        routeKey = state.draft.routeKey,
-        biomeIndex = context.biomeIndex,
-        roomIndex = context.roomIndex,
-    }
-end
 
 local function roomTitle(state, context, room)
     return "Room " .. tostring(context.roomIndex) .. " - " .. widgets.preview(state.roomOptions, room.roomKey)
 end
 
 function roomForm.draw(state, imgui, evaluation, context, room)
+    local form = identity.room(context)
     widgets.section(imgui, roomTitle(state, context, room))
     local roomIndent = widgets.indent(imgui)
-    local address = roomAddress(state, context)
+    local address = identity.address(form)
     local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
     local roomFeedback = feedback.forAddress(evaluation, address)
 
@@ -28,7 +22,7 @@ function roomForm.draw(state, imgui, evaluation, context, room)
     local identityIndent = widgets.indent(imgui)
     local nextRoomKey, roomChanged = widgets.dropdown(
         imgui,
-        "Room##" .. tostring(context.roomIndex),
+        identity.control(form, "Room", "roomKey"),
         room.roomKey,
         state.roomOptions
     )
@@ -64,7 +58,7 @@ function roomForm.draw(state, imgui, evaluation, context, room)
     widgets.labelValue(imgui, "Batch rule", generatedDoors.batchRule or "Standard")
     local nextSelectedDoor, selectedChanged = widgets.dropdown(
         imgui,
-        "Selected door##" .. tostring(context.roomIndex),
+        identity.control(form, "Selected door", "selectedDoor"),
         generatedDoors.selectedDoorIndex,
         state.selectedDoorOptions(generatedDoors)
     )

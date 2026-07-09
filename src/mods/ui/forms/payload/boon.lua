@@ -1,12 +1,14 @@
+local identity = import("mods/ui/forms/identity.lua")
 local widgets = import("mods/ui/planner/widgets.lua")
 
 local boon = {}
 
 function boon.draw(state, imgui, context, offer)
+    local form = identity.generatedOffer(context, 1)
     offer.payload = offer.payload or state.defaultPayloadForRewardType("Boon")
     local nextSource, changed = widgets.dropdown(
         imgui,
-        "Source##room" .. context.roomIndex .. "_door" .. context.doorIndex,
+        identity.control(form, "Source", "payloadSource"),
         offer.payload.source,
         state.boonSourceOptions
     )

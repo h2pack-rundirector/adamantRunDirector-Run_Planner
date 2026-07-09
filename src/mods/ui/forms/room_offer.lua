@@ -1,22 +1,14 @@
 local feedback = import("mods/ui/forms/feedback.lua")
+local identity = import("mods/ui/forms/identity.lua")
 local widgets = import("mods/ui/planner/widgets.lua")
 
 local roomOffer = {}
 
-local function offerAddress(state, context)
-    return {
-        routeKey = state.draft.routeKey,
-        biomeIndex = context.biomeIndex,
-        roomIndex = context.roomIndex,
-        offerPointIndex = 1,
-        offerIndex = 1,
-    }
-end
-
 function roomOffer.draw(state, imgui, evaluation, context, room)
+    local form = identity.roomOffer(context, 1, 1)
     local offer = state.ensureRoomOffer(room)
     local offerPoint = room.offerPoints[1]
-    local address = offerAddress(state, context)
+    local address = identity.address(form)
     local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
     local offerFeedback = feedback.forAddress(evaluation, address)
 
@@ -24,7 +16,7 @@ function roomOffer.draw(state, imgui, evaluation, context, room)
     local offerIndent = widgets.indent(imgui)
     local nextStore, storeChanged = widgets.dropdown(
         imgui,
-        "Room store##room" .. context.roomIndex,
+        identity.control(form, "Room store", "store"),
         offer.store,
         state.storeOptions
     )
@@ -37,7 +29,7 @@ function roomOffer.draw(state, imgui, evaluation, context, room)
     local rewardOptions = offerProviders.rewardType or state.rewardTypeOptions[offer.store] or state.emptyOptions
     local nextRewardType, rewardChanged = widgets.dropdown(
         imgui,
-        "Room reward##room" .. context.roomIndex,
+        identity.control(form, "Room reward", "rewardType"),
         offer.rewardType,
         rewardOptions
     )
@@ -53,7 +45,7 @@ function roomOffer.draw(state, imgui, evaluation, context, room)
 
     local nextAcquired, acquiredChanged = widgets.checkbox(
         imgui,
-        "Room acquired##room" .. context.roomIndex,
+        identity.control(form, "Room acquired", "acquired"),
         offer.acquired == true
     )
     if acquiredChanged then

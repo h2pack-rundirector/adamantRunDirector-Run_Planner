@@ -1,22 +1,14 @@
 local feedback = import("mods/ui/forms/feedback.lua")
+local identity = import("mods/ui/forms/identity.lua")
 local payload = import("mods/ui/forms/payload/init.lua")
 local widgets = import("mods/ui/planner/widgets.lua")
 
 local rewardOffer = {}
 
-local function offerAddress(state, context)
-    return {
-        routeKey = state.draft.routeKey,
-        biomeIndex = context.biomeIndex,
-        roomIndex = context.roomIndex,
-        doorIndex = context.doorIndex,
-        offerIndex = 1,
-    }
-end
-
 function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
+    local form = identity.generatedOffer(context, 1)
     local offer = state.ensureOffer(door)
-    local address = offerAddress(state, context)
+    local address = identity.address(form)
     local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
     local offerFeedback = feedback.forAddress(evaluation, address)
 
@@ -25,7 +17,7 @@ function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
     local offerProviders = offer.candidateProviders or {}
     local nextStore, storeChanged = widgets.dropdown(
         imgui,
-        "Store##room" .. context.roomIndex .. "_door" .. context.doorIndex,
+        identity.control(form, "Store", "store"),
         offer.store,
         state.storeOptions
     )
@@ -38,7 +30,7 @@ function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
     local rewardOptions = offerProviders.rewardType or state.rewardTypeOptions[offer.store] or state.emptyOptions
     local nextRewardType, rewardChanged = widgets.dropdown(
         imgui,
-        "Reward##room" .. context.roomIndex .. "_door" .. context.doorIndex,
+        identity.control(form, "Reward", "rewardType"),
         offer.rewardType,
         rewardOptions
     )
@@ -55,7 +47,7 @@ function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
 
     local nextAcquired, acquiredChanged = widgets.checkbox(
         imgui,
-        "Acquired##room" .. context.roomIndex .. "_door" .. context.doorIndex,
+        identity.control(form, "Acquired", "acquired"),
         offer.acquired == true
     )
     if acquiredChanged then

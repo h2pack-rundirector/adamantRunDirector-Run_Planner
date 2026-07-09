@@ -4,6 +4,22 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Form Identity Boundary Started
+
+The first form-object stabilization slice now centralizes participant identity
+and ImGui control IDs.
+
+Implemented behavior:
+
+- `mods/ui/forms/identity.lua` creates room, generated-door, generated-offer,
+  and room-offer identities from route addresses;
+- form control IDs now derive from participant identity instead of ad hoc local
+  string concatenation in every draw file;
+- form feedback address lookups use the same identity objects that generate
+  control IDs;
+- draft mutation, candidate provider ownership, and draw-time materialization are
+  still unchanged and remain follow-up stabilization work.
+
 ### 2026-07-09 - Planner Widget Boundary Hardened
 
 The planner widget layer is now the explicit boundary for dynamic leaf controls.

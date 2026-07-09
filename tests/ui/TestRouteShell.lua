@@ -184,7 +184,7 @@ function TestRouteShell.testDrawBindsPlannerDraftControlFromUiContext()
         local combined = table.concat(lines, "\n")
         lu.assertEquals(requestedControl, data.PLANNER_DRAFT_CONTROL)
         lu.assertEquals(control.reads, 1)
-        lu.assertNotNil(combined:find("Target##room1_door1: C02 (F_Combat02)", 1, true))
+        lu.assertNotNil(combined:find("Target##routeUnderworld_biome1_room1_door1_targetRoom: C02 (F_Combat02)", 1, true))
     end)
 end
 

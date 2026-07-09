@@ -1,22 +1,15 @@
 local feedback = import("mods/ui/forms/feedback.lua")
+local identity = import("mods/ui/forms/identity.lua")
 local rewardOffer = import("mods/ui/forms/reward_offer.lua")
 local widgets = import("mods/ui/planner/widgets.lua")
 
 local generatedDoor = {}
 
-local function doorAddress(state, context)
-    return {
-        routeKey = state.draft.routeKey,
-        biomeIndex = context.biomeIndex,
-        roomIndex = context.roomIndex,
-        doorIndex = context.doorIndex,
-    }
-end
-
 function generatedDoor.draw(state, imgui, evaluation, context, door)
+    local form = identity.generatedDoor(context)
     widgets.subsection(imgui, "Door " .. tostring(context.doorIndex) .. " / exit " .. tostring(door.exitIndex))
     local doorIndent = widgets.indent(imgui)
-    local address = doorAddress(state, context)
+    local address = identity.address(form)
     local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
     local doorFeedback = feedback.forAddress(evaluation, address)
 
@@ -24,7 +17,7 @@ function generatedDoor.draw(state, imgui, evaluation, context, door)
     local targetOptions = providers.nextDoorTarget or state.roomOptions
     local nextTarget, targetChanged = widgets.dropdown(
         imgui,
-        "Target##room" .. context.roomIndex .. "_door" .. context.doorIndex,
+        identity.control(form, "Target", "targetRoom"),
         door.targetRoomKey,
         targetOptions
     )
