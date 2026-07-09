@@ -4,6 +4,26 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Planner State Responsibilities Split
+
+Planner state is now a thinner draft-owner facade instead of the owner of every
+rebuild, persistence, provider, and presentation helper.
+
+Implemented behavior:
+
+- `mods/ui/planner/materialization.lua` owns rebuild-time draft child
+  materialization and payload defaults;
+- `mods/ui/planner/provider_preparation.lua` owns participant/provider binding
+  for generated doors, generated offers, room offers, and Devotion sources;
+- `mods/ui/planner/evaluation.lua` owns evaluation cache rebuilds and the
+  route-pipeline feedback application context;
+- `mods/ui/planner/persistence.lua` owns `PlannerDraft` binding, revision
+  reloads, and coherent draft persistence;
+- `mods/ui/planner/view_helpers.lua` owns selected-door option caching and
+  feedback location labels;
+- `mods/ui/planner/state.lua` keeps draft mutators and the public UI-facing
+  state facade.
+
 ### 2026-07-09 - Route Feedback Reads Participant Providers
 
 Route candidate export and feedback application now read provider maps from form

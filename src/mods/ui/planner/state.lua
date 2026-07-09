@@ -3,312 +3,28 @@ local dataModule = import("mods/data.lua")
 local defaultDrafts = import("mods/forms/defaults.lua")
 local routePipeline = import("mods/pipeline/route.lua")
 local participantRegistry = import("mods/ui/forms/participants.lua")
+local evaluationCache = import("mods/ui/planner/evaluation.lua")
+local materialization = import("mods/ui/planner/materialization.lua")
 local plannerOptions = import("mods/ui/planner/options.lua")
+local persistence = import("mods/ui/planner/persistence.lua")
+local viewHelpers = import("mods/ui/planner/view_helpers.lua")
 
 local plannerState = {}
 
-local function selectedDoorOptionCache()
-    return setmetatable({}, {
-        __mode = "k",
-    })
+local function ensureOffer(state, door)
+    return materialization.ensureGeneratedDoorOffer(state.catalog, door)
+end
+
+local function ensureRoomOffer(state, room)
+    return materialization.ensureRoomOffer(state.catalog, state.currentBiome(), room)
+end
+
+local function defaultPayloadForRewardType(state, rewardType)
+    return materialization.defaultPayloadForRewardType(state.catalog, rewardType)
 end
 
 function plannerState.defaultDraft()
     return defaultDrafts.fSampleDraft()
-end
-
-local function projectedSources(sources, sourceIndex, value)
-    local projected = {}
-    for index, source in ipairs(sources or {}) do
-        projected[index] = source
-    end
-    projected[sourceIndex] = value
-    return projected
-end
-
-local function defaultPayloadForRewardType(state, rewardType)
-    return plannerOptions.defaultPayloadForRewardType(state.catalog, rewardType)
-end
-
-local function ensureOffer(state, door)
-    door.offerPoint = door.offerPoint or plannerOptions.defaultGeneratedDoorOfferPoint(state.catalog)
-    door.offerPoint.kind = door.offerPoint.kind or "generatedDoorRewards"
-    door.offerPoint.batchKey = door.offerPoint.batchKey or "nextDoors"
-    door.offerPoint.offers = door.offerPoint.offers or { plannerOptions.defaultOffer(state.catalog, "RunProgress") }
-    door.offerPoint.offers[1] = door.offerPoint.offers[1] or plannerOptions.defaultOffer(state.catalog, "RunProgress")
-    return door.offerPoint.offers[1]
-end
-
-local function ensureRoomOffer(state, room)
-    local biome = state.currentBiome()
-    room.offerPoints = plannerOptions.materializedRoomOfferPoints(state.catalog, biome.biomeKey, room.roomKey, room.offerPoints)
-    local roomDeclaration = plannerOptions.roomDeclaration(state.catalog, biome.biomeKey, room.roomKey)
-    room.offerPoints = room.offerPoints or { plannerOptions.defaultRoomOfferPoint(state.catalog, roomDeclaration or { key = room.roomKey }) }
-    room.offerPoints[1] = room.offerPoints[1] or plannerOptions.defaultRoomOfferPoint(state.catalog, roomDeclaration or { key = room.roomKey })
-    room.offerPoints[1].offers = room.offerPoints[1].offers or { plannerOptions.defaultOffer(state.catalog, "WorldShop") }
-    room.offerPoints[1].offers[1] = room.offerPoints[1].offers[1] or plannerOptions.defaultOffer(state.catalog, "WorldShop")
-    return room.offerPoints[1].offers[1]
-end
-
-local function materializeOfferPayload(state, offer)
-    if offer.payload == nil then
-        offer.payload = defaultPayloadForRewardType(state, offer.rewardType)
-    end
-    if offer.rewardType == "Devotion" then
-        offer.payload.sources = offer.payload.sources or defaultPayloadForRewardType(state, "Devotion").sources
-    end
-end
-
-local function materializeGeneratedDoorOffer(state, door)
-    local offer = ensureOffer(state, door)
-    materializeOfferPayload(state, offer)
-end
-
-local function materializeRoomOffer(state, room)
-    local offer = ensureRoomOffer(state, room)
-    materializeOfferPayload(state, offer)
-end
-
-local function materializeDraftForRebuild(state)
-    local biome = state.currentBiome()
-    for _, room in ipairs((biome and biome.rooms) or {}) do
-        if room.offerPoints ~= nil then
-            materializeRoomOffer(state, room)
-        end
-
-        local generatedDoors = room.generatedDoors
-        if generatedDoors ~= nil then
-            for _, door in ipairs(generatedDoors.doors or {}) do
-                materializeGeneratedDoorOffer(state, door)
-            end
-        end
-    end
-end
-
-local function rewardTypeOptionsFor(state, storeKey)
-    return state.rewardTypeOptions[storeKey] or plannerOptions.empty()
-end
-
-local function selectedDoorOptionsFor(state, generatedDoors)
-    if generatedDoors == nil then
-        return state.emptyOptions
-    end
-
-    local doors = generatedDoors.doors or state.emptyOptions.values
-    local doorCount = #doors
-    local cached = state.selectedDoorOptionCache[generatedDoors]
-    if cached ~= nil and cached.doorCount == doorCount then
-        return cached.options
-    end
-
-    local values = {}
-    local labels = {}
-    for index = 1, doorCount do
-        values[index] = index
-        labels[index] = "Door " .. tostring(index)
-    end
-
-    local optionSet = {
-        values = values,
-        labels = labels,
-    }
-    state.selectedDoorOptionCache[generatedDoors] = {
-        doorCount = doorCount,
-        options = optionSet,
-    }
-    return optionSet
-end
-
-local function roomAt(state, roomIndex)
-    local biome = state.currentBiome()
-    return biome and biome.rooms and biome.rooms[roomIndex] or nil
-end
-
-local function roomLocationLabel(state, roomIndex)
-    local label = "Room " .. tostring(roomIndex)
-    local room = roomAt(state, roomIndex)
-    if room ~= nil and room.roomKey ~= nil then
-        label = label .. " (" .. tostring(room.roomKey) .. ")"
-    end
-    return label
-end
-
-local function feedbackLocationLabel(state, address)
-    if address == nil then
-        return nil
-    end
-
-    local parts = {}
-    if address.roomIndex ~= nil then
-        parts[#parts + 1] = roomLocationLabel(state, address.roomIndex)
-    elseif address.biomeIndex ~= nil then
-        parts[#parts + 1] = "Biome " .. tostring(address.biomeIndex)
-    elseif address.routeKey ~= nil then
-        parts[#parts + 1] = "Route " .. tostring(address.routeKey)
-    end
-
-    if address.doorIndex ~= nil then
-        parts[#parts + 1] = "door " .. tostring(address.doorIndex)
-    end
-    if address.offerPointIndex ~= nil then
-        parts[#parts + 1] = "offer point " .. tostring(address.offerPointIndex)
-    end
-    if address.offerIndex ~= nil then
-        local offerLabel = address.doorIndex ~= nil and "reward " or "offer "
-        parts[#parts + 1] = offerLabel .. tostring(address.offerIndex)
-    end
-
-    if #parts == 0 then
-        return nil
-    end
-    return table.concat(parts, " ")
-end
-
-local function attachRewardProvider(state, participant, offer)
-    local rewardOptions = rewardTypeOptionsFor(state, offer.store)
-    local provider = participant.providers.rewardType
-    if provider == nil or provider.values ~= rewardOptions.values or provider.labels ~= rewardOptions.labels then
-        provider = state.candidateProvider.create({
-            key = "rewardType",
-            version = state.providerVersion,
-            values = rewardOptions.values,
-            labels = rewardOptions.labels,
-            semanticForValue = function(value, _, _, context)
-                return {
-                    kind = "rewardType",
-                    store = context.candidate.store,
-                    rewardType = value,
-                    payload = defaultPayloadForRewardType(state, value),
-                }
-            end,
-        })
-        participant.providers.rewardType = provider
-    else
-        provider.version = state.providerVersion
-    end
-    offer.candidateProviders = nil
-end
-
-local function attachDevotionSourceProviders(state, participant, offer)
-    if offer.rewardType ~= "Devotion" then
-        participant.providers.devotionSource1 = nil
-        participant.providers.devotionSource2 = nil
-        return
-    end
-
-    for sourceIndex = 1, 2 do
-        local slotIndex = sourceIndex
-        local providerKey = "devotionSource" .. tostring(sourceIndex)
-        local provider = participant.providers[providerKey]
-        if provider == nil
-            or provider.values ~= state.boonSourceOptions.values
-            or provider.labels ~= state.boonSourceOptions.labels
-        then
-            provider = state.candidateProvider.create({
-                key = providerKey,
-                version = state.providerVersion,
-                values = state.boonSourceOptions.values,
-                labels = state.boonSourceOptions.labels,
-                semanticForValue = function(value, _, _, _context)
-                    return {
-                        kind = "devotionSource",
-                        sourceIndex = slotIndex,
-                        source = value,
-                        sources = projectedSources(participant.node.payload.sources, slotIndex, value),
-                    }
-                end,
-            })
-            participant.providers[providerKey] = provider
-        else
-            provider.version = state.providerVersion
-        end
-    end
-end
-
-local function generatedDoorContext(state, biomeIndex, roomIndex, doorIndex)
-    return {
-        routeKey = state.draft.routeKey,
-        biomeIndex = biomeIndex,
-        roomIndex = roomIndex,
-        doorIndex = doorIndex,
-    }
-end
-
-local function attachGeneratedDoorProvider(state, room, door, context)
-    local participant = state.participants:generatedDoor(context, door)
-    participant.roomKey = room.roomKey
-    participant.exitIndex = door.exitIndex
-    local provider = participant.providers.nextDoorTarget
-    if provider == nil or provider.values ~= state.roomOptions.values or provider.labels ~= state.roomOptions.labels then
-        provider = state.candidateProvider.create({
-            key = "nextDoorTarget",
-            version = state.providerVersion,
-            values = state.roomOptions.values,
-            labels = state.roomOptions.labels,
-            semanticForValue = function(value, _, _, candidateContext)
-                return {
-                    kind = "nextRoom",
-                    biomeKey = candidateContext.candidate.biomeKey,
-                    sourceRoomKey = candidateContext.candidate.sourceRoomKey,
-                    exitIndex = candidateContext.candidate.exitIndex,
-                    targetRoomKey = value,
-                }
-            end,
-        })
-        participant.providers.nextDoorTarget = provider
-    else
-        provider.version = state.providerVersion
-    end
-    door.candidateProviders = nil
-end
-
-local function attachCandidateProviders(state)
-    local biome = state.currentBiome()
-    local biomeIndex = 1
-    for roomIndex, room in ipairs((biome and biome.rooms) or {}) do
-        local roomContext = {
-            routeKey = state.draft.routeKey,
-            biomeIndex = biomeIndex,
-            roomIndex = roomIndex,
-        }
-        state.participants:room(roomContext, room)
-
-        for offerPointIndex, offerPoint in ipairs(room.offerPoints or {}) do
-            for offerIndex, offer in ipairs(offerPoint.offers or {}) do
-                local participant = state.participants:roomOffer(roomContext, offerPointIndex, offerIndex, offer)
-                attachRewardProvider(state, participant, offer)
-            end
-        end
-
-        local generatedDoors = room.generatedDoors
-        if generatedDoors ~= nil then
-            for doorIndex, door in ipairs(generatedDoors.doors or {}) do
-                attachGeneratedDoorProvider(state, room, door, generatedDoorContext(state, biomeIndex, roomIndex, doorIndex))
-
-                local offer = door.offerPoint.offers[1]
-                local participant = state.participants:generatedOffer(
-                    generatedDoorContext(state, biomeIndex, roomIndex, doorIndex),
-                    1,
-                    offer
-                )
-                attachRewardProvider(state, participant, offer)
-                attachDevotionSourceProviders(state, participant, offer)
-            end
-        end
-    end
-end
-
-local function evaluate(state)
-    materializeDraftForRebuild(state)
-    attachCandidateProviders(state)
-    local context = {
-        catalog = state.catalog,
-        participants = state.participants,
-    }
-    state.evaluation = state.pipeline.evaluate(state.draft, context)
-    state.pipeline.applyCandidateFeedback(state.draft, state.evaluation, context)
-    state.dirty = false
-    return state.evaluation
 end
 
 local function markDirty(state)
@@ -316,64 +32,21 @@ local function markDirty(state)
     state.dirty = true
 end
 
-local function persistDraft(state)
-    local control = state.draftControl
-    if control ~= nil then
-        local changed = control:writeDraft(plannerOptions.deepCopy(state.draft))
-        if control.revision ~= nil then
-            state.draftControlRevision = control:revision()
-        end
-        return changed
-    end
-    return false
+local function resetDerivedDraftState(state)
+    state.selectedDoorOptionCache = viewHelpers.selectedDoorOptionCache()
+    state.participants:clear()
 end
 
 local function draftChanged(state)
-    markDirty(state)
-    persistDraft(state)
-end
-
-local function controlRevision(control)
-    if control.revision == nil then
-        return nil
-    end
-    return control:revision()
-end
-
-local function loadDraftFromControl(state, control, revision)
-    state.draftControl = control
-    state.draftControlRevision = revision
-    state.draft = plannerOptions.deepCopy(control:readDraft())
-    state.selectedDoorOptionCache = selectedDoorOptionCache()
-    state.participants:clear()
-    markDirty(state)
-    return true
+    persistence.draftChanged(state)
 end
 
 local function bindDraftControl(state, control)
-    if control == nil then
-        return false
-    end
-    if type(control.readDraft) ~= "function" or type(control.writeDraft) ~= "function" then
-        error("PlannerDraft control must expose readDraft() and writeDraft()")
-    end
-    if control.revision ~= nil and type(control.revision) ~= "function" then
-        error("PlannerDraft control revision must be a function when provided")
-    end
-
-    local revision = controlRevision(control)
-    if control == state.draftControl then
-        if revision ~= nil and revision ~= state.draftControlRevision then
-            return loadDraftFromControl(state, control, revision)
-        end
-        return false
-    end
-
-    return loadDraftFromControl(state, control, revision)
+    return persistence.bindDraftControl(state, control, resetDerivedDraftState)
 end
 
 local function bindUiContext(state, ctx)
-    return bindDraftControl(state, ctx.controls.get(state.draftControlName))
+    return persistence.bindUiContext(state, ctx, resetDerivedDraftState)
 end
 
 local function setRoomKey(state, roomIndex, roomKey)
@@ -532,8 +205,7 @@ end
 
 local function resetDraft(state)
     state.draft = plannerState.defaultDraft()
-    state.selectedDoorOptionCache = selectedDoorOptionCache()
-    state.participants:clear()
+    resetDerivedDraftState(state)
     draftChanged(state)
 end
 
@@ -555,26 +227,23 @@ function plannerState.create(opts)
         rewardTypeOptions = plannerOptions.rewardTypeOptions(catalog),
         boonSourceOptions = plannerOptions.sourceOptions(catalog, "boon"),
         emptyOptions = plannerOptions.empty(),
-        selectedDoorOptionCache = selectedDoorOptionCache(),
+        selectedDoorOptionCache = viewHelpers.selectedDoorOptionCache(),
     }
 
     function state.currentBiome()
         return state.draft.biomes[1]
     end
     function state.selectedDoorOptions(generatedDoors)
-        return selectedDoorOptionsFor(state, generatedDoors)
+        return viewHelpers.selectedDoorOptions(state, generatedDoors)
     end
     function state.feedbackLocationLabel(address)
-        return feedbackLocationLabel(state, address)
+        return viewHelpers.feedbackLocationLabel(state, address)
     end
     function state.evaluate()
-        return evaluate(state)
+        return evaluationCache.evaluate(state)
     end
     function state.ensureEvaluation()
-        if state.dirty or state.evaluation == nil then
-            return evaluate(state)
-        end
-        return state.evaluation
+        return evaluationCache.ensure(state)
     end
     function state.markDirty()
         return markDirty(state)
