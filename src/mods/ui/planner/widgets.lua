@@ -2,6 +2,8 @@ local presentationColors = import("mods/ui/planner/presentation_colors.lua")
 
 local widgets = {}
 
+local IMGUI_COL_TEXT = 0
+
 ---@class PlannerDropdownProvider
 ---@field values table
 ---@field labels? table
@@ -98,7 +100,7 @@ local function pushTextColor(imgui, color)
     if color == nil then
         return false
     end
-    imgui.PushStyleColor(imgui.ImGuiCol.Text, color[1], color[2], color[3], color[4] or 1)
+    imgui.PushStyleColor(IMGUI_COL_TEXT, color[1], color[2], color[3], color[4] or 1)
     return true
 end
 

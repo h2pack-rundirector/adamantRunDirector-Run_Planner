@@ -59,7 +59,7 @@ function TestPlannerWidgets.testDropdownSelectedInvalidPreviewUsesProviderFeedba
         })
         lu.assertEquals(imgui._calls[1], {
             name = "PushStyleColor",
-            args = { "Text", 1.0, 0.35, 0.25, 1.0 },
+            args = { 0, 1.0, 0.35, 0.25, 1.0 },
         })
         lu.assertEquals(fakeImgui.countCalls(imgui, "PushStyleColor"), 1)
         lu.assertEquals(fakeImgui.countCalls(imgui, "PopStyleColor"), 1)
@@ -157,15 +157,15 @@ function TestPlannerWidgets.testDropdownUsesVisibleCandidateState()
         lu.assertEquals(selectableLabels, { "Alpha##1", "Gamma##3" })
         lu.assertEquals(colors, {
             {
-                kind = "Text",
+                kind = 0,
                 color = { 1, 0, 0, 1 },
             },
             {
-                kind = "Text",
+                kind = 0,
                 color = { 1, 0, 0, 1 },
             },
             {
-                kind = "Text",
+                kind = 0,
                 color = { 0, 1, 0, 1 },
             },
         })

@@ -14,9 +14,6 @@ end
 function fakeImgui.surface(overrides)
     local lines = {}
     local imgui = {
-        ImGuiCol = {
-            Text = "Text",
-        },
         _calls = {},
         _lines = lines,
     }
