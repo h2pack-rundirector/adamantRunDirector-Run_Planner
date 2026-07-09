@@ -10,7 +10,7 @@ function roomOffer.draw(state, imgui, evaluation, context, room)
     local offerPoint = room.offerPoints[1]
     local offer = offerPoint.offers[1]
     local address = identity.address(form)
-    local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
+    local routeBlocker = feedback.firstRouteBlockerForAddress(evaluation, address)
     local offerFeedback = feedback.forAddress(evaluation, address)
 
     widgets.subsection(imgui, "Room offer 1 / " .. tostring(offerPoint.kind))

@@ -1,3 +1,4 @@
+local feedback = import("mods/ui/forms/feedback.lua")
 local roomForm = import("mods/ui/forms/room.lua")
 local presentationColors = import("mods/ui/planner/presentation_colors.lua")
 local widgets = import("mods/ui/planner/widgets.lua")
@@ -17,18 +18,14 @@ local function drawHeader(imgui, opts)
     end
 end
 
-local function firstIssue(evaluation)
-    return evaluation and evaluation.status and evaluation.status.firstIssue or nil
-end
-
-local function firstIssueRoomIndex(evaluation)
-    local issue = firstIssue(evaluation)
+local function routeBlockerRoomIndex(evaluation)
+    local issue = feedback.firstRouteBlocker(evaluation)
     local address = issue and issue.address or nil
     return address and address.roomIndex or nil
 end
 
 local function inactiveMarkerText(state, evaluation)
-    local issue = firstIssue(evaluation)
+    local issue = feedback.firstRouteBlocker(evaluation)
     local location = issue and issue.address and state.feedbackLocationLabel(issue.address) or nil
     if location ~= nil then
         return "Downstream inactive after first issue: " .. tostring(location)
@@ -60,7 +57,7 @@ function fErebusPanel.draw(state, ctx, opts)
         widgets.status(imgui, evaluation, state.feedbackLocationLabel)
     end
 
-    local blockerRoomIndex = firstIssueRoomIndex(evaluation)
+    local blockerRoomIndex = routeBlockerRoomIndex(evaluation)
     local inactiveMarkerDrawn = false
     for roomIndex, room in ipairs(state.currentBiome().rooms or {}) do
         local downstream = blockerRoomIndex ~= nil and roomIndex > blockerRoomIndex

@@ -119,6 +119,69 @@ function TestFErebusPanel.testDrawsDownstreamRoomsInactiveAfterFirstIssue()
     end)
 end
 
+function TestFErebusPanel.testDrawsRewardTypeCompletionFeedbackLocally()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local fErebusPanel = h.testImport("mods/ui/biomes/f_erebus_panel.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+        state.setRewardType(1, 1, "Auto")
+        local evaluation = state.ensureEvaluation()
+        local lines, ctx = lineSink()
+
+        fErebusPanel.draw(state, ctx, {
+            evaluation = evaluation,
+        })
+
+        local combined = table.concat(lines, "\n")
+        lu.assertEquals(evaluation.state, "incomplete")
+        lu.assertNil(evaluation.history)
+        lu.assertEquals(evaluation.candidateResults, {})
+        lu.assertNotNil(combined:find("State: incomplete", 1, true))
+        lu.assertNotNil(combined:find(
+            "Reward feedback: reward_type_required [rewardType] - Reward type must be concrete.",
+            1,
+            true
+        ))
+        lu.assertNil(combined:find("Route blocker: reward_type_required", 1, true))
+        lu.assertNil(combined:find("Downstream inactive", 1, true))
+        lu.assertEquals(fakeImgui.countCalls(ctx.draw.imgui, "BeginDisabled"), 0)
+    end)
+end
+
+function TestFErebusPanel.testDrawsDevotionSourceCompletionFeedbackLocally()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local fErebusPanel = h.testImport("mods/ui/biomes/f_erebus_panel.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+        state.setRewardType(1, 1, "Devotion")
+        state.setDevotionSource(1, 1, 2, "Auto")
+        local evaluation = state.ensureEvaluation()
+        local lines, ctx = lineSink()
+
+        fErebusPanel.draw(state, ctx, {
+            evaluation = evaluation,
+        })
+
+        local combined = table.concat(lines, "\n")
+        lu.assertEquals(evaluation.state, "incomplete")
+        lu.assertNil(evaluation.history)
+        lu.assertEquals(evaluation.candidateResults, {})
+        lu.assertNotNil(combined:find(
+            "Reward feedback: devotion_source_required [payload.sources[2]] - Devotion source must be concrete.",
+            1,
+            true
+        ))
+        lu.assertNil(combined:find("Route blocker: devotion_source_required", 1, true))
+        lu.assertNil(combined:find("Downstream inactive", 1, true))
+    end)
+end
+
 function TestFErebusPanel.testDrawsRoomLocalOfferInsideRoomUnit()
     h.withTestImport(function()
         local data = h.testImport("mods/data.lua")

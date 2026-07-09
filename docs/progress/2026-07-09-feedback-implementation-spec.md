@@ -4,6 +4,22 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Slice 5 Completion Feedback Pass Started
+
+Incomplete local form feedback now stays local instead of being labeled as a
+route blocker or driving the downstream inactive horizon.
+
+Implemented behavior:
+
+- `mods/ui/forms/feedback.lua` exposes route-blocker lookups that ignore
+  `severity = "incomplete"` findings;
+- room, generated-door, generated-offer, and room-offer forms continue to draw
+  incomplete findings through their local participant feedback labels;
+- F panel downstream inactive presentation keys off the first non-incomplete
+  route blocker, not any completion finding;
+- F panel tests cover unresolved reward type and Devotion source completion
+  feedback, no history for incomplete state, and no candidate results.
+
 ### 2026-07-09 - Slice 4 Downstream Inactive Presentation Started
 
 Downstream inactive presentation is now explicit at the F panel boundary, where

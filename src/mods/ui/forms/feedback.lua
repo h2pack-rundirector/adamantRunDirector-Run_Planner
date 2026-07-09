@@ -1,5 +1,13 @@
 local feedback = {}
 
+local function firstIssue(evaluation)
+    return evaluation and evaluation.status and evaluation.status.firstIssue or nil
+end
+
+local function isRouteBlocker(finding)
+    return finding ~= nil and finding.severity ~= "incomplete"
+end
+
 local function addressMatches(left, right)
     if left == nil or right == nil then
         return false
@@ -26,10 +34,18 @@ function feedback.forAddress(evaluation, address)
     return nil
 end
 
-function feedback.firstIssueForAddress(evaluation, address)
-    local firstIssue = evaluation and evaluation.status and evaluation.status.firstIssue or nil
-    if firstIssue ~= nil and addressMatches(firstIssue.address, address) then
-        return firstIssue
+function feedback.firstRouteBlocker(evaluation)
+    local issue = firstIssue(evaluation)
+    if isRouteBlocker(issue) then
+        return issue
+    end
+    return nil
+end
+
+function feedback.firstRouteBlockerForAddress(evaluation, address)
+    local routeBlocker = feedback.firstRouteBlocker(evaluation)
+    if routeBlocker ~= nil and addressMatches(routeBlocker.address, address) then
+        return routeBlocker
     end
     return nil
 end

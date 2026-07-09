@@ -10,7 +10,7 @@ function rewardOffer.drawGeneratedDoor(state, imgui, evaluation, context, door)
     local form = identity.generatedOffer(context, 1)
     local offer = door.offerPoint.offers[1]
     local address = identity.address(form)
-    local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
+    local routeBlocker = feedback.firstRouteBlockerForAddress(evaluation, address)
     local offerFeedback = feedback.forAddress(evaluation, address)
 
     widgets.subsection(imgui, "Generated reward offer")

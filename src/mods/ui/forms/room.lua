@@ -16,7 +16,7 @@ function roomForm.draw(state, imgui, evaluation, context, room)
     widgets.section(imgui, roomTitle(state, context, room))
     local roomIndent = widgets.indent(imgui)
     local address = identity.address(form)
-    local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
+    local routeBlocker = feedback.firstRouteBlockerForAddress(evaluation, address)
     local roomFeedback = feedback.forAddress(evaluation, address)
 
     widgets.subsection(imgui, "Room identity")

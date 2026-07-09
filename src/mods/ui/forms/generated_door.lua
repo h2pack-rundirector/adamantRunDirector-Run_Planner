@@ -11,7 +11,7 @@ function generatedDoor.draw(state, imgui, evaluation, context, door)
     widgets.subsection(imgui, "Door " .. tostring(context.doorIndex) .. " / exit " .. tostring(door.exitIndex))
     local doorIndent = widgets.indent(imgui)
     local address = identity.address(form)
-    local routeBlocker = feedback.firstIssueForAddress(evaluation, address)
+    local routeBlocker = feedback.firstRouteBlockerForAddress(evaluation, address)
     local doorFeedback = feedback.forAddress(evaluation, address)
 
     local participant = state.participants:find(form)
