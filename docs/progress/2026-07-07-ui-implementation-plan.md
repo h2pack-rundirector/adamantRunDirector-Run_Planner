@@ -4,6 +4,20 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Payload Codec Cleanup Started
+
+The shared payload-column mapping used by generated-door offers and room-local
+offers now lives behind a dedicated payload codec.
+
+Implemented behavior:
+
+- `mods/controls/PlannerDraft/codecs/payloads.lua` owns payload storage column
+  declaration for `PayloadSource`, `PayloadSourceA`, and `PayloadSourceB`;
+- Boon and Devotion payload read/write conversion is shared by generated-door
+  offer and room-offer codecs;
+- generated-door offer and room-offer codecs keep ownership of their row
+  addresses, offer-point shape, and table-specific storage nodes.
+
 ### 2026-07-09 - Room Offer Codec Extracted
 
 `RoomOffers` storage mapping has moved into the codec layer, completing the
