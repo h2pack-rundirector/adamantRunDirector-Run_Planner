@@ -4,6 +4,22 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Generated Door Offer Codec Extracted
+
+`GeneratedDoorOffers` storage mapping has moved into a dedicated codec while
+preserving the existing flat reward-offer rows.
+
+Implemented behavior:
+
+- `mods/controls/PlannerDraft/codecs/generated_door_offers.lua` declares the
+  `GeneratedDoorOffers` storage node;
+- generated-door offer rows rebuild door-local offer points and reward offers
+  during reads;
+- generated-door offer row appends are delegated from `PlannerDraft` to the
+  generated-door offer codec;
+- payload column mapping remains local to the generated-door offer codec until
+  the later payload-codec slice.
+
 ### 2026-07-09 - Generated Door Codec Extracted
 
 `GeneratedDoors` row mapping has moved behind the same codec boundary as

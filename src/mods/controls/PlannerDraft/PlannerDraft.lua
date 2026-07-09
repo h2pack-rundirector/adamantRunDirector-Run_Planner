@@ -2,6 +2,7 @@
 
 local defaults = import("mods/forms/defaults.lua")
 local common = import("mods/controls/PlannerDraft/codecs/common.lua")
+local generatedDoorOfferCodec = import("mods/controls/PlannerDraft/codecs/generated_door_offers.lua")
 local generatedDoorCodec = import("mods/controls/PlannerDraft/codecs/generated_doors.lua")
 local roomCodec = import("mods/controls/PlannerDraft/codecs/rooms.lua")
 
@@ -101,25 +102,6 @@ end
 
 local ensureBiome = common.ensureBiome
 
-local function readGeneratedDoorOffers(fields, draft)
-    local rows = fields.GeneratedDoorOffers
-    for index = 1, rows:count() do
-        local row = readOfferRow(rows, index, false)
-        local biome = ensureBiome(draft, row.biomeIndex, row.biomeKey)
-        local room = biome.rooms[row.roomIndex]
-        local generatedDoors = room and room.generatedDoors or nil
-        local door = generatedDoors and generatedDoors.doors[row.doorIndex] or nil
-        if door ~= nil then
-            door.offerPoint = door.offerPoint or {
-                kind = row.offerPointKind,
-                batchKey = row.batchKey,
-                offers = {},
-            }
-            appendOffer(door.offerPoint.offers, row.offerIndex, row)
-        end
-    end
-end
-
 local function readRoomOffers(fields, draft)
     local rows = fields.RoomOffers
     for index = 1, rows:count() do
@@ -153,7 +135,7 @@ local function readDraft(fields, instance)
     }
     roomCodec.read(fields, draft)
     generatedDoorCodec.read(fields, draft)
-    readGeneratedDoorOffers(fields, draft)
+    generatedDoorOfferCodec.read(fields, draft)
     readRoomOffers(fields, draft)
     return draft
 end
@@ -166,26 +148,6 @@ local function payloadColumns(offer)
         PayloadSourceA = type(sources) == "table" and sources[1] or "",
         PayloadSourceB = type(sources) == "table" and sources[2] or "",
     }
-end
-
-local function appendGeneratedDoorOfferRow(fields, routeKey, biomeIndex, biomeKey, roomIndex, doorIndex, offerPoint, offerIndex, offer)
-    local payload = payloadColumns(offer)
-    return fields.GeneratedDoorOffers:append({
-        RouteKey = routeKey,
-        BiomeIndex = biomeIndex,
-        BiomeKey = biomeKey,
-        RoomIndex = roomIndex,
-        DoorIndex = doorIndex,
-        OfferIndex = offerIndex,
-        OfferPointKind = offerPoint.kind or "",
-        BatchKey = offerPoint.batchKey or "",
-        Store = offer.store or "",
-        RewardType = offer.rewardType or "",
-        Acquired = offer.acquired == true,
-        PayloadSource = payload.PayloadSource,
-        PayloadSourceA = payload.PayloadSourceA,
-        PayloadSourceB = payload.PayloadSourceB,
-    })
 end
 
 local function appendRoomOfferRow(fields, routeKey, biomeIndex, biomeKey, roomIndex, offerPointIndex, offerPoint, offerIndex, offer)
@@ -224,7 +186,7 @@ local function writeDraft(fields, draft)
             for doorIndex, door in ipairs(generatedDoors.doors or {}) do
                 generatedDoorCodec.append(fields, routeKey, biomeIndex, biomeKey, roomIndex, doorIndex, door)
                 for offerIndex, offer in ipairs((door.offerPoint and door.offerPoint.offers) or {}) do
-                    appendGeneratedDoorOfferRow(fields, routeKey, biomeIndex, biomeKey, roomIndex, doorIndex, door.offerPoint, offerIndex, offer)
+                    generatedDoorOfferCodec.append(fields, routeKey, biomeIndex, biomeKey, roomIndex, doorIndex, door.offerPoint, offerIndex, offer)
                 end
             end
 
@@ -250,24 +212,7 @@ function PlannerDraft.storage()
         common.intField("Revision", 0, 0, MAX_REVISION),
         roomCodec.storageNode(),
         generatedDoorCodec.storageNode(),
-        {
-            key = "GeneratedDoorOffers",
-            type = "table",
-            maxRows = MAX_OFFERS,
-            defaultRows = 0,
-            row = common.routeAddressRows({
-                common.intField("DoorIndex", 1, 1, 16),
-                common.intField("OfferIndex", 1, 1, 16),
-                common.stringField("OfferPointKind", "", 64),
-                common.stringField("BatchKey", "", 64),
-                common.stringField("Store", "", 64),
-                common.stringField("RewardType", "", 64),
-                common.boolField("Acquired", false),
-                common.stringField("PayloadSource", "", MAX_PAYLOAD_LEN),
-                common.stringField("PayloadSourceA", "", MAX_PAYLOAD_LEN),
-                common.stringField("PayloadSourceB", "", MAX_PAYLOAD_LEN),
-            }),
-        },
+        generatedDoorOfferCodec.storageNode(),
         {
             key = "RoomOffers",
             type = "table",
