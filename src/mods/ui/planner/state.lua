@@ -2,6 +2,7 @@ local candidateProviderModule = import("mods/forms/candidate_provider.lua")
 local dataModule = import("mods/data.lua")
 local defaultDrafts = import("mods/forms/defaults.lua")
 local routePipeline = import("mods/pipeline/route.lua")
+local participantRegistry = import("mods/ui/forms/participants.lua")
 local plannerOptions = import("mods/ui/planner/options.lua")
 
 local plannerState = {}
@@ -208,9 +209,47 @@ local function attachDevotionSourceProviders(state, offer)
     end
 end
 
+local function generatedDoorContext(state, biomeIndex, roomIndex, doorIndex)
+    return {
+        routeKey = state.draft.routeKey,
+        biomeIndex = biomeIndex,
+        roomIndex = roomIndex,
+        doorIndex = doorIndex,
+    }
+end
+
+local function attachGeneratedDoorProvider(state, room, door, context)
+    local participant = state.participants:generatedDoor(context)
+    participant.roomKey = room.roomKey
+    participant.exitIndex = door.exitIndex
+    local provider = participant.providers.nextDoorTarget
+    if provider == nil or provider.values ~= state.roomOptions.values or provider.labels ~= state.roomOptions.labels then
+        provider = state.candidateProvider.create({
+            key = "nextDoorTarget",
+            version = state.providerVersion,
+            values = state.roomOptions.values,
+            labels = state.roomOptions.labels,
+            semanticForValue = function(value, _, _, candidateContext)
+                return {
+                    kind = "nextRoom",
+                    biomeKey = candidateContext.candidate.biomeKey,
+                    sourceRoomKey = candidateContext.candidate.sourceRoomKey,
+                    exitIndex = candidateContext.candidate.exitIndex,
+                    targetRoomKey = value,
+                }
+            end,
+        })
+        participant.providers.nextDoorTarget = provider
+    else
+        provider.version = state.providerVersion
+    end
+    door.candidateProviders = participant.providers
+end
+
 local function attachCandidateProviders(state)
     local biome = state.currentBiome()
-    for _, room in ipairs((biome and biome.rooms) or {}) do
+    local biomeIndex = 1
+    for roomIndex, room in ipairs((biome and biome.rooms) or {}) do
         for _, offerPoint in ipairs(room.offerPoints or {}) do
             for _, offer in ipairs(offerPoint.offers or {}) do
                 attachRewardProvider(state, offer)
@@ -219,24 +258,8 @@ local function attachCandidateProviders(state)
 
         local generatedDoors = room.generatedDoors
         if generatedDoors ~= nil then
-            for _, door in ipairs(generatedDoors.doors or {}) do
-                door.candidateProviders = {
-                    nextDoorTarget = state.candidateProvider.create({
-                        key = "nextDoorTarget",
-                        version = state.providerVersion,
-                        values = state.roomOptions.values,
-                        labels = state.roomOptions.labels,
-                        semanticForValue = function(value, _, _, context)
-                            return {
-                                kind = "nextRoom",
-                                biomeKey = context.candidate.biomeKey,
-                                sourceRoomKey = context.candidate.sourceRoomKey,
-                                exitIndex = context.candidate.exitIndex,
-                                targetRoomKey = value,
-                            }
-                        end,
-                    }),
-                }
+            for doorIndex, door in ipairs(generatedDoors.doors or {}) do
+                attachGeneratedDoorProvider(state, room, door, generatedDoorContext(state, biomeIndex, roomIndex, doorIndex))
 
                 local offer = door.offerPoint.offers[1]
                 attachRewardProvider(state, offer)
@@ -291,6 +314,7 @@ local function loadDraftFromControl(state, control, revision)
     state.draftControlRevision = revision
     state.draft = plannerOptions.deepCopy(control:readDraft())
     state.selectedDoorOptionCache = selectedDoorOptionCache()
+    state.participants:clear()
     markDirty(state)
     return true
 end
@@ -478,6 +502,7 @@ end
 local function resetDraft(state)
     state.draft = plannerState.defaultDraft()
     state.selectedDoorOptionCache = selectedDoorOptionCache()
+    state.participants:clear()
     draftChanged(state)
 end
 
@@ -488,6 +513,7 @@ function plannerState.create(opts)
         catalog = catalog,
         pipeline = opts.pipeline or routePipeline,
         candidateProvider = opts.candidateProvider or candidateProviderModule,
+        participants = opts.participants or participantRegistry.create(),
         draft = plannerOptions.deepCopy(opts.draft or plannerState.defaultDraft()),
         dirty = true,
         evaluation = nil,

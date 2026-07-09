@@ -225,6 +225,37 @@ function TestPlannerState.testEvaluationMaterializesPayloadContainers()
     end)
 end
 
+function TestPlannerState.testGeneratedDoorProviderIsOwnedByParticipant()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+
+        state.ensureEvaluation()
+
+        local door = state.currentBiome().rooms[2].generatedDoors.doors[1]
+        local participant = state.participants:generatedDoor({
+            routeKey = state.draft.routeKey,
+            biomeIndex = 1,
+            roomIndex = 2,
+            doorIndex = 1,
+        })
+        lu.assertTrue(door.candidateProviders == participant.providers)
+        lu.assertTrue(door.candidateProviders.nextDoorTarget == participant.providers.nextDoorTarget)
+        lu.assertEquals(participant.roomKey, "F_Combat01")
+        lu.assertEquals(participant.exitIndex, 1)
+
+        local provider = participant.providers.nextDoorTarget
+        state.markDirty()
+        state.ensureEvaluation()
+
+        lu.assertTrue(participant.providers.nextDoorTarget == provider)
+        lu.assertEquals(provider.version, state.providerVersion)
+    end)
+end
+
 function TestPlannerState.testSelectedDoorOptionsAreCachedByDoorBatch()
     h.withTestImport(function()
         local data = h.testImport("mods/data.lua")

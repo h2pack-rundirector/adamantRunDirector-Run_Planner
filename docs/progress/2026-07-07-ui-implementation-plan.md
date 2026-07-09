@@ -4,6 +4,21 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Generated Door Participant Providers Started
+
+Provider ownership has started moving from draft nodes toward form
+participants.
+
+Implemented behavior:
+
+- `mods/ui/forms/participants.lua` owns a registry/cache keyed by form identity;
+- planner state owns the participant registry for the current editable draft;
+- generated-door target providers are created on generated-door participants;
+- `door.candidateProviders` remains as a compatibility bridge for the existing
+  route and feedback pipeline;
+- reward-type, devotion-source, and room-local providers remain draft-attached
+  until later participant slices.
+
 ### 2026-07-09 - Draw-Time Materialization Removed From Forms
 
 The form draw path no longer creates missing reward, room-offer, or payload
