@@ -182,6 +182,39 @@ function TestFErebusPanel.testFormsReadProvidersFromParticipants()
     end)
 end
 
+function TestFErebusPanel.testDrawShowsCandidateProviderMessagesAfterRouteRebuild()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local fErebusPanel = h.testImport("mods/ui/biomes/f_erebus_panel.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+        local tooltips = {}
+        local _, ctx = fakeImgui.lineSink({
+            imgui = {
+                BeginCombo = function()
+                    return true
+                end,
+                IsItemHovered = function()
+                    return true
+                end,
+                SetTooltip = function(message)
+                    tooltips[#tooltips + 1] = message
+                end,
+            },
+        })
+
+        fErebusPanel.draw(state, ctx, {
+            hideStatus = true,
+        })
+
+        local combinedTooltips = table.concat(tooltips, "\n")
+        lu.assertStrContains(combinedTooltips, "Generated room target fails declared eligibility.")
+        lu.assertStrContains(combinedTooltips, "Devotion sources must already exist in acquired loot history.")
+    end)
+end
+
 function TestFErebusPanel.testRoomOfferAndDevotionReadParticipantProviders()
     h.withTestImport(function()
         local data = h.testImport("mods/data.lua")

@@ -4,6 +4,22 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Slice 3 Candidate Feedback Regression Tests Started
+
+Candidate feedback behavior is being locked with regression tests around the
+existing provider and widget boundaries rather than changing the validation
+or draw model.
+
+Implemented behavior:
+
+- widget coverage now asserts that a selected invalid dropdown value uses its
+  provider color and hover message in the closed preview;
+- existing widget coverage continues to prove hidden candidates are omitted
+  while visible invalid candidates remain colored and tooltip-backed;
+- F panel coverage opens real rebuilt participant dropdowns and verifies
+  candidate feedback messages reach the UI after `state.ensureEvaluation()`;
+- debug-harness tests remain the end-to-end route/candidate feedback coverage.
+
 ### 2026-07-09 - Slice 2 Route Status Presentation Started
 
 Route-level status presentation now keeps the existing `widgets.status(...)`

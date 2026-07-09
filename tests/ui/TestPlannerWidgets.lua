@@ -25,7 +25,7 @@ function TestPlannerWidgets.testDropdownClosedUsesProviderPreview()
     end)
 end
 
-function TestPlannerWidgets.testDropdownPreviewUsesProviderColorAndMessage()
+function TestPlannerWidgets.testDropdownSelectedInvalidPreviewUsesProviderFeedback()
     h.withTestImport(function()
         local widgets = h.testImport("mods/ui/planner/widgets.lua")
         local tooltips = {}
@@ -37,28 +37,33 @@ function TestPlannerWidgets.testDropdownPreviewUsesProviderColorAndMessage()
                 tooltips[#tooltips + 1] = message
             end,
         })
+        local invalidColor = { 1.0, 0.35, 0.25, 1.0 }
 
-        local value, changed = widgets.dropdown(imgui, "Target##room1", "B", {
-            values = { "A", "B" },
-            labels = { "Alpha", "Beta" },
+        local value, changed = widgets.dropdown(imgui, "Target##room1", "F_Story01", {
+            values = { "F_Combat01", "F_Story01" },
+            labels = { "Combat", "Story" },
             colors = {
                 nil,
-                { 0.9, 0.2, 0.1, 1 },
+                invalidColor,
             },
             messages = {
                 nil,
-                "Beta message",
+                "Generated room target fails declared eligibility.",
             },
         })
 
-        lu.assertEquals(value, "B")
+        lu.assertEquals(value, "F_Story01")
         lu.assertFalse(changed)
         lu.assertEquals(lines, {
-            "Target##room1: Beta",
+            "Target##room1: Story",
+        })
+        lu.assertEquals(imgui._calls[1], {
+            name = "PushStyleColor",
+            args = { "Text", 1.0, 0.35, 0.25, 1.0 },
         })
         lu.assertEquals(fakeImgui.countCalls(imgui, "PushStyleColor"), 1)
         lu.assertEquals(fakeImgui.countCalls(imgui, "PopStyleColor"), 1)
-        lu.assertEquals(tooltips, { "Beta message" })
+        lu.assertEquals(tooltips, { "Generated room target fails declared eligibility." })
     end)
 end
 
