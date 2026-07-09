@@ -4,6 +4,20 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - PlannerDraft Roundtrip Tests Hardened
+
+The codec extraction is now backed by focused storage-boundary tests before
+feedback coloring starts.
+
+Implemented behavior:
+
+- flat `Rooms`, `GeneratedDoors`, `GeneratedDoorOffers`, and `RoomOffers` row
+  schemas are pinned, including payload columns;
+- representative drafts with derived feedback, history, and candidate-provider
+  data still write only normalized storage rows;
+- child offer rows whose parent room or generated door is absent do not
+  materialize phantom draft parents during reads.
+
 ### 2026-07-09 - Payload Codec Cleanup Started
 
 The shared payload-column mapping used by generated-door offers and room-local

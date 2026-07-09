@@ -89,6 +89,27 @@ local function nodeByKey(storage, key)
     return nil
 end
 
+local function rowKeys(node)
+    local keys = {}
+    for _, column in ipairs(node.row or {}) do
+        keys[#keys + 1] = column.key
+    end
+    return keys
+end
+
+local function assertNoDerivedColumns(rows)
+    local forbidden = {
+        candidateProviders = true,
+        feedback = true,
+        history = true,
+    }
+    for _, row in ipairs(rows or {}) do
+        for key in pairs(forbidden) do
+            lu.assertNil(row[key])
+        end
+    end
+end
+
 local function sampleDraft()
     return h.testImport("mods/forms/defaults.lua").fSampleDraft()
 end
@@ -187,6 +208,64 @@ function TestPlannerDraftControl.testStorageDeclaresFlatDraftTables()
     end)
 end
 
+function TestPlannerDraftControl.testStorageDeclaresFlatRowSchemas()
+    h.withTestImport(function()
+        local template = h.testImport("mods/controls/PlannerDraft/PlannerDraft.lua")
+        local storage = template.storage()
+
+        lu.assertEquals(rowKeys(nodeByKey(storage, "Rooms")), {
+            "RouteKey",
+            "BiomeIndex",
+            "BiomeKey",
+            "RoomIndex",
+            "RoomKey",
+            "SelectedDoorIndex",
+            "BatchRule",
+        })
+        lu.assertEquals(rowKeys(nodeByKey(storage, "GeneratedDoors")), {
+            "RouteKey",
+            "BiomeIndex",
+            "BiomeKey",
+            "RoomIndex",
+            "DoorIndex",
+            "ExitIndex",
+            "TargetRoomKey",
+        })
+        lu.assertEquals(rowKeys(nodeByKey(storage, "GeneratedDoorOffers")), {
+            "RouteKey",
+            "BiomeIndex",
+            "BiomeKey",
+            "RoomIndex",
+            "DoorIndex",
+            "OfferIndex",
+            "OfferPointKind",
+            "BatchKey",
+            "Store",
+            "RewardType",
+            "Acquired",
+            "PayloadSource",
+            "PayloadSourceA",
+            "PayloadSourceB",
+        })
+        lu.assertEquals(rowKeys(nodeByKey(storage, "RoomOffers")), {
+            "RouteKey",
+            "BiomeIndex",
+            "BiomeKey",
+            "RoomIndex",
+            "OfferPointIndex",
+            "OfferIndex",
+            "OfferPointKind",
+            "BatchKey",
+            "Store",
+            "RewardType",
+            "Acquired",
+            "PayloadSource",
+            "PayloadSourceA",
+            "PayloadSourceB",
+        })
+    end)
+end
+
 function TestPlannerDraftControl.testEmptyStorageReadsDefaultFDraft()
     h.withTestImport(function()
         local template = h.testImport("mods/controls/PlannerDraft/PlannerDraft.lua")
@@ -255,6 +334,35 @@ function TestPlannerDraftControl.testUiControlRoundtripsRepresentativeFDraft()
     end)
 end
 
+function TestPlannerDraftControl.testUiControlDoesNotSerializeDerivedState()
+    h.withTestImport(function()
+        local template = h.testImport("mods/controls/PlannerDraft/PlannerDraft.lua")
+        local instance = template.prepare({})
+        local currentFields = fields()
+        local control = template.createUi(currentFields, instance)
+        local draft = representativeDraft()
+
+        draft.feedback = { status = "invalid" }
+        draft.history = { rooms = { "F_Opening01" } }
+        draft.candidateProviders = { route = {} }
+        draft.biomes[1].feedback = { status = "invalid" }
+        draft.biomes[1].rooms[1].candidateProviders = { roomKey = {} }
+        draft.biomes[1].rooms[1].generatedDoors.doors[1].feedback = { status = "invalid" }
+        draft.biomes[1].rooms[1].generatedDoors.doors[1].candidateProviders = { nextDoorTarget = {} }
+        draft.biomes[1].rooms[1].generatedDoors.doors[1].offerPoint.offers[1].feedback = { status = "invalid" }
+        draft.biomes[1].rooms[1].generatedDoors.doors[1].offerPoint.offers[1].candidateProviders = { rewardType = {} }
+        draft.biomes[1].rooms[2].offerPoints[1].offers[1].history = { reward = "seen" }
+
+        lu.assertTrue(control:writeDraft(draft))
+
+        assertNoDerivedColumns(currentFields.Rooms:snapshots())
+        assertNoDerivedColumns(currentFields.GeneratedDoors:snapshots())
+        assertNoDerivedColumns(currentFields.GeneratedDoorOffers:snapshots())
+        assertNoDerivedColumns(currentFields.RoomOffers:snapshots())
+        lu.assertEquals(control:readDraft(), representativeDraft())
+    end)
+end
+
 function TestPlannerDraftControl.testStoredRowsCanMaterializeIncompleteDraft()
     h.withTestImport(function()
         local template = h.testImport("mods/controls/PlannerDraft/PlannerDraft.lua")
@@ -286,6 +394,76 @@ function TestPlannerDraftControl.testStoredRowsCanMaterializeIncompleteDraft()
                                 selectedDoorIndex = 1,
                                 doors = {},
                             },
+                        },
+                    },
+                },
+            },
+        })
+    end)
+end
+
+function TestPlannerDraftControl.testStoredChildRowsDoNotMaterializeMissingParents()
+    h.withTestImport(function()
+        local template = h.testImport("mods/controls/PlannerDraft/PlannerDraft.lua")
+        local instance = template.prepare({})
+        local control = template.createRuntime(fields({
+            Rooms = {
+                {
+                    RouteKey = "Underworld",
+                    BiomeIndex = 1,
+                    BiomeKey = "F",
+                    RoomIndex = 1,
+                    RoomKey = "F_Opening01",
+                    SelectedDoorIndex = 0,
+                    BatchRule = "",
+                },
+            },
+            GeneratedDoorOffers = {
+                {
+                    RouteKey = "Underworld",
+                    BiomeIndex = 1,
+                    BiomeKey = "F",
+                    RoomIndex = 1,
+                    DoorIndex = 1,
+                    OfferIndex = 1,
+                    OfferPointKind = "generatedDoorRewards",
+                    BatchKey = "nextDoors",
+                    Store = "RunProgress",
+                    RewardType = "Boon",
+                    Acquired = false,
+                    PayloadSource = "AphroditeUpgrade",
+                    PayloadSourceA = "",
+                    PayloadSourceB = "",
+                },
+            },
+            RoomOffers = {
+                {
+                    RouteKey = "Underworld",
+                    BiomeIndex = 1,
+                    BiomeKey = "F",
+                    RoomIndex = 2,
+                    OfferPointIndex = 1,
+                    OfferIndex = 1,
+                    OfferPointKind = "roomRewards",
+                    BatchKey = "room",
+                    Store = "WorldShop",
+                    RewardType = "RoomRewardMoneyDrop",
+                    Acquired = true,
+                    PayloadSource = "",
+                    PayloadSourceA = "",
+                    PayloadSourceB = "",
+                },
+            },
+        }), instance)
+
+        lu.assertEquals(control:readDraft(), {
+            routeKey = "Underworld",
+            biomes = {
+                {
+                    biomeKey = "F",
+                    rooms = {
+                        {
+                            roomKey = "F_Opening01",
                         },
                     },
                 },
