@@ -4,6 +4,23 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Room Offer Codec Extracted
+
+`RoomOffers` storage mapping has moved into the codec layer, completing the
+current room, door, generated-offer, and room-offer row split from
+`PlannerDraft`.
+
+Implemented behavior:
+
+- `mods/controls/PlannerDraft/codecs/room_offers.lua` declares the `RoomOffers`
+  storage node;
+- room-local offer rows rebuild room offer points and offers during reads while
+  preserving the previous behavior of ignoring rows whose room row is absent;
+- room-local offer row appends are delegated from `PlannerDraft` to the room
+  offer codec;
+- `PlannerDraft` now orchestrates the four flat draft row codecs instead of
+  owning room, door, or offer row details directly.
+
 ### 2026-07-09 - Generated Door Offer Codec Extracted
 
 `GeneratedDoorOffers` storage mapping has moved into a dedicated codec while
