@@ -4,6 +4,23 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Slice 2 Route Status Presentation Started
+
+Route-level status presentation now keeps the existing `widgets.status(...)`
+entry point but uses the same shared presentation color vocabulary as local
+form feedback.
+
+Implemented behavior:
+
+- `mods/ui/planner/presentation_colors.lua` centralizes invalid, incomplete,
+  warning, muted, blocker, and valid colors for planner feedback presentation;
+- `mods/ui/forms/feedback_presentation.lua` now reads those shared colors
+  instead of owning duplicate constants;
+- route status colors the state line and first issue line while preserving the
+  existing summary strings and translated location labels;
+- focused widget tests cover color style scopes, translated first-issue
+  locations, and valid status without enrichment coloring.
+
 ### 2026-07-09 - Slice 1 Feedback Presentation Started
 
 Feedback rendering is moving behind a planner-owned presentation helper while

@@ -329,5 +329,60 @@ function TestPlannerWidgets.testStatusRendersSummary()
             "Feedback: 1  Candidates: 2",
             "First issue: bad_room at room.generate_next",
         })
+        lu.assertEquals(fakeImgui.countCalls(imgui, "PushStyleColor"), 2)
+        lu.assertEquals(fakeImgui.countCalls(imgui, "PopStyleColor"), 2)
+    end)
+end
+
+function TestPlannerWidgets.testStatusUsesTranslatedFirstIssueLocation()
+    h.withTestImport(function()
+        local widgets = h.testImport("mods/ui/planner/widgets.lua")
+        local lines, imgui = fakeImgui.surface()
+
+        widgets.status(imgui, {
+            state = "invalid",
+            complete = true,
+            valid = false,
+            status = {
+                feedbackCount = 1,
+                firstIssue = {
+                    code = "bad_room",
+                    phase = "room.generate_next",
+                    address = {
+                        roomIndex = 2,
+                    },
+                },
+            },
+            candidateResults = {},
+        }, function(address)
+            return "Room " .. tostring(address.roomIndex)
+        end)
+
+        lu.assertEquals(lines[4], "First issue: bad_room at Room 2 (room.generate_next)")
+    end)
+end
+
+function TestPlannerWidgets.testStatusColorsValidWithoutEnrichment()
+    h.withTestImport(function()
+        local widgets = h.testImport("mods/ui/planner/widgets.lua")
+        local lines, imgui = fakeImgui.surface()
+
+        widgets.status(imgui, {
+            state = "valid",
+            complete = true,
+            valid = true,
+            status = {
+                feedbackCount = 0,
+            },
+            candidateResults = {},
+        })
+
+        lu.assertEquals(lines, {
+            "State: valid",
+            "Complete: true  Valid: true",
+            "Feedback: 0  Candidates: 0",
+        })
+        lu.assertEquals(fakeImgui.countCalls(imgui, "PushStyleColor"), 1)
+        lu.assertEquals(fakeImgui.countCalls(imgui, "PopStyleColor"), 1)
     end)
 end

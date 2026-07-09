@@ -1,3 +1,5 @@
+local presentationColors = import("mods/ui/planner/presentation_colors.lua")
+
 local widgets = {}
 
 ---@class PlannerDropdownProvider
@@ -203,7 +205,11 @@ function widgets.endDisabled(imgui, pushed)
 end
 
 function widgets.status(imgui, evaluation, locationForAddress)
-    widgets.text(imgui, "State: " .. tostring(evaluation.state))
+    widgets.textColored(
+        imgui,
+        "State: " .. tostring(evaluation.state),
+        presentationColors.forEvaluation(evaluation)
+    )
     widgets.text(imgui, "Complete: " .. tostring(evaluation.complete) .. "  Valid: " .. tostring(evaluation.valid))
     widgets.text(imgui, "Feedback: " .. tostring(evaluation.status.feedbackCount)
         .. "  Candidates: " .. tostring(#(evaluation.candidateResults or {})))
@@ -218,8 +224,11 @@ function widgets.status(imgui, evaluation, locationForAddress)
         if location ~= nil then
             issueLocation = location .. " (" .. issueLocation .. ")"
         end
-        widgets.text(imgui, "First issue: " .. tostring(evaluation.status.firstIssue.code)
-            .. " at " .. issueLocation)
+        widgets.textColored(
+            imgui,
+            "First issue: " .. tostring(evaluation.status.firstIssue.code) .. " at " .. issueLocation,
+            presentationColors.forFinding(evaluation.status.firstIssue)
+        )
     end
 end
 
