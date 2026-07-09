@@ -164,10 +164,11 @@ local function feedbackLocationLabel(state, address)
     return table.concat(parts, " ")
 end
 
-local function attachRewardProvider(state, offer)
+local function attachRewardProvider(state, participant, offer)
     local rewardOptions = rewardTypeOptionsFor(state, offer.store)
-    offer.candidateProviders = {
-        rewardType = state.candidateProvider.create({
+    local provider = participant.providers.rewardType
+    if provider == nil or provider.values ~= rewardOptions.values or provider.labels ~= rewardOptions.labels then
+        provider = state.candidateProvider.create({
             key = "rewardType",
             version = state.providerVersion,
             values = rewardOptions.values,
@@ -180,11 +181,17 @@ local function attachRewardProvider(state, offer)
                     payload = defaultPayloadForRewardType(state, value),
                 }
             end,
-        }),
+        })
+        participant.providers.rewardType = provider
+    else
+        provider.version = state.providerVersion
+    end
+    offer.candidateProviders = {
+        rewardType = provider,
     }
 end
 
-local function attachDevotionSourceProviders(state, offer)
+local function attachDevotionSourceProviders(state, participant, offer)
     if offer.rewardType ~= "Devotion" then
         return
     end
@@ -192,20 +199,30 @@ local function attachDevotionSourceProviders(state, offer)
     for sourceIndex = 1, 2 do
         local slotIndex = sourceIndex
         local providerKey = "devotionSource" .. tostring(sourceIndex)
-        offer.candidateProviders[providerKey] = state.candidateProvider.create({
-            key = providerKey,
-            version = state.providerVersion,
-            values = state.boonSourceOptions.values,
-            labels = state.boonSourceOptions.labels,
-            semanticForValue = function(value, _, _, _context)
-                return {
-                    kind = "devotionSource",
-                    sourceIndex = slotIndex,
-                    source = value,
-                    sources = projectedSources(offer.payload.sources, slotIndex, value),
-                }
-            end,
-        })
+        local provider = participant.providers[providerKey]
+        if provider == nil
+            or provider.values ~= state.boonSourceOptions.values
+            or provider.labels ~= state.boonSourceOptions.labels
+        then
+            provider = state.candidateProvider.create({
+                key = providerKey,
+                version = state.providerVersion,
+                values = state.boonSourceOptions.values,
+                labels = state.boonSourceOptions.labels,
+                semanticForValue = function(value, _, _, _context)
+                    return {
+                        kind = "devotionSource",
+                        sourceIndex = slotIndex,
+                        source = value,
+                        sources = projectedSources(participant.node.payload.sources, slotIndex, value),
+                    }
+                end,
+            })
+            participant.providers[providerKey] = provider
+        else
+            provider.version = state.providerVersion
+        end
+        offer.candidateProviders[providerKey] = provider
     end
 end
 
@@ -259,8 +276,8 @@ local function attachCandidateProviders(state)
 
         for offerPointIndex, offerPoint in ipairs(room.offerPoints or {}) do
             for offerIndex, offer in ipairs(offerPoint.offers or {}) do
-                state.participants:roomOffer(roomContext, offerPointIndex, offerIndex, offer)
-                attachRewardProvider(state, offer)
+                local participant = state.participants:roomOffer(roomContext, offerPointIndex, offerIndex, offer)
+                attachRewardProvider(state, participant, offer)
             end
         end
 
@@ -270,13 +287,13 @@ local function attachCandidateProviders(state)
                 attachGeneratedDoorProvider(state, room, door, generatedDoorContext(state, biomeIndex, roomIndex, doorIndex))
 
                 local offer = door.offerPoint.offers[1]
-                state.participants:generatedOffer(
+                local participant = state.participants:generatedOffer(
                     generatedDoorContext(state, biomeIndex, roomIndex, doorIndex),
                     1,
                     offer
                 )
-                attachRewardProvider(state, offer)
-                attachDevotionSourceProviders(state, offer)
+                attachRewardProvider(state, participant, offer)
+                attachDevotionSourceProviders(state, participant, offer)
             end
         end
     end

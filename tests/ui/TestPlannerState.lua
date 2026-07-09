@@ -297,6 +297,108 @@ function TestPlannerState.testEvaluationCreatesFormParticipants()
     end)
 end
 
+function TestPlannerState.testRewardTypeProvidersAreOwnedByParticipants()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local identity = h.testImport("mods/ui/forms/identity.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+        })
+
+        state.ensureEvaluation()
+
+        local generatedContext = {
+            routeKey = state.draft.routeKey,
+            biomeIndex = 1,
+            roomIndex = 2,
+            doorIndex = 1,
+        }
+        local generatedOffer = state.currentBiome().rooms[2].generatedDoors.doors[1].offerPoint.offers[1]
+        local generatedParticipant = state.participants:find(identity.generatedOffer(generatedContext, 1))
+        local generatedProvider = generatedParticipant.providers.rewardType
+
+        lu.assertNotNil(generatedProvider)
+        lu.assertTrue(generatedOffer.candidateProviders.rewardType == generatedProvider)
+
+        state.markDirty()
+        state.ensureEvaluation()
+
+        lu.assertTrue(generatedParticipant.providers.rewardType == generatedProvider)
+        lu.assertEquals(generatedProvider.version, state.providerVersion)
+
+        state.setRoomKey(2, "F_Shop01")
+        state.ensureEvaluation()
+
+        local roomContext = {
+            routeKey = state.draft.routeKey,
+            biomeIndex = 1,
+            roomIndex = 2,
+        }
+        local roomOffer = state.currentBiome().rooms[2].offerPoints[1].offers[1]
+        local roomOfferParticipant = state.participants:find(identity.roomOffer(roomContext, 1, 1))
+        local roomOfferProvider = roomOfferParticipant.providers.rewardType
+
+        lu.assertNotNil(roomOfferProvider)
+        lu.assertTrue(roomOffer.candidateProviders.rewardType == roomOfferProvider)
+    end)
+end
+
+function TestPlannerState.testDevotionSourceProvidersAreOwnedByGeneratedOfferParticipants()
+    h.withTestImport(function()
+        local data = h.testImport("mods/data.lua")
+        local identity = h.testImport("mods/ui/forms/identity.lua")
+        local plannerState = h.testImport("mods/ui/planner/state.lua")
+        local draft = sampleDraft()
+        local offer = draft.biomes[1].rooms[1].generatedDoors.doors[1].offerPoint.offers[1]
+        offer.rewardType = "Devotion"
+        offer.payload = nil
+        local state = plannerState.create({
+            catalog = data.loadCatalog(),
+            draft = draft,
+        })
+
+        state.ensureEvaluation()
+
+        local context = {
+            routeKey = state.draft.routeKey,
+            biomeIndex = 1,
+            roomIndex = 1,
+            doorIndex = 1,
+        }
+        local materializedOffer = state.currentBiome().rooms[1].generatedDoors.doors[1].offerPoint.offers[1]
+        local participant = state.participants:find(identity.generatedOffer(context, 1))
+        local firstProvider = participant.providers.devotionSource1
+        local secondProvider = participant.providers.devotionSource2
+
+        lu.assertTrue(materializedOffer.candidateProviders.devotionSource1 == firstProvider)
+        lu.assertTrue(materializedOffer.candidateProviders.devotionSource2 == secondProvider)
+
+        local exported = {}
+        firstProvider.exportCandidates(exported, identity.address(identity.generatedOffer(context, 1)), {
+            candidate = {
+                store = materializedOffer.store,
+            },
+        })
+
+        lu.assertEquals(exported[1].semantic.sources[1], firstProvider.values[1])
+        lu.assertEquals(exported[1].semantic.sources[2], materializedOffer.payload.sources[2])
+
+        state.setDevotionSource(1, 1, 2, "HeraUpgrade")
+        state.ensureEvaluation()
+
+        lu.assertTrue(participant.providers.devotionSource1 == firstProvider)
+        lu.assertTrue(participant.providers.devotionSource2 == secondProvider)
+        exported = {}
+        firstProvider.exportCandidates(exported, identity.address(identity.generatedOffer(context, 1)), {
+            candidate = {
+                store = materializedOffer.store,
+            },
+        })
+        lu.assertEquals(exported[1].semantic.sources[2], "HeraUpgrade")
+    end)
+end
+
 function TestPlannerState.testSelectedDoorOptionsAreCachedByDoorBatch()
     h.withTestImport(function()
         local data = h.testImport("mods/data.lua")

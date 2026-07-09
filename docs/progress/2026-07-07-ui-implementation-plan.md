@@ -4,6 +4,25 @@
 
 Newest entries should be added at the top of this section.
 
+### 2026-07-09 - Reward Providers Moved To Participants
+
+Reward candidate provider ownership has moved from reward draft nodes to form
+participants while preserving the existing route and feedback bridge.
+
+Implemented behavior:
+
+- generated-offer participants own their `rewardType` provider object;
+- room-offer participants own their `rewardType` provider object;
+- generated-offer participants own Devotion `devotionSource1` and
+  `devotionSource2` provider objects;
+- draft offers still receive `offer.candidateProviders.rewardType` so candidate
+  export, validation, feedback application, and widgets keep their current read
+  path;
+- provider objects are reused across rebuilds when the reward option domain is
+  unchanged;
+- Devotion source semantics read the current participant-bound offer node so
+  provider reuse does not capture stale payload tables.
+
 ### 2026-07-09 - Form Participants Created Without Behavior Change
 
 The participant registry now creates object identities for the current F form
