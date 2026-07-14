@@ -36,6 +36,73 @@ function fakeImgui.surface(overrides)
         record(imgui, "SameLine")
     end
 
+    function imgui.AlignTextToFramePadding()
+        record(imgui, "AlignTextToFramePadding")
+    end
+
+    function imgui.PushItemWidth(width)
+        record(imgui, "PushItemWidth", width)
+    end
+
+    function imgui.PopItemWidth()
+        record(imgui, "PopItemWidth")
+    end
+
+    function imgui.GetWindowDrawList()
+        record(imgui, "GetWindowDrawList")
+        return {}
+    end
+
+    function imgui.GetStyle()
+        record(imgui, "GetStyle")
+        return {
+            FramePadding = { x = 4 },
+            ItemInnerSpacing = { x = 4 },
+        }
+    end
+
+    function imgui.GetItemRectMin()
+        record(imgui, "GetItemRectMin")
+        return 10, 20
+    end
+
+    function imgui.GetItemRectMax()
+        record(imgui, "GetItemRectMax")
+        return 250, 44
+    end
+
+    function imgui.CalcTextSize(text)
+        record(imgui, "CalcTextSize", text)
+        return string.len(tostring(text)) * 8, 16
+    end
+
+    function imgui.GetFrameHeight()
+        record(imgui, "GetFrameHeight")
+        return 20
+    end
+
+    function imgui.GetColorU32(r, g, b, a)
+        record(imgui, "GetColorU32", r, g, b, a)
+        return {
+            r = r,
+            g = g,
+            b = b,
+            a = a,
+        }
+    end
+
+    function imgui.PushClipRect(minX, minY, maxX, maxY, intersect)
+        record(imgui, "PushClipRect", minX, minY, maxX, maxY, intersect)
+    end
+
+    function imgui.ImDrawListAddText(drawList, x, y, color, text)
+        record(imgui, "ImDrawListAddText", drawList, x, y, color, text)
+    end
+
+    function imgui.PopClipRect()
+        record(imgui, "PopClipRect")
+    end
+
     function imgui.BeginChild(label, width, height, border)
         record(imgui, "BeginChild", label, width, height, border)
         return true
@@ -50,8 +117,8 @@ function fakeImgui.surface(overrides)
         return false
     end
 
-    function imgui.BeginCombo(label, preview)
-        record(imgui, "BeginCombo", label, preview)
+    function imgui.BeginCombo(label, preview, flags)
+        record(imgui, "BeginCombo", label, preview, flags)
         append(lines, tostring(label) .. ": " .. tostring(preview))
         return false
     end

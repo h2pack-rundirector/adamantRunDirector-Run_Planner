@@ -3,6 +3,8 @@ local presentationColors = import("mods/ui/planner/presentation_colors.lua")
 local widgets = {}
 
 local IMGUI_COL_TEXT = 0
+local IMGUI_COMBO_FLAGS_NONE = 0
+local DEFAULT_DROPDOWN_WIDTH = 240
 
 ---@class PlannerDropdownProvider
 ---@field values table
@@ -119,6 +121,46 @@ local function showTooltip(imgui, message)
     end
 end
 
+local function splitControlLabel(label)
+    local text, id = tostring(label):match("^(.-)##(.+)$")
+    if id ~= nil then
+        return text, id
+    end
+    return tostring(label), tostring(label)
+end
+
+local function drawControlLabel(imgui, labelText)
+    if labelText == "" then
+        return
+    end
+    imgui.AlignTextToFramePadding()
+    widgets.text(imgui, labelText)
+    widgets.sameLine(imgui)
+end
+
+local function drawComboPreviewText(imgui, previewText, previewColor)
+    local drawList = imgui.GetWindowDrawList()
+    local style = imgui.GetStyle()
+    local rectMinX, rectMinY = imgui.GetItemRectMin()
+    local rectMaxX, rectMaxY = imgui.GetItemRectMax()
+    local _, textHeight = imgui.CalcTextSize(previewText)
+    local framePaddingX = style.FramePadding.x
+    local itemInnerSpacingX = style.ItemInnerSpacing.x
+    local arrowWidth = imgui.GetFrameHeight()
+    local textMinX = rectMinX + framePaddingX
+    local textMaxX = rectMaxX - arrowWidth - itemInnerSpacingX
+    local textPosY = rectMinY + math.max(((rectMaxY - rectMinY) - textHeight) * 0.5, 0)
+
+    if textMaxX <= textMinX then
+        return
+    end
+
+    local colorU32 = imgui.GetColorU32(previewColor[1], previewColor[2], previewColor[3], previewColor[4] or 1)
+    imgui.PushClipRect(textMinX, rectMinY, textMaxX, rectMaxY, true)
+    imgui.ImDrawListAddText(drawList, textMinX, textPosY, colorU32, previewText)
+    imgui.PopClipRect()
+end
+
 local function selectableId(provider, index, candidate)
     return widgets.choiceLabel(provider, index, candidate) .. "##" .. tostring(index)
 end
@@ -142,10 +184,18 @@ function widgets.dropdown(imgui, label, value, provider)
 
     local nextValue = value
     local changed = false
+    local labelText, controlId = splitControlLabel(label)
     local previewText, previewColor, previewMessage = widgets.previewState(provider, value)
-    local previewPushed = pushTextColor(imgui, previewColor)
-    local opened = imgui.BeginCombo(label, previewText)
-    popTextColor(imgui, previewPushed)
+    drawControlLabel(imgui, labelText)
+    imgui.PushItemWidth(DEFAULT_DROPDOWN_WIDTH)
+    local opened = imgui.BeginCombo(
+        "##" .. controlId,
+        previewColor and "" or previewText,
+        IMGUI_COMBO_FLAGS_NONE
+    )
+    if previewColor ~= nil then
+        drawComboPreviewText(imgui, previewText, previewColor)
+    end
     showTooltip(imgui, previewMessage)
 
     if opened then
@@ -164,6 +214,7 @@ function widgets.dropdown(imgui, label, value, provider)
         end
         imgui.EndCombo()
     end
+    imgui.PopItemWidth()
     return nextValue, changed
 end
 

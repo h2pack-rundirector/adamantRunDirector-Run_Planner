@@ -210,6 +210,6 @@ function TestDebugHarness.testDrawTabIncludesRoomOfferSurface()
 
         local combined = table.concat(lines, "\n")
         lu.assertNotNil(combined:find("Room offer 1 / shop", 1, true))
-        lu.assertNotNil(combined:find("Room reward##routeUnderworld_biome1_room2_offerPoint1_offer1_rewardType", 1, true))
+        lu.assertNotNil(combined:find("##routeUnderworld_biome1_room2_offerPoint1_offer1_rewardType", 1, true))
     end)
 end
