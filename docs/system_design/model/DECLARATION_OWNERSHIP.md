@@ -198,10 +198,11 @@ Structure must not copy room facts from the room catalog. If it needs a room's
 label, eligibility, force window, reward profile, or tags, it should reference
 the room catalog by key.
 
-## Room-Kind Modules
+## Room Template Modules
 
-Room-kind modules are reusable local interpreters/renderers. They are not biome
-declarations.
+Room template modules are reusable occurrence interpreters/controls. They are
+not biome declarations and are not globally instantiated once per game room
+key.
 
 Examples:
 
@@ -216,10 +217,14 @@ Examples:
 
 They own:
 
-- local form schema;
+- occurrence-local storage schema and nested control behavior;
 - typed room-state materialization;
 - local encounter event emission;
 - local offer-point emission.
+
+The Biome Plan resolves the template from the node's room declaration and
+creates a cached logical control for that `nodeId`. Two occurrences referencing
+the same declaration receive independent state through the same template.
 
 The room declaration points at the module:
 

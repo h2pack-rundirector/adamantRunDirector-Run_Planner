@@ -1,5 +1,12 @@
 # 2026-07-09 Feedback Implementation Spec
 
+> **Superseded on 2026-07-13.** This is a historical implementation log for
+> route-indexed form participants and the discarded global `PlannerDraft` UI.
+> Do not continue its slices. Current completeness, addressing, candidate, and
+> feedback contracts are defined by
+> `../system_design/ui/FORM_FEEDBACK_CONTRACT.md` and
+> `../system_design/ui/BIOME_PLAN_CONTROL_MODEL.md`.
+
 ## Progress Log
 
 Newest entries should be added at the top of this section.

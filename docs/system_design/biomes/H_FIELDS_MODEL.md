@@ -18,7 +18,7 @@ combat rooms.
 
 ## Linear Shape
 
-H is authored as concrete room nodes:
+H is authored as concrete topology occurrences:
 
 ```text
 fixed intro/opening
@@ -58,6 +58,10 @@ H_Combat04 = {
 `maxCageRewards` is map capacity. It says how many cage rewards that target
 combat map can support. It does not say which 2-vs-3 door roll happened for
 the current generated-door batch.
+
+Each generated `FieldsCombat` occurrence owns authored reward slots up to that
+declared capacity. The parent outgoing batch's cage roll decides how many of
+those slots become visible for that occurrence.
 
 Miniboss and Echo/bridge rooms are ordinary concrete rooms with eligibility
 and force metadata from game data:
@@ -122,8 +126,8 @@ else
 end
 ```
 
-Every generated door that targets a `FieldsCombat` room receives a cage offer
-point with the same derived `visibleCageCount`:
+Every generated door that targets a `FieldsCombat` occurrence receives a cage
+offer point with the same derived `visibleCageCount`:
 
 ```lua
 {
@@ -183,8 +187,8 @@ If batch capacity is 2:
 visible 2 may be min branch or max branch clamped by capacity
 ```
 
-Because the fresh model aims to avoid hidden guessing, the form should expose
-the batch's door roll directly:
+Because the fresh model aims to avoid hidden guessing, the outgoing-batch
+control should expose the batch's door roll directly:
 
 ```text
 Door Roll: Min / Max
@@ -211,7 +215,8 @@ contract is defined in `../validation/FORCE_PRESSURE_MODEL.md`.
 H needs:
 
 - concrete room catalog;
-- `FieldsCombat` target-room capacity;
+- `FieldsCombat` occurrence controls with target-room capacity and reward
+  slots;
 - generic `GeneratedDoorBatch`;
 - `FieldsCageBatch` batch rule and batch state;
 - a validator-visible `FieldsMaxDoorsRolled` counter;

@@ -47,8 +47,8 @@ A configured biome must be complete as one unit:
 rooms
 + generated doors
 + offer points
-+ acquired flags
-+ room-kind local state
++ independent acquisition choices where the topology does not derive them
++ room-template local state
 = complete configured biome
 ```
 
@@ -62,16 +62,16 @@ This is required because rewards and structure are not separable in the game:
 - N hub rewards are generated as one batch before selected pylon traversal;
 - unselected generated-door rewards can deplete reward bags.
 
-## Draft Versus Complete
+## Editable Versus Complete
 
-The form may support draft workflow. A user can fill rooms first and rewards
-later.
+Biome Plan controls support incomplete workflow. A user can fill topology first
+and rewards later.
 
-But a draft biome is not canonical history input:
+But incomplete control state is not canonical history input:
 
 ```text
-incomplete form => no canonical biome plan
-complete form => canonical biome plan
+incomplete Biome Plan => no canonical biome plan
+complete Biome Plan => canonical biome plan
 ```
 
 The builder should only consume complete configured biomes.
@@ -86,12 +86,12 @@ validation should stop at the configured route prefix.
 
 ## Validation Boundary
 
-Form completion checks whether all required data exists.
+Control completeness checks whether all required data exists.
 
 Validators check whether the complete data is legal:
 
 ```text
-form: is every required room/door/offer field filled?
+control: is every required room/door/offer field filled?
 validator: could the game generate this complete route prefix?
 ```
 

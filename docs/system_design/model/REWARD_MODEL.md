@@ -33,7 +33,7 @@ Rewards use these separate concepts:
 `TalentDrop`.
 
 `Reward Store`
-: A unique option domain used by forms and offer-domain validation. Stores
+: A unique option domain used by controls and offer-domain validation. Stores
 answer "can this surface ever offer this reward type?"
 
 `Reward Bag`
@@ -94,7 +94,7 @@ RunProgressStore = {
 }
 ```
 
-Forms use stores to render available reward-type options. Store membership is
+Reward controls use stores to render available reward-type options. Store membership is
 only the first layer of validity.
 
 ### Bags
@@ -261,8 +261,8 @@ Some reward types need payload:
 : must eventually resolve to the acquired loot type if the planner wants to
 validate downstream loot history precisely.
 
-Payload completeness belongs to the reward form leaf. Payload legality belongs
-to validation.
+Payload completeness belongs to the occurrence's reward control. Payload
+legality belongs to validation.
 
 Example Devotion offer:
 
@@ -370,28 +370,30 @@ RequiredNotInStore(name)
 The query layer should avoid planner-only names when the game has a clear
 counter or ledger name.
 
-## Form Contract
+## Reward Control Contract
 
-Reward forms are leaf participants.
+Reward components are owned by their containing occurrence control.
 
-Each reward form should provide:
+Each reward component should provide:
 
 - `isComplete`;
 - `render`;
 - `reset`;
-- `snapshot`;
+- `materialize`;
+- `exportCandidates`;
 - `applyFeedback`.
 
-The snapshot emits canonical offer data only when complete. UI conveniences
+Materialization emits canonical offer data only when complete. UI conveniences
 such as `MajorMinor` are local authoring helpers. They must resolve to concrete
 store and reward facts before entering history.
 
-Form incompleteness is local form feedback. A complete-but-invalid reward is
-history/validator feedback.
+Control incompleteness is local completeness feedback. A complete-but-invalid
+reward is history/validator feedback.
 
 ## Feedback Contract
 
-History entries should carry stable form addresses for generated offers.
+History entries carry semantic source and topology location for generated
+offers.
 
 The validator emits game-domain findings, such as:
 
@@ -399,8 +401,8 @@ The validator emits game-domain findings, such as:
 offer at this history point cannot satisfy LateHammerLootRequirements
 ```
 
-Feedback maps that finding back to the owning reward form leaf. The feedback
-layer should not need to infer UI structure from reward type strings.
+Feedback maps that finding back to the owning Biome Plan occurrence and reward
+component. It does not infer UI structure from reward type strings.
 
 ## Deferred / Unsupported Inputs
 

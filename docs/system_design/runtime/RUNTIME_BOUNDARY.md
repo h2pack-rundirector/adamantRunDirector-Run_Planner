@@ -92,8 +92,8 @@ rewardInstruction = {
 }
 ```
 
-The compiler can derive stable lookup keys from history phases and source
-addresses, but it should not invent new route semantics.
+The compiler can derive stable lookup keys from history phases, semantic
+sources, and topology locations, but it should not invent new route semantics.
 
 ## Runtime Hook Responsibilities
 
@@ -179,7 +179,7 @@ History facts should map mechanically into runtime instructions.
 : shop option instructions and bought/unbought state for diagnostics.
 
 Runtime should primarily consume offer and generated-door histories. It should
-not need to inspect form drafts.
+not need to inspect Biome Plan storage.
 
 ## Reward Runtime Rules
 

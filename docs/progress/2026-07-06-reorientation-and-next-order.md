@@ -1,5 +1,9 @@
 # 2026-07-06 Reorientation And Next Order
 
+> **Historical checkpoint.** Its completed-work inventory remains useful, but
+> its proposed UI order is superseded by
+> `2026-07-13-biome-plan-ui-redesign.md` and the current system-design UI docs.
+
 ## Purpose
 
 This note reorients the fresh planner work after the first route spine,

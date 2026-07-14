@@ -17,7 +17,7 @@ unknowable, or too expensive to represent.
 
 ## Generic Linear Shape
 
-Linear biomes are authored as concrete room nodes:
+Linear biomes are authored as concrete topology occurrences:
 
 ```text
 start-kind room
@@ -25,8 +25,8 @@ start-kind room
 -> generated preboss room
 ```
 
-The form only requires complete concrete data. It does not decide whether the
-route is legal.
+The Biome Plan and nested controls require complete concrete data. They do not
+decide whether the route is legal.
 
 A preboss target at room 2 can be a complete snapshot if all fields are filled.
 The builder can materialize that history. The validator rejects it if preboss

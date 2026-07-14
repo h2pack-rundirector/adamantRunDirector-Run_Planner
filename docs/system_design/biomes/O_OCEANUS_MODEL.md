@@ -2,10 +2,10 @@
 
 ## Purpose
 
-O should use the same route, form, history, validation, and feedback pipeline
+O should use the same route, control, history, validation, and feedback pipeline
 as other non-N biomes. Its special behavior belongs inside the combat room
-leaf because O combat rooms contain multiple encounters inside one physical
-room.
+nested control because O combat occurrences contain multiple encounters inside
+one physical room.
 
 The important distinction is:
 
@@ -41,7 +41,7 @@ The O room catalog should define concrete game rooms:
 - fountain/trial/miniboss rooms where applicable;
 - preboss room.
 
-Combat rooms point at a ship-specific room-kind leaf:
+Combat rooms point at a ship-specific room template:
 
 ```lua
 O_Combat03 = {
@@ -55,10 +55,11 @@ O_Combat03 = {
 }
 ```
 
-The room declaration owns room eligibility and exits. The `ShipCombat` leaf
-owns the room-internal encounter sequence and wheel offer points.
+The room declaration owns room eligibility and exits. Each `ShipCombat`
+occurrence control owns its room-internal encounter sequence and wheel offer
+points.
 
-## ShipCombat Leaf
+## ShipCombat Occurrence Control
 
 An O combat room is one physical room with an encounter sequence:
 
@@ -94,7 +95,7 @@ roomState = {
 
 The third encounter is optional and is controlled by game conditions such as
 `BiomeEncounterDepth`. Because that condition observes a normal timeline
-counter, it belongs in the combat leaf's encounter-sequence rules.
+counter, it belongs in the template interpreter's encounter-sequence rules.
 
 ## Room And Encounter Timing
 
@@ -184,9 +185,9 @@ Examples of the intended ownership:
 - story/shop requirements read `BiomeDepthCache` and `BiomeEncounterDepth`;
 - force behavior belongs to the room declaration;
 - preboss is a concrete terminal room;
-- room legality is rejected by validation, not by form completion.
+- room legality is rejected by validation, not by control completeness.
 
-The form can author a complete but illegal O state. The history builder should
+The occurrence control can author a complete but illegal O state. The history builder should
 materialize it, and the validator should reject it with game-domain findings.
 
 ## Boundary
@@ -194,7 +195,7 @@ materialize it, and the validator should reject it with game-domain findings.
 O needs:
 
 - concrete room catalog;
-- `ShipCombat` room-kind leaf;
+- `ShipCombat` occurrence template/control;
 - room/encounter timeline separation;
 - wheel offer-point state;
 - normal force/eligibility/preboss validation.

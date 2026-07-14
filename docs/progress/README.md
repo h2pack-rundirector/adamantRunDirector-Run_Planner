@@ -2,6 +2,12 @@
 
 This folder records implementation progress for the fresh planner rewrite.
 
+Current checkpoint:
+
+- `2026-07-13-biome-plan-ui-redesign.md`: architecture is locked and docs are
+  ready for a clean Biome Plan UI rewrite; production implementation has not
+  started.
+
 Use it for:
 
 - checkpoints already completed;

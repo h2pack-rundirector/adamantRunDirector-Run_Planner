@@ -8,18 +8,19 @@ biome-specific leaves and reward-bag precision without reintroducing the old
 row-based architecture.
 
 This is not a release plan. It is the order that should keep the data model,
-forms, history, validation, feedback, and runtime boundaries aligned while the
+controls, history, validation, feedback, and runtime boundaries aligned while the
 fresh implementation is built.
 
 ## Ordering Rules
 
 Use these rules when deciding whether a slice is ready:
 
-- declarations define game facts before forms render them;
-- forms produce complete canonical snapshots before history consumes them;
+- declarations define game facts before controls render them;
+- Biome Plan controls produce complete canonical snapshots before history
+  consumes them;
 - history materializes game events before validation evaluates legality;
 - validation owns game legality and candidate policy;
-- feedback translates validator output back to form-owned controls;
+- feedback translates validator output back to semantic control owners;
 - runtime consumes validated execution plans only;
 - no layer should invent fallback rooms, fallback rewards, or guessed defaults.
 
@@ -33,7 +34,7 @@ Create the fresh-start module skeleton and test harness before porting behavior.
 Deliverables:
 
 - fresh module entry points separated from the old row-based route engine;
-- test fixtures for declaration parsing, form snapshots, history output, and
+- test fixtures for declaration parsing, Biome Plan snapshots, history output, and
   validation output;
 - invariant helpers that fail loudly for malformed internal contracts;
 - docs linked from the implementation work area.
@@ -67,29 +68,32 @@ metadata and labels.
 Success check:
 
 - declaration tests can load the route order, room catalogs, reward catalogs,
-  and requirements without consulting forms or history.
+  and requirements without consulting controls or history.
 
-## Phase 2: Form Primitives And Canonical Snapshots
+## Phase 2: Biome Plan Controls And Canonical Snapshots
 
-Build the form contract before building the history walker.
+Build the occurrence/control contract before building the history walker.
 
 Deliverables:
 
-- common form participant interface: render, reset, completion check, snapshot;
+- one Lib control per declared route-biome occurrence;
+- normalized topology storage with stable `nodeId` occurrence identity;
+- cached nested node and outgoing-batch control interfaces;
 - common candidate-provider interface with stable values and mutable
   hidden/color/message arrays;
-- structured form addresses for rooms, generated doors, reward offers, payloads,
-  and room-kind local state;
+- semantic source plus topology location for rooms, generated doors, reward
+  offers, payloads, and room-template local state;
 - canonical snapshot emission only after local completion succeeds;
 - no Auto/Vanilla/unknown values in complete snapshots.
 
 This phase should not decide whether a completed choice is legal in the game.
-It only decides whether the form has enough concrete data to build history.
+It only decides whether the controls have enough concrete data to build history.
 
 Success check:
 
-- an incomplete form stops at local completion feedback;
-- a complete form emits concrete room, door, reward, and payload keys without
+- an incomplete nested control stops at local completion feedback;
+- a complete Biome Plan emits concrete room, door, reward, and payload keys
+  without
   defaulting blanks to the first option.
 
 ## Phase 3: First Vertical Slice: One Linear Biome
@@ -99,13 +103,13 @@ Use one simple linear biome, preferably F / Erebus, to prove the full spine.
 Deliverables:
 
 - concrete F room declarations sufficient for a configured prefix of one biome;
-- form UI for current room, generated next doors, selected door, and reward
+- Biome Plan UI for current room, generated next doors, selected door, and reward
   offers;
 - history builder for physical rooms, generated doors, reward offer points,
   acquired loot, lifecycle counters, and source addresses;
 - structural validator for room existence, room eligibility, force pressure,
   max creations, structured exits, and terminal/preboss legality;
-- feedback translator that colors room and reward candidates and emits route
+- feedback routing that colors room and reward candidates and emits route
   status messages.
 
 Keep rewards at store/domain legality first. Do not implement full bag
@@ -114,7 +118,7 @@ depletion in this phase.
 Success check:
 
 - F can be configured as a complete route prefix;
-- invalid room choices are reported by validation, not by form heuristics;
+- invalid room choices are reported by validation, not by control heuristics;
 - candidate colors come from validator feedback;
 - golden history tests show the expected room lifecycle phases.
 
@@ -130,7 +134,8 @@ Deliverables:
 - Q deterministic door structure represented as data, not a special engine;
 - force and max-creation validation shared across all linear biomes.
 
-Do not add biome-specific route engines for these biomes.
+Do not add biome-specific route engines for these biomes. Use the generic
+topology walker and registered room-template interpreters.
 
 Success check:
 
@@ -221,7 +226,7 @@ Deliverables:
 - hub generated-door count of 9 or 10;
 - explicit selected pylon order, exactly six selected pylons;
 - pylon materializers for combat, miniboss, and story rooms;
-- side-room state only on selected pylons;
+- occurrence-local pylon and side-room state for all generated pylons;
 - hub reward batch generated at hub entry;
 - physical history entries for hub returns, side rooms, and pylon restores.
 
@@ -232,7 +237,7 @@ Success check:
 
 - N validation walks the same history and candidate feedback architecture;
 - hub reward generation is one batch at hub entry;
-- side-room controls do not require a separate form pipeline.
+- side-room controls do not require a separate control pipeline.
 
 ## Phase 9: Route Scope And Multi-Biome History
 
@@ -283,7 +288,7 @@ history is authoritative.
 Deliverables:
 
 - NPC/feature declarations using the same requirement DSL;
-- form participants with completion and candidate-provider contracts;
+- semantic controls with completion and candidate-provider contracts;
 - history events for spawned/entered/used feature facts;
 - validation through route history, not separate row lists.
 
@@ -291,7 +296,7 @@ Success check:
 
 - NPC/feature timing checks use the same event-distance queries as reward and
   room validation;
-- feature forms do not mutate room history directly.
+- feature controls do not mutate room history directly.
 
 ## Phase 12: Chaos Detours
 
@@ -338,7 +343,7 @@ The smallest useful checkpoint is not a full route. It is:
 
 ```text
 F declarations
-+ complete F form snapshot
++ complete F Biome Plan snapshot
 + F history ledger
 + structural validation
 + candidate feedback
@@ -347,7 +352,7 @@ F declarations
 That proves the architecture loop:
 
 ```text
-declarations -> form -> canonical snapshot -> history -> validation -> feedback
+declarations -> controls -> canonical snapshot -> history -> validation -> feedback
 ```
 
 Reward bags, N, NPCs, features, Chaos, and runtime should wait until this loop
@@ -359,7 +364,7 @@ is stable enough that new mechanics plug into it instead of reshaping it.
 - `../model/CONFIGURED_SCOPE.md` owns route-prefix scope.
 - `../model/DECLARATION_OWNERSHIP.md` owns declaration boundaries.
 - `../pipeline/TIMELINE_EVENTS.md` owns lifecycle phases and counters.
-- `../ui/FORM_FEEDBACK_CONTRACT.md` owns form and feedback contracts.
+- `../ui/FORM_FEEDBACK_CONTRACT.md` owns completeness and feedback contracts.
 - `../ui/UI_IMPLEMENTATION_ORDER.md` owns production UI build order.
 - `../validation/VALIDATION_MODEL.md` owns validation and candidate flow.
 - `../validation/REQUIREMENTS_DSL.md` owns predicate language.

@@ -5,7 +5,7 @@
 N should participate in the same fresh-start pipeline as the other biomes:
 
 ```text
-form snapshot
+Biome Plan control
 -> canonical plan
 -> history ledger
 -> validators
@@ -32,9 +32,9 @@ N_Opening
 -> N_Hub
 ```
 
-The route form does not need to model these as ordinary editable room picks.
-Layout/structure declares them as fixed physical rooms that are materialized
-before hub door generation.
+The Biome Plan materializes these as fixed topology occurrences rather than
+ordinary editable room picks. Layout/structure declares them before hub door
+generation.
 
 ## Hub Generated Doors
 
@@ -49,11 +49,11 @@ Canonical shape:
 ```lua
 roomNode = {
     roomKey = "N_Hub",
-    roomState = {
-        kind = "EphyraHub",
-        hubDoorCount = 10,
-    },
     generatedDoors = {
+        batchRule = "EphyraHubBatch",
+        batchState = {
+            hubDoorCount = 10,
+        },
         selection = {
             mode = "orderedSubset",
             requiredCount = 6,
@@ -77,8 +77,9 @@ roomNode = {
 ```
 
 `hubDoorCount` is explicit user-authored data. The UI should expose whether the
-hub generated 9 or 10 doors. The completed plan must then provide that many
-concrete generated doors.
+hub generated 9 or 10 doors. It belongs to the hub occurrence's outgoing batch
+because it determines the peer set. The completed plan must then provide that
+many concrete generated doors.
 
 The hub UI should be hard-structured around these doors:
 
@@ -178,7 +179,8 @@ N_Opening
 
 This is the N equivalent of the authored room stream in linear biomes.
 
-The form is hub-shaped, but the history builder sees a deterministic stream:
+The Biome Plan editor is hub-shaped, but the history builder sees a
+deterministic stream:
 
 ```text
 sort hub visits by visitOrder
@@ -226,12 +228,17 @@ N_MiniBossXX
 -> N_Hub return
 ```
 
-The canonical plan stores the selected pylon door and any pylon-local state.
-The history builder emits the deterministic restore/hub-return physical entries.
+The canonical plan stores every generated pylon occurrence and its pylon-local
+state. The history builder emits deterministic restore/hub-return physical
+entries only for occurrences selected in the ordered visit subset.
 
 ## Pylon Room State
 
 N pylon room kinds own their local state.
+
+This state is occurrence-local and exists for selected and unselected generated
+pylons. Unselected pylons remain complete dead leaves: their offers participate
+in the hub batch, but their side-room traversal does not enter history.
 
 Combat pylons may contain side-room child state:
 
@@ -279,19 +286,19 @@ fixed intro sequence
 Preboss termination is based on selected pylon count, not on total generated
 hub door count.
 
-## History Source Addresses
+## History Source And Location
 
-History entries emitted from N materialization should carry source addresses
-back to the authored participant:
+History entries emitted from N materialization carry semantic source and
+topology location back to the owning control:
 
-- hub-generated door findings target the hub door participant;
-- pylon room findings target the selected pylon room/door participant;
-- side-room findings target the pylon room's side-room child participant;
+- hub-generated door findings target the hub outgoing batch and door;
+- pylon room findings target the pylon occurrence `nodeId`;
+- side-room findings target the owning pylon occurrence and semantic child;
 - derived restore and hub-return entries point back to the pylon room that
   caused them.
 
-Validators still consume the history ledger only. Feedback uses source
-addresses to return findings to the correct form participant.
+Validators still consume the history ledger only. Feedback uses source and
+location to resolve the Biome Plan and nested semantic owner.
 
 ## Boundary
 

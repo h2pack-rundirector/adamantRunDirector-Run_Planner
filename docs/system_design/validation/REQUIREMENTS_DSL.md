@@ -550,6 +550,15 @@ Creation cap:
 }
 ```
 
+This checks room creations, not entered-room history. Every generated target
+increments the count when its room is created for an offered door, including
+unselected peers. Doors in the same batch are evaluated in game generation
+order, so an earlier peer can exhaust the cap for a later peer.
+
+The predicate applies only when the room declaration supplies an explicit
+`MaxCreationsThisRun`. Ordinary combat rooms without that declaration may
+repeat; the planner must not infer a universal cap of one from their room key.
+
 ### `RoomEnteredHistory`
 
 Prior entered-room checks:

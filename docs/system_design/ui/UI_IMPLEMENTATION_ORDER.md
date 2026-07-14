@@ -1,440 +1,303 @@
-# UI Implementation Order
+# Biome Plan UI Rewrite Order
 
 ## Purpose
 
-This document turns the form/feedback contract into an implementation path for
-the production planner UI.
+This document defines the implementation sequence for replacing the current
+planner UI with the Biome Plan control model.
 
-The system-design docs define the model. This document defines the order and
-the control-layer boundaries that should keep the UI from recreating the old
-row-template architecture.
-
-The production UI should be a thin editor over explicit route data:
+The rewrite is intentionally clean. Existing row-oriented panels, a global
+`PlannerDraft`, and detached form-participant state are reference material for
+visible behavior only. They are not compatibility contracts.
 
 ```text
-draft form -> complete snapshot -> history -> validation -> feedback
+static route-biome controls
+-> dynamic occurrence tree inside each control
+-> canonical materialization
+-> history and validation
+-> semantic feedback
+-> low-allocation draw
 ```
 
-It should not be a route engine.
+## Preconditions
 
-## Production UI Responsibilities
+Before production UI work begins, lock these contracts:
 
-The UI layer owns:
+- occurrence identity is `nodeId`, not game room key;
+- one Biome Plan Lib control exists per declared route-biome occurrence;
+- the selected parent owns one outgoing batch and all peer doors;
+- generated unselected peers are complete dead leaves;
+- room templates own occurrence-local schema and behavior;
+- batch decisions live on the parent batch;
+- route order lives outside Biome Plan persistence;
+- canonical plans contain concrete game decisions, not UI roles;
+- validation uses semantic source plus topology location;
+- Lib profile/reset/resync paths produce one derived-state invalidation signal.
 
-- editable draft state;
-- local form completeness;
-- stable option and candidate provider tables;
-- explicit reset behavior when parent choices change;
-- visual application of feedback markers;
-- low-allocation draw behavior.
+Game-data gaps should be recorded explicitly. They must not be filled with a
+convenient uniqueness or fallback rule.
 
-The UI layer does not own:
+## Production Boundaries
 
-- route legality;
-- room eligibility at a generated depth;
-- force pressure;
-- reward legality;
-- reward bag depletion;
-- runtime execution-plan interpretation.
+ModpackLib remains the host for module registration, storage, controls,
+profiles, navigation, commits, and trusted ImGui context.
 
-If a control needs route context to decide whether a value is legal, that
-answer should come from validation feedback, not from local draw code.
-
-## Lib And Control Constraints
-
-The planner UI is a hot path. Draw code should assume it may be called often
-and should avoid table creation, option reshaping, or route validation during
-draw.
-
-ModpackLib remains the production host and root infrastructure. It provides the
-UI context, trusted ImGui surface, nav helpers, module storage/control
-registration, and commit lifecycle. Planner room, reward, door, and payload
-leaves are not top-level Lib controls because their count and shape are dynamic.
-They are form participants owned by the planner UI graph.
-
-Planner leaf widgets are custom planner widgets unless a Lib widget can be used
-without changing draft ownership. Public Lib widgets are appropriate for true
-Lib storage fields, route-shell selection fields, or UI-only transient state.
-They should not force route draft leaves into persistent or transient storage
-just to satisfy a widget binding contract.
-
-If the planner needs behavior already present in Lib widgets, such as colored
-dropdown previews or hidden choices, implement the minimal behavior in
-`mods/ui/planner/widgets.lua` or add a deliberate adapter layer. Any adapter must
-still call the owning form mutator for draft edits and must not write route draft
-storage rows directly from a leaf widget.
-
-Control rules:
-
-- candidate value arrays and labels are stable objects owned by the form
-  participant;
-- hidden, color, and message arrays are mutable draw-state owned by the same
-  participant;
-- feedback mutates draw-state arrays during rebuild, not during draw;
-- draw helpers read prepared state and call explicit mutators for user edits;
-- mutators mark the smallest practical dirty scope;
-- widget labels and IDs are stable and scoped so repeated leaf instances do not
-  collide;
-- tests use explicit fake RoM/Lib/ImGui draw surfaces when they need text
-  capture or interaction assertions.
-
-Draw helpers may be shared, but they should not hide route state mutation. A
-helper that changes draft data should do so through an explicit mutator passed
-by the owning form.
-
-## Host Trust Boundary
-
-Run Planner production UI is hosted by RoM and ModpackLib. The module is not
-expected to load without RoM, Lib, ImGui, or the game globals/functions the pack
-declares as hard dependencies.
-
-After UI context construction, production draw code may call these surfaces
-directly:
-
-- `ctx.draw.imgui`;
-- `ctx.draw.nav`;
-- `ctx.data`;
-- `ctx.controls`;
-- game global/function surfaces consumed by runtime hooks.
-
-Missing host APIs or malformed internal services should fail loudly at the
-boundary that constructed them. Do not add `pcall`, missing-method probes, or
-text fallbacks inside hot draw paths for trusted RoM/Lib/ImGui/game surfaces.
-Optional domain data can still be represented as `nil` where the planner model
-allows it, such as no stored active tab, no candidate feedback message, or no
-optional reward payload field.
-
-## Folder Shape
-
-The exact names can change, but the split should stay close to this:
+Planner boundaries are:
 
 ```text
+route shell
+  -> route aggregate
+      -> Biome Plan controls
+          -> topology and outgoing batch controls
+          -> registered nested room-template controls
+              -> reusable reward/payload/encounter/shop components
+```
+
+Dynamic node and batch controls are cached logical objects backed by the parent
+Biome Plan's storage. They are not registered independently with Lib.
+
+The host surface is trusted after construction. Missing RoM, Lib, ImGui, game
+APIs, declarations, or registered templates fail at their contact boundary.
+Do not scatter `pcall`, method probes, or fallback draw paths through the hot
+path.
+
+## Suggested Folder Shape
+
+Exact filenames may change, but ownership should remain visible:
+
+```text
+src/mods/controls/
+  biome_plan.lua
+  topology.lua
+  outgoing_batch.lua
+  room_templates/
+    registry.lua
+    standard_combat.lua
+    fields_combat.lua
+    ship_combat.lua
+    ephyra_combat.lua
+    shop.lua
+
 src/mods/ui/planner/
-  state.lua          -- draft state, dirty flags, cached evaluation
-  options.lua        -- shared stable option/catalog helpers
-  widgets.lua        -- low-level dropdown/checkbox/status wrappers
-  route_selection.lua -- active route/biome storage helpers
-  route_nav.lua      -- route tabs and biome nav drawing
-  route_shell.lua    -- top-level planner tab orchestration
+  state.lua
+  options.lua
+  widgets.lua
+  route_selection.lua
+  route_nav.lua
+  route_shell.lua
 
 src/mods/ui/biomes/
-  registry.lua       -- route/biome to panel dispatch
-  placeholder_panel.lua -- explicit placeholder for unimplemented biomes
-  f_erebus_panel.lua -- F/Erebus biome panel composition
-
-src/mods/ui/forms/
-  route.lua
-  biome.lua
-  room.lua
-  generated_door.lua
-  offer_point.lua
-  reward_offer.lua
-  payload/
-    boon.lua
-    devotion.lua
+  registry.lua
+  biome_plan_panel.lua
+  fields_extensions.lua
+  ephyra_extensions.lua
+  tartarus_extensions.lua
 ```
 
-Form files own domain draft shape and local completion. Planner files own
-application state, rebuild scheduling, and top-level composition.
-
-Avoid rebuilding biome-sized route templates. Biomes should compose room,
-generated-door, offer-point, and payload leaves.
+The generic biome panel draws topology and dispatches to registered node/batch
+owners. Biome extension modules contribute true biome-scoped or batch behavior;
+they do not copy general room/reward editors.
 
 ## Composition And Dependency Policy
 
-UI composition should be local, explicit, and layered.
-
-Each level composes only one level below it. The UI root should not wire every
-leaf form, and leaf forms should not reach upward to route-shell state except
-through the planner state and context values passed to their draw calls.
-
-Use `create(deps)` when a module returns a composed service or instance that
-holds collaborators:
+Use explicit construction for orchestrators that retain collaborators:
 
 ```text
 ui.create(...)
-  -> route_shell.create(...)
-       -> route_nav.create(...)
-       -> biomes.registry.create(...)
-            -> f_erebus_panel.create(...)
-                 -> room-form layer
+-> route_shell.create(...)
+-> route_aggregate.create(...)
+-> biome_plan_registry.create(...)
+-> room_template_registry.create(...)
 ```
 
-Good `create(deps)` candidates are orchestration modules:
+Passed dependency tables remain caller-owned and read-only. A constructor that
+needs additional services returns a new object; it does not mutate the passed
+table.
 
-- `ui.lua`, which owns the production UI graph and planner state instance;
-- `route_shell.lua`, which owns the planner tab shell and delegates route
-  layout;
-- `route_nav.lua`, which owns route tabs, biome navigation, and route-selection
-  storage helpers;
-- `ui/biomes/registry.lua`, which owns route/biome panel dispatch;
-- biome panels such as `f_erebus_panel.lua`, when their child form graph becomes
-  large enough to benefit from explicit construction.
-
-Use ENVY-style dependency modules, such as `local deps = ...`, for stateless
-modules where a dependency boundary is useful but no per-instance service is
-needed. This is appropriate for helper-like modules or leaves only when their
-dependencies are loaded by a known composer.
-
-Direct imports remain acceptable for stable pure helpers and simple leaf forms.
-Do not force constructor plumbing into every form just to remove imports. Move a
-leaf to dependency injection when it becomes a composition boundary, needs
-replaceable collaborators in focused tests, or starts obscuring ownership.
-
-Composition rules:
-
-- parent modules may compose direct children, but should not compose
-  grandchildren;
-- child modules may compose their own immediate leaves;
-- services should be returned explicitly from `create(deps)` rather than added
-  by mutating a passed service table;
-- default module-level `draw(...)` wrappers may remain during migration, but the
-  production graph should be constructed once through `ui.create(...)`;
-- route legality, history, reward legality, and force pressure stay outside the
-  UI composition graph and enter through planner state and validation feedback.
+Leaf template modules receive only declared collaborators and the occurrence
+view supplied by their Biome Plan. They do not reach upward into route-shell
+state or sideways into another node's storage.
 
 ## Dirty Rebuild Lifecycle
 
-The draw loop should read the previous evaluation cache:
+Draw never validates or reconstructs the route.
 
 ```text
-draw cached form state
--> user mutates draft through explicit mutator
--> mutator marks dirty scope
--> next rebuild materializes complete snapshots if possible
--> pipeline builds history and validation feedback once
--> feedback updates provider draw-state arrays
--> draw reads updated provider state
+user edit / profile commit / reset / resync
+-> advance non-persisted change epoch
+-> verify local construction invariants
+-> check completeness
+-> materialize complete biome prefix
+-> build history and validate
+-> evaluate exported candidates
+-> apply feedback to semantic owners
+-> draw prepared state until the next change
 ```
 
-No dropdown should run route validation for itself.
+One dirty rebuild produces route status, first blocking issue, downstream
+inactive state, and provider presentation arrays. Candidate feedback does not
+trigger independent route walks per widget.
 
-No incomplete form should be materialized into fake history. If completion
-fails, the rebuild produces local completion feedback and stops before history.
+## Draw And Allocation Rules
 
-Before adding broader feedback coloring, stabilize the draw and persistence
-boundaries:
-
-- planner widgets own provider presentation and do not own route legality;
-- draw code reads prepared state and does not materialize missing draft children;
-- parent mutators materialize or clear child shape before persistence;
-- planner state has explicit owners for draft mutation, persistence binding,
-  candidate preparation, and evaluation caching;
-- `PlannerDraft` delegates room, door, reward, and payload storage mapping to
-  domain-owned serialization codecs.
-
-## Candidate Provider Interface
-
-Every candidate-owning form participant should expose the same kind of
-provider:
-
-```lua
-{
-    values = values,
-    labels = labels,
-    hidden = hidden,
-    colors = colors,
-    messages = messages,
-    version = version,
-}
-```
-
-The provider represents a stable candidate list. The validator evaluates the
-candidate semantics while walking history. Feedback maps those results back to
-the owning provider and mutates `hidden`, `colors`, and `messages`.
-
-Use stable arrays whenever the domain does not change. Increment `version` only
-when `values` or `labels` change, such as when a parent room kind changes the
-valid child payload type.
+- Cache Biome Plan, node, batch, provider, and storage-handle objects by stable
+  identity.
+- Keep option values and labels stable.
+- Mutate hidden/color/message arrays only during dirty rebuilds.
+- Do not deep-copy a biome tree after every edit.
+- Do not allocate addresses, candidate records, or decoration tables per frame.
+- Use stable ImGui ids derived from control id, `nodeId`, semantic component,
+  and local slot—not game room key alone.
+- Keep caller-owned draw option tables read-only.
+- Fix shared control/template contract problems at the contract boundary.
 
 ## Parent-Child Reset Policy
 
-Parent choices own child shape.
+The semantic parent owns incompatible-child reset:
 
-When a parent value changes, the parent form must reset children that no longer
-match the selected shape:
+- room-key replacement reinitializes the occurrence through the new template;
+- batch-rule changes reset incompatible selection and batch state;
+- door-target removal deletes the entire downstream branch;
+- reward-store changes reset incompatible reward type and payload;
+- reward-type changes reset incompatible payload;
+- H cage-roll changes do not erase per-occurrence maximum reward slots;
+- N visit-order changes do not erase unvisited pylon-local state;
+- profile/reset operations use the same control methods as ordinary edits.
 
-- room key changes reset room-kind local state;
-- exit count changes reset generated-door children;
-- reward store changes reset reward candidates and payloads;
-- reward type changes reset reward payload leaf state;
-- N selected-pylon changes reset side-room children for unselected pylons.
-
-Resetting should write explicit draft state. It should not rely on validation
-or materialization to replace stale child data later.
-
-## Debug Harness Boundary
-
-The debug harness is a proof surface, not the production UI architecture.
-
-It may exercise declarations, materialization, history, validation, and
-feedback. It should not become the source of production layout patterns unless
-the pattern also satisfies the form and hot-path constraints in this document.
-
-The production UI can use the same domain services, but should own its own
-planner state and candidate-provider objects.
+These mutations must be coherent before commit. Widgets never clean storage
+rows manually.
 
 ## Implementation Slices
 
-### Slice 1: Freeze The Debug Harness Role
+### Slice 1: Freeze And Remove The Old UI Surface
 
-Document and test the harness as a system exerciser. Do not add production
-layout responsibilities to it.
+- preserve tests or screenshots that express desired user-visible behavior;
+- remove production dependencies on the row-based planner state and panels;
+- remove the global `PlannerDraft` control and its row ABI;
+- keep the module loadable with an explicit planner placeholder if necessary;
+- do not add migration or dual-write adapters.
 
-Success check:
+Checkpoint: no production code assumes room index is topology identity.
 
-- harness can still create sample drafts and display validation output;
-- no production widget code depends on harness-only state shape.
+### Slice 2: Establish Lib Control And Reload Contracts
 
-### Slice 2: Extract Catalog And Label Helpers
+- register one empty/default Biome Plan control per route-biome occurrence;
+- confirm whole-control profile and reset roundtrips;
+- add one non-persisted commit invalidation epoch;
+- confirm or extend the explicit reload/resync notification path;
+- test cached nested-object behavior across staged-state reload.
 
-Create shared helpers for stable room, reward, route, and label lookup.
+Checkpoint: profile/reset/resync invalidation is explicit before dynamic state
+is layered on top.
 
-Success check:
+### Slice 3: Implement Topology Storage And Mutation
 
-- labels are resolved in one path;
-- form participants do not build ad hoc option tables during draw.
+- implement stable node id allocation;
+- implement root, nodes, outgoing batches, doors, and selection codecs;
+- implement branch insertion, target replacement, selection, and removal;
+- enforce tree/dead-leaf/terminal invariants at mutation and decode boundaries;
+- support repeated game room keys, including repeated same-batch peers.
 
-### Slice 3: Build Low-Level Widgets
+Checkpoint: a topology-only F tree roundtrips without typed room state.
 
-Add dropdown, checkbox, section, status, and marker wrappers that consume
-candidate providers.
+### Slice 4: Implement Template Registry And Nested Controls
 
-Success check:
+- define the registered template contract;
+- cache nested node controls by Biome Plan plus `nodeId`;
+- implement a no-local-state opening/terminal template;
+- implement `StandardCombat` with its occurrence reward surface;
+- verify two occurrences of one room key remain independent;
+- reject unknown or incompatible templates at construction.
 
-- widgets support hidden values, invalid/warning colors, and hover/detail
-  messages without route-specific code;
-- repeated controls use stable scoped IDs.
+Checkpoint: topology dispatch is generic and contains no template-name switch.
 
-### Slice 4: Add Planner State And Evaluation Cache
+### Slice 5: Materialize F End To End
 
-Create the production draft state container, dirty flags, and cached evaluation
-result.
+- implement standard outgoing batches;
+- materialize every generated peer plus the selected continuation;
+- attach semantic source and topology location to emitted facts;
+- compile a canonical F biome and route prefix;
+- reuse the existing history/validation pipeline only where its contract
+  matches the new canonical plan.
 
-Success check:
+Checkpoint: a complete F tree produces concrete canonical output with repeated
+room-key support.
 
-- draw can run without rebuilding;
-- mutation marks dirty state;
-- rebuild can stop at form completion before history.
+### Slice 6: Add Candidate And Feedback Routing
 
-### Slice 5: Port One Linear Biome Editor
+- add provider ownership to nested controls and batches;
+- export candidates during the normal materialization/history walk;
+- apply candidate results through `biomeControlId` and `nodeId`;
+- enforce provider versions and stale-feedback rebuild behavior;
+- apply route status, blocking horizon, and downstream inactive decoration.
 
-Start with F / Erebus. Render current room, generated next doors, selected
-door, and reward offers through form participants.
+Checkpoint: validation never performs row arithmetic or widget lookup.
 
-Success check:
+### Slice 7: Build The Generic Immediate-Mode Editor
 
-- F can emit a complete canonical snapshot;
-- incomplete F produces local completion feedback;
-- invalid F choices are colored by validation feedback.
+- draw the selected topology path and peer doors;
+- draw nested template content through cached controls;
+- make topology edits call Biome Plan mutation methods;
+- keep navigation separate from persisted biome state;
+- retain debug harnesses only as explicit test hosts.
 
-### Slice 6: Add Generated-Door Offers
+Checkpoint: prepared state can be drawn repeatedly without materialization or
+candidate allocation.
 
-Make generated-door reward offers first-class UI children.
+### Slice 8: Add H, O, N, And I Typed Surfaces
 
-Success check:
+Implement special structure only at its owner:
 
-- every generated door can carry an explicit offer point;
-- selected door state stays on the generated door and acquired state stays on
-  the reward offer;
-- unselected door offers remain materialized for bag simulation.
+- H: `FieldsCombat` occurrence reward slots plus parent batch cage roll;
+- O: `ShipCombat` occurrence encounters and wheel offers;
+- N: `EphyraCombat` pylon/side-room state plus hub ordered-subset batch;
+- I: Biome Plan-scoped structure, target occurrence state, and peer batch
+  constraints.
 
-### Slice 7: Add Room-Local Offer Points
+Add one biome at a time with storage, materialization, validation, feedback,
+and allocation tests before proceeding.
 
-Add shop, preboss, O wheel, and other room-local offer-point leaves after the
-generated-door path is stable.
+### Slice 9: Complete Remaining Templates And Routes
 
-Success check:
+- add remaining room templates and reusable components;
+- add G, P, Q, and any declared variant route-biome controls;
+- verify cross-biome route-prefix history and feedback;
+- reject unimplemented templates explicitly rather than silently falling back.
 
-- shop offers can be offered without being acquired;
-- preboss shop/free-reward choice is represented as one room-local surface;
-- O encounter reward offers do not require fake room rows.
+### Slice 10: Performance And Hardening
 
-### Slice 8: Add Payload Leaves
-
-Implement payload forms for reward types that need structured detail, such as
-Boon and Devotion.
-
-Success check:
-
-- reward type changes reset incompatible payload state;
-- payload completion is local;
-- reward legality remains validator-owned.
-
-### Slice 9: Add Route Status And Error Horizon
-
-Render route-level status from feedback, then grey or inactive downstream
-content after the first blocking invalid.
-
-Success check:
-
-- route status uses feedback messages and translated locations;
-- downstream inactive presentation does not hide the original error;
-- enrichment colors appear only for valid configured scope.
-
-### Slice 10: Add Performance Tests
-
-Add allocation and draw-budget tests around the production editor surfaces.
-
-Success check:
-
-- opening dropdowns does not rebuild candidate arrays every frame;
-- common draw paths stay within the same budget class as the old tested panels;
-- dirty rebuild tests catch accidental validation inside draw.
-
-### Slice 11: Expand Beyond F
-
-Only after the F production editor proves the loop, add the other biome forms
-in dependency order:
-
-1. G/P/Q shared linear variants;
-2. H generated-door batch and `FieldsCombat` leaf;
-3. O room/encounter split and wheel offers;
-4. I Clockwork generated-door batch;
-5. N hub/pylon form.
-
-Each addition should plug into the same form, provider, history, validation,
-and feedback contracts.
-
-## Explicit Non-Goals
-
-Do not add these while building the first production UI:
-
-- compact picked/other-door storage;
-- Auto/Vanilla canonical values;
-- route legality checks inside widgets;
-- runtime execution-plan work;
-- NPC/features;
-- Chaos detours;
-- reward bag simulation;
-- compatibility shims for old row-template storage.
-
-Convenience can come later as UI sugar, but the stored draft and canonical
-snapshot should remain explicit.
+- assert zero steady-state candidate/option reshaping during draw;
+- measure dirty rebuild and steady draw allocation separately;
+- fuzz malformed storage references at the decode boundary;
+- exercise profile switching, resets, explicit resync, and repeated room keys;
+- run full module tests, lint, and assembled pack validation.
 
 ## First Production Checkpoint
 
-The first useful UI checkpoint is:
+The first useful checkpoint is deliberately narrow:
 
 ```text
-F route prefix
-+ production route editor state
-+ generated-door form controls
-+ generated-door reward offer controls
-+ candidate feedback coloring
-+ route status
-+ draw/allocation tests
+Biome Plan registration and profile lifecycle
++ topology storage and mutation
++ StandardCombat occurrence state
++ complete F materialization
 ```
 
-That checkpoint proves the control layer without broadening the model too
-early.
+It does not require every biome, polished navigation, or all feedback colors.
+It must prove the ownership and occurrence model before the UI surface grows.
+
+## Explicit Non-Goals
+
+- preserving the old `PlannerDraft` storage ABI;
+- keeping old panels alive through compatibility adapters;
+- making every topology node a Lib-registered control;
+- globally materializing one control per game room key;
+- allowing draw code to interpret game legality;
+- hiding incomplete declaration/template support behind defaults.
 
 ## Supporting Docs
 
-- `FORM_FEEDBACK_CONTRACT.md` owns form, leaf, address, and feedback contracts.
-- `FORM_STORAGE_ROUNDTRIP.md` owns form-to-draft-to-storage serialization
-  boundaries.
-- `../validation/VALIDATION_MODEL.md` owns candidate evaluation and
-  presentation policy.
-- `../migration/IMPLEMENTATION_SEQUENCE.md` owns the full implementation order.
-- `../model/CANONICAL_PLAN.md` owns the canonical route data shape.
+- `BIOME_PLAN_CONTROL_MODEL.md` owns semantic architecture.
+- `FORM_STORAGE_ROUNDTRIP.md` owns persistence, profiles, and reset.
+- `FORM_FEEDBACK_CONTRACT.md` owns completeness and feedback routing.
+- `../model/CANONICAL_PLAN.md` owns materialized output.
+- `../validation/VALIDATION_MODEL.md` owns legality evaluation.

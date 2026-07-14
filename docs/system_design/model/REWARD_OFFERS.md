@@ -3,7 +3,7 @@
 ## Purpose
 
 Reward offers are concrete generated reward facts inside offer points. They are
-separate from UI reward forms and from acquired loot history.
+separate from UI reward controls and from acquired loot history.
 
 The planner needs this separation because reward bags deplete when rewards are
 offered, while loot-history rules care about rewards the player acquired.
@@ -149,8 +149,8 @@ generatedDoors = {
 }
 ```
 
-Both rewards are offered and can affect bag state. Only the selected/acquired
-reward updates loot history.
+Both rewards are offered and can affect bag state. Only the selected, and
+therefore acquired, reward updates loot history.
 
 ## Structural Reward Offers
 
@@ -161,7 +161,6 @@ Some rewards are game-domain reward offers with structural consequences.
 offerPoint = {
     kind = "clockworkGoal",
     rewardType = "ClockworkGoal",
-    acquired = true,
 }
 ```
 
@@ -173,6 +172,10 @@ door targets the real room, such as `I_Combat03`, and the offer point carries
 Structural reward offers can drive biome counters, encounter selection, and
 terminal-room eligibility. That means configured biomes must include reward
 offer metadata; a structure-only configured biome is not a complete plan.
+
+For generated doors, acquisition is derived from the parent batch selection.
+The persisted target occurrence owns the offer data but not a second acquired
+toggle.
 
 ## Encounter Offer Points
 

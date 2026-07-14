@@ -1,5 +1,12 @@
 # 2026-07-07 UI Implementation Plan
 
+> **Superseded on 2026-07-13.** This is a historical implementation log for
+> the discarded global `PlannerDraft` and row-oriented UI. Do not continue its
+> slices or preserve its storage ABI. Current architecture and rewrite order
+> are defined by
+> `../system_design/ui/BIOME_PLAN_CONTROL_MODEL.md` and
+> `../system_design/ui/UI_IMPLEMENTATION_ORDER.md`.
+
 ## Progress Log
 
 Newest entries should be added at the top of this section.

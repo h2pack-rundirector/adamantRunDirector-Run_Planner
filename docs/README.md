@@ -13,12 +13,16 @@ a running implementation log.
 
 Notable model authorities:
 
+- `system_design/ui/BIOME_PLAN_CONTROL_MODEL.md`: authoritative dynamic UI
+  topology, occurrence identity, control ownership, and materialization model.
+- `system_design/ui/FORM_STORAGE_ROUNDTRIP.md`: Biome Plan storage, profile,
+  reset, and codec boundaries.
+- `system_design/ui/FORM_FEEDBACK_CONTRACT.md`: completeness, dual addressing,
+  candidate ownership, and feedback routing.
 - `system_design/validation/FORCE_PRESSURE_MODEL.md`: force-pressure
   declaration and generated-door batch validation semantics.
 - `system_design/ui/UI_IMPLEMENTATION_ORDER.md`: production UI build order,
-  draw-state constraints, and control-layer rollout.
-- `system_design/ui/FORM_STORAGE_ROUNDTRIP.md`: form-to-draft-to-storage
-  serialization boundaries for production UI forms.
+  draw-state constraints, and clean-rewrite rollout.
 
 ## Progress
 

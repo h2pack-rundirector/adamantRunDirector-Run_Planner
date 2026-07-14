@@ -1,60 +1,47 @@
-# Form And Feedback Contract
+# Biome Plan Completeness And Feedback Contract
 
 ## Purpose
 
-The UI form should author concrete route decisions without becoming a route
-validator. The fresh planner keeps form completion, history building,
-validation, and feedback as separate responsibilities.
-
-The guiding rule is:
+The UI authors a dynamic decision tree without becoming the game-rule
+validator.
 
 ```text
-Forms decide whether data is complete enough to materialize.
-History and validators decide whether the materialized plan is legal.
-Feedback targets form participants, not inner widget aliases.
+nested controls decide local completeness
+-> Biome Plan materializes a complete canonical biome
+-> history and validators decide game legality
+-> feedback returns to the semantic owner
 ```
 
-## Draft Form Versus Complete Snapshot
-
-The draft form may contain blanks, partial choices, and local UI state.
-
-When complete, the form emits a strict complete snapshot that can be
-materialized into the canonical plan. Complete snapshots must not contain
-implicit defaults, unresolved Auto/Vanilla choices, placeholder target rooms,
-or incomplete reward selections.
-
-The history builder consumes only complete snapshots. It should not build fake
-history for incomplete editable choices.
+The validator speaks game language. The UI resolves that language through
+stable topology locations. Neither side knows storage rows or widget aliases.
 
 ## Completeness Boundary
 
-Form completion checks are local shape checks:
+Completeness is local shape, not legality.
 
-- required fields are filled;
-- referenced local draft choices exist;
-- typed room state is materializable;
-- reward offer forms resolve to concrete store and reward type;
-- generated doors reference concrete target rooms and declared exit indexes.
+A nested node control checks that its required typed fields can materialize.
+An outgoing batch checks its doors, exits, selection, and batch-authored state.
+A Biome Plan checks its root, tree invariants, terminal shape, biome-scoped
+state, and every occurrence referenced by the tree.
 
-Form completion must not validate route/game legality:
+Completeness includes generated but unselected nodes because they represent
+rooms and rewards created by the game. Those nodes must be locally complete,
+but they must be dead leaves.
 
-- room availability at current depth;
+Completeness does not decide:
+
+- room eligibility at the generation phase;
+- `MaxCreationsThisRun` or other generation limits;
 - force pressure;
-- duplicate generated rooms;
-- reward legality;
-- reward bag availability;
-- NPC/feature legality;
-- encounter-depth or room-history spacing.
+- reward legality or bag availability;
+- NPC, encounter, or feature legality;
+- depth and history timing.
 
-Those belong to history validation.
+Those are validator responsibilities.
 
-## Partial Route Scope
+## Route Scope
 
-Partial history is not allowed inside a biome. A biome is atomic for history
-scope: either its form is complete and contributes to history, or it is
-incomplete and contributes only form-completion findings.
-
-Partial route planning is allowed only as a complete biome prefix:
+History accepts complete biome prefixes only:
 
 ```text
 Underworld: F
@@ -63,162 +50,174 @@ Underworld: F, G, H
 Underworld: F, G, H, I
 ```
 
-Invalid scopes include:
+A biome is atomic at this boundary. If `Underworld_F` is incomplete, later
+Underworld biome plans cannot contribute to history. The route aggregate owns
+this prefix rule; individual Biome Plan controls do not infer route order.
 
-```text
-G without F
-F incomplete with G complete
-F, H while skipping G
-```
+## Nested Control Interface
 
-The route form owns this prefix rule.
-
-## Form Participants
-
-The UI is composed from small form participants, not biome-sized route engines.
-
-Examples:
-
-- route form;
-- biome form;
-- room-kind form;
-- generated-door form;
-- offer-point form;
-- reward-offer form;
-- shop-offer form;
-- side-room child form.
-
-Room-kind and reward forms are polymorphic leaves. Biomes compose them instead
-of owning custom route templates for every biome shape.
-
-## Leaf Interface
-
-Leaf forms should expose a small common interface:
+Room templates expose a consistent occurrence interface. Exact names may vary,
+but the contract is:
 
 ```lua
-leaf.defaultDraft(context) -> draft
-leaf.isComplete(draft, context) -> completion
-leaf.materialize(draft, context) -> canonicalFragment
-leaf.render(draw, draft, context, feedback) -> changed
-leaf.reset(draft, context, reason) -> draft
+nodeControl:isComplete(context) -> completion
+nodeControl:materialize(context) -> canonicalFragment
+nodeControl:exportCandidates(out, context)
+nodeControl:applyFeedback(feedback)
+nodeControl:draw(draw, context) -> changed
+nodeControl:reset(reason)
 ```
 
-`isComplete` answers whether the local draft can be materialized. It does not
-answer whether the result is legal in the run.
+Outgoing batches and biome-scoped editors expose equivalent operations for
+their own semantics.
 
-`materialize` returns concrete canonical data. It must not invent defaults for
-missing required choices.
+The template owns translation between semantic aspects and its internal
+components. A route validator never selects a dropdown or mutates storage on
+the template's behalf.
 
-`render` owns inner widget layout and local mapping from participant feedback
-to inner controls.
+## Dual Addressing
 
-`reset` handles local cleanup when a parent choice changes.
+Every materialized authored fact carries both semantic source and planner
+location.
 
-## Structured Addresses
-
-Form addresses should be structured data, not row strings or UI aliases.
-
-Examples:
+Semantic source uses game-domain language:
 
 ```lua
-{ routeKey = "Underworld", biomeIndex = 1 }
-```
-
-```lua
-{ routeKey = "Underworld", biomeIndex = 1, roomIndex = 4 }
-```
-
-```lua
-{ routeKey = "Underworld", biomeIndex = 1, roomIndex = 4, doorIndex = 2 }
-```
-
-```lua
-{
-    routeKey = "Surface",
-    biomeIndex = 1,
-    roomIndex = 3,
-    childKind = "sideRoom",
-    childIndex = 1,
+source = {
+    routeKey = "Underworld",
+    biomeKey = "F",
+    gameRoomKey = "F_Combat02",
+    aspect = "generatedTargetReward",
+    slot = 1,
 }
 ```
 
-Leaf-local widget aliases may exist inside the leaf, but they should not be the
-language of route validation.
+Planner location identifies the occurrence owner:
 
-## Builder Source Addresses
+```lua
+location = {
+    biomeControlId = "Underworld_F",
+    nodeId = 17,
+    parentNodeId = 12,
+    doorIndex = 2,
+}
+```
 
-While materializing complete snapshots into history, the builder should attach
-source addresses to authored facts:
+Only fields relevant to the fact are present. Biome-scoped findings may omit
+`nodeId`; node-local findings may omit parent and door; batch findings target
+the parent node and may name a peer door.
 
-- room entries;
-- generated doors;
-- offer points;
-- reward offers;
-- room-kind state facts;
-- side-room child facts.
+Game room key alone is never a sufficient return address because the same room
+declaration may occur multiple times.
 
-This gives feedback a direct reverse lookup from validation finding to form
-participant.
+## Candidate Ownership
 
-History facts may contain derived game data, but their source address should
-refer to the authored participant that produced them.
+The semantic owner of a choice owns its candidate provider:
 
-## Feedback Boundary
+- an outgoing batch owns target-room, selection, and batch-state candidates;
+- a node template owns reward, payload, encounter, shop, and room-local
+  candidates;
+- the Biome Plan owns biome-scoped candidates;
+- the route aggregate owns route-prefix and navigation candidates.
 
-Validators emit domain findings with source addresses and payloads.
+Providers expose stable values and labels plus mutable presentation arrays:
 
-Feedback translates findings into participant-level markers:
+```lua
+provider = {
+    key = "generatedTargetReward",
+    version = 12,
+    values = stableValues,
+    labels = stableLabels,
+    hidden = mutableHidden,
+    colors = mutableColors,
+    messages = mutableMessages,
+}
+```
+
+Candidate export emits semantic records plus the dual address. The generic
+walker asks the owner to export; it does not inspect the owner's storage or
+switch on widget/template names.
+
+## Feedback Application
+
+Validators return findings and candidate results with the original source and
+location.
 
 ```lua
 {
-    address = { routeKey = "Underworld", biomeIndex = 1, roomIndex = 4, doorIndex = 2 },
-    severity = "invalid",
     code = "target_room_does_not_match_exit",
-    message = "...",
+    severity = "invalid",
+    source = { ... },
+    location = { ... },
+    providerKey = "nextDoorTarget",
+    providerVersion = 12,
+    candidateKey = "F_Story01",
     payload = { ... },
 }
 ```
 
-Feedback should not know inner widget aliases such as dropdown keys. If a
-finding targets a `FieldsCombat` room participant, the `FieldsCombat` leaf
-decides which local control to decorate.
+Feedback application is:
 
-This avoids route feedback doing row arithmetic or reaching into template
-internals.
+```text
+biomeControlId
+-> Biome Plan control
+-> node, outgoing batch, or biome-scoped owner
+-> owner.applyFeedback(...)
+-> provider/component/widget decoration
+```
 
-## Candidate And Color Policy
+Provider feedback applies only when the provider version matches. A mismatch
+marks evaluation dirty instead of applying stale indexes.
 
-Candidate-owning leaves expose stable candidate provider arrays. They own the
-values, labels, and mutable draw-state arrays, but they do not own route/game
-validity.
+Feedback may mutate hidden/color/message arrays and participant-level status.
+It must not write authored plan state.
 
-Validation evaluates exported candidate semantics and returns presentation
-policies such as hidden, invalid, or warning. Policy belongs to the failed
-condition, not to a broad "impossible" category.
+## Presentation Policy
 
-Incomplete local fields are form-completion findings, not route-legality
-findings.
+Declaration-time impossible options may be absent from stable provider values.
+Context-invalid options remain visible and are colored invalid unless the
+failed rule explicitly owns a hide policy.
 
-Downstream content after the first blocking invalid can be greyed or inactive.
+Downstream content after the first blocking invalid may be greyed or inactive.
+Enrichment colors appear only when the complete route scope is valid. Inline
+invalid labels are not a second reporting system; route status and markers own
+invalid reporting.
 
-Enrichment colors are allowed only when the planned scope is valid.
+Incomplete local fields produce completeness findings. They do not enter game
+validation as invented canonical facts.
+
+## Generic Walker Contract
+
+The topology walker owns traversal and phase ordering. It does not know the
+internal shape of `StandardCombat`, `FieldsCombat`, `ShipCombat`, or other room
+templates.
+
+For every node it:
+
+1. resolves the room declaration and registered template;
+2. asks the nested control for completeness, canonical state, and candidates;
+3. processes the parent-owned outgoing batch and all generated peers;
+4. follows the selected or ordered continuation;
+5. preserves the returned source and location on emitted facts.
+
+Template-specific history interpretation lives in registered template
+materializers/interpreters, not a central template-name switch.
 
 ## Non-Goals
 
-The form layer should not:
+The control layer does not:
 
-- simulate route legality;
-- compute reward bag state;
-- infer generated doors from compact role/group choices in the canonical plan;
-- expose row-based route coordinates as validation language;
-- require route feedback to know leaf-local widget aliases.
+- simulate route legality during draw;
+- compute reward bags or history counters;
+- use game room keys as occurrence identities;
+- expose storage table rows as feedback addresses;
+- require validators to know template internals or widget aliases;
+- materialize unresolved `Auto`, `Vanilla`, `Major`, or `Minor` roles.
 
 ## Supporting Docs
 
-- `UI_IMPLEMENTATION_ORDER.md` owns production UI build order and draw-state
-  constraints.
-- `FORM_STORAGE_ROUNDTRIP.md` owns the form-to-draft-to-storage mapping and
-  serialization rules.
-- `../validation/VALIDATION_MODEL.md` owns candidate evaluation and feedback
-  semantics.
+- `BIOME_PLAN_CONTROL_MODEL.md` owns topology and semantic ownership.
+- `FORM_STORAGE_ROUNDTRIP.md` owns physical persistence and reset behavior.
+- `UI_IMPLEMENTATION_ORDER.md` owns implementation sequencing.
+- `../validation/VALIDATION_MODEL.md` owns legality and candidate evaluation.
 - `../model/CANONICAL_PLAN.md` owns canonical plan shape.

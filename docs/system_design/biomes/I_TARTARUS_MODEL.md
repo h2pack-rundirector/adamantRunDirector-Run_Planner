@@ -77,6 +77,9 @@ biomeState = {
 plan. The planner should not keep it random or implicit, because later
 generation legality depends on the value.
 
+This is persisted by the route-biome `BiomePlan` control, not by an individual
+combat occurrence or the route aggregate.
+
 ## ClockworkDoorBatch
 
 Every current room produces one generated-door batch. I activates a
@@ -93,7 +96,6 @@ generatedDoors = {
             offerPoint = {
                 kind = "clockworkGoal",
                 rewardType = "ClockworkGoal",
-                acquired = true,
             },
         },
         {
@@ -103,7 +105,6 @@ generatedDoors = {
                 kind = "generatedDoorRewards",
                 store = "TartarusRewards",
                 rewardType = "Boon",
-                acquired = false,
             },
         },
     },
@@ -121,7 +122,6 @@ inspect concrete offer points, not an invented `Goal` / `NonGoal` room role.
 offerPoint = {
     kind = "clockworkGoal",
     rewardType = "ClockworkGoal",
-    acquired = true,
 }
 ```
 
@@ -156,18 +156,18 @@ After Clockwork goals are complete:
 generated doors must include the preboss door when the game would force it
 ```
 
-Goal progress is based on the selected/acquired offer:
+Goal progress is based on the selected door. Acquisition is derived from the
+batch selection rather than authored as a second toggle:
 
 ```text
 selected door offerPoint.rewardType == "ClockworkGoal"
-and acquired == true
 => remainingClockworkGoals -= 1
 ```
 
-Non-goal progression uses acquired non-goal rewards:
+Non-goal progression uses the selected non-goal reward:
 
 ```text
-selected acquired generated-door reward is not ClockworkGoal
+selected generated-door reward is not ClockworkGoal
 => biomeRewardsSpawned += 1
 ```
 
@@ -175,18 +175,19 @@ The validator should use these counters to enforce the same forced-first and
 forced-later behavior the game expresses through `ForcedFirstReward` and
 `ForcedRewards`.
 
-## Combat Leaf
+## Combat Occurrence Control
 
-`ClockworkCombat` owns local combat-room form and encounter materialization.
-It can derive encounter profile from the selected room's reward offer:
+Each `ClockworkCombat` occurrence owns its local combat state and encounter
+materialization. It can derive encounter profile from that target occurrence's
+incoming reward offer:
 
 ```text
 ClockworkGoal offer => goal reward encounter profile
 normal reward offer => normal I combat encounter profile
 ```
 
-The combat leaf does not own goal counting. Goal counting belongs to history
-and validation because it depends on selected/acquired generated-door offers.
+The combat occurrence does not own goal counting. Goal counting belongs to
+history and validation because it depends on selected generated-door offers.
 
 ## Special Rooms
 
@@ -227,7 +228,7 @@ should require full reward configuration for every configured biome.
 There is no valid structure-only I plan:
 
 ```text
-configured I = rooms + generated doors + offer points + acquired flags
+configured I = rooms + generated doors + offer points + selected door state
 ```
 
 Partial planning should happen by route scope, not by disabling rewards inside
@@ -241,7 +242,7 @@ I needs:
 - explicit Clockwork biome state;
 - `ClockworkDoorBatch` generated-door batch rule;
 - `ClockworkGoal` structural reward offers;
-- `ClockworkCombat` leaf for encounter/form materialization;
+- `ClockworkCombat` occurrence control for encounter materialization;
 - normal force/eligibility/preboss validation.
 
 I does not need:

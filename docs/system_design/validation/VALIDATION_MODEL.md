@@ -3,104 +3,95 @@
 ## Purpose
 
 Validation is the game-rule authority for complete canonical plans. It does
-not author draft form data, invent missing choices, or render UI controls.
-
-The guiding rule is:
+not author Biome Plan state, invent missing choices, or render UI controls.
 
 ```text
-Forms decide whether data is complete.
-History materializes complete data into game facts.
-Validators decide whether those game facts are legal.
-Feedback applies validation results back to form participants.
+controls decide completeness
+-> materialization emits canonical facts and candidates
+-> history establishes lifecycle state
+-> validators decide legality
+-> feedback returns to semantic owners
 ```
 
 ## Inputs
 
 The validator receives:
 
-- complete canonical route plan;
-- route scope;
-- declarations;
-- materialized history;
-- candidate records exported by form providers into history.
+- a complete canonical route-prefix plan;
+- route and declaration catalogs;
+- materialized lifecycle history;
+- candidate records exported by Biome Plan, batch, and node owners;
+- semantic source and topology location metadata on authored facts.
 
-Incomplete form state does not enter validation. If a biome or leaf is
-incomplete, the form layer reports completion findings and the history builder
-does not materialize fake room, door, reward, or candidate facts for it.
+Incomplete Biome Plan state does not enter game validation. Completeness emits
+its own findings and stops materialization at the incomplete biome boundary.
 
 ## Outputs
 
-Validation emits two related outputs:
+Validation emits:
 
 `findings`
-: Blocking or warning records about selected authored facts.
+: Blocking or warning records about selected/authored facts.
 
 `candidateResults`
-: Presentation policies for candidate values owned by form providers.
+: Presentation policies for provider-owned candidate values.
 
-Both outputs use source/form addresses as return addresses. Validators may
-preserve these addresses, but they do not inspect UI internals.
-
-Example finding:
+Both preserve the source and location supplied by materialization:
 
 ```lua
 {
     code = "room_depth_unavailable",
     severity = "invalid",
     phase = "room.generate_next",
-    sourceAddress = { routeKey = "Underworld", biomeIndex = 1, roomIndex = 3, doorIndex = 2 },
+    source = {
+        routeKey = "Underworld",
+        biomeKey = "F",
+        gameRoomKey = "F_Story01",
+        aspect = "nextRoomTarget",
+    },
+    location = {
+        biomeControlId = "Underworld_F",
+        nodeId = 17,
+        parentNodeId = 12,
+        doorIndex = 2,
+    },
     payload = {
-        roomKey = "F_Story01",
         requiredBiomeDepthMin = 4,
         actualBiomeDepth = 3,
     },
 }
 ```
 
-Example candidate result:
-
-```lua
-{
-    formAddress = { routeKey = "Underworld", biomeIndex = 1, roomIndex = 3, doorIndex = 2 },
-    providerKey = "nextDoorTarget",
-    providerVersion = 12,
-    candidateKey = "F_Story01",
-    candidateIndex = 5,
-    presentation = "hide",
-    code = "room_depth_unavailable",
-    payload = { actualBiomeDepth = 3 },
-}
-```
+The validator may compare game room keys. It never treats them as occurrence
+addresses or inspects storage rows, templates, widgets, or ImGui ids.
 
 ## Validation Layers
 
-Validation is layered by responsibility.
-
 ### Scope Validation
 
-Scope validation checks route-level shape:
-
-- configured biomes form a route prefix;
-- configured biomes match the selected route order;
-- every configured biome is complete before history materialization.
-
-Scope validation should not walk room/reward legality.
+Scope validation checks that configured biomes form a complete route prefix in
+the declared route order. It does not walk room or reward legality.
 
 ### Structural Validation
 
-Structural validation checks physical route facts:
+Structural validation checks canonical physical facts:
 
-- room keys exist in the declaration catalog;
+- room keys exist in declarations;
 - generated doors reference declared exits;
-- generated door counts match declared exits;
-- selected door target matches the next entered room;
-- exit constraints match target room tags;
-- terminal/preboss conditions are satisfied;
-- room caps and creation limits are not violated.
+- generated door counts and exit constraints are satisfied;
+- selection shape is valid for the batch rule;
+- the selected/visited targets match the entered sequence;
+- terminal/preboss shape is satisfied;
+- every generated occurrence has compatible typed state;
+- room creation caps count generated occurrences correctly.
+
+For `MaxCreationsThisRun`, every generated door target counts when created,
+including unselected peers. Same-batch doors are processed in generation order.
+Rooms without an explicit cap are not made unique by the planner.
 
 ### Timing And Eligibility Validation
 
-Timing validation checks game-rule conditions at the correct lifecycle phase:
+Timing validation checks at the correct lifecycle phase:
 
 - room eligibility;
 - force windows and force pressure;
@@ -110,26 +101,17 @@ Timing validation checks game-rule conditions at the correct lifecycle phase:
 - previous-room exit requirements;
 - generated-door batch rules.
 
-Force-pressure details live in `FORCE_PRESSURE_MODEL.md`.
-
-The validator should name the counter axis it uses. `depth` alone is not a
-valid query.
+The validator names the actual counter axis. `depth` alone is not a valid
+query. Force-pressure details live in `FORCE_PRESSURE_MODEL.md`.
 
 ### Reward Validation
 
-Reward validation is split into:
-
-- offer domain validation;
-- bag-entry requirement validation;
-- offer batch validation;
-- reward bag simulation;
-- loot acquisition history validation.
-
-See `../model/REWARD_MODEL.md` for the reward-specific boundary.
+Reward validation covers offer domains, entry requirements, offer-batch rules,
+reward bags, and acquired loot history. See `../model/REWARD_MODEL.md`.
 
 ## Lifecycle Phases
 
-Validation should attach checks to the same lifecycle used by history:
+Validation follows history phases:
 
 ```text
 room.enter
@@ -139,84 +121,69 @@ room.generate_next
 room.commit
 ```
 
-Examples:
-
-- next-room target candidates are evaluated at `room.generate_next`;
-- generated door rewards are evaluated at `room.generate_next`;
-- O wheel rewards are evaluated inside `room.offer_points`;
-- acquired selected door loot updates history when the selected room is
-  entered/acquired;
+- next-room targets and generated-door rewards evaluate at
+  `room.generate_next`;
+- every generated peer contributes generation and offer facts;
+- selected-door acquisition applies when the selected target is entered;
+- N hub offers generate as one hub batch, then acquisition follows visit order;
+- O wheel offers evaluate sequentially inside `room.offer_points`;
 - `BiomeDepthCache` changes at `room.commit`;
 - `BiomeEncounterDepth` changes with encounter events.
 
-This phase split prevents BDC/BED off-by-one bugs and keeps O multi-encounter
-rooms honest.
-
 ## Candidate Providers
 
-Candidate-producing form leaves expose a common allocation-stable provider
-interface.
-
-The provider owns the hot-path storage:
+The control that understands a semantic choice owns its allocation-stable
+provider:
 
 ```lua
 provider = {
     key = "nextDoorTarget",
     version = 12,
-
     values = stableValues,
     labels = stableLabels,
-
     hidden = mutableHidden,
     colors = mutableColors,
     messages = mutableMessages,
-
-    exportCandidates = function(out, formAddress, context) end,
-    applyCandidateFeedback = function(feedback) end,
-    clearCandidateFeedback = function() end,
 }
 ```
 
-Examples of candidate providers:
+Examples include outgoing-batch targets and selection, reward/payload choices,
+shop options, H cage roll, O wheel choices, N hub visits, and I reward kind.
 
-- next-door target room picker;
-- reward type picker;
-- reward payload picker, such as boon source;
-- Devotion/Trial source picker;
-- shop option picker;
-- H cage roll picker;
-- O wheel count picker;
-- N hub door picker.
-
-The provider may rebuild stable arrays only on a dirty domain change. Route
-context changes should mutate `hidden`, `colors`, and `messages`; they should
-not reshape `values` or `labels` during draw.
+The provider may rebuild values/labels only when its candidate domain changes.
+Route-context changes update presentation arrays rather than reshaping values
+during draw.
 
 ## Candidate Export
 
-The history builder asks providers to export semantic candidate records while
-materializing complete snapshots.
-
-The builder treats the provider as a black box:
+Materialization asks each semantic owner to export candidates. The generic
+walker does not inspect storage or switch on template names.
 
 ```lua
-provider.exportCandidates(out, formAddress, context)
+owner:exportCandidates(out, context)
 ```
 
-Exported records contain:
+An exported record contains:
 
-- opaque form return address;
-- provider key;
-- provider version;
-- stable candidate key;
-- optional cached candidate index;
-- semantic game payload.
-
-Example:
+- semantic source;
+- topology location;
+- provider key and version;
+- stable candidate key and optional cached index;
+- game-language semantic payload.
 
 ```lua
 {
-    formAddress = { routeKey = "Underworld", biomeIndex = 1, roomIndex = 3, doorIndex = 1 },
+    source = {
+        routeKey = "Underworld",
+        biomeKey = "F",
+        gameRoomKey = "F_Combat03",
+        aspect = "nextRoomTarget",
+    },
+    location = {
+        biomeControlId = "Underworld_F",
+        nodeId = 12,
+        doorIndex = 1,
+    },
     providerKey = "nextDoorTarget",
     providerVersion = 12,
     candidateKey = "F_MiniBoss02",
@@ -230,176 +197,90 @@ Example:
 }
 ```
 
-The validator reads `semantic`. Feedback uses the address/provider metadata to
-return results. Neither layer reaches into form internals.
+The validator reads `semantic`. Feedback uses source/location/provider metadata
+to return the result.
 
 ## Candidate Evaluation
 
-Candidate evaluation is part of validation's normal history walk. Feedback
-must not ask the validator to rewalk the route for each control.
+Candidate evaluation is part of the normal history walk, not a separate route
+walk for every control.
 
-The validator evaluates all candidate records at their appropriate lifecycle
-phase and emits candidate results.
+- `nextRoom` uses eligibility, exits, force pressure, creation caps, and timing;
+- `rewardType` uses offer domain, entry requirements, and reward bag state;
+- `devotionSource` uses acquired god history and payload duplicate rules;
+- `shopOption` uses shop domain and replacement requirements;
+- batch candidates use peer facts visible at the batch lifecycle phase.
 
-Examples:
-
-- `semantic.kind = "nextRoom"` uses room eligibility, exit constraints,
-  force pressure, caps, and timing queries. Force-pressure candidate projection
-  is defined in `FORCE_PRESSURE_MODEL.md`.
-- `semantic.kind = "rewardType"` uses offer domain, entry requirements, and
-  reward bag state.
-- `semantic.kind = "devotionSource"` uses acquired god source history and
-  payload duplicate rules.
-- `semantic.kind = "shopOption"` uses shop domain and replacement
-  requirements.
-
-The same underlying rule functions should power selected-value findings and
-candidate results. If a selected value is invalid, validation should emit both
-the candidate result for that value and the blocking finding for route status.
+Selected-value findings and candidate results use the same rule functions. An
+invalid selected value produces both its presentation result and a blocking
+route finding.
 
 ## Presentation Policy
 
-Candidate validity is not just true/false. Failed conditions choose a
-presentation policy.
+Policy belongs to the failed condition:
 
-Example policies:
-
-```lua
-{
-    code = "room_depth_unavailable",
-    presentation = "hide",
-}
-```
-
-```lua
-{
-    code = "force_pressure_conflict",
-    presentation = "invalid",
-}
-```
-
-```lua
-{
-    code = "profile_dependent_requirement",
-    presentation = "warning",
-}
-```
-
-Policy belongs to the failed condition. Do not use broad abstract buckets such
-as "impossible" as the source of UI behavior.
-
-Normal policy rules:
-
-- depth windows and declaration-range failures can hide candidates;
+- declaration-time impossible candidates can be absent;
+- depth/declaration-range conditions may explicitly hide;
 - route-context conflicts usually remain visible and invalid;
-- selected invalid candidates become blocking findings;
-- unselected invalid candidates only color or hide options;
-- unsupported/profile-dependent rules should be explicit warnings or blocking
-  unsupported findings, not silently valid.
+- selected invalid candidates are blocking findings;
+- unselected invalid candidates affect option presentation only;
+- profile-dependent or unsupported rules are explicit warnings or failures;
+- enrichment colors appear only while the route scope is valid.
+
+Do not infer UI behavior from a broad `impossible` category.
 
 ## Feedback Application
 
-Feedback maps validator results back to provider interfaces.
+Feedback resolves:
 
-Feedback applies results only if the provider version still matches:
-
-```lua
-if feedback.providerVersion == provider.version then
-    provider.applyCandidateFeedback(feedback)
-end
+```text
+location.biomeControlId
+-> Biome Plan
+-> node/batch/biome owner
+-> provider or semantic component
 ```
 
-If versions do not match, the route context should rebuild instead of applying
-stale candidate results.
+Provider feedback applies only when `providerVersion` still matches. Otherwise
+the route rebuilds rather than applying stale candidate indexes.
 
-Provider feedback mutates stable arrays:
-
-```lua
-hidden[index] = feedback.presentation == "hide"
-colors[index] = feedback.color
-messages[index] = feedback.message
-```
-
-Draw code reads these arrays directly. It should not allocate or recompute
-candidate validity during render.
+Feedback mutates prepared hidden/color/message arrays. Draw reads those arrays
+directly and does not recompute validity.
 
 ## Error Horizon
 
-The first blocking finding defines the route error horizon.
-
-Before the horizon:
-
-- selected invalid facts are shown as blocking invalids;
-- candidate colors remain useful;
-- local form completion feedback remains local.
-
-After the horizon:
-
-- downstream route content can be greyed or inactive;
-- enrichment colors should be suppressed;
-- validators may still compute candidate policy if needed for stable UI, but
-  route status should remain focused on the first blocking issue.
-
-The horizon is a presentation rule over findings. It should not change the
-canonical plan or history facts.
+The first blocking finding defines the presentation horizon. Downstream content
+may become grey/inactive and enrichment is suppressed, while the canonical plan
+and history remain unchanged. Route status and markers are the common invalid
+reporting path; inline invalid labels are not reintroduced.
 
 ## Requirement Handling
 
-`REQUIREMENTS_DSL.md` owns the normalized predicate language.
-
-Validator predicates should use game-language names:
-
-- `LootTypeHistory`;
-- `UseRecord`;
-- `BiomeUseRecord`;
-- `LootBiomeRecord`;
-- `ClearedBiomes`;
-- `EncounterDepth`;
-- `BiomeEncounterDepth`;
-- `RequiredMinRoomsSinceEvent`;
-- `RequiredMinExits`;
-- `RequiredNotInStore`.
-
-Unknown requirement kinds are contract failures. They are not soft user-facing
-invalids and should not default to valid.
-
-Unsupported requirements must be explicit. If a requirement depends on save
-state or unmodeled systems, it should produce a known unsupported/profile
-policy rather than disappearing into a fallback.
+`REQUIREMENTS_DSL.md` owns normalized game predicates. Unknown kinds are
+contract failures. Requirements that depend on save state or unmodeled systems
+produce explicit unsupported/profile policies rather than defaulting valid.
 
 ## Performance Rules
 
-Validation and feedback must respect the planner UI hot path:
-
-- no per-frame candidate allocation;
-- candidate arrays are stable between dirty rebuilds;
-- feedback mutates arrays in place;
-- candidate lookup by key/index happens during feedback application, not draw;
-- validation walks history once per route rebuild, not once per control;
-- builders and validators do not repeatedly query leaf internals.
-
-The design is intentionally not purely functional at the candidate-storage
-boundary. Mutable arrays are part of the contract because dropdown rendering is
-hot-path UI work.
+- no per-frame candidate or address allocation;
+- stable candidate arrays between dirty rebuilds;
+- one history/validation walk per dirty route rebuild;
+- feedback applies by cached control/node/provider lookup;
+- builders and validators do not repeatedly query nested UI internals.
 
 ## Non-Goals
 
-Validation should not:
+Validation does not:
 
-- validate incomplete form drafts;
-- invent default room or reward choices;
-- render UI controls;
-- understand leaf-local widget aliases;
-- re-solve runtime hook behavior;
+- validate incomplete control state;
+- invent default rooms or rewards;
+- render or mutate authored UI state;
+- know storage rows, node-template internals, or widget aliases;
 - model probabilities;
-- compensate for incomplete declarations with silent fallbacks.
-
-If an internal fact is malformed after the form/build boundary, fail loudly at
-the boundary or in a focused validator test.
+- compensate for incomplete declarations with fallbacks.
 
 ## Supporting Docs
 
-- `../ui/FORM_FEEDBACK_CONTRACT.md` owns form completion and participant
-  feedback boundaries.
-- `../pipeline/TIMELINE_EVENTS.md` owns lifecycle phase definitions.
-- `../model/REWARD_MODEL.md` owns reward validation layers and bag simulation.
+- `../ui/BIOME_PLAN_CONTROL_MODEL.md` owns topology and control ownership.
+- `../ui/FORM_FEEDBACK_CONTRACT.md` owns completeness and feedback routing.
+- `../pipeline/TIMELINE_EVENTS.md` owns lifecycle phases.
+- `../model/REWARD_MODEL.md` owns reward validation and bag simulation.

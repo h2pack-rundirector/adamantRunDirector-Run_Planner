@@ -3,7 +3,8 @@
 ## Purpose
 
 The canonical plan is the complete user-authored route shape before it is
-expanded into game history. It stores concrete user decisions only.
+expanded into game history. It is materialized from complete Biome Plan
+controls and stores concrete game decisions only.
 
 It does not store copied game facts such as room eligibility, force windows,
 counter costs, exit counts, labels, or reward bag contents. Those belong to
@@ -64,11 +65,17 @@ biomePlan = {
 The biome plan is not row-shaped and not encounter-shaped. Rooms are physical
 transition points. A room may contain zero, one, or many encounters.
 
+This sequence is the selected/visited projection of the persisted topology
+tree. Each visited room retains all generated peer doors, including unselected
+target occurrences, on its outgoing batch. The same game room key may appear
+in multiple room nodes or peer doors; occurrence identity belongs to the
+authoring topology, not the room key.
+
 The history builder expands room nodes into room entries, encounter entries,
 generated door events, reward offer events, loot acquisition events, and
 counter views.
 
-Runtime does not consume the draft form directly. It consumes an execution plan
+Runtime does not consume Biome Plan storage directly. It consumes an execution plan
 compiled from validated history; see `../runtime/RUNTIME_BOUNDARY.md`.
 
 ## Room Node
@@ -136,6 +143,9 @@ generatedDoors.doors[selectedDoorIndex].targetRoomKey == next roomNode.roomKey
 Unselected doors are fully materialized because reward offers and bag depletion
 depend on all generated doors, not only the selected path.
 
+Two doors may have the same `targetRoomKey`. They still represent distinct
+generated occurrences with independent typed state and reward offers.
+
 Generated doors do not copy exit tags or exit constraints into the plan. They
 reference the source room's declared exits by `exitIndex`. The builder reads
 the declared exit and validates that the target room satisfies that exit's
@@ -202,8 +212,16 @@ rewardOffer = {
 ```
 
 Presence of a reward offer means the game generated or displayed it.
-`acquired = true` means the player actually got it. Unselected door rewards and
-unpurchased shop items use `acquired = false`.
+`acquired = true` means the player actually got it.
+
+Acquisition is derived when topology decides it: an ordinary generated-door
+offer is acquired exactly when its door is selected, and an N hub-door offer is
+acquired exactly when its door appears in the ordered visit subset. Those
+authoring controls do not persist a second acquired toggle.
+
+Acquisition remains explicit for independent choices inside an entered room,
+such as shop purchases and O wheel selections. Their typed occurrence state
+materializes the concrete `acquired` value.
 
 Reward UI templates may be convenient, but completed offers must resolve to a
 concrete store and reward type. Completed canonical plans do not allow
@@ -248,14 +266,39 @@ roomState = {
 }
 ```
 
-The room key and declarations determine which state type is expected. The form
-materializer should fail completion if the state is missing or has the wrong
-shape.
+The room key and declarations determine which state type is expected. The room
+template materializer should fail completion if the state is missing or has
+the wrong shape.
 
-## Draft Plan Versus Canonical Plan
+## Source Metadata
 
-The UI may hold a draft plan with blanks or incomplete controls. The canonical
-plan exists only after local form completion succeeds.
+During materialization, canonical facts carry planner source metadata so
+history findings can return to their semantic owner:
 
-The history builder consumes canonical plans, not drafts. It should not invent
-default rooms or fake rewards for incomplete editable choices.
+```lua
+source = {
+    routeKey = "Underworld",
+    biomeKey = "F",
+    gameRoomKey = "F_Combat04",
+    aspect = "generatedTargetReward",
+}
+
+location = {
+    biomeControlId = "Underworld_F",
+    nodeId = 17,
+    parentNodeId = 12,
+    doorIndex = 2,
+}
+```
+
+Planner-only `nodeId` values are not runtime game identities. They may be
+dropped after execution-plan compilation once no feedback path needs them.
+
+## Biome Plan Versus Canonical Plan
+
+Biome Plan controls may hold blanks or incomplete nested controls. The
+canonical plan exists only after local control and topology completeness
+succeeds.
+
+The history builder consumes canonical plans, not persisted control storage. It
+should not invent default rooms or fake rewards for incomplete choices.
