@@ -1,37 +1,13 @@
 # Run Planner Docs
 
-This folder separates stable system design from implementation progress and
-raw game-data references.
+The locked revamp design under `revamp/` is the sole architecture and
+implementation-guidance authority for the clean Run Planner rewrite. Begin
+with `revamp/README.md` and follow its declared reading order.
 
-## System Design
-
-`system_design/` is the durable architecture source of truth for the fresh
-planner model.
-
-Edit these docs only when the intended system model changes. Do not use them as
-a running implementation log.
-
-Notable model authorities:
-
-- `system_design/ui/BIOME_PLAN_CONTROL_MODEL.md`: authoritative dynamic UI
-  topology, occurrence identity, control ownership, and materialization model.
-- `system_design/ui/FORM_STORAGE_ROUNDTRIP.md`: Biome Plan storage, profile,
-  reset, and codec boundaries.
-- `system_design/ui/FORM_FEEDBACK_CONTRACT.md`: completeness, dual addressing,
-  candidate ownership, and feedback routing.
-- `system_design/validation/FORCE_PRESSURE_MODEL.md`: force-pressure
-  declaration and generated-door batch validation semantics.
-- `system_design/ui/UI_IMPLEMENTATION_ORDER.md`: production UI build order,
-  draw-state constraints, and clean-rewrite rollout.
-
-## Progress
-
-`progress/` records implementation checkpoints, validation runs, known gaps,
-and next slices.
-
-Progress docs may point back to system design docs. System design docs should
-only point to progress docs through intentional appendices or stable tracker
-links.
+The superseded `system_design/` and `progress/` trees are preserved on the
+`codex/fresh-planner-spine` branch and in Git history. They are intentionally
+absent from the live rewrite branch so searches cannot confuse them with the
+revamp model.
 
 ## Game Data References
 
@@ -39,5 +15,5 @@ links.
 - `gameinfo/PHYSICAL_EXIT_TOPOLOGY_AUDIT.md`: physical exit counts by biome.
 - `gameinfo/rewardbag.txt`: community reward-bag reference notes.
 
-Historical migration notes were culled from the docs tree. Use git history for
-provenance when needed; do not keep stale design plans as live documentation.
+These files are audit evidence rather than design authority. Harvest or remove
+them as the executable catalog is built.

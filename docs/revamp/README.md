@@ -6,12 +6,14 @@ This directory defines the target architecture for a clean Run Planner
 rewrite. It is forward-looking design guidance, not a description of the
 current implementation.
 
-The existing documents under `docs/system_design/`, `docs/gameinfo/`, and
-`docs/progress/` remain source material while this set is written. They are not
-authoritative for the revamp when they disagree with documents in this
+The superseded `docs/system_design/` and `docs/progress/` trees are archived on
+`codex/fresh-planner-spine`. The remaining `docs/gameinfo/` files are
+non-authoritative audit evidence. Neither can override documents in this
 directory.
 
-The current implementation remains live until the rewrite begins.
+The legacy implementation is archived on `codex/fresh-planner-spine`. The live
+rewrite branch starts from the minimal managed-module skeleton required by
+Checkpoint 0.
 
 The six-document set completed coherent design review and was locked on
 2026-07-14. Questions deliberately assigned to a later biome implementation
