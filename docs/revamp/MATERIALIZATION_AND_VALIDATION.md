@@ -82,8 +82,8 @@ Materialization receives:
 - the Route Control's committed configured-prefix state;
 - the corresponding committed Biome Plans;
 - the statically declared Room Control registry;
-- immutable room, reward, requirement, encounter, exit, batch, and biome
-  declarations;
+- immutable room, reward, requirement, encounter-profile, exit, batch, and
+  biome declarations;
 - registered room-template and batch-rule materializers;
 - stable candidate providers exported by semantic owners.
 
@@ -92,13 +92,21 @@ Declarations contain possible game facts:
 - room identity and template;
 - physical exits and exit constraints;
 - room eligibility, creation caps, appearance caps, and force metadata;
-- encounter phases and counter effects;
+- baseline encounter phases, presence snapshots, counter effects, and
+  phase-owned offer points;
 - reward surfaces, stores, counted bags, and shop profiles;
-- normalized modeled requirements and out-of-scope audit metadata.
+- normalized requirements with registered evaluators.
 
 The canonical plan contains only the concrete choices made from those facts.
 It must not copy labels, option lists, eligibility predicates, force windows,
 physical-exit declarations, or reward-store declarations.
+
+Before history is built, materialization resolves each referenced Room
+Control's baseline encounter profile into one effective room spine. At the
+current checkpoint this is the baseline itself. A future enabled persistent
+NPC layer may replace an addressed phase during this step; a disabled layer is
+dormant. No validator or runtime hook may combine baseline history with a
+separate NPC side channel after the walk has begun.
 
 ## Completeness Gate
 
@@ -112,7 +120,8 @@ For each configured biome, completeness requires:
 - complete batch state, physical target links, and selection state;
 - one distinct Room Control key for every referenced top-level target;
 - a complete local fragment from every referenced Room Control;
-- complete active local child slots and inactive dormant slots ignored;
+- complete active explicit local-child and phase-derived offer-point slots,
+  with inactive optional-phase slots ignored;
 - concrete reward types, payloads, purchases, wheel picks, and other local
   choices required by the selected topology;
 - a selected continuation that reaches the declared terminal rule.
@@ -219,7 +228,9 @@ For ordinary generated doors, acquisition is derived from the batch's picked
 target. The incoming offer does not persist or materialize a second editable
 `acquired` flag that could disagree with topology. Independent room-local
 offers such as shop purchases, O wheel choices, and entered N side rooms carry
-their own concrete acquisition state.
+their own concrete acquisition state. A phase-owned offer point is addressed
+by its parent Room Control and offer-point key; it is not a nested control or a
+second room declaration.
 
 ### Semantic Addresses
 
@@ -278,7 +289,8 @@ Registered specialized rules replace only the traversal they own:
 - `ClockworkDoorBatch` associates one concrete incoming offer kind with each
   target;
 - `EphyraHubBatch` emits one persistent hub batch and six ordered visits;
-- `ShipCombat` interleaves encounter and wheel fragments inside one room;
+- `ShipCombat` derives wheel slots from its encounter phases and interleaves
+  their fragments inside one room;
 - Olympus materializers emit declared encounter phases and typed exits;
 - `QMinibossBatch` emits its declared distinct pair.
 
@@ -302,6 +314,7 @@ biome.enter
 
 room.enter
 incoming_reward.acquire
+room.prepare_encounters
 room encounter phases and room-local offer points in declared order
 room.generate_next
 generated target creation and incoming reward offers in exit order
@@ -318,6 +331,7 @@ biome.enter
 room.enter
 room.restore
 encounter.start
+combat.complete
 encounter.complete
 offer_point.begin
 reward.offer
@@ -331,14 +345,30 @@ room.commit
 biome.complete
 ```
 
+Encounter events retain their semantic `roomControlKey`, encounter-profile
+key, and phase key in addition to the effective concrete encounter identity.
+This lets requirements address stable room-spine phases even when a future
+persistent layer replaces the baseline encounter.
+
 The target room is created and its incoming reward is offered by the current
 room at `room.generate_next`. If picked, that reward is acquired when the
 target is later entered. An unpicked target emits creation and offer events but
 no entry or acquisition event.
 
-Room-local event order comes from the registered room template. This is
-necessary for O, where encounter 1 completes, wheel 1 is offered and acquired,
-then encounter 2 and wheel 2 may occur. A single aggregate
+Room-local event order comes from the registered room template and the resolved
+spine based on its encounter profile. This is necessary for O. Its complete
+phase sequence is prepared first against the pre-room counter snapshot. The
+baseline then emits:
+
+```text
+Intro start -> Intro complete
+Combat1 start/count -> wheel1 offer/select -> combat complete -> acquire -> encounter complete
+Combat2 start/count -> wheel2 offer/select -> combat complete -> acquire -> encounter complete
+```
+
+The final line exists only when `Combat2` was authored present. In particular,
+the wheel is offered at encounter start, before its combat, while acquisition
+completes after combat and before the encounter completes. A single aggregate
 `room.encounters -> room.offer_points` phase would be wrong.
 
 Normal shop offers become pending during the shop room. The current room
@@ -357,7 +387,8 @@ Special structures emit ordinary typed facts in their real order:
   acquired non-goal rewards separately;
 - N emits the hub reward batch once, then ordered pylon entries, parent-local
   side-room creation/entry, parent restores, and hub returns;
-- O emits each wheel as a distinct sequential offer batch;
+- O resolves optional phase presence at `room.prepare_encounters`, then emits
+  each active phase-owned wheel as a distinct sequential offer batch;
 - P emits its non-counting and counting encounter phases separately;
 - Q emits both forced miniboss creations and offers before following one.
 
@@ -400,12 +431,13 @@ Important distinctions:
 - loot/use requirements see only prior `reward.acquire` events;
 - one physical room commit advances `biomeDepthCache` once even when it has
   multiple encounters;
-- `biomeEncounterDepth` changes only for encounter phases declared to count;
+- `biomeEncounterDepth` changes only for resolved encounter phases whose
+  effective behavior counts;
 - Clockwork progress changes on acquisition, not door creation.
 
 ## Requirement Model
 
-### Normalization and Classification
+### Normalization and Evaluator Registration
 
 Hand-authored game requirements are normalized at catalog construction. Each
 production predicate has:
@@ -413,8 +445,7 @@ production predicate has:
 - a registered kind or named evaluator;
 - typed arguments;
 - an evaluation phase;
-- a policy for selected facts and candidates;
-- one `modeled` or `outOfScope` classification from `DOMAIN_MODEL.md`.
+- a policy for selected facts and candidates.
 
 Boolean composition uses explicit `all`, `any`, and `not` nodes. Generic game
 paths are translated into typed ledger queries where the fact is current-run
@@ -433,11 +464,10 @@ Modeled predicate families include:
   offers, payload integrity, and same-batch uniqueness;
 - named game requirements registered to one of these typed queries.
 
-An `outOfScope` predicate remains declaration audit metadata and has no effect
-on planner validity. An unknown predicate kind, unknown named evaluator,
-missing evaluator, malformed payload, or missing classification is a
-declaration contract failure that prevents catalog construction. None becomes
-a production validator result or defaults to valid.
+External save/profile predicates are absent from production declarations. An
+unknown predicate kind, unknown named evaluator, missing evaluator, or
+malformed payload is a declaration contract failure that prevents catalog
+construction. None becomes a production validator result or defaults to valid.
 
 ### Evaluation API
 
@@ -623,13 +653,12 @@ their bounded pending interval can affect `RequiredNotInStore` queries.
 
 ### Unmodeled Reward Inputs
 
-Reward requirements use the general validity classification. Save/unlock facts
-declared out of scope are audited and omitted from validity. Route-relevant
-facts not yet derivable, such as an exact current-run trait count needed by a
-supported reward source, prevent catalog construction until an evaluator is
-implemented or the source is deliberately removed from the supported surface.
-They do not enter production validator results and are not approximated,
-silently accepted, or weakened to warnings.
+Save/unlock facts are absent from production reward declarations. Route-
+relevant facts not yet derivable, such as an exact current-run trait count
+needed by a supported reward source, prevent catalog construction until an
+evaluator is implemented or the source is deliberately removed from the
+supported surface. They are not approximated, silently accepted, or weakened
+to warnings.
 
 ## Candidate Projection
 
@@ -732,6 +761,8 @@ contains concrete runtime decisions such as:
 - the source authored revision required for consumption;
 - expected route, biome, current room, and lifecycle phase;
 - physical exit-to-target room assignments in generation order;
+- concrete effective encounter assignments and suppression policy for
+  unplanned natural encounter replacements;
 - concrete generated reward and payload assignments;
 - selected/entered continuation;
 - room-local encounter, wheel, cage, shop, and child instructions;
@@ -798,10 +829,6 @@ The pipeline distinguishes:
 : A complete authored fact violates a modeled game/planner rule. Produces a
   blocking selected-plan finding.
 
-`Out of scope`
-: A known external predicate deliberately excluded from planner validity.
-  Produces audit metadata, not route feedback by default.
-
 `Contract failure`
 : Catalog, storage, registration, address, or internal shape contradicts a
   construction invariant. Fails loudly at its boundary and is not converted
@@ -831,8 +858,8 @@ The pipeline test suite must cover:
 - O interleaved encounters and wheel offers;
 - H cage roll history and I acquisition-driven goal history;
 - P typed exits and Q deterministic paired batches;
-- modeled/out-of-scope requirement handling and catalog rejection of unknown
-  or evaluator-less requirements;
+- modeled requirement handling and catalog rejection of unknown or evaluator-
+  less requirements;
 - selected and candidate use of the same rule functions;
 - provider-version rejection of stale feedback;
 - one published prepared view per draw and replacement publication before the

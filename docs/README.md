@@ -15,5 +15,7 @@ revamp model.
 - `gameinfo/PHYSICAL_EXIT_TOPOLOGY_AUDIT.md`: physical exit counts by biome.
 - `gameinfo/rewardbag.txt`: community reward-bag reference notes.
 
-These files are audit evidence rather than design authority. Harvest or remove
-them as the executable catalog is built.
+These files are audit evidence rather than design authority. Their room-exit,
+force-window, and counted-bag facts are now exercised by the headless catalog
+foundation and its coverage tests; they remain useful for future game-data
+reverification.

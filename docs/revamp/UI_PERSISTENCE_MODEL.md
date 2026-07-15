@@ -88,6 +88,12 @@ Room controls are the stable semantic interface for:
 No second logical control instance is created when topology references the
 room. The Biome Plan retrieves the already declared control by its stable key.
 
+Encounter phases are addressed through their owning Room Control as
+`roomControlKey + phaseKey`. The Room Control materializes the effective phase
+into its canonical fragment even when a future route-level persistent entity
+selects the replacement. This does not make that cross-room entity private
+Room Control storage.
+
 ### Local Child Slots
 
 Bounded room-internal children are fields or bounded tables inside the owning
@@ -96,13 +102,28 @@ Room Control template. They are not independently declared nested Lib controls.
 Examples include:
 
 - H cage reward slots;
-- O encounter and wheel slots;
+- O phase-presence state and phase-derived wheel offer slots;
 - N combat-pylon side-door slots.
 
-Each slot has a stable template-local key. The owning control translates
-candidate, feedback, and materialization operations for that slot. A
-concrete child game room key may repeat under different parents without
+Explicit children come from the room declaration. Phase-owned offer points
+come from the referenced encounter profile and are flattened into the same
+Room Control manifest. Each slot has a stable template-local key. The owning
+control translates candidate, feedback, and materialization operations for
+that slot. No slot becomes an independently registered nested control.
+
+For `ShipCombat`, the Room Control persists the authored presence of optional
+`Combat2` plus the offered reward values and picked value for each active
+wheel. The declaration bounds each wheel to two offers. `wheel2` state may
+remain persisted while `Combat2` is absent, but it is dormant and ignored.
+A concrete child game room key may repeat under different parents without
 colliding because persistence is scoped by the parent Room Control.
+
+Future NPC assignments are separate persistent route entities because their
+identity, uniqueness, spacing, and target movement cross Room Controls. Their
+target is a stable encounter-phase address. Disabled assignments remain stored
+but dormant; enabled assignments merge into the targeted Room Control fragment
+before history is produced. NPC controls and storage are intentionally deferred
+and are not part of the current manifest.
 
 ### Biome Plans
 
@@ -180,6 +201,7 @@ counter, dynamic control schema, or copied canonical document.
 | Picked state / visit order | Biome Plan or batch rule | Module table roots scoped to biome step |
 | Room-local fields | Room Control | Room-control private storage |
 | Bounded room-internal child state | Parent Room Control | Parent-control private storage |
+| Optional encounter presence and phase offers | Parent Room Control | Parent-control private storage |
 | Generated target reward | Target Room Control | Room-control private storage |
 | Peer-wide batch state | Batch rule | Biome Plan batch-state storage |
 | Selected tab/filter/view state | UI composition | Transient module data |
@@ -317,6 +339,22 @@ Room-local child address:
     aspect = "generatedReward",
 }
 ```
+
+Phase-owned offer-point address:
+
+```lua
+{
+    routeKey = "Surface",
+    biomeStepKey = "Surface_O",
+    roomControlKey = "Surface_O_Combat04",
+    localSlotKey = "wheel2",
+    aspect = "pickedReward",
+}
+```
+
+The profile's phase key remains descriptor metadata used for lifecycle
+materialization; persisted and presentation ownership still resolves through
+the parent Room Control and stable offer-point key.
 
 Feedback resolution during the committed rebuild is direct:
 

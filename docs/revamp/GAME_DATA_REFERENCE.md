@@ -82,8 +82,10 @@ These are separate game concepts:
 : Restricts creation relative to the current source room. It is not a general
   same-batch uniqueness rule.
 
-All supported ordinary `F/G/H/I/N/O/P/Q_CombatXX` declarations inherit or
-declare `MaxAppearancesThisBiome = 1`. None declares
+Supported ordinary `F/G/H/I/O/P/Q_CombatXX` declarations inherit or declare
+`MaxAppearancesThisBiome = 1`. N combat rooms do not declare that cap; their
+top-level uniqueness instead comes from the persistent hub's one physical door
+mapping per pylon room. No supported ordinary combat declaration declares
 `MaxCreationsThisRun`.
 
 Special rooms commonly declare `MaxCreationsThisRun = 1`, including shops,
@@ -92,20 +94,22 @@ the concrete room declaration rather than inferred from room kind.
 
 ## Requirement Scope Boundary
 
-The raw catalog contains both current-run predicates and external save/profile
-predicates. `DOMAIN_MODEL.md` owns their semantic classification. Applied to
-the extracted game data:
+The raw game catalog contains both current-run predicates and external
+save/profile predicates. The production planner catalog keeps only facts it
+can derive from the authored route and its history:
 
 - current-run room, reward, encounter, creation, and counter history is
   modeled;
-- explicitly identified save progression, story completion, unlocks, world
-  upgrades, bounty state, and prior-run encounter completion are out of scope;
+- save progression, story completion, unlocks, world upgrades, bounty state,
+  and prior-run encounter completion are not copied into production room
+  declarations;
 - a route-relevant predicate without a registered evaluator is a declaration
   failure;
-- an unknown or unclassified predicate is also a declaration failure.
+- an unknown predicate is also a declaration failure.
 
-Out-of-scope predicates remain audit metadata. They are deliberately excluded
-from planner eligibility rather than silently treated as satisfied.
+If exact game-data conformance checking is added later, it must operate as a
+separate development-time extraction/audit tool against the source game data.
+Manually copied external paths do not belong in the runtime catalog.
 
 ## Planner Canonicalization
 
@@ -152,6 +156,38 @@ Unique combat-map counts:
 I has 34 weighted combat entries but only 24 unique concrete combat keys.
 Control capacity uses unique keys, not room-set weight.
 
+### Catalog Scope Exclusions
+
+Development-only game declarations are audit evidence, not production catalog
+members. The supported room universe excludes debug-only `I_Shop01`,
+`I_MiniBoss03`, and `Q_MiniBoss01`. `Q_Combat10` and `Q_Combat11` are also
+debug-only through their inherited `Q_BaseFoyer` data. The normal room picker
+rejects all five through the resolved `DebugOnly` flag.
+
+`N_Shop01` is real and non-debug, but its `N_Hub.RoomMap` entry is commented
+out. The linked opening/pre-hub path enters `N_Hub`, whose live physical map
+contains only the declared 23 combat, two miniboss, and one story targets.
+`N_Shop01` can matter only through route-structural behavior outside that
+supported hub spine, including a possible return from a Chaos detour. Chaos is
+currently suppressed and deferred, so the shop remains outside the production
+catalog for that explicit structural reason.
+
+`G_MiniBoss03` is a normal production room: it is present in the G room set,
+has no resolved `DebugOnly` flag, owns the `MiniBossJellyfish` encounter, and
+has two physical exits. It participates in the same depth-4-to-7 force window
+and current-run mutual exclusion group as `G_MiniBoss01` and
+`G_MiniBoss02`.
+
+### Opening Encounter Variants
+
+The raw legal encounter sets contain progression-controlled opening outcomes.
+`OpeningEmpty` is eligible before Apollo has been used or during a Dream Run;
+`FCastTutorialFight` is a one-time follow-up after `OpeningEmpty`. These are not
+authored production choices. The supported progressed-save baseline uses
+counting `OpeningGeneratedF` for F and counting `OpeningGeneratedN` for N.
+`PreHubGeneratedN` remains explicitly non-counting. Encounter-depth effects
+live on these production encounter profiles, not room declarations.
+
 ### Q Forced Miniboss Pairs
 
 Q forces two-exit combat maps at biome depths 2 and 5. Their outgoing targets
@@ -168,8 +204,8 @@ batches to the two distinct compatible miniboss controls while preserving the
 picked concrete identity and both reward offers.
 
 `Q_MiniBoss04` has a raw requirement on prior `GameState` encounter
-completion. Prior-save encounter completion is out of scope, so both depth-6
-miniboss controls participate in planner topology.
+completion. Save progression is not a production requirement predicate, so
+both depth-6 miniboss controls participate in planner topology.
 
 ### G Capacity Check
 
@@ -195,6 +231,54 @@ O has one physical exit per modeled room. With preboss forced at depth 7, at
 most six preterminal ordinary targets can be combat rooms. O provides 15
 unique combat maps.
 
+### O Ship Encounter Sequence
+
+O combat rooms use `MultipleEncountersData`. The game prepares the entire
+encounter sequence before the first encounter begins:
+
+1. one encounter from `OEncountersIntros`;
+2. one encounter from `OEncountersDefault`;
+3. a second encounter from `OEncountersDefault` when its 0.6 chance and
+   pre-room `BiomeEncounterDepth > 1` and `< 6` requirements pass.
+
+Those raw sets are not coherent planner domains. `OEncountersIntros` mixes the
+normal `GeneratedO_Intro01` with progression-only
+`GeneratedO_Intro01_First` and the Heracles variants `HeraclesCombatO` and
+`HeraclesCombatO2`. `OEncountersDefault` mixes normal `GeneratedO` with
+progression `DeadSeaIntro` and Icarus variants. The production baseline
+therefore declares `GeneratedO_Intro01` for `Intro` and `GeneratedO` for both
+counting combat phases. It does not expose either raw set as an unresolved
+production baseline.
+
+NPC encounters are future persistent route entities rather than baseline set
+members. When that layer is implemented, an enabled assignment replaces a
+stable room phase before history; when it is disabled, runtime suppresses
+natural NPC selection inside the configured planner prefix. Progression-only
+variants remain outside production declarations.
+
+The raw O combat-room availability rule counts several concrete intro
+encounter names over the previous three rooms. Production normalizes that rule
+to `RecentEncounterPhaseCount(ShipCombat, Intro)`. This preserves the game's
+structural meaning while ensuring a future NPC replacement still occupies and
+counts as the same intro phase.
+
+The planner does not reproduce the random roll. It authors the optional third
+slot only inside the equivalent inclusive depth range `[2, 5]`, evaluated at
+`room.prepare_encounters` before any encounter in this room changes the
+counter.
+
+Each normal default ship encounter runs `ShipsEncounterSetup` at encounter start.
+That setup creates one reward offer, or two when the `GeneratedO` encounter's
+`TwoRewardChoiceChance = 0.8` roll succeeds, and waits for one selection before
+combat proceeds. The planner authors this random outcome as an offer count of
+one or two. After combat, `SpawnRoomReward` exposes the selected reward and
+`WaitForNextEncounterReady` blocks the next encounter until its required
+pickup completes.
+
+Therefore the production declaration uses phase-owned wheel offer points. It
+must not model wheel rewards as an incoming door reward, merge both wheels into
+one room-wide batch, or place the offer after combat.
+
 ### Capacity Rule
 
 The correct capacity bound is not `termination depth * 2`.
@@ -209,10 +293,13 @@ It must account for:
 - depth-local combat eligibility;
 - biome-specific structures such as N hub doors.
 
-The implementation should validate the maximum legal topology through the
-same declaration model used by materialization. It must match target demand to
-compatible concrete controls, not merely count all rooms tagged `Combat`. A raw
-total-room count is only a sanity check.
+The implementation validates the declared maximum topology through static
+proof inputs. It matches target demand to compatible concrete controls using
+template/structure constraints and statically evaluable counter ranges, not
+merely all rooms tagged `Combat`. History, peer, cap, and game-state predicates
+are dynamic: the audit reports their kinds as excluded rather than pretending
+to prove them. Runtime materialization and validation remain responsible for
+those predicates. A raw total-room count is only a sanity check.
 
 ## Physical Exit Facts
 

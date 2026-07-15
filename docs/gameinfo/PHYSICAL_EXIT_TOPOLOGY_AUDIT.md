@@ -59,7 +59,8 @@ Planner declarations match the physical `ErebusExitDoor` count.
 | `F_Story01`, `F_Reprieve01`, `F_Shop01` | 2 |
 | `F_MiniBoss01`, `F_MiniBoss02`, `F_MiniBoss03` | 1 |
 
-No planner update needed from this audit.
+The revamp catalog includes all three F miniboss rooms with these physical
+exit counts.
 
 ## G: Oceanus
 
@@ -75,7 +76,8 @@ Planner declarations match the physical `OceanusExitDoor` count.
 | `G_MiniBoss01`, `G_MiniBoss03` | 2 |
 | `G_MiniBoss02` | 1 |
 
-No planner update needed from this audit.
+The revamp catalog includes all three G miniboss rooms with these physical
+exit counts.
 
 ## H: Mourning Fields
 

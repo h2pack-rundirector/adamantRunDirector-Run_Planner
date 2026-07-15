@@ -20,14 +20,11 @@ keep room-internal structure inside the owning Room Control
 
 ## Requirement Scope
 
-`DOMAIN_MODEL.md` owns the `modeled` and `outOfScope` classification. This
-document applies that boundary when a biome declaration mixes route-derived
-predicates with external save/profile predicates. A route-relevant requirement
-without a modeled evaluator prevents catalog construction; it does not become
-a production biome state.
-
-Biome rules must name each out-of-scope source they discard. They must not use
-external-state uncertainty to weaken modeled current-run structure.
+Biome declarations contain only route-derived predicates with registered
+evaluators. External save/profile predicates are omitted from production data.
+A route-relevant requirement without an evaluator prevents catalog
+construction, and external-state uncertainty must not weaken modeled
+current-run structure.
 
 ## Shared Structural Rules
 
@@ -83,19 +80,21 @@ The planner does not model random weights or odds.
 ### Local Child Slots
 
 Some concrete rooms contain bounded child structure that is not part of the
-top-level generated-room tree. Examples include H cages, O wheel encounters,
+top-level generated-room tree. Examples include H cages, O reward wheels,
 and N side rooms.
 
-These are statically declared semantic slots inside their owning Room Control.
-Their stable address is:
+H cages and N side rooms are explicit room-local child declarations. O wheels
+are phase-owned offer points derived from the room's `ShipCombat` encounter
+profile. Both forms become statically bounded semantic slots inside their
+owning Room Control. Their stable address is:
 
 ```text
 parent room-control key + declared local slot key
 ```
 
-The child may retain a concrete game room or reward key as data. Repeated child
-game keys do not create duplicate top-level Room Controls or dynamic occurrence
-IDs.
+The child may retain a concrete game room or reward key as data. A phase-owned
+slot also retains its phase key. Repeated child game keys do not create
+duplicate top-level Room Controls or dynamic occurrence IDs.
 
 ## Structural Summary
 
@@ -123,8 +122,10 @@ F_Opening03
 ```
 
 Openings are root-only and cannot be ordinary generated targets later in the
-biome. Opening save-progression requirements are out of scope; the authored
-plan selects the concrete opening.
+biome. The production profile uses counting `OpeningGeneratedF`, the normal
+post-tutorial encounter. Progression-controlled `OpeningEmpty` and
+`FCastTutorialFight` are game-data reference facts, not authored planner
+choices or production requirements.
 
 `F_PreBoss01` is the terminal room and is forced at
 `biomeDepthCache = 10`.
@@ -311,9 +312,9 @@ same batch. `ClockworkDoorBatch` validates that peer condition directly.
 
 Preboss controls become eligible after remaining goals reaches zero. Once the
 acquired non-goal count reaches `maxNonGoalRewards`, preboss force pressure is
-active. Preboss layout selection conditions based on prior save progression
-are out of scope; the plan may select any supported concrete preboss control
-whose modeled requirements pass.
+active. Both concrete preboss layouts remain authored candidates. Save
+progression does not enter the production requirement registry; the selected
+plan must satisfy the requirements the planner declares.
 
 Every configured I plan includes its offer kind and concrete reward state.
 There is no reward-optional or structure-only I mode.
@@ -327,6 +328,11 @@ N begins with a fixed linked sequence:
 ```text
 N_Opening01 -> N_PreHub01 -> N_Hub
 ```
+
+`N_Opening01` uses counting `OpeningGeneratedN`, the normal progressed-save
+encounter. Progression-controlled `OpeningEmpty` is not an authored planner
+choice. `N_PreHub01` uses `PreHubGeneratedN`, which is explicitly non-counting.
+These encounter effects belong to encounter profiles, not room counter fields.
 
 `N_Hub` owns one persistent `EphyraHubBatch`. The game catalog maps physical
 hub door IDs to 23 combat rooms, two miniboss rooms, and one story room. On the
@@ -431,25 +437,45 @@ Its special behavior is entirely room-local.
 
 An O combat control represents one physical room containing:
 
-1. a non-counting intro encounter;
-2. one counting combat encounter;
-3. an optional second counting combat encounter.
+1. `Intro`, with baseline `GeneratedO_Intro01`, which does not count;
+2. `Combat1`, with baseline `GeneratedO`, which counts;
+3. optional `Combat2`, also with baseline `GeneratedO`, which counts.
 
-The second combat is possible with nonzero game chance only while the modeled
-`BiomeEncounterDepth` predicates pass. The completed room state explicitly
-authors whether it occurred; the planner does not simulate the probability.
+The raw game encounter sets also contain progression-only and NPC outcomes, so
+they are provenance rather than planner baseline domains. Each phase keeps its
+stable `roomControlKey + phaseKey` address. A future enabled persistent NPC
+assignment may replace the baseline encounter and its counter effect before
+history is built; a disabled NPC layer contributes nothing and its natural
+encounters are suppressed within the configured planner prefix.
 
-Each counting ship encounter owns a sequential wheel offer point. A wheel
-contains one or two concrete rewards and exactly one acquired choice. The first
-wheel fully offers and acquires before the next encounter's wheel is generated,
-so separate wheels are not merged into a room-wide batch.
+The game prepares the complete sequence before starting any of these phases.
+At the planner's corresponding `room.prepare_encounters` snapshot, `Combat2`
+is authorable only when the pre-room `BiomeEncounterDepth` is in `[2, 5]`.
+The game also gives that phase a nonzero chance. The planner does not simulate
+that probability: completed room state explicitly authors whether the optional
+phase is present.
 
-O combat rooms use these wheel offers instead of an ordinary incoming
-generated-door reward. Story, shop, devotion/trial, miniboss, reprieve, and
+Each counting phase owns one `ShipWheel` offer point. The offer point authors
+one or two concrete rewards and exactly one picked reward. Its lifecycle is:
+
+```text
+encounter.start and increment BiomeEncounterDepth
+wheel rewards offer and one is selected
+combat completes
+selected wheel reward spawns and is acquired
+encounter completes
+```
+
+Only then may the next encounter begin. Separate wheels are not merged into a
+room-wide batch. `Combat2`'s `wheel2` slot is dormant when that phase is absent.
+
+O combat room declarations therefore use the `None` incoming reward surface;
+their encounter profile, rather than duplicated room-local declarations, owns
+`wheel1` and `wheel2`. Story, shop, devotion/trial, miniboss, reprieve, and
 preboss controls use their concrete declaration-owned reward surfaces.
 
 Room commit advances `BiomeDepthCache` once regardless of encounter count.
-Counting encounters advance `BiomeEncounterDepth` independently.
+Resolved counting encounters advance `BiomeEncounterDepth` independently.
 
 ## P: Mount Olympus
 
@@ -523,8 +549,9 @@ the same unpicked-identity simplification used for ordinary combat targets,
 not a claim about vanilla picker probability.
 
 `Q_MiniBoss04` has a prior-save encounter-completion requirement in raw game
-data. That predicate is explicitly out of scope. Both depth-6 miniboss controls
-participate in planner topology and modeled current-run validation.
+data. Save progression does not enter the production requirement registry.
+Both depth-6 miniboss controls participate in planner topology and modeled
+current-run validation.
 
 Q combat rooms do not gain reward slots merely because they have two exits.
 Reward ownership follows each concrete target declaration. Forced miniboss
@@ -541,7 +568,6 @@ Every biome declaration must prove:
 - every local child slot has a finite declaration-derived bound;
 - every canonicalized target family has sufficient compatible controls;
 - modeled requirements have evaluators;
-- out-of-scope requirements are individually classified with their source;
 - every other route-relevant requirement fails catalog construction;
 - the maximum persisted topology fits its declared Lib table bounds.
 

@@ -22,28 +22,22 @@ or an exact recorder of every vanilla room-picker outcome.
 
 ## Planner Validity Domain
 
-Production requirements are hand-authored and classified before entering
-planner validation:
+Production requirements are hand-authored only when the route plan and its
+derived history contain the state needed to evaluate them. Every production
+predicate has a registered evaluator and participates in eligibility or
+validation.
 
-`modeled`
-: The route plan and its derived history contain the state needed to evaluate
-  the predicate. It participates in eligibility and validation.
+Dependencies on prior-run/save story progression, unlocks and world upgrades,
+active bounty overrides, current trait/aspect/familiar state, and prior-run
+encounter completion are deliberately absent from production declarations.
+They may be recorded in game-data reference material or a future development-
+time conformance audit, but they are not catalog data, validator results, or
+feedback states.
 
-`outOfScope`
-: The predicate is a known dependency on save progression or another system
-  the planner deliberately does not model. It is retained as audit metadata
-  but has no effect on planner validity.
-
-A route-relevant predicate without a registered evaluator, an unknown
-predicate, or an unclassified predicate is a declaration contract failure and
-prevents catalog construction. `unsupported` may appear in design notes or
-implementation tracking, but it is not a production catalog classification,
-validator status, or feedback state. `outOfScope` is never an implicit
-fallback for unfinished planner support.
-
-Current out-of-scope families include prior-run/save story progression,
-unlocks and world upgrades, active bounty overrides, current trait/aspect/
-familiar state, and prior-run encounter completion.
+A route-relevant predicate without a registered evaluator or an unknown
+predicate is a declaration contract failure and prevents catalog construction.
+External-state omission must never become a fallback for unfinished support of
+a current-run fact.
 
 Current-run facts emitted by the configured route remain modeled even when the
 game expresses them through a generic path. Room entry, reward acquisition,
@@ -72,8 +66,25 @@ exceptions.
 
 `Room Declaration`
 : Verified game data for one concrete game room key such as `F_Combat04`. It
-  owns type, tags, eligibility, force, caps, exits, encounter profile, and
-  reward surface facts.
+  owns type, tags, eligibility, force, caps, exits, its encounter-profile key,
+  and reward surface facts. It does not duplicate encounter phases or their
+  counter effects.
+
+`Encounter Profile`
+: A finite fixed or authored baseline sequence of encounter phases. It owns
+  stable phase keys, order, kind, optional presence, baseline encounter
+  identity and `biomeEncounterDepth` effect, and any reward offer point attached
+  to that phase. Optional presence is decided at an explicitly named lifecycle
+  snapshot, not recomputed while later phases execute. Concrete baseline keys
+  remain leaf facts on the profile phase; there is no parallel registry of
+  empty encounter-name records.
+
+`Resolved Room Spine`
+: The effective ordered room phases after active persistent route entities have
+  been merged into the baseline profile. With no such layer enabled, it equals
+  the baseline. A future NPC assignment may replace a phase's encounter and
+  counter effect without changing its stable phase address. History consumes
+  only the resolved spine, never the unmerged profile plus side-channel data.
 
 `Room Template`
 : Reusable typed behavior such as `StandardCombat`, `FieldsCombat`,
@@ -88,9 +99,10 @@ exceptions.
   fragments.
 
 `Local Child Slot`
-: One statically declared semantic child inside a Room Control, identified by
-  its parent control and declaration-local slot key. It models bounded
-  room-internal structures such as H cages, O encounters, and N side doors.
+: One statically bounded semantic child inside a Room Control, identified by
+  its parent control and slot key. A slot is either declared directly by the
+  room or derived from its encounter profile. It models room-internal
+  structures such as H cages, O reward wheels, and N side doors.
 
 `Generated Batch`
 : The complete set of rooms generated together from a source room. It owns
@@ -141,20 +153,38 @@ There is no planner occurrence ID in the revamp model.
 
 ### Local Child Identity
 
-A bounded room-internal child is addressed through its owning control:
+A bounded room-internal child or phase-owned offer point is addressed through
+its owning control:
 
 ```text
 parentRoomControlKey + localSlotKey
 ```
 
-The slot may carry a concrete game room or reward key as data. The same child
-game room key may appear in slots owned by different parent controls. This is
-required for N side rooms, where one `N_SubXX` declaration can be predetermined
-behind physical doors in several different pylon maps.
+The slot may carry a concrete game room or reward key as data. Explicit room
+children come from the room declaration; encounter offer points come from the
+room's referenced encounter profile. The Room Control manifest flattens both
+sources into one stable local-slot list. It does not create nested controls.
+
+The same child game room key may appear in slots owned by different parent
+controls. This is required for N side rooms, where one `N_SubXX` declaration
+can be predetermined behind physical doors in several different pylon maps.
 
 Child slots do not participate in the top-level control registry or Biome Plan
 link table. Their parent template owns their storage, completeness, candidates,
 feedback translation, and materialization.
+
+### Encounter Phase Identity
+
+Every encounter phase has a stable room-local address:
+
+```text
+roomControlKey + phaseKey
+```
+
+The address survives baseline encounter replacement. Persistent route-level
+entities such as a future NPC assignment target this semantic address, not a UI
+row or encounter-set position. The resolved phase remains part of the owning
+Room Control's canonical fragment.
 
 ### Injective Topology References
 
@@ -407,6 +437,12 @@ F_Combat05 / F_Combat11
 The Biome Plan does not need to inspect or rewrite internal reward widgets. It
 asks each referenced room control for its concrete generated reward fragment.
 
+The reward primitive is the sole owner of its payload domain and normalized
+acquisition identity. A reward surface selects fixed primitives, stores, shop
+profiles, and batch constraints; it does not redeclare a fixed primitive's
+payload domain. Store filters may only include concrete reward types exposed by
+their referenced stores, and eligible/ineligible filters cannot overlap.
+
 Domain ownership does not change game timing:
 
 ```text
@@ -420,8 +456,10 @@ picked target is entered
 ```
 
 Independent room-internal choices, such as shops and O wheels, persist their
-own acquisition state. I Clockwork Goals are acquired and decrement their goal
-counter when acquired, not merely when a containing door is generated.
+own offer and acquisition state. An optional encounter's inactive offer point
+is dormant and contributes nothing to completeness, materialization, or
+history. I Clockwork Goals are acquired and decrement their goal counter when
+acquired, not merely when a containing door is generated.
 
 ## Dormant Controls
 
@@ -479,12 +517,28 @@ The history model must preserve the game lifecycle:
 
 ```text
 room.enter
-room.encounters
-room.offer_points
+room.prepare_encounters
+room.sequence
 room.generate_next
 room.commit
 biome.complete
 ```
+
+`room.prepare_encounters` resolves the complete phase sequence, including
+optional-phase presence and any enabled persistent encounter replacement,
+against the pre-sequence counter snapshot. The sequence then emits each
+effective phase's events in order. A counting combat phase may therefore emit:
+
+```text
+encounter.start and biomeEncounterDepth increment
+reward offers and selection at the declared offer timing
+combat.complete
+selected reward acquisition at the declared acquisition timing
+encounter.complete
+```
+
+The exact offer and acquisition points belong to the encounter profile. They
+must not be recovered later from a room-wide aggregate phase.
 
 The current room generates the next rooms. Every generated target counts as a
 creation, including unpicked peers. Only entered rooms count as appearances.
@@ -492,7 +546,8 @@ creation, including unpicked peers. Only entered rooms count as appearances.
 Counters remain distinct:
 
 - `biomeDepthCache` advances with committed room history;
-- `biomeEncounterDepth` advances with counting encounters;
+- `biomeEncounterDepth` advances only from resolved encounter phases whose
+  effective behavior counts;
 - route-wide room-history ordinal supports spacing rules;
 - generated-room creation history includes every target;
 - reward-offer history includes every offer;
@@ -509,6 +564,7 @@ The canonical plan stores concrete game choices, not UI helpers:
 
 - concrete game room keys;
 - physical exit indexes;
+- concrete effective encounter identities and counter effects;
 - concrete reward types and payloads;
 - concrete acquisition choices;
 - typed room and batch fragments.

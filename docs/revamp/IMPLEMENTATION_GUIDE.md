@@ -246,7 +246,7 @@ Required properties:
 
 - it adds one upstream contract and its focused tests;
 - downstream placeholders do not pretend to implement missing behavior;
-- every production requirement is modeled or deliberately out of scope;
+- every production requirement has a modeled evaluator contract;
 - no temporary fallback enters canonical or runtime output;
 - tests assert semantic contracts, not current table layout;
 - the worktree has no accidental generated or deployed-profile changes;
@@ -302,12 +302,15 @@ This checkpoint is declaration-only.
 - Underworld and Surface route declarations with ordered biome-step keys;
 - complete F, G, H, I, N, O, P, and Q concrete room catalogs;
 - roots, terminals, room kinds, template keys, physical exits/types, reward
-  surfaces, encounter profiles, counters, caps, force metadata, and modeled
-  eligibility;
+  surfaces, fixed and sequenced baseline encounter profiles, phase presence
+  snapshots, canonical baseline encounter keys where required, phase-owned
+  offer points, counters, caps, force metadata, and modeled eligibility;
+- explicit per-room records with no generated room ranges, semantic defaults,
+  or implicit counter/cap/profile/reward facts;
 - reward primitives, normalized acquisition names, unique stores, counted
   bags, shop profiles, offer profiles, payload domains, and batch constraints;
-- normalized requirement registry with evaluation phase and validity
-  classification;
+- normalized requirement registry with evaluation phases, payload schemas,
+  evaluator contracts, and static/dynamic capacity classification;
 - batch-rule and room-template declaration registries;
 - finite local-child and topology bounds;
 - mechanically generated stable Route and Room Control keys;
@@ -315,15 +318,10 @@ This checkpoint is declaration-only.
 
 ### Requirement Gate
 
-Every production requirement must be exactly one of:
-
-- `modeled`, with a registered evaluator contract;
-- `outOfScope`, with its concrete game-data source and reason.
-
-Missing evaluators, unknown kinds, unknown named predicates, generic
-unclassified paths, and malformed payloads fail catalog construction. An
-unfinished requirement may be tracked in design notes, but it does not enter
-production declarations.
+Every production requirement must have a registered evaluator contract.
+Missing evaluators, unknown kinds, unknown named predicates, and malformed
+payloads fail catalog construction. External save/profile predicates and
+unfinished requirements do not enter production declarations.
 
 ### Game-Data Gate
 
@@ -331,22 +329,38 @@ Tests and generated audits must prove:
 
 - route and room keys are unique in their declared scope;
 - each room's template accepts its room kind;
+- every room explicitly declares tags, exits, reward surface, encounter-profile
+  key, structural counter effects, caps, terminal/fixed state, and local
+  children, including empty and false values;
+- every encounter profile explicitly declares its phases, including each
+  phase's baseline encounter identity and encounter-depth effect where the
+  concrete identity affects planner semantics;
 - creation caps and appearance caps remain separate fields;
 - ordinary combat canonicalization is not encoded as
   `MaxCreationsThisRun = 1`;
 - physical exits match extracted map data;
-- Q forced pairs and N side-door mappings match their declarations;
+- Q forced pairs, H cage metadata, I/N biome state, and N physical hub-door
+  mappings are closed, typed, and internally consistent;
 - each canonicalized family has sufficient compatible controls under maximum
-  topology demand;
+  topology demand, and every declared canonical family has exactly one proof;
 - all declared force windows preserve start, deadline, and independent
   eligibility bounds;
-- every reward surface resolves to declared stores/profiles and payload types.
+- every reward surface, including nested branches and incoming-kind variants,
+  resolves to declared stores/profiles and reward/payload types.
+
+NPC catalogs, persistence, targeting, and validation are not Checkpoint 1
+deliverables. The foundation reserves stable `roomControlKey + phaseKey`
+addresses and resolves history from an effective room spine so those entities
+can later merge before history without changing Room Control identity. Mixed
+vanilla encounter sets containing progression and NPC variants are not
+production baseline declarations.
 
 ### Acceptance
 
 - the catalog loads without UI, Lib refs, history, or runtime state;
 - every F-Q declaration passes the coverage audit;
-- capacity tests use compatible matching, not raw room counts;
+- capacity tests use compatible matching, not raw room counts, and report every
+  dynamic predicate excluded from the static proof;
 - changing one malformed fixture fails at the catalog boundary with a precise
   invariant message;
 - no placeholder biome or reward declaration is counted as implemented.
@@ -630,11 +644,12 @@ production UI.
 
 ### 7C: Q Headless and Dormant
 
-Prove its fixed depth skeleton, both specialized distinct miniboss batches,
-canonicalized unpicked identity, and the out-of-scope prior-save requirement on
-`Q_MiniBoss04`. At biome depth 3, prove both required miniboss targets as one
-complete specialized batch. Prior-route inputs use explicit fixtures, and Q
-remains absent from the Surface prefix domain and production UI.
+Prove its fixed depth skeleton, both specialized distinct miniboss batches, and
+canonicalized unpicked identity. The prior-save condition on `Q_MiniBoss04` is
+not production planner data. At biome depth 3, prove both required miniboss
+targets as one complete specialized batch. Prior-route inputs use explicit
+fixtures, and Q remains absent from the Surface prefix domain and production
+UI.
 
 ### 7D: H Implementation and Activation
 
@@ -665,8 +680,11 @@ prefix to N.
 ### 7G: O Implementation and Activation
 
 Prove one-exit top-level topology and `ShipCombat` room-local sequencing:
-non-counting intro, one or two counting encounters, and sequential wheel offer
-and acquisition points. Add O production UI, validate it after the real N
+the complete sequence is prepared against pre-room history; the intro does not
+count; one or two combat phases count; and each combat phase owns a wheel that
+offers/selects at encounter start and acquires after combat. Derive stable
+wheel storage slots from the profile instead of duplicating them in every O
+room declaration. Add O production UI, validate it after the real N
 snapshot/history, and expand the Surface active prefix to `N/O`.
 
 ### 7H: P/Q Surface Activation
@@ -682,7 +700,7 @@ contiguous prefix passes its focused in-game probe.
 - no new route engine is introduced;
 - specialized behavior is owned by a registered batch, room template, or
   biome state rule named in `BIOME_RULES.md`;
-- all new requirements pass the classification gate;
+- all new requirements resolve to registered evaluators;
 - all local slots and topology remain declaration-bounded;
 - compatible-control capacity is reproven;
 - event order and counter timing have golden fixtures;
@@ -859,8 +877,7 @@ Retain a scenario only when it asserts a revamp contract. Rewrite it with:
 - full canonical/history evidence where timing matters;
 - exact declaration facts instead of sample defaults;
 - shared selected/candidate rule functions;
-- explicit completeness, invalid, out-of-scope, and contract-failure
-  expectations;
+- explicit completeness, invalid, and contract-failure expectations;
 
 Delete tests whose subject is:
 

@@ -84,8 +84,9 @@ Intro/preboss topology rooms were excluded from this list:
 - No upper eligibility bound.
 - Force persists after 7 if eligible.
 - Eligibility adds mutual exclusion/current-run entered checks.
-- Some variants add meta-progression requirements.
-- `G_MiniBoss03` is `DebugOnly`.
+- `G_MiniBoss02` also has prior-save encounter-completion requirements; those
+  do not change the shared current-run force window.
+- `G_MiniBoss03` is a normal production room, not `DebugOnly`.
 
 ### Fields
 
