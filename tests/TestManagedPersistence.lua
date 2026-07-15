@@ -5,12 +5,11 @@ local h = dofile("tests/support/import_harness.lua")
 
 TestManagedPersistence = {}
 
-local function load()
-    local catalog = h.testImport("mods/composition/catalog.lua").load()
-    local storage = h.testImport("mods/route/storage_manifest.lua").build(catalog)
-    local instances = h.testImport("mods/controls/instances.lua").build(catalog)
-    local templates = h.testImport("mods/controls/templates.lua").build(catalog)
-    return catalog, storage, instances, templates
+local function load(activePrefixEnds)
+    local systems = h.testImport("mods/systems.lua").create({
+        activePrefixEnds = activePrefixEnds,
+    })
+    return systems.catalog, systems.route.storage, systems.controls.instances, systems.controls.templates, systems
 end
 
 local function storageLookup(storage)
@@ -103,7 +102,7 @@ end
 
 function TestManagedPersistence.testManagedStateInstallsCompleteDeclarations()
     h.withImport(function()
-        local catalog = h.testImport("mods/composition/catalog.lua").load()
+        local _, _, _, _, systems = load()
         local captured = {}
         local module = {
             data = {
@@ -121,12 +120,76 @@ function TestManagedPersistence.testManagedStateInstallsCompleteDeclarations()
             },
         }
 
-        local installed = h.testImport("mods/composition/managed_state.lua").install(module, catalog)
+        local installed = systems.managedState.install(module)
 
         lu.assertEquals(#captured.storage, 18)
         lu.assertEquals(countKeys(captured.templates), 18)
         lu.assertEquals(countKeys(captured.instances), 212)
         lu.assertIs(captured.storage, installed.storage.moduleStorage)
+    end)
+end
+
+function TestManagedPersistence.testSystemsComposesInjectedSubsystemsInOrder()
+    local rawCatalog = { key = "raw" }
+    local enrichedCatalog = { key = "enriched" }
+    local controls = {
+        catalog = enrichedCatalog,
+        templates = {},
+        instances = {},
+    }
+    local route = { storage = {}, stateAccess = {} }
+    local managedState = { install = function() end }
+    local calls = {}
+    local systemFactory = h.testImport("mods/systems.lua", nil, {
+        catalogAssembly = {
+            create = function(overrides)
+                calls[#calls + 1] = { name = "catalog", value = overrides }
+                return rawCatalog
+            end,
+        },
+        controlsAssembly = {
+            create = function(catalog, opts)
+                calls[#calls + 1] = { name = "controls", catalog = catalog, opts = opts }
+                return controls
+            end,
+        },
+        routeAssembly = {
+            create = function(catalog)
+                calls[#calls + 1] = { name = "route", catalog = catalog }
+                return route
+            end,
+        },
+    })
+    local catalogOverrides = { routes = {} }
+
+    local result = systemFactory.create({
+        catalogOverrides = catalogOverrides,
+        activePrefixEnds = { Underworld = "Underworld_G" },
+        managedState = managedState,
+    })
+
+    lu.assertIs(result.catalog, enrichedCatalog)
+    lu.assertIs(result.controls, controls)
+    lu.assertIs(result.route, route)
+    lu.assertIs(result.managedState, managedState)
+    lu.assertEquals(calls[1], { name = "catalog", value = catalogOverrides })
+    lu.assertIs(calls[2].catalog, rawCatalog)
+    lu.assertEquals(calls[2].opts.activePrefixEnds, { Underworld = "Underworld_G" })
+    lu.assertIs(calls[3].catalog, enrichedCatalog)
+end
+
+function TestManagedPersistence.testControlAssemblyDoesNotMutateValidatedCatalog()
+    h.withImport(function()
+        local catalogAssembly = h.testImport("mods/catalog/assembly.lua")
+        local controlsAssembly = h.testImport("mods/controls/assembly.lua")
+        local catalog = catalogAssembly.create()
+
+        local controls = controlsAssembly.create(catalog)
+
+        lu.assertNil(catalog.controlManifest)
+        lu.assertNotNil(controls.catalog.controlManifest)
+        lu.assertFalse(rawequal(catalog, controls.catalog))
+        lu.assertIs(catalog.routes, controls.catalog.routes)
     end)
 end
 
@@ -173,8 +236,7 @@ end
 
 function TestManagedPersistence.testRouteRefsShareReadsButOnlyUiCanWrite()
     h.withImport(function()
-        local catalog, _, _, templates = load()
-        local instances = h.testImport("mods/controls/instances.lua").build(catalog, {
+        local _, _, instances, templates = load({
             Underworld = "Underworld_G",
         })
         local instance = namedInstance(instances.Underworld, "Underworld")
@@ -231,7 +293,7 @@ end
 
 function TestManagedPersistence.testStateAccessKeepsRuntimeReadOnlyAndValidatesAuthoredGlobals()
     h.withImport(function()
-        local catalog, storage = load()
+        local catalog, storage, _, _, systems = load()
         local values = {
             Underworld_I_MaxNonGoalRewards = 4,
             Surface_N_HubDoorCount = 9,
@@ -269,7 +331,7 @@ function TestManagedPersistence.testStateAccessKeepsRuntimeReadOnlyAndValidatesA
                 return name .. ":" .. tostring(address)
             end,
         }
-        local runtime = h.testImport("mods/route/state_access.lua").createRuntime({
+        local runtime = systems.route.stateAccess.createRuntime({
             controls = controls,
             data = data,
         }, catalog, storage)

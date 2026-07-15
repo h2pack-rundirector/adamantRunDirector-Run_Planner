@@ -1,4 +1,5 @@
-local s = import("mods/catalog/schema.lua")
+local deps = ...
+local s = deps.schema
 
 local function validateReferencedKeys(values, lookup, path, description)
     for index, key in ipairs(values or {}) do

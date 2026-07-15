@@ -1,5 +1,6 @@
-local s = import("mods/catalog/schema.lua")
-local requirementSchema = import("mods/catalog/requirements.lua")
+local deps = ...
+local s = deps.schema
+local requirementSchema = deps.requirements
 
 local validator = {}
 

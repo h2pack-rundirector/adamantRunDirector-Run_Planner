@@ -14,9 +14,9 @@ directory.
 The legacy implementation is archived on `codex/fresh-planner-spine`. The live
 rewrite branch now implements the managed-module skeleton, headless catalog,
 and the static-control and managed-persistence foundation of Checkpoint 2. Room
-template specialization and explicit composition wiring remain before the
-checkpoint is complete. The production UI remains the explicit
-unavailable-status shell.
+template specialization remains before the checkpoint is complete. System-wide
+composition and subsystem-local dependency injection are in place. The
+production UI remains the explicit unavailable-status shell.
 
 The six-document set completed coherent design review and was locked on
 2026-07-14. Questions deliberately assigned to a later biome implementation

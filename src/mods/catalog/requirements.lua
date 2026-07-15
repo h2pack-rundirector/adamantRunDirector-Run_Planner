@@ -1,5 +1,6 @@
-local s = import("mods/catalog/schema.lua")
-local kindRegistry = import("mods/catalog/requirement_kinds.lua")
+local deps = ...
+local s = deps.schema
+local kindRegistry = deps.kindRegistry
 
 local requirements = {}
 

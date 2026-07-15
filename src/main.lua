@@ -36,8 +36,8 @@ local function init()
         return
     end
 
-    local catalog = import("mods/composition/catalog.lua").load()
-    import("mods/composition/managed_state.lua").install(module, catalog)
+    local moduleSystems = import("mods/systems.lua").create()
+    moduleSystems.managedState.install(module)
 
     module.ui.tab(drawUnavailable)
     module.fallbackUi.attachGuiOnce(function(fallbackUi)

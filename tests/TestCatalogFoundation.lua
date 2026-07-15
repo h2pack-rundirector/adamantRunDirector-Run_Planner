@@ -6,7 +6,9 @@ local h = dofile("tests/support/import_harness.lua")
 TestCatalogFoundation = {}
 
 local function loadCatalog(overrides)
-    return h.testImport("mods/composition/catalog.lua").load(overrides)
+    return h.testImport("mods/systems.lua").create({
+        catalogOverrides = overrides,
+    }).catalog
 end
 
 local function assertFails(callback, expected)
@@ -399,7 +401,10 @@ end
 
 function TestCatalogFoundation.testRequirementKindRegistryOwnsModeledContracts()
     h.withImport(function()
-        local kinds = h.testImport("mods/catalog/requirement_kinds.lua")
+        local schema = h.testImport("mods/catalog/schema.lua")
+        local kinds = h.testImport("mods/catalog/requirement_kinds.lua", nil, {
+            schema = schema,
+        })
         for key, contract in pairs(kinds) do
             lu.assertIsTable(contract.contactPhases, key)
             lu.assertTrue(#contract.contactPhases > 0, key)

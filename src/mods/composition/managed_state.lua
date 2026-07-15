@@ -1,11 +1,11 @@
+local deps = ...
+local storage = deps.storage
+local templates = deps.templates
+local instances = deps.instances
+
 local managedState = {}
 
-function managedState.install(module, catalog, opts)
-    opts = opts or {}
-    local storage = import("mods/route/storage_manifest.lua").build(catalog)
-    local templates = import("mods/controls/templates.lua").build(catalog)
-    local instances = import("mods/controls/instances.lua").build(catalog, opts.activePrefixEnds)
-
+function managedState.install(module)
     module.data.define(storage.moduleStorage)
     module.controls.defineTemplates(templates)
     module.controls.define(instances)

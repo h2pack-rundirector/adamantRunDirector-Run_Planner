@@ -173,6 +173,13 @@ Constructors receive named dependencies. Do not mutate a caller-provided
 service table, publish partially built services, or hide missing dependencies
 behind module globals.
 
+`systems.lua` is the system-wide composition root. It composes major subsystem
+results in dependency order and delegates each subtree to one subsystem-local
+assembly layer. Those assembly modules may import concrete implementations and
+inject them into their leaves; domain leaves do not discover collaborators with
+`import(...)`. Static declaration aggregators may import declaration files
+because aggregation is their explicit composition responsibility.
+
 The coordinator may retain:
 
 - immutable catalog and registries;

@@ -1,3 +1,6 @@
+local deps = ...
+local stateManifest = deps.stateManifest
+
 local manifest = {}
 
 local function roomControlKey(biomeStepKey, gameRoomKey, biomeKey)
@@ -40,7 +43,7 @@ function manifest.build(catalog)
                 gameRoomKey = room.key,
                 templateKey = room.templateKey,
                 localSlots = {},
-                state = import("mods/controls/state_manifest.lua").build(catalog, room),
+                state = stateManifest.build(catalog, room),
             }
             local encounterProfile = catalog.encounterProfiles.lookup[room.encounterProfileKey]
             for _, phase in ipairs(encounterProfile.phases) do
