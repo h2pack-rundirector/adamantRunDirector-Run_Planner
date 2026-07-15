@@ -12,10 +12,11 @@ non-authoritative audit evidence. Neither can override documents in this
 directory.
 
 The legacy implementation is archived on `codex/fresh-planner-spine`. The live
-rewrite branch completed the minimal managed-module skeleton required by
-Checkpoint 0 and now implements the headless Checkpoint 1 catalog foundation.
-The production UI remains the explicit unavailable-status shell; static Lib
-controls and managed planner storage begin at Checkpoint 2.
+rewrite branch now implements the managed-module skeleton, headless catalog,
+and the static-control and managed-persistence foundation of Checkpoint 2. Room
+template specialization and explicit composition wiring remain before the
+checkpoint is complete. The production UI remains the explicit
+unavailable-status shell.
 
 The six-document set completed coherent design review and was locked on
 2026-07-14. Questions deliberately assigned to a later biome implementation

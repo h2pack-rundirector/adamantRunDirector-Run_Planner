@@ -36,6 +36,9 @@ local function init()
         return
     end
 
+    local catalog = import("mods/composition/catalog.lua").load()
+    import("mods/composition/managed_state.lua").install(module, catalog)
+
     module.ui.tab(drawUnavailable)
     module.fallbackUi.attachGuiOnce(function(fallbackUi)
         rom.gui.add_imgui(fallbackUi.renderWindow)

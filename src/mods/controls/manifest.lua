@@ -14,7 +14,16 @@ function manifest.build(catalog)
         rooms = { ordered = {}, lookup = {} },
     }
     for _, route in ipairs(catalog.routes.ordered) do
-        local descriptor = { key = route.key, templateKey = route.controlTemplateKey }
+        local descriptor = {
+            key = route.key,
+            templateKey = route.controlTemplateKey,
+            configuredPrefixValues = { "" },
+            configuredPrefixLookup = { [""] = true },
+        }
+        for _, biomeStep in ipairs(route.biomeSteps) do
+            descriptor.configuredPrefixValues[#descriptor.configuredPrefixValues + 1] = biomeStep.key
+            descriptor.configuredPrefixLookup[biomeStep.key] = true
+        end
         result.routes.ordered[#result.routes.ordered + 1] = descriptor
         result.routes.lookup[descriptor.key] = descriptor
     end
@@ -31,6 +40,7 @@ function manifest.build(catalog)
                 gameRoomKey = room.key,
                 templateKey = room.templateKey,
                 localSlots = {},
+                state = import("mods/controls/state_manifest.lua").build(catalog, room),
             }
             local encounterProfile = catalog.encounterProfiles.lookup[room.encounterProfileKey]
             for _, phase in ipairs(encounterProfile.phases) do

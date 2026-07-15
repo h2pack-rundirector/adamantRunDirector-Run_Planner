@@ -413,6 +413,12 @@ must all run the same rebuild-and-publication lifecycle as a normal committed
 change. Module initialization publishes the default empty-prefix revision by
 the same path. The lifecycle signal and derived revision are not persisted.
 
+Lib commit and reload remain distinct lifecycle events. The planner normalizes
+`onActivate`, configuration-changing `onCommit`, and setting-changing
+`onReload` observations into its one authored revision signal. A no-op reload,
+including the follow-up reload after a hash/profile commit, does not advance the
+planner revision or cause a duplicate rebuild.
+
 ## Topology Clearing and Reset
 
 Topology editing and full persisted reset are different operations.
