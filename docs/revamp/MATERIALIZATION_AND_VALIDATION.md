@@ -131,7 +131,8 @@ their rewards were offered. Unreferenced dormant controls do not participate.
 
 Completeness rejects unresolved authoring helpers such as `Auto`, `Vanilla`,
 `Major`, `Minor`, blank reward values, partial Devotion source pairs, or an
-implicit shop purchase choice.
+incomplete active shop offer. A shop's `purchased = false` value is a complete
+negative acquisition decision; it does not make a missing reward complete.
 
 Route scope is atomic by biome. If the configured prefix is `F, G, H`, F is
 complete and valid, and G is incomplete, F retains its validated snapshot and

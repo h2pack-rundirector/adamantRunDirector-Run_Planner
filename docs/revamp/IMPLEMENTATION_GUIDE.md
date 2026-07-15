@@ -377,6 +377,13 @@ production baseline declarations.
 This checkpoint proves the physical persistence model before topology or UI is
 built.
 
+Before specializing a Room Control template, review its contract in
+`room_controls/` together with `room_controls/REWARD_COMPONENTS.md`. If that
+review changes domain ownership, biome behavior, or canonical semantics,
+correct the owning authority document first. Do not implement a generic
+surface/template combination that the corresponding specification has not
+admitted.
+
 ### Deliverables
 
 - one statically declared Route Control instance per route, produced through

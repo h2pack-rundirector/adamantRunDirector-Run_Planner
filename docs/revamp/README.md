@@ -52,6 +52,16 @@ These six documents are the complete, locked revamp design and
 implementation-guidance set. Implementation follows
 `IMPLEMENTATION_GUIDE.md`.
 
+The supplemental `room_controls/` specification set expands the locked Room
+Control direction into one reviewable contract per registered room template.
+It is subordinate to the six authority documents above, but it is the
+implementation contract for Checkpoints 2 and 4. Template implementation must
+not begin until the corresponding specification has been reviewed.
+
+[`ROOM_CONTROL_HANDOFF.md`](ROOM_CONTROL_HANDOFF.md) records the current
+post-Checkpoint-2 design state, verified game-data findings, and the exact
+production-catalog work that remains before Room Control implementation.
+
 ## Authority Boundaries
 
 Each fact has one home:

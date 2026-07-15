@@ -1,0 +1,187 @@
+# Room Control Design Handoff
+
+Date: 2026-07-15
+
+## Starting Point
+
+The last implementation commit before this design pass is
+`1e8307b refactor(planner): centralize system wiring` on
+`codex/planner-revamp`. The committed implementation has the Checkpoint 2
+managed-state foundation and the preferred Systems -> DI -> subsystem
+composition direction. Real specialized Room Control templates have not been
+implemented yet.
+
+This pass deliberately stopped before implementation and produced the
+supplemental [`room_controls/`](room_controls/) contract set. Review each
+template specification before building that template. The six parent revamp
+documents remain authoritative if a supplemental specification conflicts with
+them.
+
+## Locked Control Shape
+
+- Every supported top-level room has one statically named Lib control instance.
+- Catalog assembly resolves an immutable descriptor and injects dependencies;
+  template modules do not leaf-import catalogs.
+- Templates are handwritten and explicit. Each concrete room remains readable
+  at its declaration point; catalog generation only performs assembly.
+- Reward components are ordinary injected Lua collaborators, not nested Lib
+  controls.
+- Each control owns its bounded room-local persistence, typed runtime/UI read,
+  semantic UI mutation operations, and later candidate/feedback translation.
+- Biome plans own outgoing topology, source exit batches, picks, counters, and
+  route validation. Controls may receive immutable topology context needed to
+  activate bounded local state.
+- Maximum-capacity persistence is preferred when the game has a small static
+  bound. Context activates a prefix or named subset; inactive state stays
+  persisted and dormant.
+- Fixed facts do not consume persistence merely to make a control nonempty.
+
+## Decisions Made During This Pass
+
+### Shop
+
+Every authored shop slot stores its concrete reward, required payload, and a
+`purchased` boolean. `false` is the complete semantic answer "not purchased";
+there is no empty/Purchased/Skipped tri-state. Reward selection independently
+determines slot completeness.
+
+World Shop has three semantic slots. `I_WorldShop` has five offers and
+`Q_WorldShop` has six. The shared component is profile-parameterized and
+returns semantic profile slot keys rather than exposing private storage
+indexes.
+
+### O combat rooms
+
+An O combat control reserves both reward-wheel surfaces. Its UI exposes an
+encounter-count dropdown:
+
+- 2 = Intro plus Combat1;
+- 3 = Intro plus Combat1 plus optional Combat2.
+
+Combat1 and its wheel are always active. Selecting 2 makes Combat2 and wheel2
+dormant; selecting 3 activates them. Each active wheel authors one or two
+offers and exactly one picked offer. The pre-room `biomeEncounterDepth` window
+still validates whether the third encounter is legal.
+
+### N combat rooms
+
+Each N combat instance reserves its declaration-known side-room slots, with a
+global maximum of three. Repeated `N_SubXX` room names are not identities;
+identity is the parent control plus `sideDoorN` slot.
+
+Each side slot distinguishes not generated, generated but unentered, and
+entered. The current specification represents that with generation state plus
+`enteredOrder`; this also preserves the order needed when several side rooms
+are entered. Hub target visitation remains batch-owned.
+
+### H Bridge
+
+`H_Bridge01` does not justify a bespoke control template. The supported
+non-progression realization is the Echo story, so it uses the ordinary Story
+control with a fixed Story reward. Its bridge encounter profile and topology
+remain declaration facts. NPC/event variants are deferred.
+
+### Persistent NPC entities
+
+NPCs such as Heracles cannot remain addon data if enabling them changes the
+room spine. The future model is a persistent entity that is disabled when not
+configured and merged into complete history when enabled. This is intentionally
+deferred: the current checkpoint should establish the room spine without
+inventing partial NPC production behavior.
+
+## Preboss Findings and Model
+
+### One terminal room per biome
+
+`I_PreBoss02` is a post-true-ending progression variant. It inherits
+`I_PreBoss01` and requires `ReachedTrueEnding = true` on a non-dream run.
+Because save progression is outside the planner baseline, only
+`I_PreBoss01` is supported. The resulting catalog has one terminal preboss
+room in every biome.
+
+### How vanilla creates Shop and free offers
+
+F/G/H/P do not declare separate shop and reward room IDs. At the terminal
+fork, vanilla processes physical doors independently and may assign the same
+forced `X_PreBoss01` room to every door. These preboss rooms have no
+`MaxCreationsPerRoom` cap.
+
+`ChooseRoomReward` implements `ForcedFirstReward = "Shop"` by scanning the
+source room's already-created `OfferedRewards`. The first preboss copy receives
+Shop. Later copies fall through to the ordinary eligible `RunProgress` picker,
+with Devotion and `RoomMoneyDrop` excluded. Entering any door loads the same
+map ID; its `ChosenRewardType` determines whether the map initializes the
+World Shop or spawns the selected free reward.
+
+`AutocompleteSurfaceShopDelivery` is unrelated to this split and must not be
+used as its model.
+
+### Planner representation
+
+`PrebossShopOrFreeReward` should be deleted. It incorrectly turns a room-level
+offer set into a generic reward surface.
+
+F/G/H/P use one Preboss control with maximum storage for:
+
+- one complete World Shop inventory;
+- `freeRewards[1]`;
+- `freeRewards[2]`;
+- `entryMode = "" | "Shop" | "Reward1" | "Reward2"`.
+
+The preceding room's physical exit count is immutable context and activates:
+
+```text
+1 exit  -> Shop
+2 exits -> Shop + Reward1
+3 exits -> Shop + Reward1 + Reward2
+```
+
+F/H/P cannot activate Reward2. G can activate it when the concrete source has
+three exits. All active offers must be authored because reward simulation
+uses picked and unpicked offers. Exactly one active entry mode is selected.
+
+Acquisition is derived, never persisted twice:
+
+- Shop entry acquires only shop slots with `purchased = true`;
+- Reward1 entry acquires only free reward 1;
+- Reward2 entry acquires only free reward 2;
+- unselected offers affect offered-reward simulation but not acquisition.
+
+I/N/O/Q are shop-only preboss controls and need no entry dropdown. I uses
+`I_WorldShop`, Q uses `Q_WorldShop`, and N/O use `WorldShop`. I's fixed
+Clockwork Goal door marker remains execution metadata; it does not create a
+free-reward branch.
+
+## Production Code Still To Reconcile
+
+The design docs now state the intended model, but the declaration/catalog code
+still reflects the pre-review model. Before implementing controls:
+
+1. remove `I_PreBoss02` from `i_tartarus.lua`, including terminal keys and
+   catalog coverage;
+2. remove `PrebossShopOrFreeReward` from reward surfaces and replace the
+   F/G/H/P declaration use with explicit Preboss entry-offer capability;
+3. map `H_Bridge01` to the Story control template and remove the standalone
+   `FieldsBridge` control-template registration;
+4. split real control templates into focused modules assembled through the
+   existing control subsystem DI layer;
+5. implement reward components first, then F/G, H/I, N/O, and P/Q templates;
+6. add storage-manifest, typed read/write, dormancy, and profile-capacity tests
+   before proceeding to Checkpoint 4 materialization.
+
+Do not add NPC support, runtime fallback interpretation, or candidate/feedback
+production code merely to complete Checkpoint 2. Those remain later explicit
+checkpoints.
+
+## Verification Sources
+
+Relevant live game-data locations used during the design review:
+
+- `Scripts/RewardLogic.lua`: `ChooseRoomReward` and `ForcedFirstReward`;
+- `Scripts/RoomLogic.lua`: per-door room/reward construction;
+- `Scripts/RunLogic.lua`: room creation caps and forced-room selection;
+- `Scripts/StoreLogic.lua`: Shop reward defaulting to `WorldShop`;
+- `Scripts/RoomDataF.lua`, `RoomDataG.lua`, `RoomDataH.lua`, and
+  `RoomDataP.lua`: multi-offer preboss declarations;
+- `Scripts/RoomDataI.lua`: I shop profile and the progression-only
+  `I_PreBoss02` variant.
