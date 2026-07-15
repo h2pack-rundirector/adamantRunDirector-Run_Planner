@@ -309,8 +309,8 @@ This checkpoint is declaration-only.
   or implicit counter/cap/profile/reward facts;
 - reward primitives, normalized acquisition names, unique stores, counted
   bags, shop profiles, offer profiles, payload domains, and batch constraints;
-- normalized requirement registry with evaluation phases, payload schemas,
-  evaluator contracts, and static/dynamic capacity classification;
+- code-owned requirement-kind registry with supported contact phases, payload
+  schemas, evaluator contracts, and static/dynamic capacity classification;
 - batch-rule and room-template declaration registries;
 - finite local-child and topology bounds;
 - mechanically generated stable Route and Room Control keys;

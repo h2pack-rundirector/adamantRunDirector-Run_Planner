@@ -27,6 +27,12 @@ derived history contain the state needed to evaluate them. Every production
 predicate has a registered evaluator and participates in eligibility or
 validation.
 
+Requirement expressions are phase-free. Their room, reward, encounter, or
+other semantic contact supplies the evaluation phase for the complete tree,
+and the code-owned kind registry defines which contacts each predicate kind
+supports. Reusable reason codes classify failures; semantic origin descriptors
+identify the affected route, biome step, room, reward, or local slot.
+
 Dependencies on prior-run/save story progression, unlocks and world upgrades,
 active bounty overrides, current trait/aspect/familiar state, and prior-run
 encounter completion are deliberately absent from production declarations.

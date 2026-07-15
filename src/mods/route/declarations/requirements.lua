@@ -1,106 +1,81 @@
-local modeledKinds = {
-    All = { phases = { "room.generate_next", "reward.offer" }, capacity = "composite" },
-    Any = { phases = { "room.generate_next", "reward.offer" }, capacity = "composite" },
-    Not = { phases = { "room.generate_next", "reward.offer" }, capacity = "composite" },
-    CounterRange = {
-        phases = { "room.prepare_encounters", "room.generate_next", "reward.offer" },
-        capacity = "static",
-    },
-    RoomEnteredCount = { phases = { "room.generate_next" }, capacity = "dynamic" },
-    RoomCreatedCount = { phases = { "room.generate_next" }, capacity = "dynamic" },
-    RequiredMinExits = { phases = { "room.generate_next", "reward.offer" }, capacity = "dynamic" },
-    RequiredOfferedPeer = { phases = { "room.generate_next" }, capacity = "dynamic" },
-    RequiredNotInStore = { phases = { "reward.offer" }, capacity = "dynamic" },
-    LootTypeHistory = { phases = { "reward.offer" }, capacity = "dynamic" },
-    ClearedBiomes = { phases = { "reward.offer" }, capacity = "dynamic" },
-    EncounterDepth = { phases = { "reward.offer" }, capacity = "dynamic" },
-    PriorDistinctLootSources = {
-        phases = { "room.generate_next", "reward.offer" },
-        capacity = "dynamic",
-    },
-    RequiredMinRoomsSinceEvent = { phases = { "reward.offer" }, capacity = "dynamic" },
-    EnteredKindCount = { phases = { "room.generate_next" }, capacity = "dynamic" },
-    ClockworkCapacity = { phases = { "room.generate_next" }, capacity = "dynamic" },
-    ClockworkGoalsRemaining = { phases = { "room.generate_next" }, capacity = "dynamic" },
-    HubVisitsCompleted = { phases = { "room.generate_next" }, capacity = "dynamic" },
-    ClockworkNonGoalLimitReached = { phases = { "room.generate_next" }, capacity = "dynamic" },
-    CurrentRoomCreationExclusion = { phases = { "room.generate_next" }, capacity = "dynamic" },
-    RecentEncounterPhaseCount = { phases = { "room.generate_next" }, capacity = "dynamic" },
-    BiomeRoomCreatedAny = { phases = { "room.generate_next" }, capacity = "dynamic" },
-}
-
-local function modeled(kind, phase, values)
-    values.kind = kind
-    values.phase = phase
-    return values
-end
-
 return {
-    modeledKinds = modeledKinds,
     named = {
-        HammerLootRequirements = modeled("All", "reward.offer", {
+        HammerLootRequirements = {
+            kind = "All",
             requirements = {
-                modeled("RequiredNotInStore", "reward.offer", {
+                {
+                    kind = "RequiredNotInStore",
                     rewardType = "WeaponUpgradeDrop",
-                    code = "hammer_pending_in_shop",
-                }),
-                modeled("LootTypeHistory", "reward.offer", {
+                    code = "reward_pending_in_store",
+                },
+                {
+                    kind = "LootTypeHistory",
                     rewardTypes = { "WeaponUpgrade" },
                     comparison = "==",
                     value = 0,
-                    code = "early_hammer_requires_no_prior_hammer",
-                }),
+                    code = "prior_reward_count_mismatch",
+                },
             },
-        }),
-        LateHammerLootRequirements = modeled("All", "reward.offer", {
+        },
+        LateHammerLootRequirements = {
+            kind = "All",
             requirements = {
-                modeled("RequiredNotInStore", "reward.offer", {
+                {
+                    kind = "RequiredNotInStore",
                     rewardType = "WeaponUpgradeDrop",
-                    code = "late_hammer_pending_in_shop",
-                }),
-                modeled("ClearedBiomes", "reward.offer", {
+                    code = "reward_pending_in_store",
+                },
+                {
+                    kind = "ClearedBiomes",
                     comparison = ">",
                     value = 2,
-                    code = "late_hammer_requires_cleared_biomes",
-                }),
-                modeled("LootTypeHistory", "reward.offer", {
+                    code = "cleared_biome_count_mismatch",
+                },
+                {
+                    kind = "LootTypeHistory",
                     rewardTypes = { "WeaponUpgrade" },
                     comparison = "==",
                     value = 1,
-                    code = "late_hammer_requires_one_prior_hammer",
-                }),
+                    code = "prior_reward_count_mismatch",
+                },
             },
-        }),
-        DevotionLootRequirements = modeled("All", "reward.offer", {
+        },
+        DevotionLootRequirements = {
+            kind = "All",
             requirements = {
-                modeled("EncounterDepth", "reward.offer", {
+                {
+                    kind = "EncounterDepth",
                     comparison = ">=",
                     value = 7,
-                    code = "devotion_requires_encounter_depth",
-                }),
-                modeled("CounterRange", "reward.offer", {
+                    code = "encounter_depth_count_mismatch",
+                },
+                {
+                    kind = "CounterRange",
                     axis = "biomeEncounterDepth",
                     range = { min = 2 },
-                    code = "devotion_requires_biome_encounter_depth",
-                }),
-                modeled("PriorDistinctLootSources", "reward.offer", {
+                    code = "biome_encounter_depth_out_of_range",
+                },
+                {
+                    kind = "PriorDistinctLootSources",
                     sourceDomain = "OlympianGods",
                     comparison = ">=",
                     value = 2,
-                    code = "devotion_requires_prior_gods",
-                }),
-                modeled("RequiredMinRoomsSinceEvent", "reward.offer", {
+                    code = "distinct_loot_source_count_mismatch",
+                },
+                {
+                    kind = "RequiredMinRoomsSinceEvent",
                     event = { kind = "reward.acquire", rewardType = "Devotion" },
                     axis = "roomHistoryOrdinal",
                     count = 15,
-                    code = "devotion_requires_spacing",
-                }),
-                modeled("RequiredMinExits", "reward.offer", {
+                    code = "reward_spacing_too_short",
+                },
+                {
+                    kind = "RequiredMinExits",
                     count = 2,
                     exceptBiomeKeys = { "O" },
-                    code = "devotion_requires_two_exits",
-                }),
+                    code = "insufficient_exits",
+                },
             },
-        }),
+        },
     },
 }

@@ -72,15 +72,6 @@ local function addUniqueOption(options, seen, rewardType)
     end
 end
 
-local function requireRequirementPhase(node, expectedPhase, path)
-    if node.phase ~= expectedPhase then
-        fail(
-            path,
-            "requirement phase '" .. node.phase .. "' must match contact phase '" .. expectedPhase .. "'"
-        )
-    end
-end
-
 local function validateRewards(raw, requirements)
     local rewards = copy(raw)
     requiredTable(rewards, "rewards")
@@ -153,7 +144,12 @@ local function validateRewards(raw, requirements)
                 if requirement == nil then
                     fail(entryPath .. ".requirementKey", "unknown named requirement '" .. entry.requirementKey .. "'")
                 end
-                requireRequirementPhase(requirement, "reward.offer", entryPath .. ".requirementKey")
+                requirementSchema.validateNode(
+                    requirement,
+                    requirements,
+                    "requirements.named." .. entry.requirementKey,
+                    "reward.offer"
+                )
             end
             addUniqueOption(options, seen, entry.rewardType)
         end
@@ -510,10 +506,12 @@ local function validateEncounterPhase(phase, profileKind, requirements, rewards,
             { "room.prepare_encounters" },
             presencePath .. ".eligibilitySnapshot"
         )
-        requirementSchema.validateNode(phase.presence.requirement, requirements, presencePath .. ".requirement")
-        if phase.presence.requirement.phase ~= phase.presence.eligibilitySnapshot then
-            fail(presencePath .. ".requirement.phase", "must match the eligibility snapshot")
-        end
+        requirementSchema.validateNode(
+            phase.presence.requirement,
+            requirements,
+            presencePath .. ".requirement",
+            phase.presence.eligibilitySnapshot
+        )
     end
     if phase.offerPoint ~= nil then
         local offerPath = path .. ".offerPoint"
@@ -1114,8 +1112,12 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
                 positiveInteger(room.caps.maxCreationsPerRoom, roomPath .. ".caps.maxCreationsPerRoom")
             end
             if room.eligibility ~= nil then
-                requirementSchema.validateNode(room.eligibility, requirements, roomPath .. ".eligibility")
-                requireRequirementPhase(room.eligibility, "room.generate_next", roomPath .. ".eligibility.phase")
+                requirementSchema.validateNode(
+                    room.eligibility,
+                    requirements,
+                    roomPath .. ".eligibility",
+                    "room.generate_next"
+                )
             end
             if room.force ~= nil then
                 nonEmptyString(room.force.kind, roomPath .. ".force.kind")
@@ -1129,11 +1131,11 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
                     end
                 elseif room.force.kind == "requirement" then
                     s.onlyKeys(room.force, { "kind", "requirement" }, roomPath .. ".force")
-                    requirementSchema.validateNode(room.force.requirement, requirements, roomPath .. ".force.requirement")
-                    requireRequirementPhase(
+                    requirementSchema.validateNode(
                         room.force.requirement,
-                        "room.generate_next",
-                        roomPath .. ".force.requirement.phase"
+                        requirements,
+                        roomPath .. ".force.requirement",
+                        "room.generate_next"
                     )
                 elseif room.force.kind ~= "always" then
                     fail(roomPath .. ".force.kind", "unknown force kind '" .. room.force.kind .. "'")

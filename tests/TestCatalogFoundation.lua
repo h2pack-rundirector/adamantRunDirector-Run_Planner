@@ -397,56 +397,76 @@ function TestCatalogFoundation.testLoaderDoesNotMutateRawDeclarations()
     end)
 end
 
-function TestCatalogFoundation.testRejectsUnknownOrWrongPhaseRequirementsAtCatalogBoundary()
+function TestCatalogFoundation.testRequirementKindRegistryOwnsModeledContracts()
+    h.withImport(function()
+        local kinds = h.testImport("mods/catalog/requirement_kinds.lua")
+        for key, contract in pairs(kinds) do
+            lu.assertIsTable(contract.contactPhases, key)
+            lu.assertTrue(#contract.contactPhases > 0, key)
+            if contract.capacity == "composite" then
+                lu.assertNotNil(contract.childShape, key)
+                lu.assertNotNil(contract.staticCombine, key)
+            else
+                lu.assertIsFunction(contract.validatePayload, key)
+            end
+            if contract.capacity == "static" then
+                lu.assertIsFunction(contract.staticEvaluate, key)
+            end
+        end
+
+        local catalog = loadCatalog(h.rawDeclarations())
+        local first = findRequirement(
+            catalog.biomes.lookup.F.rooms.lookup.F_MiniBoss01.eligibility,
+            "RoomEnteredCount"
+        )
+        local second = findRequirement(
+            catalog.biomes.lookup.F.rooms.lookup.F_MiniBoss02.eligibility,
+            "RoomEnteredCount"
+        )
+        lu.assertEquals(first.code, "other_miniboss_entered")
+        lu.assertEquals(second.code, first.code)
+        lu.assertNil(catalog.requirements.modeledKinds)
+    end)
+end
+
+function TestCatalogFoundation.testRejectsUnknownOrWrongContactRequirementsAtCatalogBoundary()
     h.withImport(function()
         local raw = h.rawDeclarations()
         raw.biomes[1].rooms[1].eligibility = {
             kind = "MysteryPredicate",
-            phase = "room.generate_next",
         }
         assertFails(function() loadCatalog(raw) end, "unknown modeled requirement kind 'MysteryPredicate'")
 
         raw = h.rawDeclarations()
-        raw.biomes[1].rooms[1].eligibility = {
-            kind = "CounterRange",
-            phase = "reward.acquire",
-            axis = "biomeDepthCache",
-            range = { min = 1 },
-        }
-        assertFails(function() loadCatalog(raw) end, "has no evaluator at phase 'reward.acquire'")
-
-        raw = h.rawDeclarations()
-        findRawRoom(raw, "F", "F_Combat01").eligibility.phase = "reward.offer"
+        findRawRoom(raw, "F", "F_Combat01").eligibility.phase = "room.generate_next"
         assertFails(
             function() loadCatalog(raw) end,
-            "requirement phase 'reward.offer' must match contact phase 'room.generate_next'"
+            ".eligibility.phase: unexpected field"
         )
 
         raw = h.rawDeclarations()
         findRawRoom(raw, "I", "I_PreBoss01").force.requirement = {
-            kind = "CounterRange",
-            phase = "reward.offer",
-            axis = "biomeDepthCache",
-            range = { min = 1 },
-            code = "wrong_force_contact_phase",
+            kind = "RequiredNotInStore",
+            rewardType = "WeaponUpgradeDrop",
+            code = "reward_pending_in_store",
         }
         assertFails(
             function() loadCatalog(raw) end,
-            "requirement phase 'reward.offer' must match contact phase 'room.generate_next'"
+            "kind 'RequiredNotInStore' has no evaluator at contact phase 'room.generate_next'"
         )
 
         raw = h.rawDeclarations()
-        raw.requirements.named.RoomPhaseForBag = {
-            kind = "CounterRange",
-            phase = "room.generate_next",
-            axis = "biomeDepthCache",
-            range = { min = 1 },
-            code = "wrong_bag_contact_phase",
+        raw.requirements.named.RoomOnlyForBag = {
+            kind = "RoomEnteredCount",
+            roomKeys = { "F_Opening01" },
+            comparison = "==",
+            value = 0,
+            code = "entered_room_count_mismatch",
         }
-        raw.rewards.bags.RunProgress.entries[1].requirementKey = "RoomPhaseForBag"
+        raw.rewards.bags.RunProgress.entries[1].requirementKey = "RoomOnlyForBag"
         assertFails(
             function() loadCatalog(raw) end,
-            "requirement phase 'room.generate_next' must match contact phase 'reward.offer'"
+            "kind 'RoomEnteredCount' has no evaluator at contact phase 'reward.offer'"
         )
     end)
 end
@@ -590,7 +610,7 @@ function TestCatalogFoundation.testEncounterProfilesOwnBaselineEncounterDepthEff
         })
         lu.assertEquals(ship.phases[3].presence.kind, "authoredOptional")
         lu.assertEquals(ship.phases[3].presence.eligibilitySnapshot, "room.prepare_encounters")
-        lu.assertEquals(ship.phases[3].presence.requirement.phase, "room.prepare_encounters")
+        lu.assertNil(ship.phases[3].presence.requirement.phase)
         lu.assertNil(catalog.biomes.lookup.O.rooms.lookup.O_Combat04.metadata)
     end)
 end
@@ -607,9 +627,51 @@ function TestCatalogFoundation.testRejectsMalformedRequirementsAndRegistryDiscri
 
         raw = h.rawDeclarations()
         raw.biomes[1].rooms[1].eligibility = {
-            kind = "All", phase = "room.generate_next", requirements = {},
+            kind = "All", requirements = {},
         }
         assertFails(function() loadCatalog(raw) end, ".eligibility.requirements: must not be empty")
+
+        raw = h.rawDeclarations()
+        raw.biomes[1].rooms[1].eligibility = {
+            kind = "All",
+            code = "aggregate_failure",
+            requirements = {
+                {
+                    kind = "CounterRange",
+                    axis = "biomeDepthCache",
+                    range = { min = 1 },
+                    code = "biome_depth_out_of_range",
+                },
+            },
+        }
+        assertFails(function() loadCatalog(raw) end, ".eligibility.code: All propagates child failures")
+
+        for _, composite in ipairs({
+            {
+                kind = "Any",
+                requirements = {
+                    {
+                        kind = "CounterRange",
+                        axis = "biomeDepthCache",
+                        range = { min = 1 },
+                        code = "biome_depth_out_of_range",
+                    },
+                },
+            },
+            {
+                kind = "Not",
+                requirement = {
+                    kind = "CounterRange",
+                    axis = "biomeDepthCache",
+                    range = { min = 1 },
+                    code = "biome_depth_out_of_range",
+                },
+            },
+        }) do
+            raw = h.rawDeclarations()
+            raw.biomes[1].rooms[1].eligibility = composite
+            assertFails(function() loadCatalog(raw) end, ".eligibility.code: expected a non-empty string")
+        end
 
         raw = h.rawDeclarations()
         raw.rewards.surfaces.None.kind = "mystery"

@@ -76,10 +76,9 @@ return {
                     eligibilitySnapshot = "room.prepare_encounters",
                     requirement = {
                         kind = "CounterRange",
-                        phase = "room.prepare_encounters",
                         axis = "biomeEncounterDepth",
                         range = { min = 2, max = 5 },
-                        code = "o_second_encounter_depth",
+                        code = "biome_encounter_depth_out_of_range",
                     },
                 },
                 offerPoint = {

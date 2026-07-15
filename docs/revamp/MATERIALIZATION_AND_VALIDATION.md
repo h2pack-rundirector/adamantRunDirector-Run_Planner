@@ -442,10 +442,21 @@ Important distinctions:
 Hand-authored game requirements are normalized at catalog construction. Each
 production predicate has:
 
-- a registered kind or named evaluator;
+- a registered kind or named requirement expression;
 - typed arguments;
-- an evaluation phase;
+- a contact-supplied evaluation phase supported by its kind;
 - a policy for selected facts and candidates.
+
+Requirement nodes do not store their evaluation phase. The semantic contact
+supplies one phase for the complete tree: room eligibility and requirement-
+based force use `room.generate_next`, counted reward entries use
+`reward.offer`, and authored encounter presence uses its declared
+`eligibilitySnapshot`. The code-owned kind registry declares which contacts
+each kind supports. A tree cannot mix snapshots.
+
+Named requirements are reusable typed expressions, not independent evaluators.
+Their payload and references validate at catalog construction, and every use
+must be legal at the phase supplied by its contact.
 
 Boolean composition uses explicit `all`, `any`, and `not` nodes. Generic game
 paths are translated into typed ledger queries where the fact is current-run
@@ -465,7 +476,7 @@ Modeled predicate families include:
 - named game requirements registered to one of these typed queries.
 
 External save/profile predicates are absent from production declarations. An
-unknown predicate kind, unknown named evaluator, missing evaluator, or
+unknown predicate kind, unknown named expression, missing evaluator, or
 malformed payload is a declaration contract failure that prevents catalog
 construction. None becomes a production validator result or defaults to valid.
 
@@ -474,14 +485,24 @@ construction. None becomes a production validator result or defaults to valid.
 The logical contract is:
 
 ```lua
-evaluateRequirement(requirement, historyView, phaseContext)
-  -> { status = "valid" | "invalid", evidence = ... }
+evaluateRequirement(requirement, historyView, contactPhase, evaluationContext)
+  -> {
+      status = "valid" | "invalid",
+      failures = {
+          {
+              code = "...",
+              kind = "...",
+              requirementPath = { ... },
+              evidence = { ... },
+          },
+      },
+  }
 ```
 
 Evaluators are pure. They receive the exact history snapshot, source/target
-facts, batch peers, exit context, and offer context required by their declared
-phase. They do not read controls, persistence, current ImGui state, or runtime
-game globals.
+facts, batch peers, exit context, and offer context required by the supplied
+contact phase. They do not read controls, persistence, current ImGui state, or
+runtime game globals.
 
 Selected-plan validation and candidate projection call the same evaluators.
 There is not a permissive candidate rule and a stricter selected rule.
@@ -705,10 +726,17 @@ A finding contains:
 
 ```lua
 {
-    code = "room_depth_unavailable",
+    code = "biome_depth_out_of_range",
     severity = "invalid",
     phase = "room.generate_next",
-    source = { ... },
+    origin = {
+        routeKey = "Underworld",
+        biomeStepKey = "Underworld_F",
+        ownerKind = "room",
+        ownerKey = "F_Story01",
+        aspect = "eligibility",
+        requirementPath = {},
+    },
     providerKey = "targetRoom",
     providerVersion = 12,
     candidateKey = "Underworld_F_Story01",
@@ -719,8 +747,16 @@ A finding contains:
 }
 ```
 
-Stable codes and typed evidence are part of the validator contract. Human
-messages are presentation derived from them.
+Codes are reusable reason classifications, not finding identities. They do not
+contain route, biome, room, reward, NPC, provider, or candidate identity and
+may repeat across declarations. The semantic origin, provider/candidate
+address, and local requirement path identify where a failure belongs. Typed
+evidence carries expected and actual facts. Human messages are presentation
+derived from the reason code and evidence.
+
+Leaf predicates own reason codes. `all` propagates its failed children and has
+no aggregate code. `any` owns an aggregate code when no alternative passes,
+and `not` owns a code for the case where its child succeeds.
 
 Feedback resolution is direct:
 
