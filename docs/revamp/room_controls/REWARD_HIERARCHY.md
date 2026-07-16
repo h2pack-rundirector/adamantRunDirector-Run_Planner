@@ -143,21 +143,22 @@ it or which structural producer consumes it.
 
 ## Layer 4: Concrete Producer Bindings
 
-Every counted producer declares its complete store and filter facts:
+Every room declares its incoming producer explicitly:
 
 ```lua
-reward = {
+incomingReward = {
     kind = "countedChoice",
     storeKeys = { "RunProgress", "MetaProgress" },
-    eligibleRewardTypes = nil,
+    eligibleRewardTypes = {},
     ineligibleRewardTypes = { "Devotion" },
 }
 ```
 
-The same descriptor nests inside structural producers:
+The same field may own a structural producer whose children carry their own
+locally named bindings:
 
 ```lua
-reward = {
+incomingReward = {
     kind = "localSlots",
     maxSlots = 3,
     choice = {
@@ -172,6 +173,8 @@ reward = {
 The declaration parser validates:
 
 - known bags and primitive filter members;
+- explicit positive and negative filter lists, where an empty list means no
+  filter;
 - dense, duplicate-free store and filter lists;
 - no overlap between positive and negative filters;
 - every eligible primitive belongs to at least one referenced bag;
@@ -456,15 +459,14 @@ filtering, option enumeration, or descriptor allocation.
 
 After this document is reviewed and locked:
 
-1. replace named surface references with explicit producer bindings from the
-   consumer audit;
-2. update catalog validation and compile immutable per-binding descriptors;
-3. remove the generic `store_choice.lua` prototype;
-4. implement payload-domain and primitive collaborators;
-5. implement counted bags and the binding compiler;
-6. reimplement StandardCombat against its injected compiled binding;
-7. verify per-instance storage manifests and typed APIs;
-8. implement structural and shop components only as their first consuming
+1. build immutable compiled descriptors over the implemented embedded binding
+   declarations and recursive catalog validation;
+2. remove the generic `store_choice.lua` prototype;
+3. implement payload-domain and primitive collaborators;
+4. implement counted bags and the binding compiler;
+5. reimplement StandardCombat against its injected compiled binding;
+6. verify per-instance storage manifests and typed APIs;
+7. implement structural and shop components only as their first consuming
    Room Control slice requires them.
 
 Candidates, feedback, canonical materialization, draw views, and history

@@ -73,7 +73,7 @@ exceptions.
 `Room Declaration`
 : Verified game data for one concrete game room key such as `F_Combat04`. It
   owns type, tags, eligibility, force, caps, exits, its encounter-profile key,
-  and concrete reward-producer binding. It does not duplicate encounter phases or their
+  and concrete incoming-reward binding. It does not duplicate encounter phases or their
   counter effects.
 
 `Encounter Profile`
@@ -308,7 +308,7 @@ F_Combat04 = {
         {},
     },
     encounterProfile = "StandardCombat",
-    reward = {
+    incomingReward = {
         kind = "countedChoice",
         storeKeys = { "RunProgress", "MetaProgress" },
         eligibleRewardTypes = {},
@@ -411,7 +411,9 @@ Outgoing topology never belongs to a target room control.
 A Room Control owns only facts local to its concrete room:
 
 - its template-specific authored fields;
-- its generated/entered reward-producer binding and concrete reward choices;
+- its `incomingReward` binding and concrete incoming reward choices;
+- phase-owned offer points and their concrete rewards when its encounter
+  profile produces rewards inside the room;
 - room-local encounter structure when the room type requires it;
 - bounded local child slots declared by its template;
 - room-local completeness;
@@ -437,15 +439,21 @@ Batch rules must not be copied into each child room.
 
 ## Reward Ownership and Timing
 
-The target Room Control owns the authored reward value because the target room
-declaration owns the reward-producer binding. This lets heterogeneous peers expose
-different typed reward interfaces:
+The target Room Control owns the authored incoming reward value because the
+target room declaration owns `incomingReward`. This lets heterogeneous peers
+expose different typed reward interfaces:
 
 ```text
 F_Story01 / F_Combat06
 F_Combat04 / F_MiniBoss02
 F_Combat05 / F_Combat11
 ```
+
+`incomingReward` means the reward contract attached to entering or realizing
+the target room. It is not an inventory of every reward the room can produce.
+Encounter-generated rewards remain on explicit phase `offerPoint` records.
+Consequently O combat rooms declare `incomingReward.kind = "none"` while their
+shared `ShipCombat` encounter profile owns both reward wheels.
 
 The Biome Plan does not need to inspect or rewrite internal reward widgets. It
 asks each referenced room control for its concrete generated reward fragment.

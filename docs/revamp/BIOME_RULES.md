@@ -6,9 +6,9 @@ This document defines the structural extensions by which F through Q specialize
 the common Route Plan, Biome Plan, Room Control, and Generated Batch model.
 
 It does not duplicate complete room declarations. Concrete eligibility, force,
-caps, physical exits, reward-producer bindings, and encounter profiles remain catalog
-data. This document owns only the rules needed to interpret those declarations
-as biome topology and typed room-local state.
+caps, physical exits, incoming-reward bindings, and encounter profiles remain
+catalog data. This document owns only the rules needed to interpret those
+declarations as biome topology and typed room-local state.
 
 The common rule is:
 
@@ -483,9 +483,9 @@ target-store override resolution, including any forced target that replaces
 the working default, and validates the outgoing targets. This dependency does
 not move outgoing topology or target rewards into the Room Control.
 
-O combat room declarations therefore use an incoming reward binding with
-`kind = "none"`;
-their encounter profile, rather than duplicated room-local declarations, owns
+O combat room declarations therefore use
+`incomingReward = { kind = "none" }`. Their encounter profile, rather than
+duplicated room-local declarations, owns
 `wheel1` and `wheel2`. Story, shop, devotion/trial, miniboss, reprieve, and
 direct-preboss controls use their concrete declaration-owned reward bindings.
 Forked prebosses instead compose a World Shop and the free `RunProgress`

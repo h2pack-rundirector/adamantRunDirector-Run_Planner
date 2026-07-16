@@ -51,7 +51,7 @@ before Lib prepares the instance:
     biomeStepKey = "Underworld_F",
     gameRoomKey = "F_Combat04",
     roomKind = "Combat",
-    reward = <validated compiled producer binding>,
+    incomingReward = <validated compiled producer binding>,
     encounterProfile = <validated resolved descriptor>,
     localSlots = <validated bounded descriptors>,
     metadata = <template-relevant immutable facts>,

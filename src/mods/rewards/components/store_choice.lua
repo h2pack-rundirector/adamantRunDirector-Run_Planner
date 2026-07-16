@@ -50,19 +50,18 @@ local function payloadDescriptor(catalog, rewardType)
     error("unsupported payload domain kind '" .. tostring(domain.kind) .. "'", 0)
 end
 
-local function included(surface, rewardType, eligibleLookup, ineligibleLookup)
-    return (surface.eligibleRewardTypes == nil or eligibleLookup[rewardType] == true)
+local function included(binding, rewardType, eligibleLookup, ineligibleLookup)
+    return (#binding.eligibleRewardTypes == 0 or eligibleLookup[rewardType] == true)
         and ineligibleLookup[rewardType] ~= true
 end
 
-function storeChoice.prepare(catalog, surface, fieldPrefix)
-    if surface.kind ~= "storeChoice" then
-        error("store-choice component requires a storeChoice surface", 0)
+function storeChoice.prepare(catalog, binding, fieldPrefix)
+    if binding.kind ~= "countedChoice" then
+        error("store-choice component requires a countedChoice binding", 0)
     end
     local descriptor = {
-        surfaceKey = surface.key,
-        storeKeys = copyList(surface.storeKeys),
-        storeLookup = listLookup(surface.storeKeys),
+        storeKeys = copyList(binding.storeKeys),
+        storeLookup = listLookup(binding.storeKeys),
         rewardsByStore = {},
         rewardLookup = {},
         rewardTypes = {},
@@ -78,15 +77,15 @@ function storeChoice.prepare(catalog, surface, fieldPrefix)
         descriptor.fields.storeKey = fieldPrefix .. "StoreKey"
     end
 
-    local eligibleLookup = listLookup(surface.eligibleRewardTypes)
-    local ineligibleLookup = listLookup(surface.ineligibleRewardTypes)
+    local eligibleLookup = listLookup(binding.eligibleRewardTypes)
+    local ineligibleLookup = listLookup(binding.ineligibleRewardTypes)
     for _, storeKey in ipairs(descriptor.storeKeys) do
         local rewardLookup = {}
         descriptor.rewardsByStore[storeKey] = rewardLookup
         local bag = catalog.rewards.bags.lookup[storeKey]
         for _, entry in ipairs(bag.entries) do
             local rewardType = entry.rewardType
-            if included(surface, rewardType, eligibleLookup, ineligibleLookup) then
+            if included(binding, rewardType, eligibleLookup, ineligibleLookup) then
                 rewardLookup[rewardType] = true
                 if descriptor.rewardLookup[rewardType] ~= true then
                     descriptor.rewardLookup[rewardType] = true
@@ -228,7 +227,7 @@ local function validateValue(descriptor, value, context)
 
     local rewardType = optionalString(value.rewardType, "rewardType", context)
     if rewardType ~= nil and descriptor.rewardLookup[rewardType] ~= true then
-        fail(context, "rewardType '" .. rewardType .. "' is not available from this surface")
+        fail(context, "rewardType '" .. rewardType .. "' is not available from this binding")
     end
     if storeKey ~= nil
         and rewardType ~= nil

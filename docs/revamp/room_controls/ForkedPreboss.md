@@ -20,7 +20,7 @@ Every covered room declares that composition explicitly:
 ```lua
 {
     templateKey = "ForkedPreboss",
-    reward = { kind = "shop", shopProfileKey = "WorldShop" },
+    incomingReward = { kind = "shop", shopProfileKey = "WorldShop" },
     entryOfferPolicy = {
         kind = "shopThenFillRemainingExits",
         freeReward = {

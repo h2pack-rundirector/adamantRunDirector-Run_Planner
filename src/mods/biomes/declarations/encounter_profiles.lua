@@ -58,8 +58,9 @@ return {
                 baselineEncounterKey = "GeneratedO",
                 countsEncounterDepth = true,
                 offerPoint = {
+                    kind = "offerPoint",
                     key = "wheel1",
-                    surfaceKey = "ShipWheel",
+                    choice = { kind = "countedChoice", storeKeys = { "RunProgress", "MetaProgress" }, eligibleRewardTypes = {}, ineligibleRewardTypes = {} },
                     offerCount = { min = 1, max = 2 },
                     picked = "exactlyOne",
                     offerTiming = "encounterStart",
@@ -82,8 +83,9 @@ return {
                     },
                 },
                 offerPoint = {
+                    kind = "offerPoint",
                     key = "wheel2",
-                    surfaceKey = "ShipWheel",
+                    choice = { kind = "countedChoice", storeKeys = { "RunProgress", "MetaProgress" }, eligibleRewardTypes = {}, ineligibleRewardTypes = {} },
                     offerCount = { min = 1, max = 2 },
                     picked = "exactlyOne",
                     offerTiming = "encounterStart",

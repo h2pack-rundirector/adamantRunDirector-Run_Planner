@@ -19,7 +19,7 @@ end
 
 function standardCombat.prepare(catalog, room)
     requireEqual(room.kind, "Combat", "kind", room)
-    requireEqual(room.rewardSurfaceKey, "RunProgressMinorMajor", "reward surface", room)
+    requireEqual(room.incomingReward.kind, "countedChoice", "incoming reward binding kind", room)
     requireEqual(room.encounterProfileKey, "StandardCombat", "encounter profile", room)
     if #room.localChildren ~= 0 then
         error("StandardCombat room '" .. room.key .. "' cannot declare local children", 0)
@@ -27,7 +27,7 @@ function standardCombat.prepare(catalog, room)
     return {
         generatedReward = storeChoice.prepare(
             catalog,
-            catalog.rewards.surfaces.lookup[room.rewardSurfaceKey],
+            room.incomingReward,
             "Reward"
         ),
     }

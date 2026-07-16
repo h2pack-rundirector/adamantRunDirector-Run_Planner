@@ -8,9 +8,10 @@ structural requirements.
 
 Verification date: 2026-07-16.
 
-The audit is implementation guidance for reconciling reward declarations
-before the bottom-up reward components replace the current prototype. It is
-not a runtime game-data reader.
+The declaration and catalog reconciliation described by this audit is
+implemented. The audit remains the binding authority for the bottom-up reward
+components that will replace the current prototype. It is not a runtime
+game-data reader.
 
 Primary game sources:
 
@@ -35,18 +36,20 @@ Primary game sources:
 A reward surface describes producer behavior and UI shape. A filtered reward
 domain is not a new surface.
 
-Ordinary counted rewards use one declaration shape:
+An ordinary room-level counted reward uses one declaration shape:
 
 ```lua
-reward = {
+incomingReward = {
     kind = "countedChoice",
     storeKeys = { "TartarusRewards" },
-    eligibleRewardTypes = { "Boon" },       -- optional positive filter
-    ineligibleRewardTypes = {},              -- optional negative filter
+    eligibleRewardTypes = { "Boon" },       -- explicit positive filter
+    ineligibleRewardTypes = {},              -- empty means no negative filter
 }
 ```
 
-The concrete room or structural producer owns `storeKeys` and both filters.
+The concrete room or structural producer owns `storeKeys` and both explicit
+filter lists. An empty list means that the corresponding filter does not narrow
+the store domain.
 Catalog assembly compiles that binding into one immutable per-instance choice
 view. It may internally cache equal views, but combinations such as
 "Tartarus plus Boon-only" or "RunProgress without Devotion" have no public
@@ -328,22 +331,25 @@ target rewards whose legal parent context can vary retain capacity for every
 potentially legal reward. The Ship wheel may omit Devotion capacity because
 its one-exit structural impossibility is fixed for every supported instance.
 
-## Required Declaration Reconciliation
+## Declaration Reconciliation Status
 
-Before implementing the hierarchy:
+The declaration authority switch is complete:
 
-1. replace named filtered surface references with explicit reward bindings;
-2. move `storeKeys`, `eligibleRewardTypes`, and `ineligibleRewardTypes` to the
-   concrete room, local slot, branch, or offer-point declaration that owns
-   them;
-3. validate and compile each binding once during catalog/control assembly;
-4. keep shops, fixed rewards, local slots, branches, and offer points as
-   behavioral kinds rather than bag-filter combinations;
-5. remove the biome-O exception from `DevotionLootRequirements` and apply bag
-   entry requirements only to bag-backed provenance;
-6. preserve the generated-door store-resolution rule and O final-wheel
-   outgoing-store dependency in batch validation/materialization;
-7. derive per-instance persistence capacity from the compiled domain instead
+- named filtered surface references and the global surface registry are gone;
+- every room embeds its complete `incomingReward`; local side rooms,
+  incoming-kind branches, offer points, and forked preboss free offers embed
+  their complete locally named bindings;
+- catalog validation recursively checks every embedded producer kind, store,
+  filter, shop profile, constraint, and nested binding;
+- the biome-O exception is removed from `DevotionLootRequirements`.
+
+The remaining hierarchy implementation must:
+
+1. compile each counted binding once during control assembly;
+2. apply bag-entry requirements only to bag-backed provenance;
+3. preserve generated-door store resolution and O's final-wheel outgoing-store
+   dependency during batch validation and materialization;
+4. derive per-instance persistence capacity from the compiled domain instead
    of selecting a named filtered component.
 
 ## Lock Conditions

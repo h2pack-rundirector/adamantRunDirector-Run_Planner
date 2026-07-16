@@ -110,7 +110,12 @@ function TestCatalogFoundation.testLoadsCompleteRouteAndRoomUniverseHeadlessly()
             catalog.controlManifest.rooms.lookup.Underworld_F_PreBoss01.entryOfferPolicy,
             {
                 kind = "shopThenFillRemainingExits",
-                freeRewardSurfaceKey = "PrebossFreeReward",
+                freeReward = {
+                    kind = "countedChoice",
+                    storeKeys = { "RunProgress" },
+                    eligibleRewardTypes = {},
+                    ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
+                },
                 maxFreeRewards = 1,
             }
         )
@@ -260,7 +265,12 @@ function TestCatalogFoundation.testLocalChildrenStayParentScoped()
         lu.assertEquals(#n.rooms.lookup.N_Combat05.localChildren, 3)
         lu.assertEquals(n.rooms.lookup.N_Combat05.localChildren[1].gameRoomKey, "N_Sub02")
         lu.assertEquals(n.rooms.lookup.N_Combat22.localChildren[2].gameRoomKey, "N_Sub02")
-        lu.assertEquals(n.rooms.lookup.N_Combat22.localChildren[1].rewardSurfaceKey, "SubRoomHardReward")
+        lu.assertEquals(n.rooms.lookup.N_Combat22.localChildren[1].reward, {
+            kind = "countedChoice",
+            storeKeys = { "SubRoomRewardsHard" },
+            eligibleRewardTypes = {},
+            ineligibleRewardTypes = {},
+        })
         lu.assertNil(catalog.controlManifest.rooms.lookup.Surface_N_Sub02)
 
         local descriptor = catalog.controlManifest.rooms.lookup.Surface_N_Combat05
@@ -277,7 +287,7 @@ function TestCatalogFoundation.testLocalChildrenStayParentScoped()
             local controlKey = "Surface_" .. roomKey
             local oRoom = catalog.biomes.lookup.O.rooms.lookup[roomKey]
             lu.assertEquals(#oRoom.localChildren, 0, roomKey)
-            lu.assertEquals(oRoom.rewardSurfaceKey, "None", roomKey)
+            lu.assertEquals(oRoom.incomingReward, { kind = "none" }, roomKey)
             lu.assertEquals(catalog.controlManifest.rooms.lookup[controlKey].localSlots, {
                 { key = "wheel1", kind = "offerPoint", phaseKey = "Combat1" },
                 { key = "wheel2", kind = "offerPoint", phaseKey = "Combat2" },
@@ -341,10 +351,11 @@ function TestCatalogFoundation.testRouteRelevantRequirementsRemainTypedAndPhaseB
     end)
 end
 
-function TestCatalogFoundation.testRewardCatalogPreservesCountedEntriesAndTypedSurfaces()
+function TestCatalogFoundation.testRewardCatalogPreservesBagsAndEmbeddedBindings()
     h.withImport(function()
         lu.assertNil(h.rawDeclarations().rewards.normalizedAcquisitions)
-        local rewards = loadCatalog().rewards
+        local catalog = loadCatalog()
+        local rewards = catalog.rewards
         lu.assertEquals(#rewards.bags.lookup.RunProgress.entries, 18)
         lu.assertEquals(#rewards.bags.lookup.MetaProgress.entries, 13)
         lu.assertEquals(rewards.bags.lookup.RunProgress.entries[7].requirementKey, "HammerLootRequirements")
@@ -355,13 +366,61 @@ function TestCatalogFoundation.testRewardCatalogPreservesCountedEntriesAndTypedS
         })
         lu.assertEquals(rewards.normalizedAcquisitions.WeaponUpgradeDrop, "WeaponUpgrade")
         lu.assertEquals(rewards.primitives.lookup.Devotion.payloadDomain, "DevotionPair")
-        lu.assertEquals(rewards.surfaces.lookup.FieldsCages.maxSlots, 3)
-        lu.assertEquals(rewards.surfaces.lookup.FieldsCages.constraints, {
+        lu.assertNil(rewards.surfaces)
+        local biomes = catalog.biomes.lookup
+        lu.assertEquals(biomes.H.rooms.lookup.H_Combat01.incomingReward.maxSlots, 3)
+        lu.assertEquals(biomes.H.rooms.lookup.H_Combat01.incomingReward.constraints, {
             "UniqueNonBoonRewardTypes", "UniqueBoonSources",
         })
-        lu.assertEquals(rewards.surfaces.lookup.ClockworkGoalOrTartarus.kinds[1].rewardType, "ClockworkGoal")
+        lu.assertEquals(
+            biomes.I.rooms.lookup.I_Combat01.incomingReward.kinds[1].reward.rewardType,
+            "ClockworkGoal"
+        )
         lu.assertEquals(#rewards.shops.profiles.lookup.Q_WorldShop.slots, 6)
         lu.assertEquals(rewards.shops.profiles.lookup.Q_WorldShop.constraintKeys, { "QWorldShopPrimaryUnique" })
+    end)
+end
+
+function TestCatalogFoundation.testEmbeddedRewardBindingsPreserveAuditedDivergences()
+    h.withImport(function()
+        local catalog = loadCatalog()
+        local biomes = catalog.biomes.lookup
+
+        lu.assertEquals(biomes.F.rooms.lookup.F_Combat01.incomingReward, {
+            kind = "countedChoice",
+            storeKeys = { "RunProgress" },
+            eligibleRewardTypes = {},
+            ineligibleRewardTypes = { "Devotion" },
+        })
+        lu.assertEquals(biomes.F.rooms.lookup.F_Combat02.incomingReward.ineligibleRewardTypes, {})
+        lu.assertEquals(biomes.G.rooms.lookup.G_Combat04.incomingReward.ineligibleRewardTypes, { "Devotion" })
+        lu.assertEquals(biomes.G.rooms.lookup.G_Combat06.incomingReward.ineligibleRewardTypes, {})
+        lu.assertEquals(biomes.H.rooms.lookup.H_Combat01.incomingReward.choice.ineligibleRewardTypes, {
+            "Devotion",
+        })
+        lu.assertEquals(
+            biomes.I.rooms.lookup.I_Combat01.incomingReward.kinds[2].reward.ineligibleRewardTypes,
+            { "Boon" }
+        )
+        lu.assertEquals(
+            biomes.I.rooms.lookup.I_MiniBoss01.incomingReward.storeKeys,
+            { "TartarusRewards" }
+        )
+        lu.assertEquals(
+            biomes.N.rooms.lookup.N_Combat12.incomingReward.ineligibleRewardTypes,
+            { "WeaponUpgrade", "HermesUpgrade" }
+        )
+        lu.assertEquals(
+            catalog.encounterProfiles.lookup.ShipCombat.phases[2].offerPoint.choice.ineligibleRewardTypes,
+            {}
+        )
+        lu.assertEquals(biomes.O.rooms.lookup.O_Devotion01.incomingReward.kind, "fixed")
+        lu.assertEquals(biomes.P.rooms.lookup.P_Combat01.incomingReward.ineligibleRewardTypes, {
+            "Devotion",
+        })
+        lu.assertEquals(biomes.Q.rooms.lookup.Q_Combat01.incomingReward.ineligibleRewardTypes, {
+            "Devotion",
+        })
     end)
 end
 
@@ -558,8 +617,20 @@ function TestCatalogFoundation.testRejectsMalformedRoomAndRewardFixturesAtCatalo
         assertFails(function() loadCatalog(raw) end, "ordinary combat canonicalization must not be encoded as a creation cap")
 
         raw = h.rawDeclarations()
-        raw.biomes[1].rooms[4].rewardSurfaceKey = "MissingSurface"
-        assertFails(function() loadCatalog(raw) end, "unknown reward surface 'MissingSurface'")
+        raw.biomes[1].rooms[4].incomingReward.kind = "mystery"
+        assertFails(function() loadCatalog(raw) end, ".incomingReward.kind: unknown value 'mystery'")
+
+        raw = h.rawDeclarations()
+        raw.biomes[1].rooms[4].reward = raw.biomes[1].rooms[4].incomingReward
+        assertFails(function() loadCatalog(raw) end, ".reward: unexpected field")
+
+        raw = h.rawDeclarations()
+        raw.biomes[1].rooms[4].rewardSurfaceKey = "RunProgressMinorMajor"
+        assertFails(function() loadCatalog(raw) end, ".rewardSurfaceKey: unexpected field")
+
+        raw = h.rawDeclarations()
+        raw.rewards.surfaces = {}
+        assertFails(function() loadCatalog(raw) end, "rewards.surfaces: unexpected field")
 
         raw = h.rawDeclarations()
         raw.rewards.bags.RunProgress.entries[1].rewardType = "MissingReward"
@@ -576,7 +647,7 @@ function TestCatalogFoundation.testRejectsMissingExplicitRoomFactsAtCatalogBound
         local requiredFacts = {
             { key = "tags", error = ".tags: expected an explicit table" },
             { key = "exits", error = ".exits: expected an explicit table" },
-            { key = "rewardSurfaceKey", error = ".rewardSurfaceKey: expected a non-empty string" },
+            { key = "incomingReward", error = ".incomingReward: expected an explicit table" },
             { key = "encounterProfileKey", error = ".encounterProfileKey: expected a non-empty string" },
             { key = "counters", error = ".counters: expected an explicit table" },
             { key = "caps", error = ".caps: expected an explicit table" },
@@ -622,8 +693,14 @@ function TestCatalogFoundation.testEncounterProfilesOwnBaselineEncounterDepthEff
         lu.assertEquals(ship.phases[2].baselineEncounterKey, "GeneratedO")
         lu.assertEquals(ship.phases[3].baselineEncounterKey, "GeneratedO")
         lu.assertEquals(ship.phases[2].offerPoint, {
+            kind = "offerPoint",
             key = "wheel1",
-            surfaceKey = "ShipWheel",
+            choice = {
+                kind = "countedChoice",
+                storeKeys = { "RunProgress", "MetaProgress" },
+                eligibleRewardTypes = {},
+                ineligibleRewardTypes = {},
+            },
             offerCount = { min = 1, max = 2 },
             picked = "exactlyOne",
             offerTiming = "encounterStart",
@@ -695,8 +772,8 @@ function TestCatalogFoundation.testRejectsMalformedRequirementsAndRegistryDiscri
         end
 
         raw = h.rawDeclarations()
-        raw.rewards.surfaces.None.kind = "mystery"
-        assertFails(function() loadCatalog(raw) end, "rewards.surfaces.None.kind: unknown value 'mystery'")
+        findRawRoom(raw, "F", "F_Opening01").incomingReward.kind = "mystery"
+        assertFails(function() loadCatalog(raw) end, ".incomingReward.kind: unknown value 'mystery'")
 
         raw = h.rawDeclarations()
         raw.biomes[1].root.mode = "mystery"
@@ -731,8 +808,8 @@ function TestCatalogFoundation.testRejectsMalformedEncounterProfilesAndLocalChil
         assertFails(function() loadCatalog(raw) end, ".eligibilitySnapshot: unknown value 'room.encounters'")
 
         raw = h.rawDeclarations()
-        raw.encounterProfiles.ShipCombat.phases[2].offerPoint.surfaceKey = "MissingSurface"
-        assertFails(function() loadCatalog(raw) end, "unknown reward surface 'MissingSurface'")
+        raw.encounterProfiles.ShipCombat.phases[2].offerPoint.choice.storeKeys = { "MissingStore" }
+        assertFails(function() loadCatalog(raw) end, "unknown reward store 'MissingStore'")
 
         raw = h.rawDeclarations()
         raw.encounterProfiles.ShipCombat.phases[1].baselineEncounterKey = ""
@@ -791,28 +868,32 @@ function TestCatalogFoundation.testRejectsMalformedNestedRewardsAndSpecializedBi
         assertFails(function() loadCatalog(raw) end, "no referenced constraint owns slot group 'MissingGroup'")
 
         raw = h.rawDeclarations()
-        raw.rewards.surfaces.ForcedDevotion.payloadDomain = "DevotionPair"
-        assertFails(function() loadCatalog(raw) end, ".ForcedDevotion.payloadDomain: unexpected field")
+        findRawRoom(raw, "O", "O_Devotion01").incomingReward.payloadDomain = "DevotionPair"
+        assertFails(function() loadCatalog(raw) end, ".incomingReward.payloadDomain: unexpected field")
 
         raw = h.rawDeclarations()
-        raw.rewards.surfaces.RunProgressBoonOnly.eligibleRewardTypes = { "ClockworkGoal" }
+        findRawRoom(raw, "F", "F_MiniBoss01").incomingReward.eligibleRewardTypes = { "ClockworkGoal" }
         assertFails(function() loadCatalog(raw) end, "is not offered by the referenced stores")
 
         raw = h.rawDeclarations()
-        raw.rewards.surfaces.RunProgressBoonOnly.ineligibleRewardTypes = { "Boon" }
+        findRawRoom(raw, "F", "F_MiniBoss01").incomingReward.ineligibleRewardTypes = { "Boon" }
         assertFails(function() loadCatalog(raw) end, "reward primitive 'Boon' is both eligible and ineligible")
 
         raw = h.rawDeclarations()
-        raw.rewards.surfaces.PrebossFreeReward.eligibleRewardTypes = { "ClockworkGoal" }
+        findRawRoom(raw, "F", "F_Combat02").incomingReward.eligibleRewardTypes = { "GiftDrop" }
+        assertFails(function() loadCatalog(raw) end, "reward store 'RunProgress' has no allowed reward primitives")
+
+        raw = h.rawDeclarations()
+        findRawRoom(raw, "F", "F_PreBoss01").entryOfferPolicy.freeReward.eligibleRewardTypes = { "ClockworkGoal" }
         assertFails(function() loadCatalog(raw) end, "is not offered by the referenced stores")
 
         raw = h.rawDeclarations()
-        raw.rewards.surfaces.PrebossFreeReward.ineligibleRewardTypes = { "MissingReward" }
+        findRawRoom(raw, "F", "F_PreBoss01").entryOfferPolicy.freeReward.ineligibleRewardTypes = { "MissingReward" }
         assertFails(function() loadCatalog(raw) end, "unknown reward primitive 'MissingReward'")
 
         raw = h.rawDeclarations()
-        findRawRoom(raw, "F", "F_PreBoss01").entryOfferPolicy.freeRewardSurfaceKey = "MissingSurface"
-        assertFails(function() loadCatalog(raw) end, "unknown reward surface 'MissingSurface'")
+        findRawRoom(raw, "F", "F_PreBoss01").entryOfferPolicy.freeReward.storeKeys = { "MissingStore" }
+        assertFails(function() loadCatalog(raw) end, "unknown reward store 'MissingStore'")
 
         raw = h.rawDeclarations()
         findRawRoom(raw, "F", "F_PreBoss01").entryOfferPolicy.maxFreeRewards = 2
@@ -827,12 +908,12 @@ function TestCatalogFoundation.testRejectsMalformedNestedRewardsAndSpecializedBi
         assertFails(function() loadCatalog(raw) end, ".entryOfferPolicy: expected an explicit table")
 
         raw = h.rawDeclarations()
-        raw.rewards.surfaces.ClockworkGoalOrTartarus.kinds[2].storeKeys = { "MissingStore" }
+        findRawRoom(raw, "I", "I_Combat01").incomingReward.kinds[2].reward.storeKeys = { "MissingStore" }
         assertFails(function() loadCatalog(raw) end, "unknown reward store 'MissingStore'")
 
         raw = h.rawDeclarations()
-        raw.rewards.surfaces.ClockworkGoalOrTartarus.kinds[2].storeKeys = nil
-        assertFails(function() loadCatalog(raw) end, "incoming kind requires either rewardType or storeKeys")
+        findRawRoom(raw, "I", "I_Combat01").incomingReward.kinds[2].reward.storeKeys = nil
+        assertFails(function() loadCatalog(raw) end, ".storeKeys: expected an explicit table")
 
         raw = h.rawDeclarations()
         raw.biomes[3].rooms[2].metadata.effectiveMaxCageRewards = 6

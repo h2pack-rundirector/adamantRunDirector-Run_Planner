@@ -23,12 +23,12 @@ count:
 ```lua
 {
     templateKey = "DirectPreboss",
-    reward = { kind = "shop", shopProfileKey = "I_WorldShop" },
+    incomingReward = { kind = "shop", shopProfileKey = "I_WorldShop" },
     entryOfferPolicy = { kind = "shopOnly" },
 }
 ```
 
-The catalog validates that `reward` is a shop binding and that the direct
+The catalog validates that `incomingReward` is a shop binding and that the direct
 policy has no alternate-offer fields. The control's authored value then has
 this shape:
 

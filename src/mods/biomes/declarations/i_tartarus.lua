@@ -18,7 +18,7 @@ return {
             templateKey = "FixedIntro",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "None",
+            incomingReward = { kind = "none" },
             encounterProfileKey = "FixedIntro",
             counters = { biomeDepthCache = 0, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -36,7 +36,24 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -57,7 +74,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -75,7 +109,24 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -99,7 +150,24 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -120,7 +188,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -135,7 +220,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -150,7 +252,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -165,7 +284,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -183,7 +319,24 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -207,7 +360,24 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -231,7 +401,24 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -255,7 +442,24 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -276,7 +480,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -291,7 +512,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -309,7 +547,24 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -330,7 +585,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -345,7 +617,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -363,7 +652,24 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -384,7 +690,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -399,7 +722,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -417,7 +757,24 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -441,7 +798,24 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -462,7 +836,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -477,7 +868,24 @@ return {
             templateKey = "ClockworkCombat",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "ClockworkGoalOrTartarus",
+            incomingReward = {
+                kind = "incomingKind",
+                kinds = {
+                    {
+                        key = "Goal",
+                        reward = { kind = "fixed", rewardType = "ClockworkGoal", constraints = {} },
+                    },
+                    {
+                        key = "NonGoal",
+                        reward = {
+                            kind = "countedChoice",
+                            storeKeys = { "TartarusRewards" },
+                            eligibleRewardTypes = {},
+                            ineligibleRewardTypes = { "Boon" },
+                        },
+                    },
+                },
+            },
             encounterProfileKey = "ClockworkCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
@@ -501,7 +909,7 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "TartarusNoDevotion",
+            incomingReward = { kind = "countedChoice", storeKeys = { "TartarusRewards" }, eligibleRewardTypes = {}, ineligibleRewardTypes = { "Devotion" } },
             encounterProfileKey = "HealthRestore",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1, maxCreationsThisRun = 1 },
@@ -536,7 +944,7 @@ return {
             templateKey = "Story",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "FixedStory",
+            incomingReward = { kind = "fixed", rewardType = "Story", constraints = {} },
             encounterProfileKey = "Story",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1, maxCreationsThisRun = 1 },
@@ -575,7 +983,7 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "RunProgressBoonOnly",
+            incomingReward = { kind = "countedChoice", storeKeys = { "TartarusRewards" }, eligibleRewardTypes = { "Boon" }, ineligibleRewardTypes = {} },
             encounterProfileKey = "I_MiniBoss01",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1, maxCreationsThisRun = 1 },
@@ -621,7 +1029,7 @@ return {
                 { index = 1, targetMode = "generated", type = "CWTartarusExitDoor" },
                 { index = 2, targetMode = "generated", type = "CWTartarusExitDoor" },
             },
-            rewardSurfaceKey = "RunProgressBoonOnly",
+            incomingReward = { kind = "countedChoice", storeKeys = { "TartarusRewards" }, eligibleRewardTypes = { "Boon" }, ineligibleRewardTypes = {} },
             encounterProfileKey = "I_MiniBoss02",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1, maxCreationsThisRun = 1 },
@@ -670,7 +1078,7 @@ return {
             templateKey = "DirectPreboss",
             tags = {},
             exits = { { index = 1, targetMode = "fixedBoss", type = "CWTartarusExitDoor" } },
-            rewardSurfaceKey = "TartarusShop",
+            incomingReward = { kind = "shop", shopProfileKey = "I_WorldShop" },
             entryOfferPolicy = { kind = "shopOnly" },
             encounterProfileKey = "Preboss",
             counters = { biomeDepthCache = 0, roomHistoryOrdinal = 1 },

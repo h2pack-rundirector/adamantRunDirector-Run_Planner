@@ -69,6 +69,7 @@ local function storePayloadArity(catalog, specification)
         local bag = catalog.rewards.bags.lookup[storeKey]
         for _, entry in ipairs(bag.entries) do
             local eligible = specification.eligibleRewardTypes == nil
+                or #specification.eligibleRewardTypes == 0
                 or contains(specification.eligibleRewardTypes, entry.rewardType)
             if eligible and not contains(specification.ineligibleRewardTypes, entry.rewardType) then
                 local arity = payloadArity(catalog, entry.rewardType)
@@ -173,76 +174,44 @@ local function addShop(catalog, layout, addressPrefix, fieldPrefix, shopProfileK
     end
 end
 
-local function addSurface(catalog, layout, surface, address, fieldPrefix, context)
-    if surface.kind == "none" then
+local function addReward(catalog, layout, reward, address, fieldPrefix, context)
+    if reward.kind == "none" then
         return
     end
-    if surface.kind == "fixed" then
+    if reward.kind == "fixed" then
         addSelection(catalog, layout, address, fieldPrefix, {
-            fixedRewardType = surface.rewardType,
+            fixedRewardType = reward.rewardType,
         })
         return
     end
-    if surface.kind == "storeChoice" then
+    if reward.kind == "countedChoice" then
         addSelection(catalog, layout, address, fieldPrefix, {
-            storeKeys = surface.storeKeys,
-            eligibleRewardTypes = surface.eligibleRewardTypes,
-            ineligibleRewardTypes = surface.ineligibleRewardTypes,
+            storeKeys = reward.storeKeys,
+            eligibleRewardTypes = reward.eligibleRewardTypes,
+            ineligibleRewardTypes = reward.ineligibleRewardTypes,
         })
         return
     end
-    if surface.kind == "shop" then
-        addShop(catalog, layout, address, fieldPrefix, surface.shopProfileKey)
+    if reward.kind == "shop" then
+        addShop(catalog, layout, address, fieldPrefix, reward.shopProfileKey)
         return
     end
-    if surface.kind == "branch" then
-        local values = {}
-        for _, branch in ipairs(surface.branches) do
-            values[#values + 1] = branch.key
-        end
-        local valueList, valueLookup = allowedValues(values)
-        addScalar(layout, address .. ".branch", fieldPrefix .. "Branch", {
-            type = "string",
-            default = "",
-            maxLen = STRING_MAX,
-            allowedValues = valueList,
-            allowedLookup = valueLookup,
-        })
-        for _, branch in ipairs(surface.branches) do
-            local branchAddress = address .. "." .. branch.key
-            local branchPrefix = fieldPrefix .. title(branch.key)
-            if branch.surfaceKey ~= nil then
-                addSurface(
-                    catalog,
-                    layout,
-                    catalog.rewards.surfaces.lookup[branch.surfaceKey],
-                    branchAddress,
-                    branchPrefix,
-                    context
-                )
-            else
-                addSelection(catalog, layout, branchAddress, branchPrefix, {
-                    storeKeys = branch.storeKeys,
-                    eligibleRewardTypes = branch.eligibleRewardTypes,
-                    ineligibleRewardTypes = branch.ineligibleRewardTypes,
-                })
-            end
-        end
-        return
-    end
-    if surface.kind == "localSlots" then
+    if reward.kind == "localSlots" then
         for _, child in ipairs(context.localChildren) do
-            addSelection(catalog, layout, "local." .. child.key, title(child.key) .. "Reward", {
-                storeKeys = surface.storeKeys,
-                eligibleRewardTypes = surface.eligibleRewardTypes,
-                ineligibleRewardTypes = surface.ineligibleRewardTypes,
-            })
+            addReward(
+                catalog,
+                layout,
+                reward.choice,
+                "local." .. child.key,
+                title(child.key) .. "Reward",
+                context
+            )
         end
         return
     end
-    if surface.kind == "incomingKind" then
+    if reward.kind == "incomingKind" then
         local values = {}
-        for _, kind in ipairs(surface.kinds) do
+        for _, kind in ipairs(reward.kinds) do
             values[#values + 1] = kind.key
         end
         local valueList, valueLookup = allowedValues(values)
@@ -253,22 +222,24 @@ local function addSurface(catalog, layout, surface, address, fieldPrefix, contex
             allowedValues = valueList,
             allowedLookup = valueLookup,
         })
-        for _, kind in ipairs(surface.kinds) do
-            addSelection(catalog, layout, address .. "." .. kind.key, fieldPrefix .. title(kind.key), {
-                fixedRewardType = kind.rewardType,
-                storeKeys = kind.storeKeys,
-                eligibleRewardTypes = kind.eligibleRewardTypes,
-                ineligibleRewardTypes = kind.ineligibleRewardTypes,
-            })
+        for _, kind in ipairs(reward.kinds) do
+            addReward(
+                catalog,
+                layout,
+                kind.reward,
+                address .. "." .. kind.key,
+                fieldPrefix .. title(kind.key),
+                context
+            )
         end
         return
     end
-    error("unsupported reward surface kind '" .. tostring(surface.kind) .. "'", 0)
+    error("unsupported reward binding kind '" .. tostring(reward.kind) .. "'", 0)
 end
 
 local function addLocalChildren(catalog, layout, room)
     for _, child in ipairs(room.localChildren) do
-        if child.rewardSurfaceKey ~= nil then
+        if child.reward ~= nil then
             local childPrefix = title(child.key)
             addScalar(layout, "local." .. child.key .. ".generated", childPrefix .. "Generated", {
                 type = "bool",
@@ -280,10 +251,10 @@ local function addLocalChildren(catalog, layout, room)
                 min = 0,
                 max = #room.localChildren,
             })
-            addSurface(
+            addReward(
                 catalog,
                 layout,
-                catalog.rewards.surfaces.lookup[child.rewardSurfaceKey],
+                child.reward,
                 "local." .. child.key,
                 childPrefix .. "Reward",
                 room
@@ -316,12 +287,11 @@ local function addEncounterState(catalog, layout, room)
                 min = 0,
                 max = offer.offerCount.max,
             })
-            local surface = catalog.rewards.surfaces.lookup[offer.surfaceKey]
             for index = 1, offer.offerCount.max do
-                addSurface(
+                addReward(
                     catalog,
                     layout,
-                    surface,
+                    offer.choice,
                     "offer." .. offer.key .. "." .. tostring(index),
                     offerPrefix .. "Offer" .. tostring(index),
                     room
@@ -338,10 +308,10 @@ function stateManifest.build(catalog, room)
         scalars = { ordered = {}, lookup = {} },
         selections = { ordered = {}, lookup = {} },
     }
-    addSurface(
+    addReward(
         catalog,
         layout,
-        catalog.rewards.surfaces.lookup[room.rewardSurfaceKey],
+        room.incomingReward,
         "reward",
         "Reward",
         room

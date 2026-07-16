@@ -68,8 +68,8 @@ the current prototype until that hierarchy is reviewed and locked.
 
 [`REWARD_CONSUMER_AUDIT.md`](room_controls/REWARD_CONSUMER_AUDIT.md) verifies
 the concrete store, inherited filter, and forced-reward provenance for every
-supported reward producer. Its listed declaration reconciliations precede the
-hierarchy implementation.
+supported reward producer. Its declaration reconciliation is implemented; the
+compiled collaborator hierarchy remains next.
 
 [`ROOM_CONTROL_HANDOFF.md`](ROOM_CONTROL_HANDOFF.md) records the reviewed Room
 Control design state, verified game-data findings, and the sequencing context
@@ -169,8 +169,8 @@ The revamp starts from these decisions:
 - Bounded room-internal children use stable parent-local slots rather than
   dynamic or duplicate top-level controls.
 - A Biome Plan owns generated batches, room links, and picked state.
-- A room control owns the authored state and reward-producer binding local to
-  that room.
+- A room control owns its authored `incomingReward` and any rewards produced
+  by explicit room-local children or encounter offer points.
 - Outgoing topology belongs to the Biome Plan, never to a target room control.
 - Picked and unpicked generated rooms use the same room-control representation.
 - Unpicked rooms are dead leaves. Their offered rewards remain materialized.

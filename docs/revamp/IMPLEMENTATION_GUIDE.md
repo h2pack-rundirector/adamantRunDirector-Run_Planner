@@ -336,7 +336,7 @@ Tests and generated audits must prove:
 
 - route and room keys are unique in their declared scope;
 - each room's template accepts its room kind;
-- every room explicitly declares tags, exits, its complete reward-producer
+- every room explicitly declares tags, exits, its complete incoming-reward
   binding, encounter-profile key, structural counter effects, caps,
   terminal/fixed state, and local children, including empty and false values;
 - every encounter profile explicitly declares its phases, including each

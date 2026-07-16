@@ -77,12 +77,11 @@ local function validateRewards(raw, requirements)
     local rewards = copy(raw)
     requiredTable(rewards, "rewards")
     s.onlyKeys(rewards, {
-        "bags", "batchConstraints", "payloadDomains", "primitives", "shops", "surfaces",
+        "bags", "batchConstraints", "payloadDomains", "primitives", "shops",
     }, "rewards")
     rewards.primitives = keyedCatalog(rewards.primitives, "rewards.primitives")
     rewards.payloadDomains = keyedCatalog(rewards.payloadDomains, "rewards.payloadDomains")
     rewards.bags = keyedCatalog(rewards.bags, "rewards.bags")
-    rewards.surfaces = keyedCatalog(rewards.surfaces, "rewards.surfaces")
     rewards.batchConstraints = keyedCatalog(rewards.batchConstraints, "rewards.batchConstraints")
 
     for _, primitive in ipairs(rewards.primitives.ordered) do
@@ -249,180 +248,154 @@ local function validateRewards(raw, requirements)
     end
     rewards.shops = shops
 
-    local function validateStoreKeys(storeKeys, path)
-        if storeKeys == nil then
-            return
-        end
-        s.stringList(storeKeys, path, true)
-        for index, storeKey in ipairs(storeKeys) do
-            if rewards.stores.lookup[storeKey] == nil then
-                fail(path .. "[" .. tostring(index) .. "]", "unknown reward store '" .. tostring(storeKey) .. "'")
-            end
-        end
-    end
-
-    local function validateRewardTypes(rewardTypes, path)
-        if rewardTypes == nil then
-            return
-        end
-        s.stringList(rewardTypes, path, true)
-        for index, rewardType in ipairs(rewardTypes) do
-            if rewards.primitives.lookup[rewardType] == nil then
-                fail(path .. "[" .. tostring(index) .. "]", "unknown reward primitive '" .. tostring(rewardType) .. "'")
-            end
-        end
-    end
-
-    local function validateStoreFilters(storeKeys, eligibleRewardTypes, ineligibleRewardTypes, path)
-        validateRewardTypes(eligibleRewardTypes, path .. ".eligibleRewardTypes")
-        validateRewardTypes(ineligibleRewardTypes, path .. ".ineligibleRewardTypes")
-        local storeOptions = {}
-        for _, storeKey in ipairs(storeKeys) do
-            for _, rewardType in ipairs(rewards.stores.lookup[storeKey].options) do
-                storeOptions[rewardType] = true
-            end
-        end
-        local eligible = {}
-        for index, rewardType in ipairs(eligibleRewardTypes or {}) do
-            if not storeOptions[rewardType] then
-                fail(
-                    path .. ".eligibleRewardTypes[" .. tostring(index) .. "]",
-                    "reward primitive '" .. rewardType .. "' is not offered by the referenced stores"
-                )
-            end
-            eligible[rewardType] = true
-        end
-        for index, rewardType in ipairs(ineligibleRewardTypes or {}) do
-            if not storeOptions[rewardType] then
-                fail(
-                    path .. ".ineligibleRewardTypes[" .. tostring(index) .. "]",
-                    "reward primitive '" .. rewardType .. "' is not offered by the referenced stores"
-                )
-            end
-            if eligible[rewardType] then
-                fail(
-                    path .. ".ineligibleRewardTypes[" .. tostring(index) .. "]",
-                    "reward primitive '" .. rewardType .. "' is both eligible and ineligible"
-                )
-            end
-        end
-    end
-
-    for _, surface in ipairs(rewards.surfaces.ordered) do
-        local path = "rewards.surfaces." .. surface.key
-        s.enum(surface.kind, {
-            "branch", "fixed", "incomingKind", "localSlots", "none", "shop", "storeChoice",
-        }, path .. ".kind")
-        if surface.kind == "fixed" then
-            s.onlyKeys(surface, { "constraints", "key", "kind", "rewardType" }, path)
-            nonEmptyString(surface.rewardType, path .. ".rewardType")
-        elseif surface.kind == "storeChoice" then
-            s.onlyKeys(surface, {
-                "batchConstraint", "eligibleRewardTypes", "ineligibleRewardTypes", "key", "kind", "storeKeys",
-            }, path)
-            if surface.storeKeys == nil then
-                fail(path .. ".storeKeys", "store-choice surface requires reward stores")
-            end
-            validateStoreKeys(surface.storeKeys, path .. ".storeKeys")
-            validateStoreFilters(
-                surface.storeKeys,
-                surface.eligibleRewardTypes,
-                surface.ineligibleRewardTypes,
-                path
-            )
-        elseif surface.kind == "localSlots" then
-            s.onlyKeys(surface, { "constraints", "key", "kind", "maxSlots", "storeKeys" }, path)
-            if surface.storeKeys == nil then
-                fail(path .. ".storeKeys", "local-slot surface requires reward stores")
-            end
-            validateStoreKeys(surface.storeKeys, path .. ".storeKeys")
-        elseif surface.kind == "shop" then
-            s.onlyKeys(surface, { "key", "kind", "shopProfileKey" }, path)
-            nonEmptyString(surface.shopProfileKey, path .. ".shopProfileKey")
-        elseif surface.kind == "branch" then
-            s.onlyKeys(surface, { "branches", "key", "kind" }, path)
-            s.list(surface.branches, path .. ".branches", true)
-        elseif surface.kind == "incomingKind" then
-            s.onlyKeys(surface, { "key", "kind", "kinds" }, path)
-            s.list(surface.kinds, path .. ".kinds", true)
-        else
-            s.onlyKeys(surface, { "key", "kind" }, path)
-        end
-        if surface.kind == "localSlots" then
-            positiveInteger(surface.maxSlots, path .. ".maxSlots")
-        end
-        if surface.shopProfileKey ~= nil and shops.profiles.lookup[surface.shopProfileKey] == nil then
-            fail(path .. ".shopProfileKey", "unknown shop profile '" .. surface.shopProfileKey .. "'")
-        end
-        if surface.rewardType ~= nil and rewards.primitives.lookup[surface.rewardType] == nil then
-            fail(path .. ".rewardType", "unknown reward primitive '" .. surface.rewardType .. "'")
-        end
-        if surface.batchConstraint ~= nil and rewards.batchConstraints.lookup[surface.batchConstraint] == nil then
-            fail(path .. ".batchConstraint", "unknown batch constraint '" .. surface.batchConstraint .. "'")
-        end
-        if surface.constraints ~= nil then
-            s.stringList(surface.constraints, path .. ".constraints", true)
-        end
-        for index, constraintKey in ipairs(surface.constraints or {}) do
-            if rewards.batchConstraints.lookup[constraintKey] == nil then
-                fail(path .. ".constraints[" .. tostring(index) .. "]", "unknown batch constraint '" .. constraintKey .. "'")
-            end
-        end
-        local branchKeys = {}
-        for index, branch in ipairs(surface.branches or {}) do
-            local branchPath = path .. ".branches[" .. tostring(index) .. "]"
-            requiredTable(branch, branchPath)
-            nonEmptyString(branch.key, branchPath .. ".key")
-            if branchKeys[branch.key] then
-                fail(branchPath .. ".key", "duplicate branch key '" .. branch.key .. "'")
-            end
-            branchKeys[branch.key] = true
-            if branch.surfaceKey ~= nil then
-                s.onlyKeys(branch, { "key", "surfaceKey" }, branchPath)
-                nonEmptyString(branch.surfaceKey, branchPath .. ".surfaceKey")
-                if rewards.surfaces.lookup[branch.surfaceKey] == nil then
-                    fail(branchPath .. ".surfaceKey", "unknown surface '" .. branch.surfaceKey .. "'")
-                end
-            else
-                s.onlyKeys(branch, {
-                    "eligibleRewardTypes", "ineligibleRewardTypes", "key", "storeKeys",
-                }, branchPath)
-                if branch.storeKeys == nil then
-                    fail(branchPath, "branch requires either surfaceKey or storeKeys")
-                end
-                validateStoreKeys(branch.storeKeys, branchPath .. ".storeKeys")
-                validateStoreFilters(
-                    branch.storeKeys,
-                    branch.eligibleRewardTypes,
-                    branch.ineligibleRewardTypes,
-                    branchPath
-                )
-            end
-        end
-        local kindKeys = {}
-        for index, kind in ipairs(surface.kinds or {}) do
-            local kindPath = path .. ".kinds[" .. tostring(index) .. "]"
-            requiredTable(kind, kindPath)
-            nonEmptyString(kind.key, kindPath .. ".key")
-            if kindKeys[kind.key] then
-                fail(kindPath .. ".key", "duplicate incoming kind key '" .. kind.key .. "'")
-            end
-            kindKeys[kind.key] = true
-            if kind.rewardType ~= nil then
-                s.onlyKeys(kind, { "key", "rewardType" }, kindPath)
-                if rewards.primitives.lookup[kind.rewardType] == nil then
-                    fail(kindPath .. ".rewardType", "unknown reward primitive '" .. kind.rewardType .. "'")
-                end
-            else
-                s.onlyKeys(kind, { "key", "storeKeys" }, kindPath)
-                if kind.storeKeys == nil then
-                    fail(kindPath, "incoming kind requires either rewardType or storeKeys")
-                end
-                validateStoreKeys(kind.storeKeys, kindPath .. ".storeKeys")
-            end
-        end
-    end
     return rewards
+end
+
+local function validateConstraintKeys(rewards, constraintKeys, path)
+    requiredTable(constraintKeys, path)
+    s.stringList(constraintKeys, path, false)
+    for index, constraintKey in ipairs(constraintKeys) do
+        if rewards.batchConstraints.lookup[constraintKey] == nil then
+            fail(path .. "[" .. tostring(index) .. "]", "unknown batch constraint '" .. constraintKey .. "'")
+        end
+    end
+end
+
+local function validateStoreKeys(rewards, storeKeys, path)
+    requiredTable(storeKeys, path)
+    s.stringList(storeKeys, path, true)
+    for index, storeKey in ipairs(storeKeys) do
+        if rewards.stores.lookup[storeKey] == nil then
+            fail(path .. "[" .. tostring(index) .. "]", "unknown reward store '" .. tostring(storeKey) .. "'")
+        end
+    end
+end
+
+local function validateRewardTypes(rewards, rewardTypes, path)
+    requiredTable(rewardTypes, path)
+    s.stringList(rewardTypes, path, false)
+    for index, rewardType in ipairs(rewardTypes) do
+        if rewards.primitives.lookup[rewardType] == nil then
+            fail(path .. "[" .. tostring(index) .. "]", "unknown reward primitive '" .. tostring(rewardType) .. "'")
+        end
+    end
+end
+
+local function validateCountedChoice(binding, rewards, path)
+    s.onlyKeys(binding, {
+        "batchConstraint", "eligibleRewardTypes", "ineligibleRewardTypes", "kind", "storeKeys",
+    }, path)
+    validateStoreKeys(rewards, binding.storeKeys, path .. ".storeKeys")
+    validateRewardTypes(rewards, binding.eligibleRewardTypes, path .. ".eligibleRewardTypes")
+    validateRewardTypes(rewards, binding.ineligibleRewardTypes, path .. ".ineligibleRewardTypes")
+
+    local storeOptions = {}
+    for _, storeKey in ipairs(binding.storeKeys) do
+        for _, rewardType in ipairs(rewards.stores.lookup[storeKey].options) do
+            storeOptions[rewardType] = true
+        end
+    end
+    local eligible = {}
+    for index, rewardType in ipairs(binding.eligibleRewardTypes) do
+        if not storeOptions[rewardType] then
+            fail(
+                path .. ".eligibleRewardTypes[" .. tostring(index) .. "]",
+                "reward primitive '" .. rewardType .. "' is not offered by the referenced stores"
+            )
+        end
+        eligible[rewardType] = true
+    end
+    local ineligible = {}
+    for index, rewardType in ipairs(binding.ineligibleRewardTypes) do
+        if not storeOptions[rewardType] then
+            fail(
+                path .. ".ineligibleRewardTypes[" .. tostring(index) .. "]",
+                "reward primitive '" .. rewardType .. "' is not offered by the referenced stores"
+            )
+        end
+        if eligible[rewardType] then
+            fail(
+                path .. ".ineligibleRewardTypes[" .. tostring(index) .. "]",
+                "reward primitive '" .. rewardType .. "' is both eligible and ineligible"
+            )
+        end
+        ineligible[rewardType] = true
+    end
+
+    for storeIndex, storeKey in ipairs(binding.storeKeys) do
+        local allowedCount = 0
+        for _, rewardType in ipairs(rewards.stores.lookup[storeKey].options) do
+            if (#binding.eligibleRewardTypes == 0 or eligible[rewardType])
+                and not ineligible[rewardType]
+            then
+                allowedCount = allowedCount + 1
+            end
+        end
+        if allowedCount == 0 then
+            fail(
+                path .. ".storeKeys[" .. tostring(storeIndex) .. "]",
+                "reward store '" .. storeKey .. "' has no allowed reward primitives"
+            )
+        end
+    end
+    if binding.batchConstraint ~= nil
+        and rewards.batchConstraints.lookup[binding.batchConstraint] == nil
+    then
+        fail(path .. ".batchConstraint", "unknown batch constraint '" .. binding.batchConstraint .. "'")
+    end
+end
+
+local function validateRewardBinding(binding, rewards, path)
+    requiredTable(binding, path)
+    s.enum(
+        binding.kind,
+        { "countedChoice", "fixed", "incomingKind", "localSlots", "none", "shop" },
+        path .. ".kind"
+    )
+    if binding.kind == "none" then
+        s.onlyKeys(binding, { "kind" }, path)
+    elseif binding.kind == "countedChoice" then
+        validateCountedChoice(binding, rewards, path)
+    elseif binding.kind == "fixed" then
+        s.onlyKeys(binding, { "constraints", "kind", "rewardType" }, path)
+        nonEmptyString(binding.rewardType, path .. ".rewardType")
+        if rewards.primitives.lookup[binding.rewardType] == nil then
+            fail(path .. ".rewardType", "unknown reward primitive '" .. binding.rewardType .. "'")
+        end
+        validateConstraintKeys(rewards, binding.constraints, path .. ".constraints")
+    elseif binding.kind == "shop" then
+        s.onlyKeys(binding, { "kind", "shopProfileKey" }, path)
+        nonEmptyString(binding.shopProfileKey, path .. ".shopProfileKey")
+        if rewards.shops.profiles.lookup[binding.shopProfileKey] == nil then
+            fail(path .. ".shopProfileKey", "unknown shop profile '" .. binding.shopProfileKey .. "'")
+        end
+    elseif binding.kind == "localSlots" then
+        s.onlyKeys(binding, { "choice", "constraints", "kind", "maxSlots" }, path)
+        positiveInteger(binding.maxSlots, path .. ".maxSlots")
+        validateConstraintKeys(rewards, binding.constraints, path .. ".constraints")
+        validateRewardBinding(binding.choice, rewards, path .. ".choice")
+        if binding.choice.kind ~= "countedChoice" then
+            fail(path .. ".choice.kind", "local slots require a countedChoice binding")
+        end
+    elseif binding.kind == "incomingKind" then
+        s.onlyKeys(binding, { "kind", "kinds" }, path)
+        s.list(binding.kinds, path .. ".kinds", true)
+        local kindKeys = {}
+        for index, incoming in ipairs(binding.kinds) do
+            local incomingPath = path .. ".kinds[" .. tostring(index) .. "]"
+            requiredTable(incoming, incomingPath)
+            s.onlyKeys(incoming, { "key", "reward" }, incomingPath)
+            nonEmptyString(incoming.key, incomingPath .. ".key")
+            if kindKeys[incoming.key] then
+                fail(incomingPath .. ".key", "duplicate incoming kind key '" .. incoming.key .. "'")
+            end
+            kindKeys[incoming.key] = true
+            validateRewardBinding(incoming.reward, rewards, incomingPath .. ".reward")
+            if incoming.reward.kind ~= "fixed" and incoming.reward.kind ~= "countedChoice" then
+                fail(incomingPath .. ".reward.kind", "incoming kinds require fixed or countedChoice bindings")
+            end
+        end
+    end
 end
 
 local function validateExit(exit, exitTypes, path)
@@ -502,9 +475,8 @@ local function validateEntryOfferPolicy(room, template, rewards, path)
     end
 
     requiredTable(policy, path .. ".entryOfferPolicy")
-    local shopSurface = rewards.surfaces.lookup[room.rewardSurfaceKey]
-    if shopSurface.kind ~= "shop" then
-        fail(path .. ".rewardSurfaceKey", "preboss primary reward surface must be a shop")
+    if room.incomingReward.kind ~= "shop" then
+        fail(path .. ".incomingReward.kind", "preboss incoming reward binding must be a shop")
     end
 
     if isDirect then
@@ -515,7 +487,7 @@ local function validateEntryOfferPolicy(room, template, rewards, path)
 
     s.onlyKeys(
         policy,
-        { "freeRewardSurfaceKey", "kind", "maxFreeRewards" },
+        { "freeReward", "kind", "maxFreeRewards" },
         path .. ".entryOfferPolicy"
     )
     s.enum(
@@ -523,7 +495,6 @@ local function validateEntryOfferPolicy(room, template, rewards, path)
         { "shopThenFillRemainingExits" },
         path .. ".entryOfferPolicy.kind"
     )
-    nonEmptyString(policy.freeRewardSurfaceKey, path .. ".entryOfferPolicy.freeRewardSurfaceKey")
     positiveInteger(policy.maxFreeRewards, path .. ".entryOfferPolicy.maxFreeRewards")
     if policy.maxFreeRewards > template.freeRewardSlotCapacity then
         fail(
@@ -531,17 +502,11 @@ local function validateEntryOfferPolicy(room, template, rewards, path)
             "exceeds ForkedPreboss slot capacity of " .. tostring(template.freeRewardSlotCapacity)
         )
     end
-    local freeRewardSurface = rewards.surfaces.lookup[policy.freeRewardSurfaceKey]
-    if freeRewardSurface == nil then
+    validateRewardBinding(policy.freeReward, rewards, path .. ".entryOfferPolicy.freeReward")
+    if policy.freeReward.kind ~= "countedChoice" then
         fail(
-            path .. ".entryOfferPolicy.freeRewardSurfaceKey",
-            "unknown reward surface '" .. policy.freeRewardSurfaceKey .. "'"
-        )
-    end
-    if freeRewardSurface.kind ~= "storeChoice" then
-        fail(
-            path .. ".entryOfferPolicy.freeRewardSurfaceKey",
-            "forked preboss free rewards require a store-choice surface"
+            path .. ".entryOfferPolicy.freeReward.kind",
+            "forked preboss free rewards require a countedChoice binding"
         )
     end
 end
@@ -607,12 +572,13 @@ local function validateEncounterPhase(phase, profileKind, requirements, rewards,
         local offerPath = path .. ".offerPoint"
         requiredTable(phase.offerPoint, offerPath)
         s.onlyKeys(phase.offerPoint, {
-            "acquisitionTiming", "key", "offerCount", "offerTiming", "picked", "surfaceKey",
+            "acquisitionTiming", "choice", "key", "kind", "offerCount", "offerTiming", "picked",
         }, offerPath)
+        s.enum(phase.offerPoint.kind, { "offerPoint" }, offerPath .. ".kind")
         nonEmptyString(phase.offerPoint.key, offerPath .. ".key")
-        nonEmptyString(phase.offerPoint.surfaceKey, offerPath .. ".surfaceKey")
-        if rewards.surfaces.lookup[phase.offerPoint.surfaceKey] == nil then
-            fail(offerPath .. ".surfaceKey", "unknown reward surface '" .. phase.offerPoint.surfaceKey .. "'")
+        validateRewardBinding(phase.offerPoint.choice, rewards, offerPath .. ".choice")
+        if phase.offerPoint.choice.kind ~= "countedChoice" then
+            fail(offerPath .. ".choice.kind", "offer points require a countedChoice binding")
         end
         requiredTable(phase.offerPoint.offerCount, offerPath .. ".offerCount")
         s.onlyKeys(phase.offerPoint.offerCount, { "max", "min" }, offerPath .. ".offerCount")
@@ -1135,7 +1101,7 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
             local roomPath = path .. ".rooms[" .. tostring(roomIndex) .. "]"
             s.onlyKeys(room, {
                 "canonicalFamily", "caps", "counters", "eligibility", "encounterProfileKey", "exits",
-                "entryOfferPolicy", "fixed", "force", "key", "kind", "localChildren", "metadata", "rewardSurfaceKey",
+                "entryOfferPolicy", "fixed", "force", "incomingReward", "key", "kind", "localChildren", "metadata",
                 "tags", "templateKey", "terminal",
             }, roomPath)
             if string.sub(room.key, 1, 2) ~= biome.key .. "_" then
@@ -1150,7 +1116,7 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
             requiredTable(room.tags, roomPath .. ".tags")
             s.stringList(room.tags, roomPath .. ".tags", false)
             requiredTable(room.exits, roomPath .. ".exits")
-            nonEmptyString(room.rewardSurfaceKey, roomPath .. ".rewardSurfaceKey")
+            validateRewardBinding(room.incomingReward, rewards, roomPath .. ".incomingReward")
             nonEmptyString(room.encounterProfileKey, roomPath .. ".encounterProfileKey")
             requiredTable(room.counters, roomPath .. ".counters")
             positiveInteger(room.counters.roomHistoryOrdinal, roomPath .. ".counters.roomHistoryOrdinal", true)
@@ -1169,9 +1135,6 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
             end
             if not contains(template.roomKinds, room.kind) then
                 fail(roomPath .. ".templateKey", "template '" .. room.templateKey .. "' does not accept room kind '" .. room.kind .. "'")
-            end
-            if rewards.surfaces.lookup[room.rewardSurfaceKey] == nil then
-                fail(roomPath .. ".rewardSurfaceKey", "unknown reward surface '" .. tostring(room.rewardSurfaceKey) .. "'")
             end
             validateEntryOfferPolicy(room, template, rewards, roomPath)
             local encounterProfile = encounterProfiles.lookup[room.encounterProfileKey]
@@ -1276,14 +1239,39 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
                     s.onlyKeys(child, { "key", "kind", "ordinal" }, childPath)
                 elseif child.kind == "sideRoom" then
                     s.onlyKeys(child, {
-                        "doorId", "gameRoomKey", "key", "kind", "ordinal", "rewardSurfaceKey",
+                        "doorId", "gameRoomKey", "key", "kind", "ordinal", "reward",
                     }, childPath)
                     positiveInteger(child.doorId, childPath .. ".doorId")
                     nonEmptyString(child.gameRoomKey, childPath .. ".gameRoomKey")
-                    nonEmptyString(child.rewardSurfaceKey, childPath .. ".rewardSurfaceKey")
+                    validateRewardBinding(child.reward, rewards, childPath .. ".reward")
+                    if child.reward.kind ~= "countedChoice" then
+                        fail(childPath .. ".reward.kind", "side rooms require a countedChoice binding")
+                    end
                 end
-                if child.rewardSurfaceKey ~= nil and rewards.surfaces.lookup[child.rewardSurfaceKey] == nil then
-                    fail(childPath .. ".rewardSurfaceKey", "unknown reward surface '" .. child.rewardSurfaceKey .. "'")
+            end
+            if room.incomingReward.kind == "localSlots" then
+                if #room.localChildren == 0 then
+                    fail(roomPath .. ".localChildren", "localSlots reward requires declared reward children")
+                end
+                if #room.localChildren > room.incomingReward.maxSlots then
+                    fail(roomPath .. ".localChildren", "exceeds reward binding maxSlots")
+                end
+                for childIndex, child in ipairs(room.localChildren) do
+                    if child.kind ~= "reward" then
+                        fail(
+                            roomPath .. ".localChildren[" .. tostring(childIndex) .. "].kind",
+                            "localSlots reward requires reward children"
+                        )
+                    end
+                end
+            else
+                for childIndex, child in ipairs(room.localChildren) do
+                    if child.kind == "reward" then
+                        fail(
+                            roomPath .. ".localChildren[" .. tostring(childIndex) .. "].kind",
+                            "reward child requires a localSlots incoming room binding"
+                        )
+                    end
                 end
             end
             if room.canonicalFamily ~= nil then

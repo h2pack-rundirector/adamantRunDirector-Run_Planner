@@ -33,7 +33,7 @@ function instances.build(catalog, activePrefixEnds)
             routeKey = room.routeKey,
             biomeStepKey = room.biomeStepKey,
             gameRoomKey = room.gameRoomKey,
-            rewardSurfaceKey = room.rewardSurfaceKey,
+            incomingReward = room.incomingReward,
             entryOfferPolicy = room.entryOfferPolicy,
         }
         if room.state ~= nil then

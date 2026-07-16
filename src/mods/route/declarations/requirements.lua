@@ -72,7 +72,6 @@ return {
                 {
                     kind = "RequiredMinExits",
                     count = 2,
-                    exceptBiomeKeys = { "O" },
                     code = "insufficient_exits",
                 },
             },

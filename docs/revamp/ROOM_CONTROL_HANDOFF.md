@@ -197,12 +197,11 @@ The declaration and catalog layer now reflects the reviewed model:
 
 The next production work is deliberately narrower:
 
-1. reconcile reward producer bindings against
-   [`REWARD_CONSUMER_AUDIT.md`](room_controls/REWARD_CONSUMER_AUDIT.md);
-2. replace the generic reward prototype with the bottom-up hierarchy;
-3. continue real control templates through the existing control subsystem DI
+1. replace the generic reward prototype with the bottom-up hierarchy over the
+   reconciled embedded bindings;
+2. continue real control templates through the existing control subsystem DI
    layer in F/G, H/I, N/O, and P/Q order;
-4. add storage-manifest, typed read/write, dormancy, and profile-capacity tests
+3. add storage-manifest, typed read/write, dormancy, and profile-capacity tests
    before proceeding to Checkpoint 4 materialization.
 
 Do not add NPC support, runtime fallback interpretation, or candidate/feedback
@@ -218,7 +217,7 @@ component is deliberately not final:
 [`REWARD_HIERARCHY.md`](room_controls/REWARD_HIERARCHY.md) defines the
 bottom-up replacement being reviewed. The companion
 [`REWARD_CONSUMER_AUDIT.md`](room_controls/REWARD_CONSUMER_AUDIT.md) found
-store and filter corrections that must land before that replacement:
+store and filter corrections that are now embedded in the declarations:
 no-Devotion minor/major contexts, Tartarus-backed I minibosses, and the
 no-Boon Clockwork NonGoal branch. These are explicit producer bindings, not
 new named reward components. Every other room template is named explicitly in

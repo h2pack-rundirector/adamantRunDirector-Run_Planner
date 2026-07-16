@@ -195,7 +195,7 @@ function TestManagedPersistence.testControlAssemblyDoesNotMutateValidatedCatalog
     end)
 end
 
-function TestManagedPersistence.testRoomSchemasCoverEveryBoundedSpecialSurface()
+function TestManagedPersistence.testRoomSchemasCoverEveryBoundedRewardBinding()
     h.withImport(function()
         local catalog, _, instances, templates = load()
 
@@ -208,9 +208,24 @@ function TestManagedPersistence.testRoomSchemasCoverEveryBoundedSpecialSurface()
         lu.assertNil(standardCombat.state)
         lu.assertNotNil(standardCombat.generatedReward)
 
+        local fCombat01 = storageLookup(
+            templates.StandardCombat.storage(instances.Underworld_F_Combat01)
+        )
+        lu.assertNil(fCombat01.RewardStoreKey)
+        lu.assertNotNil(fCombat01.RewardPayload1)
+        lu.assertNil(fCombat01.RewardPayload2)
+
+        local gCombat04 = storageLookup(
+            templates.StandardCombat.storage(instances.Underworld_G_Combat04)
+        )
+        lu.assertNotNil(gCombat04.RewardStoreKey)
+        lu.assertNotNil(gCombat04.RewardPayload1)
+        lu.assertNil(gCombat04.RewardPayload2)
+
         local fields = storageLookup(catalog.controlManifest.rooms.lookup.Underworld_H_Combat01.state.storage)
         lu.assertNotNil(fields.Cage1RewardType)
-        lu.assertNotNil(fields.Cage3RewardPayload2)
+        lu.assertNotNil(fields.Cage3RewardPayload1)
+        lu.assertNil(fields.Cage3RewardPayload2)
 
         local clockwork = storageLookup(catalog.controlManifest.rooms.lookup.Underworld_I_Combat01.state.storage)
         lu.assertNotNil(clockwork.RewardIncomingKind)
