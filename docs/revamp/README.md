@@ -14,12 +14,18 @@ directory.
 The legacy implementation is archived on `codex/fresh-planner-spine`. The live
 rewrite branch now implements the managed-module skeleton, headless catalog,
 and the static-control and managed-persistence foundation of Checkpoint 2. The
-first specialized prototype implements typed `StandardCombat` controls with a
-generic bag-selection component; the reward-hierarchy review below will
-replace that component before the slice is finalized. The remaining room
-templates still use an explicit transitional adapter. System-wide composition
-and subsystem-local dependency injection are in place. The production UI
-remains the explicit unavailable-status shell.
+bottom-up reward hierarchy now implements payload domains, primitives, counted
+bags, compiled bindings, counted and fixed choices, shop option sets and
+profiles, and their persistence components. Focused Room Control templates
+cover every F and G room without the transitional adapter. Because shared
+templates are registered globally, the same implementations cover 106 room
+instances across the full catalog. Biome-specific structural templates outside
+F/G remain on the explicit transitional adapter. An evidence-backed biome
+implementation-support manifest records F/G as focused-control complete while
+leaving every topology, materialization, headless-pipeline, and planner-active
+capability false. System-wide composition and subsystem-local dependency
+injection are in place. The production UI remains the explicit
+unavailable-status shell.
 
 The six-document set completed coherent design review and was locked on
 2026-07-14. Questions deliberately assigned to a later biome implementation
@@ -61,19 +67,17 @@ It is subordinate to the six authority documents above, but it is the
 implementation contract for Checkpoints 2 and 4. Template implementation must
 not begin until the corresponding specification has been reviewed.
 
-The review-draft
-[`REWARD_HIERARCHY.md`](room_controls/REWARD_HIERARCHY.md) defines the proposed
-bottom-up reward-component graph. Reward-control implementation is paused at
-the current prototype until that hierarchy is reviewed and locked.
+The locked
+[`REWARD_HIERARCHY.md`](room_controls/REWARD_HIERARCHY.md) defines the bottom-up
+reward-component graph. Its counted-choice foundation and first consuming Room
+Control slice are implemented. Fixed/absent rewards, shop profiles, and the
+forked-preboss composition are also implemented; the remaining biome-specific
+structural wrappers stay phased by their first concrete template consumers.
 
 [`REWARD_CONSUMER_AUDIT.md`](room_controls/REWARD_CONSUMER_AUDIT.md) verifies
 the concrete store, inherited filter, and forced-reward provenance for every
 supported reward producer. Its declaration reconciliation is implemented; the
-compiled collaborator hierarchy remains next.
-
-[`ROOM_CONTROL_HANDOFF.md`](ROOM_CONTROL_HANDOFF.md) records the reviewed Room
-Control design state, verified game-data findings, and the sequencing context
-for the remaining template implementations.
+compiled counted-choice hierarchy is implemented.
 
 ## Authority Boundaries
 

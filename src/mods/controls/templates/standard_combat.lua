@@ -1,5 +1,6 @@
 local deps = ...
-local storeChoice = deps.storeChoice
+local countedBindings = deps.countedBindings
+local countedChoice = deps.countedChoice
 
 local standardCombat = {}
 
@@ -17,26 +18,28 @@ local function requireEqual(actual, expected, label, room)
     end
 end
 
-function standardCombat.prepare(catalog, room)
+function standardCombat.prepare(_, room)
     requireEqual(room.kind, "Combat", "kind", room)
     requireEqual(room.incomingReward.kind, "countedChoice", "incoming reward binding kind", room)
     requireEqual(room.encounterProfileKey, "StandardCombat", "encounter profile", room)
     if #room.localChildren ~= 0 then
         error("StandardCombat room '" .. room.key .. "' cannot declare local children", 0)
     end
-    return {
-        generatedReward = storeChoice.prepare(
-            catalog,
-            room.incomingReward,
-            "Reward"
-        ),
-    }
+    return {}
 end
 
 local Template = {}
 
+function Template.prepare(instance)
+    instance.generatedReward = countedChoice.prepare(
+        countedBindings.compile(instance.incomingReward),
+        "Reward"
+    )
+    return instance
+end
+
 function Template.storage(instance)
-    return storeChoice.storage(instance.generatedReward)
+    return countedChoice.storage(instance.generatedReward)
 end
 
 local function controlContext(instance)
@@ -50,8 +53,13 @@ local function createRuntime(fields, instance)
     function control.read(_)
         return {
             kind = "StandardCombat",
-            generatedReward = storeChoice.read(fields, instance.generatedReward, context),
+            generatedReward = countedChoice.read(fields, instance.generatedReward, context),
         }
+    end
+
+    function control.isComplete(_)
+        local reward = countedChoice.read(fields, instance.generatedReward, context)
+        return countedChoice.isComplete(instance.generatedReward, reward)
     end
 
     return control
@@ -66,7 +74,7 @@ function Template.createUi(fields, instance)
     local context = controlContext(instance)
 
     function control.setGeneratedReward(_, value)
-        storeChoice.write(fields, instance.generatedReward, value, context)
+        countedChoice.write(fields, instance.generatedReward, value, context)
     end
 
     return control

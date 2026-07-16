@@ -103,7 +103,7 @@ Logical persistence:
 ```lua
 {
     storeKey = "",   -- omitted from storage when exactly one store is allowed
-    rewardType = "",
+    rewardType = "", -- omitted when exactly one reward type is allowed
     source1 = "",    -- allocated only when an allowed primitive can need it
     source2 = "",    -- allocated only when an allowed primitive can need it
 }

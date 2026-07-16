@@ -45,6 +45,20 @@ local function namedInstance(instance, name)
     return instance
 end
 
+local function preparedInstance(instances, templates, name)
+    local source = instances[name]
+    local instance = {}
+    for key, value in pairs(source) do
+        instance[key] = value
+    end
+    instance.name = name
+    local template = templates[instance.template]
+    if template.prepare ~= nil then
+        instance = template.prepare(instance)
+    end
+    return instance, template
+end
+
 local function countKeys(values)
     local count = 0
     for _ in pairs(values) do
@@ -133,13 +147,17 @@ function TestManagedPersistence.testManagedStateInstallsCompleteDeclarations()
 end
 
 function TestManagedPersistence.testSystemsComposesInjectedSubsystemsInOrder()
-    local rawCatalog = { key = "raw" }
+    local rawRewards = { key = "raw rewards" }
+    local rawCatalog = { key = "raw", rewards = rawRewards }
     local enrichedCatalog = { key = "enriched" }
+    local rewardServices = { key = "reward services" }
     local controls = {
         catalog = enrichedCatalog,
+        manifest = { key = "control manifest" },
         templates = {},
         instances = {},
     }
+    local biomeSupport = { key = "biome support" }
     local route = { storage = {}, stateAccess = {} }
     local managedState = { install = function() end }
     local calls = {}
@@ -150,10 +168,27 @@ function TestManagedPersistence.testSystemsComposesInjectedSubsystemsInOrder()
                 return rawCatalog
             end,
         },
+        rewardAssembly = {
+            create = function(rewards)
+                calls[#calls + 1] = { name = "rewards", value = rewards }
+                return rewardServices
+            end,
+        },
         controlsAssembly = {
             create = function(catalog, opts)
                 calls[#calls + 1] = { name = "controls", catalog = catalog, opts = opts }
                 return controls
+            end,
+        },
+        biomeSupportAssembly = {
+            create = function(catalog, manifest, evidence)
+                calls[#calls + 1] = {
+                    name = "biomeSupport",
+                    catalog = catalog,
+                    manifest = manifest,
+                    evidence = evidence,
+                }
+                return biomeSupport
             end,
         },
         routeAssembly = {
@@ -168,17 +203,27 @@ function TestManagedPersistence.testSystemsComposesInjectedSubsystemsInOrder()
     local result = systemFactory.create({
         catalogOverrides = catalogOverrides,
         activePrefixEnds = { Underworld = "Underworld_G" },
+        biomeCapabilityEvidence = { topology = {} },
         managedState = managedState,
     })
 
     lu.assertIs(result.catalog, enrichedCatalog)
+    lu.assertIs(result.rewards, rewardServices)
     lu.assertIs(result.controls, controls)
+    lu.assertIs(result.biomeSupport, biomeSupport)
     lu.assertIs(result.route, route)
     lu.assertIs(result.managedState, managedState)
     lu.assertEquals(calls[1], { name = "catalog", value = catalogOverrides })
-    lu.assertIs(calls[2].catalog, rawCatalog)
-    lu.assertEquals(calls[2].opts.activePrefixEnds, { Underworld = "Underworld_G" })
-    lu.assertIs(calls[3].catalog, enrichedCatalog)
+    lu.assertEquals(calls[2], { name = "rewards", value = rawRewards })
+    lu.assertIs(calls[3].catalog, rawCatalog)
+    lu.assertEquals(calls[3].opts.activePrefixEnds, { Underworld = "Underworld_G" })
+    lu.assertEquals(calls[4], {
+        name = "biomeSupport",
+        catalog = enrichedCatalog,
+        manifest = controls.manifest,
+        evidence = { topology = {} },
+    })
+    lu.assertIs(calls[5].catalog, enrichedCatalog)
 end
 
 function TestManagedPersistence.testControlAssemblyDoesNotMutateValidatedCatalog()
@@ -199,7 +244,11 @@ function TestManagedPersistence.testRoomSchemasCoverEveryBoundedRewardBinding()
     h.withImport(function()
         local catalog, _, instances, templates = load()
 
-        local standardCombat = instances.Underworld_F_Combat04
+        local standardCombat = preparedInstance(
+            instances,
+            templates,
+            "Underworld_F_Combat04"
+        )
         local f = storageLookup(templates.StandardCombat.storage(standardCombat))
         lu.assertNotNil(f.RewardStoreKey)
         lu.assertNotNil(f.RewardType)
@@ -208,49 +257,74 @@ function TestManagedPersistence.testRoomSchemasCoverEveryBoundedRewardBinding()
         lu.assertNil(standardCombat.state)
         lu.assertNotNil(standardCombat.generatedReward)
 
+        local fCombat01Instance = preparedInstance(
+            instances,
+            templates,
+            "Underworld_F_Combat01"
+        )
         local fCombat01 = storageLookup(
-            templates.StandardCombat.storage(instances.Underworld_F_Combat01)
+            templates.StandardCombat.storage(fCombat01Instance)
         )
         lu.assertNil(fCombat01.RewardStoreKey)
         lu.assertNotNil(fCombat01.RewardPayload1)
         lu.assertNil(fCombat01.RewardPayload2)
 
+        local gCombat04Instance = preparedInstance(
+            instances,
+            templates,
+            "Underworld_G_Combat04"
+        )
         local gCombat04 = storageLookup(
-            templates.StandardCombat.storage(instances.Underworld_G_Combat04)
+            templates.StandardCombat.storage(gCombat04Instance)
         )
         lu.assertNotNil(gCombat04.RewardStoreKey)
         lu.assertNotNil(gCombat04.RewardPayload1)
         lu.assertNil(gCombat04.RewardPayload2)
 
-        local fields = storageLookup(catalog.controlManifest.rooms.lookup.Underworld_H_Combat01.state.storage)
+        local fields = storageLookup(
+            catalog.controlManifest.rooms.lookup.Underworld_H_Combat01.prepared.state.storage
+        )
         lu.assertNotNil(fields.Cage1RewardType)
         lu.assertNotNil(fields.Cage3RewardPayload1)
         lu.assertNil(fields.Cage3RewardPayload2)
 
-        local clockwork = storageLookup(catalog.controlManifest.rooms.lookup.Underworld_I_Combat01.state.storage)
+        local clockwork = storageLookup(
+            catalog.controlManifest.rooms.lookup.Underworld_I_Combat01.prepared.state.storage
+        )
         lu.assertNotNil(clockwork.RewardIncomingKind)
         lu.assertNotNil(clockwork.RewardNonGoalType)
 
-        local ephyra = storageLookup(catalog.controlManifest.rooms.lookup.Surface_N_Combat02.state.storage)
+        local ephyra = storageLookup(
+            catalog.controlManifest.rooms.lookup.Surface_N_Combat02.prepared.state.storage
+        )
         lu.assertNotNil(ephyra.SideDoor1Generated)
         lu.assertNotNil(ephyra.SideDoor1EnteredOrder)
         lu.assertNotNil(ephyra.SideDoor1RewardType)
 
-        local ship = storageLookup(catalog.controlManifest.rooms.lookup.Surface_O_Combat01.state.storage)
+        local ship = storageLookup(
+            catalog.controlManifest.rooms.lookup.Surface_O_Combat01.prepared.state.storage
+        )
         lu.assertNotNil(ship.Combat2Present)
         lu.assertNotNil(ship.Wheel1OfferCount)
         lu.assertNotNil(ship.Wheel1Offer1Type)
         lu.assertNotNil(ship.Wheel2Offer2Payload2)
 
-        local devotion = storageLookup(catalog.controlManifest.rooms.lookup.Surface_O_Devotion01.state.storage)
+        local devotion = storageLookup(
+            catalog.controlManifest.rooms.lookup.Surface_O_Devotion01.prepared.state.storage
+        )
         lu.assertNotNil(devotion.RewardPayload1)
         lu.assertNotNil(devotion.RewardPayload2)
         lu.assertNil(devotion.RewardType)
 
-        local shop = storageLookup(catalog.controlManifest.rooms.lookup.Underworld_F_Shop01.state.storage)
-        lu.assertNotNil(shop.RewardBoonType)
-        lu.assertNotNil(shop.RewardBoonPurchased)
-        lu.assertNotNil(shop.RewardMinorPurchased)
+        local shopInstance = preparedInstance(
+            instances,
+            templates,
+            "Underworld_F_Shop01"
+        )
+        local shop = storageLookup(templates.Shop.storage(shopInstance))
+        lu.assertNotNil(shop.ShopBoonType)
+        lu.assertNotNil(shop.ShopBoonPurchased)
+        lu.assertNotNil(shop.ShopMinorPurchased)
     end)
 end
 
@@ -258,8 +332,7 @@ function TestManagedPersistence.testStandardCombatUsesTypedRewardInterface()
     h.withImport(function()
         local _, _, instances, templates = load()
         local name = "Underworld_F_Combat04"
-        local instance = namedInstance(instances[name], name)
-        local template = templates[instance.template]
+        local instance, template = preparedInstance(instances, templates, name)
         local fields = fieldsFor(template.storage(instance))
         local runtime = template.createRuntime(fields, instance)
         local ui = template.createUi(fields, instance)
@@ -268,6 +341,7 @@ function TestManagedPersistence.testStandardCombatUsesTypedRewardInterface()
             kind = "StandardCombat",
             generatedReward = {},
         })
+        lu.assertFalse(runtime:isComplete())
         lu.assertNil(runtime.write)
         lu.assertNil(runtime.setGeneratedReward)
         lu.assertNil(runtime.field)
@@ -281,6 +355,7 @@ function TestManagedPersistence.testStandardCombatUsesTypedRewardInterface()
             storeKey = "RunProgress",
             rewardType = "Boon",
         })
+        lu.assertFalse(runtime:isComplete())
 
         ui:setGeneratedReward({
             storeKey = "RunProgress",
@@ -295,6 +370,7 @@ function TestManagedPersistence.testStandardCombatUsesTypedRewardInterface()
                 payload = { source = "ApolloUpgrade" },
             },
         })
+        lu.assertTrue(runtime:isComplete())
 
         ui:setGeneratedReward({
             storeKey = "RunProgress",
@@ -306,6 +382,7 @@ function TestManagedPersistence.testStandardCombatUsesTypedRewardInterface()
             rewardType = "Devotion",
             payload = { sources = { "ApolloUpgrade", "ZeusUpgrade" } },
         })
+        lu.assertTrue(runtime:isComplete())
 
         lu.assertErrorMsgContains("is not available from store 'MetaProgress'", function()
             ui:setGeneratedReward({
@@ -338,6 +415,7 @@ function TestManagedPersistence.testStandardCombatUsesTypedRewardInterface()
             kind = "StandardCombat",
             generatedReward = {},
         })
+        lu.assertFalse(runtime:isComplete())
 
         fields.RewardStoreKey:write("MetaProgress")
         fields.RewardType:write("Boon")
@@ -347,20 +425,50 @@ function TestManagedPersistence.testStandardCombatUsesTypedRewardInterface()
     end)
 end
 
-function TestManagedPersistence.testEveryStandardCombatUsesSpecializedPreparation()
+function TestManagedPersistence.testFocusedInstancesRemainLightweightUntilTemplatePreparation()
     h.withImport(function()
-        local catalog, _, instances = load()
+        local catalog, _, instances, templates = load()
         local count = 0
         for _, room in ipairs(catalog.controlManifest.rooms.ordered) do
             if room.templateKey == "StandardCombat" then
                 count = count + 1
-                lu.assertNil(room.state, room.key)
-                lu.assertNotNil(room.generatedReward, room.key)
+                lu.assertNil(room.prepared.state, room.key)
+                lu.assertNil(room.prepared.generatedReward, room.key)
                 lu.assertNil(instances[room.key].state, room.key)
-                lu.assertIs(instances[room.key].generatedReward, room.generatedReward)
+                lu.assertNil(instances[room.key].generatedReward, room.key)
+
+                local prepared = preparedInstance(instances, templates, room.key)
+                lu.assertNotNil(prepared.generatedReward, room.key)
+                lu.assertNotNil(prepared.generatedReward.view, room.key)
             end
         end
         lu.assertEquals(count, 56)
+    end)
+end
+
+function TestManagedPersistence.testInstanceDeclarationsRejectPreparedCollaboratorFields()
+    local builder = h.testImport("mods/controls/instances.lua")
+    local catalog = {
+        controlManifest = {
+            routes = { ordered = {} },
+            rooms = {
+                ordered = {
+                    {
+                        key = "Underworld_F_Combat01",
+                        templateKey = "StandardCombat",
+                        routeKey = "Underworld",
+                        biomeStepKey = "Underworld_F",
+                        gameRoomKey = "F_Combat01",
+                        incomingReward = {},
+                        prepared = { generatedReward = {} },
+                    },
+                },
+            },
+        },
+    }
+
+    lu.assertErrorMsgContains("cannot enter Lib declaration field 'generatedReward'", function()
+        builder.build(catalog)
     end)
 end
 
@@ -442,7 +550,7 @@ end
 
 function TestManagedPersistence.testStateAccessKeepsRuntimeReadOnlyAndValidatesAuthoredGlobals()
     h.withImport(function()
-        local catalog, storage, _, _, systems = load()
+        local catalog, storage, instances, templates, systems = load()
         local values = {
             Underworld_I_MaxNonGoalRewards = 4,
             Surface_N_HubDoorCount = 9,
@@ -475,22 +583,59 @@ function TestManagedPersistence.testStateAccessKeepsRuntimeReadOnlyAndValidatesA
             end
             return field(values[alias])
         end
-        local controls = {
-            read = function(name, address)
-                return name .. ":" .. tostring(address)
-            end,
+        local routeInstance = namedInstance(instances.Underworld, "Underworld")
+        local routeFields = fieldsFor(templates.Route.storage(routeInstance))
+        local roomName = "Underworld_F_Combat04"
+        local roomInstance, roomTemplate = preparedInstance(instances, templates, roomName)
+        local roomFields = fieldsFor(roomTemplate.storage(roomInstance))
+        local runtimeRefs = {
+            Underworld = templates.Route.createRuntime(routeFields, routeInstance),
+            [roomName] = roomTemplate.createRuntime(roomFields, roomInstance),
         }
+        local uiRefs = {
+            Underworld = templates.Route.createUi(routeFields, routeInstance),
+            [roomName] = roomTemplate.createUi(roomFields, roomInstance),
+        }
+        local function controls(refs)
+            return {
+                get = function(name)
+                    return refs[name]
+                end,
+                read = function(name, ...)
+                    return refs[name]:read(...)
+                end,
+            }
+        end
         local runtime = systems.route.stateAccess.createRuntime({
-            controls = controls,
+            controls = controls(runtimeRefs),
             data = data,
+        }, catalog, storage)
+        local ui = systems.route.stateAccess.createUi({
+            controls = controls(uiRefs),
+            data = data,
+            resetAll = function() end,
         }, catalog, storage)
 
         lu.assertNil(runtime.writeRoute)
         lu.assertNil(runtime.writeRoom)
         lu.assertNil(runtime.writeBiomeGlobal)
-        lu.assertEquals(runtime:readRoute("Underworld"), "Underworld:nil")
-        lu.assertEquals(runtime:readRoom("Underworld_F_Combat04", "reward"),
-            "Underworld_F_Combat04:reward")
+        lu.assertEquals(runtime:readRoute("Underworld"), "")
+        lu.assertEquals(runtime:readRoom(roomName), {
+            kind = "StandardCombat",
+            generatedReward = {},
+        })
+        lu.assertIs(runtime:getRoom(roomName), runtimeRefs[roomName])
+        lu.assertNil(runtime:getRoom(roomName).setGeneratedReward)
+        lu.assertIs(ui:getRoom(roomName), uiRefs[roomName])
+        lu.assertNil(ui.writeRoom)
+        ui:getRoom(roomName):setGeneratedReward({
+            storeKey = "RunProgress",
+            rewardType = "MaxHealthDrop",
+        })
+        lu.assertEquals(runtime:readRoom(roomName).generatedReward, {
+            storeKey = "RunProgress",
+            rewardType = "MaxHealthDrop",
+        })
         lu.assertEquals(runtime:readBiome("Underworld_F").batches[1], {
             parentRoomControlKey = "Underworld_F_Opening01",
             ruleKey = "Standard",

@@ -36,11 +36,14 @@ function instances.build(catalog, activePrefixEnds)
             incomingReward = room.incomingReward,
             entryOfferPolicy = room.entryOfferPolicy,
         }
-        if room.state ~= nil then
-            instance.state = room.state
+        for key in pairs(room.prepared) do
+            if key ~= "state" then
+                error("room control preparation cannot enter Lib declaration field '"
+                    .. tostring(key) .. "'", 0)
+            end
         end
-        if room.generatedReward ~= nil then
-            instance.generatedReward = room.generatedReward
+        if room.prepared.state ~= nil then
+            instance.state = room.prepared.state
         end
         result[room.key] = instance
     end

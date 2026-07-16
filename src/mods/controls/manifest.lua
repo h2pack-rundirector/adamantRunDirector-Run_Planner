@@ -11,16 +11,11 @@ local function roomControlKey(biomeStepKey, gameRoomKey, biomeKey)
     return biomeStepKey .. "_" .. string.sub(gameRoomKey, #prefix + 1)
 end
 
-local function attachPreparedDescriptor(descriptor, prepared)
+local function preparedDescriptor(prepared)
     if type(prepared) ~= "table" then
         error("room control preparation must return a table", 0)
     end
-    for key, value in pairs(prepared) do
-        if descriptor[key] ~= nil then
-            error("room control preparation cannot replace descriptor field '" .. tostring(key) .. "'", 0)
-        end
-        descriptor[key] = value
-    end
+    return prepared
 end
 
 function manifest.build(catalog)
@@ -54,11 +49,12 @@ function manifest.build(catalog)
                 biomeStepKey = biome.biomeStepKey,
                 gameRoomKey = room.key,
                 templateKey = room.templateKey,
+                implementationKind = templates.implementationKind(room.templateKey),
                 incomingReward = room.incomingReward,
                 entryOfferPolicy = room.entryOfferPolicy,
                 localSlots = {},
+                prepared = preparedDescriptor(templates.prepareRoom(catalog, room)),
             }
-            attachPreparedDescriptor(descriptor, templates.prepareRoom(catalog, room))
             local encounterProfile = catalog.encounterProfiles.lookup[room.encounterProfileKey]
             for _, phase in ipairs(encounterProfile.phases) do
                 if phase.offerPoint ~= nil then

@@ -1,0 +1,83 @@
+local deps = ...
+local countedBindings = deps.countedBindings
+local countedChoice = deps.countedChoice
+
+local miniboss = {}
+
+local function fail(room, message)
+    error("Miniboss room '" .. room.key .. "' " .. message, 0)
+end
+
+local function unavailableView()
+    error("planner controls have no production draw view before the editor checkpoint", 0)
+end
+
+function miniboss.prepare(_, room)
+    if room.kind ~= "Miniboss" then
+        fail(room, "must have kind 'Miniboss'")
+    end
+    if room.incomingReward.kind ~= "countedChoice" then
+        fail(room, "requires a countedChoice incoming reward")
+    end
+    if #room.localChildren ~= 0 then
+        fail(room, "cannot declare local children")
+    end
+    return {}
+end
+
+local Template = {}
+
+function Template.prepare(instance)
+    instance.generatedReward = countedChoice.prepare(
+        countedBindings.compile(instance.incomingReward),
+        "Reward"
+    )
+    return instance
+end
+
+function Template.storage(instance)
+    return countedChoice.storage(instance.generatedReward)
+end
+
+local function context(instance)
+    return "room control '" .. instance.name .. "' generatedReward"
+end
+
+local function createRuntime(fields, instance)
+    local control = {}
+    local rewardContext = context(instance)
+
+    function control.read(_)
+        return {
+            kind = "Miniboss",
+            generatedReward = countedChoice.read(fields, instance.generatedReward, rewardContext),
+        }
+    end
+
+    function control.isComplete(_)
+        local value = countedChoice.read(fields, instance.generatedReward, rewardContext)
+        return countedChoice.isComplete(instance.generatedReward, value)
+    end
+
+    return control
+end
+
+function Template.createRuntime(fields, instance)
+    return createRuntime(fields, instance)
+end
+
+function Template.createUi(fields, instance)
+    local control = createRuntime(fields, instance)
+    local rewardContext = context(instance)
+
+    function control.setGeneratedReward(_, value)
+        countedChoice.write(fields, instance.generatedReward, value, rewardContext)
+    end
+
+    return control
+end
+
+Template.views = { default = unavailableView }
+miniboss.template = Template
+
+return miniboss

@@ -2,13 +2,20 @@ local deps = ...
 
 local route = deps.route
 local transitionalRoom = deps.transitionalRoom
+local fixedOpening = deps.fixedOpening
+local fixedIntro = deps.fixedIntro
 local standardCombat = deps.standardCombat
+local miniboss = deps.miniboss
+local story = deps.story
+local fountain = deps.fountain
+local shopRoom = deps.shopRoom
+local forkedPreboss = deps.forkedPreboss
 
 local templates = {}
 
 local implementations = {
-    FixedOpening = transitionalRoom,
-    FixedIntro = transitionalRoom,
+    FixedOpening = fixedOpening,
+    FixedIntro = fixedIntro,
     FixedPreHub = transitionalRoom,
     EphyraHub = transitionalRoom,
     StandardCombat = standardCombat,
@@ -17,13 +24,13 @@ local implementations = {
     EphyraCombat = transitionalRoom,
     ShipCombat = transitionalRoom,
     OlympusCombat = transitionalRoom,
-    Story = transitionalRoom,
-    Fountain = transitionalRoom,
-    Shop = transitionalRoom,
-    Miniboss = transitionalRoom,
+    Story = story,
+    Fountain = fountain,
+    Shop = shopRoom,
+    Miniboss = miniboss,
     Devotion = transitionalRoom,
     DirectPreboss = transitionalRoom,
-    ForkedPreboss = transitionalRoom,
+    ForkedPreboss = forkedPreboss,
 }
 
 local function implementation(templateKey)
@@ -36,6 +43,13 @@ end
 
 function templates.prepareRoom(catalog, room)
     return implementation(room.templateKey).prepare(catalog, room)
+end
+
+function templates.implementationKind(templateKey)
+    if implementation(templateKey) == transitionalRoom then
+        return "transitional"
+    end
+    return "focused"
 end
 
 function templates.build(catalog)

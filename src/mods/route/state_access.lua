@@ -33,9 +33,14 @@ local function createCommon(surface, catalog, storage)
         return surface.controls.read(routeKey)
     end
 
-    function access.readRoom(_, roomControlKey, address)
+    function access.getRoom(_, roomControlKey)
         requireRoom(catalog, roomControlKey)
-        return surface.controls.read(roomControlKey, address)
+        return surface.controls.get(roomControlKey)
+    end
+
+    function access.readRoom(_, roomControlKey)
+        requireRoom(catalog, roomControlKey)
+        return surface.controls.read(roomControlKey)
     end
 
     function access.readBiome(_, biomeStepKey)
@@ -75,11 +80,6 @@ function stateAccess.createUi(ui, catalog, storage)
     function access.writeRoute(_, routeKey, configuredBiomePrefix)
         requireRoute(catalog, routeKey)
         ui.controls.get(routeKey):write(configuredBiomePrefix)
-    end
-
-    function access.writeRoom(_, roomControlKey, address, value)
-        requireRoom(catalog, roomControlKey)
-        ui.controls.get(roomControlKey):write(address, value)
     end
 
     function access.writeBiomeGlobal(_, biomeStepKey, semanticKey, value)

@@ -105,11 +105,16 @@ Expected semantic mutation families are:
 Exact method names may be normalized during implementation, but these are
 semantic operations. No caller writes an internal field or dropdown index.
 
-Checkpoint 2 implements storage and typed UI/runtime reads and writes.
-Checkpoint 4 adds completeness, canonical materialization, candidate export,
-and candidate application. Checkpoint 6 adds production views. Storage must be
-complete now for every later operation; later checkpoints must not require a
-schema migration.
+Checkpoint 2 implements bounded storage for every template, plus typed
+UI/runtime reads, writes, and component-local completeness for F/G focused
+controls. Dormant biome-specific H, I, N, O, P, and Q templates may use the
+explicit transitional adapter only for their complete physical schema. Their
+Checkpoint 7 slices replace that adapter with the semantic operations in this
+document before claiming focused-control support. Checkpoint 4 composes F's
+predicates across referenced controls and topology, then adds canonical
+materialization, candidate export, and candidate application. Checkpoint 6 adds
+production views. Storage must be complete now for every later operation;
+later checkpoints must not require a schema migration.
 
 ## Reward Hierarchy and Components
 

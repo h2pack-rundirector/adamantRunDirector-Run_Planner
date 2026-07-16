@@ -52,9 +52,6 @@ local function payloadArity(catalog, rewardType)
 end
 
 local function contains(values, candidate)
-    if values == nil then
-        return false
-    end
     for _, value in ipairs(values) do
         if value == candidate then
             return true
@@ -68,8 +65,7 @@ local function storePayloadArity(catalog, specification)
     for _, storeKey in ipairs(specification.storeKeys or {}) do
         local bag = catalog.rewards.bags.lookup[storeKey]
         for _, entry in ipairs(bag.entries) do
-            local eligible = specification.eligibleRewardTypes == nil
-                or #specification.eligibleRewardTypes == 0
+            local eligible = #specification.eligibleRewardTypes == 0
                 or contains(specification.eligibleRewardTypes, entry.rewardType)
             if eligible and not contains(specification.ineligibleRewardTypes, entry.rewardType) then
                 local arity = payloadArity(catalog, entry.rewardType)

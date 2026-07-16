@@ -1,7 +1,9 @@
 # Reward Hierarchy
 
-Status: review draft. Do not replace the current reward-control prototype until
-this contract and the consumer audit are reviewed and locked.
+Status: locked. The counted-choice, fixed/absent, primitive-choice, and shop
+branches are implemented. Their shared Room Control consumers cover every F/G
+room. Remaining biome-specific structural wrappers are phased by their first
+concrete template consumers.
 
 ## Purpose
 
@@ -443,31 +445,49 @@ Systems
 
 ```text
 validated catalog
-  -> compileRewardBindings(catalog.rewards, catalog.rooms)
+  -> createRewardServices(catalog.rewards)
   -> createControlTemplates(rewardServices)
-  -> createControlsAssembly(controlTemplates)
+  -> validate rooms and emit lightweight Lib control declarations
+  -> Lib copies each declaration
+  -> Template.prepare compiles its binding and attaches its component descriptor
 ```
 
-Leaf modules do not import the catalog or locate sibling services. Control
-assembly binds each normalized reward descriptor to its compiled collaborator
-and injects it into the owning template.
+Leaf modules do not import the catalog or locate sibling services. Systems
+injects the shared registries, compiler, and components into each owning
+template. A focused source instance contains only compact declaration facts;
+it never contains bags, primitives, payload collaborators, compiled views, or
+component modules. `Template.prepare` constructs the per-control descriptor
+after Lib's declaration-copy boundary, retaining references to the one shared
+collaborator graph.
 
-The system graph is created once. Draw performs no component construction,
-filtering, option enumeration, or descriptor allocation.
+The shared system graph and each per-control descriptor are created once during
+activation. Draw performs no component construction, filtering, option
+enumeration, or descriptor allocation.
 
 ## Implementation Sequence
 
-After this document is reviewed and locked:
+The implemented F/G vertical slice follows the hierarchy bottom-up:
 
-1. build immutable compiled descriptors over the implemented embedded binding
-   declarations and recursive catalog validation;
-2. remove the generic `store_choice.lua` prototype;
-3. implement payload-domain and primitive collaborators;
-4. implement counted bags and the binding compiler;
-5. reimplement StandardCombat against its injected compiled binding;
-6. verify per-instance storage manifests and typed APIs;
-7. implement structural and shop components only as their first consuming
-   Room Control slice requires them.
+1. construct payload-domain collaborators from validated declarations;
+2. construct primitive collaborators over those payload domains;
+3. construct counted-bag collaborators while preserving entry multiplicity
+   and deduplicating authored options;
+4. compile each concrete counted binding into an immutable choice view;
+5. bind that view to the counted-choice persistence and typed-value component;
+6. implement absent and fixed primitive components;
+7. construct shop option-set/profile collaborators and the bounded shop
+   component directly over primitives;
+8. implement the shared `FixedOpening`, `FixedIntro`, `StandardCombat`,
+   `Miniboss`, `Story`, `Fountain`, and `Shop` templates;
+9. compose counted free rewards and a World Shop inside `ForkedPreboss` while
+   leaving active free-reward count in predecessor topology context;
+10. remove the generic `store_choice.lua` prototype after the replacement
+    passes its typed API and storage tests.
+
+The next slices implement the remaining biome-specific structural wrappers as
+their biomes are activated. Shared template registration remains global: F/G
+is the editor activation boundary, not a reason to duplicate or suppress a
+valid shared implementation for another biome.
 
 Candidates, feedback, canonical materialization, draw views, and history
 simulation remain in their existing later checkpoints.

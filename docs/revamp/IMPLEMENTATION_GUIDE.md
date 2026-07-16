@@ -163,6 +163,7 @@ raw declarations
   -> normalized catalog
   -> template and batch registries
   -> static control/storage manifest
+  -> validated biome implementation support
   -> Route/Biome Plan descriptors
   -> materializer/history/validator/compiler services
   -> planner coordinator
@@ -191,6 +192,34 @@ The coordinator may retain:
 
 It must not retain callback-owned `ui.data`, `runtime.data`, writable fields,
 `ui.controls`, `runtime.controls`, `ui.draw`, or an ImGui object.
+
+### Biome Implementation Support
+
+Catalog validity and implementation progress are separate contracts. The
+catalog continues to validate the complete F-Q game-data universe even when a
+biome is dormant. An explicit implementation-support declaration records these
+capabilities for every route-biome step:
+
+```text
+focusedRoomControls
+-> topology
+-> materialization
+-> headlessPipeline
+-> plannerActive
+```
+
+Every capability is an explicit boolean. The support validator rejects missing
+or unknown biomes, missing fields, broken capability dependencies, claims that
+do not match assembled subsystem evidence, and non-contiguous planner-active
+route prefixes. A biome can benefit from a globally shared focused template
+without claiming `focusedRoomControls`; that capability means every Room
+Control needed by the biome has left the transitional adapter.
+
+The initial support declaration claims focused Room Controls for F and G only.
+All topology, materialization, headless-pipeline, and planner-active capabilities
+remain false until their owning checkpoints land. H, I, N, O, P, and Q retain
+bounded dormant storage but defer their biome-specific semantic Room Controls
+to their Checkpoint 7 slices.
 
 ## State-Access Threading
 
@@ -389,14 +418,19 @@ admitted.
 
 - one statically declared Route Control instance per route, produced through
   the registered Route Control template;
-- complete Room Control template taxonomy;
+- complete declared Room Control template taxonomy and bounded storage schema;
 - one statically declared Room Control per top-level concrete room in every
   route-biome step;
 - parent-local bounded child storage inside the appropriate Room Control
   templates;
 - finite module storage for each Biome Plan's topology and biome-global state;
 - static control and storage manifests generated from the validated catalog;
-- UI and runtime control refs exposing semantic reads, not private aliases;
+- focused UI and runtime control refs exposing semantic reads, not private
+  aliases, for every F and G room;
+- explicit dormant transitional adapters for biome-specific H, I, N, O, P,
+  and Q templates, used only to prove bounded storage before those biomes are
+  implemented;
+- an evidence-backed implementation-support record for every route-biome step;
 - `UiStateAccess` and `RuntimeStateAccess` adapters;
 - Lib full reset-to-defaults integration for all persisted module and control
   state;
@@ -410,16 +444,24 @@ and Lib reset to defaults therefore persist no configured planner biome for
 either route. Once compilation exists, that default publishes no execution
 plan and leaves both routes vanilla.
 
-Room Control templates must declare their complete intended storage schema at
-this checkpoint, including bounded special slots. Adding H, I, N, O, P, or Q
-later must not require dynamic controls.
+Every Room Control must declare its complete intended storage schema at this
+checkpoint, including bounded special slots. The transitional adapter may own
+that physical schema for a dormant non-F/G template, but it is not a semantic
+Room Control implementation and cannot be used by materialization. Adding H,
+I, N, O, P, or Q later must replace the corresponding adapter without adding
+dynamic controls or migrating storage.
 
 ### Acceptance
 
 - expected Route and Room Control counts match the catalog-generated manifest;
 - every control name satisfies Lib stable-identifier rules;
-- UI and runtime refs read the same committed semantic values;
+- every F/G Room Control is focused and no F/G instance uses the transitional
+  adapter;
+- UI and runtime refs for focused controls read the same committed semantic
+  values;
 - UI-only writes cannot be reached from runtime refs;
+- implementation-support claims match assembled evidence and cannot activate
+  a biome with transitional controls;
 - fresh profile creation and Lib reset to defaults restore an empty configured
   prefix for both routes;
 - profile switch, hash import, Lib reset to defaults, normal commit, and
@@ -429,7 +471,8 @@ later must not require dynamic controls.
   dormant leaves;
 - no test or source accesses a generated private control alias.
 
-There is still no production route editor in this checkpoint.
+There is still no production route editor in this checkpoint. Focused semantic
+Room Controls for non-F/G biomes are intentionally deferred to Checkpoint 7.
 
 ## Checkpoint 3: Biome Plan and Standard Topology
 
@@ -437,7 +480,8 @@ Build the dynamic topology object without ImGui, history, or game legality.
 
 ### Deliverables
 
-- one long-lived Biome Plan descriptor per route-biome step;
+- one long-lived F Biome Plan descriptor and the shared descriptor/registry
+  contracts needed to add later route-biome steps without a second engine;
 - Standard batch implementation;
 - root, target-link, exit-index, picked-target, and downstream operations;
 - target unlinking and full topology-clearing operations;
@@ -449,7 +493,8 @@ Build the dynamic topology object without ImGui, history, or game legality.
 - generic traversal that follows the picked continuation and retains unpicked
   dead leaves;
 - specialized batch registry interface, initially without all specialized
-  implementations.
+  implementations;
+- validated `topology = true` support evidence for F only.
 
 ### Acceptance
 
@@ -469,9 +514,15 @@ Build the dynamic topology object without ImGui, history, or game legality.
 
 ## Checkpoint 4: Room Controls and Canonical Materialization
 
+This checkpoint completes canonical materialization for F. Shared component
+implementations may already serve G or later room kinds, but no other biome
+claims materialization until its Checkpoint 7 headless slice is complete.
+
 ### Deliverables
 
-- semantic completeness/materialization interface for Route and Room Controls;
+- composed semantic completeness/materialization interface for Route and Room
+  Controls over the component-local predicates established with their typed
+  storage contracts;
 - reusable reward/payload components inside Room Control templates;
 - concrete generated-target reward fragments owned by target Room Controls;
 - active/inactive local-child slot materialization;
@@ -479,7 +530,8 @@ Build the dynamic topology object without ImGui, history, or game legality.
 - canonical biome-snapshot and composed route-plan shape with stable semantic
   return addresses;
 - candidate export from Room Controls and batches;
-- configured-prefix completeness horizon.
+- configured-prefix completeness horizon;
+- validated `materialization = true` support evidence for F only.
 
 Materialization must be read-only. It cannot create payload containers, select
 the first option, mutate a control, or repair topology.
@@ -560,7 +612,7 @@ editor be mounted.
 ### Deliverables
 
 - route shell and Route Control prefix editor;
-- static planner-activation manifest initially exposing only Underworld F and
+- implementation-support activation updated to expose only Underworld F and
   the empty Surface prefix;
 - transient route/biome navigation state;
 - F Biome Plan batch composition;
@@ -621,16 +673,15 @@ Biome implementation and planner exposure are separate gates.
   in-game probe. Planner activation does not mean runtime-hook activation;
   runtime remains deferred to Checkpoint 9.
 
-The Route Control option domain is bounded by a static planner-activation
-manifest's `maximumActivePrefix` for each route. The manifest is validated
-against the route declaration. The full catalog and static controls may already
-exist, but dormant headless biomes beyond that bound cannot be selected or
-exposed as implemented UI.
+The Route Control option domain is bounded by the validated implementation-
+support route view's `maximumActivePrefix`. The full catalog and static controls
+may already exist, but dormant headless biomes beyond that bound cannot be
+selected or exposed as implemented UI.
 
 Each headless slice follows:
 
 ```text
-catalog and static-schema audit
+focused Room Control replacement and static-schema audit
 -> topology/materialization
 -> lifecycle/history
 -> shared validation and bags
@@ -640,6 +691,8 @@ catalog and static-schema audit
 
 Activation adds production UI composition, integration with the real prior
 route prefix, prefix-domain expansion, and a focused in-game probe.
+The phase updates implementation support only after the assembled focused
+controls and downstream subsystem registries prove the claimed capability.
 
 ### 7A: G Implementation and Activation
 
@@ -717,6 +770,8 @@ contiguous prefix passes its focused in-game probe.
   biome state rule named in `BIOME_RULES.md`;
 - all new requirements resolve to registered evaluators;
 - all local slots and topology remain declaration-bounded;
+- no biome claiming focused controls retains a transitional Room Control;
+- capability claims match assembled subsystem evidence;
 - compatible-control capacity is reproven;
 - event order and counter timing have golden fixtures;
 - rewards use the common offer/acquisition/bag pipeline;
