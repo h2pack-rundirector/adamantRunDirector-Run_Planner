@@ -73,8 +73,10 @@ control:read() -> template-specific authored state
 This is a room-local authored value, not the canonical biome record. At
 Checkpoint 4 the template materializer separates `generatedReward` from the
 typed `roomState`, adds semantic source addresses, and returns both to the
-Biome Plan materializer. Control identity, game-room identity, topology, and
-canonical provenance are not duplicated into private persistence.
+common canonical materializer. The materializer combines those fragments while
+driving registered layout traversal. Control identity, game-room identity,
+topology, and canonical provenance are not duplicated into private
+persistence.
 
 The UI ref extends that contract with game-language mutation operations. It
 does not expose the current generic API:
@@ -155,6 +157,12 @@ explicitly selects and configures its components.
 | `DirectPreboss` | 4 | [`DirectPreboss.md`](DirectPreboss.md) | profile-selected shop |
 | `ForkedPreboss` | 4 | [`ForkedPreboss.md`](ForkedPreboss.md) | contextual shop plus free offers |
 | **Total** | **209** | | |
+
+Preboss template names describe room-local reward behavior, not how a terminal
+transition fills every predecessor exit. The biome layout owns the separate
+terminal exit policy: forked prebosses use `allExitsTerminal`, N/O/Q direct
+prebosses use `singleTerminal`, and I combines the same `DirectPreboss` local
+shop with `terminalWithCompanions`.
 
 ## Cross-Template Acceptance
 

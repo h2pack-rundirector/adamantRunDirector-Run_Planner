@@ -13,7 +13,7 @@ declarations as biome topology and typed room-local state.
 The common rule is:
 
 ```text
-use Standard topology by default
+use LinearBiome with Standard batches by default
 add a biome rule only when several owners must coordinate
 keep room-internal structure inside the owning Room Control
 ```
@@ -28,27 +28,112 @@ current-run structure.
 
 ## Shared Structural Rules
 
-### Standard Linear Topology
+### Biome Layout Declarations
 
-F, G, H, I, O, P, and Q expose one selected continuation through generated
-door batches:
+Every biome declares one `layout` record. The layout owns structural roles and
+relationships; Room Declarations continue to own intrinsic room facts. Raw
+Room Declarations therefore do not independently author generic `fixed` or
+`terminal` booleans.
+
+The supported layout kinds are:
+
+- `LinearBiome` for F, G, H, I, O, P, and Q;
+- `HubBiome` for N.
+
+Every layout declaration names its start or fixed entry sequence, continuation
+rules, one terminal room and transition rule, and finite topology bounds. Those
+bounds cover layout batches and top-level targets only. Room-local child bounds
+remain on the applicable Room Declarations and templates.
+
+Top-level target bounds include ordinary generated-batch targets and any
+ordinary companion targets stored inside a terminal transition. Multiple
+reward realizations of the same terminal Room Control do not consume duplicate
+top-level target identities.
+
+### `LinearBiome`
+
+A linear biome has one declared start followed by a selected chain of
+continuations:
 
 ```text
-root room
+start
 -> generated batch
--> picked target
+-> selected target
 -> generated batch
 -> ...
--> terminal preboss
+-> PrebossEntry
 ```
 
-A Standard batch contains one target per declared active physical exit and
-exactly one picked target. Every target reward is offered. Only the picked
-target enters history and may produce the next top-level batch.
+At every selected source, the authored continuation is either one generated
+batch or one terminal transition, never both. A Standard batch contains one
+target per active physical exit and exactly one picked target. Every target
+reward is offered. Only the picked target continues the selected path;
+unpicked targets are dead leaves.
 
-H, I, and Q replace Standard with a specialized batch rule at defined points.
-O and P retain Standard top-level topology while specializing room-internal
-encounter materialization. N uses a hub-shaped Biome Plan.
+The continuation declaration supplies one default batch rule and an ordered
+list of explicit structural overrides. H and I use their specialized rule as
+the default. Q uses `Standard` by default and declares its deterministic
+miniboss points as overrides. O and P remain linear while specializing
+room-local encounters or physical-exit validation.
+
+An override selector uses only topology-visible structural facts such as an
+explicit predecessor-room set. It never dispatches from lifecycle counters,
+reward history, or concrete-biome conditionals in the generic layout code. The
+layout parser rejects overlapping overrides whose precedence would be
+ambiguous. Batch and transition rule keys are derived during normalization;
+they are not persisted authored choices.
+
+### `HubBiome`
+
+`HubBiome` declares a fixed entry sequence, one persistent hub batch, an
+ordered visited subset, derived returns to the same physical hub, and a
+separate post-visit terminal transition. The persistent hub batch and terminal
+transition occupy distinct structural slots and may coexist. Hub returns do
+not create repeated controls or topology cycles.
+
+### `PrebossEntry`
+
+Every supported biome closes through the one registered `PrebossEntry`
+terminal transition. It is structurally separate from an ordinary generated
+batch and:
+
+- derives the single terminal Room Control from the layout declaration;
+- reads the selected predecessor's declared physical exit count;
+- applies the layout's declared terminal exit policy;
+- supplies immutable predecessor context to terminal materialization;
+- ends layout traversal without duplicate terminal-control links.
+
+The terminal layout declaration owns one exit policy:
+
+| Exit policy | Biomes | Physical realization |
+| --- | --- | --- |
+| `allExitsTerminal` | F, G, H, P | every predecessor exit realizes the same terminal Room Control through a distinct entry offer |
+| `singleTerminal` | N, O, Q | the structural terminal point has one shop-only terminal realization and no companion target |
+| `terminalWithCompanions` | I | the first active predecessor exit realizes the selected terminal; every remaining exit is an ordinary unpicked companion target |
+
+For `terminalWithCompanions`, the terminal declaration also names the batch
+rule governing companion generation. Companion targets are part of the one
+terminal transition, use distinct Room Controls, own complete concrete reward
+state, and are dead leaves. The terminal transition remains mutually exclusive
+with an ordinary continuing batch.
+
+The terminal Room Declaration owns its `entryOfferPolicy`:
+
+| Policy | Biomes | Realization |
+| --- | --- | --- |
+| `shopThenFillRemainingExits` | F, G, H, P | one shop realization plus one free RunProgress offer for every remaining predecessor exit |
+| `shopOnly` | I, N, O, Q | one direct shop realization |
+
+For the forked policy, the one terminal Room Control owns bounded free-reward
+slots and an authored entry mode. The predecessor exit count determines how
+many slots are active: F, H, and P can activate one; G can activate up to two.
+The selected entry mode acquires exactly one realization and enters the same
+single concrete terminal room. No layout code switches on a biome, terminal
+template, or room name to implement these reward surfaces.
+
+Terminal eligibility and force remain Room Declaration predicates. They can
+make an explicit terminal transition required or invalid, but never create,
+remove, or replace authored topology.
 
 ### Canonical Room Uniqueness
 
@@ -80,7 +165,7 @@ The planner does not model random weights or odds.
 ### Local Child Slots
 
 Some concrete rooms contain bounded child structure that is not part of the
-top-level generated-room tree. Examples include H cages, O reward wheels,
+top-level biome layout. Examples include H cages, O reward wheels,
 and N side rooms.
 
 H cages and N side rooms are explicit room-local child declarations. O wheels
@@ -98,32 +183,45 @@ duplicate top-level Room Controls or dynamic occurrence IDs.
 
 ## Structural Summary
 
-| Biome | Top-level shape | Specialized owner |
-| --- | --- | --- |
-| F | Linear, variable exits | Standard batches |
-| G | Linear, two or three exits | Standard batches |
-| H | Linear with a bridge offer window | `FieldsCageBatch` and Fields room controls |
-| I | Linear Clockwork progression | `ClockworkDoorBatch` and biome state |
-| N | Persistent hub with ordered subset | `EphyraHubBatch` and pylon controls |
-| O | Linear, one exit | `ShipCombat` room controls |
-| P | Linear with typed physical exits | Exit constraints and Olympus room controls |
-| Q | Linear with forced paired miniboss batches | `QMinibossBatch` |
+| Biome | Layout kind | Default batch rule | Terminal exit / offer policy | Bounds: batches / targets |
+| --- | --- | --- | --- | --- |
+| F | `LinearBiome` | `Standard` | `allExitsTerminal` / `shopThenFillRemainingExits` | 10 / 20 |
+| G | `LinearBiome` | `Standard` | `allExitsTerminal` / `shopThenFillRemainingExits` | 8 / 21 |
+| H | `LinearBiome` | `FieldsCageBatch` | `allExitsTerminal` / `shopThenFillRemainingExits` | 5 / 10 |
+| I | `LinearBiome` | `ClockworkDoorBatch` | `terminalWithCompanions` / `shopOnly` | 12 / 24 |
+| N | `HubBiome` | `EphyraHubBatch` | `singleTerminal` / `shopOnly` | 1 / 10 |
+| O | `LinearBiome` | `Standard` | `singleTerminal` / `shopOnly` | 7 / 7 |
+| P | `LinearBiome` | `Standard` | `allExitsTerminal` / `shopThenFillRemainingExits` | 9 / 18 |
+| Q | `LinearBiome` | `Standard` with `QMinibossBatch` overrides | `singleTerminal` / `shopOnly` | 7 / 10 |
 
 ## F: Erebus
 
-### Root and Termination
+### Layout Declaration
 
-F begins with one selected opening control from:
-
-```text
-F_Opening01
-F_Opening02
-F_Opening03
+```lua
+layout = {
+    kind = "LinearBiome",
+    start = {
+        mode = "oneOf",
+        roomKeys = { "F_Opening01", "F_Opening02", "F_Opening03" },
+    },
+    continuation = {
+        defaultBatchRuleKey = "Standard",
+        overrides = {},
+    },
+    terminal = {
+        roomKey = "F_PreBoss01",
+        transitionRuleKey = "PrebossEntry",
+        exitPolicy = { kind = "allExitsTerminal" },
+    },
+    bounds = { maxBatches = 10, maxTargets = 20 },
+}
 ```
 
-Openings are root-only and cannot be ordinary generated targets later in the
-biome. The production profile uses counting `OpeningGeneratedF`, the normal
-post-tutorial encounter. Progression-controlled `OpeningEmpty` and
+F begins with one selected opening control. Openings are start-only and cannot
+be ordinary generated targets later in the biome. The production profile uses
+counting `OpeningGeneratedF`, the normal post-tutorial encounter.
+Progression-controlled `OpeningEmpty` and
 `FCastTutorialFight` are game-data reference facts, not authored planner
 choices or production requirements.
 
@@ -152,10 +250,27 @@ a combat control.
 
 ## G: Oceanus
 
-### Root and Termination
+### Layout Declaration
 
-`G_Intro` is the fixed root. `G_PreBoss01` is terminal and forced at
-`biomeDepthCache = 8`.
+```lua
+layout = {
+    kind = "LinearBiome",
+    start = { mode = "fixed", roomKeys = { "G_Intro" } },
+    continuation = {
+        defaultBatchRuleKey = "Standard",
+        overrides = {},
+    },
+    terminal = {
+        roomKey = "G_PreBoss01",
+        transitionRuleKey = "PrebossEntry",
+        exitPolicy = { kind = "allExitsTerminal" },
+    },
+    bounds = { maxBatches = 8, maxTargets = 21 },
+}
+```
+
+`G_Intro` is the fixed start. `G_PreBoss01` is forced at
+`biomeDepthCache = 8` by its Room Declaration.
 
 ### Topology
 
@@ -183,10 +298,29 @@ mandatory shop and miniboss target slots.
 
 ## H: Mourning Fields
 
+### Layout Declaration
+
+```lua
+layout = {
+    kind = "LinearBiome",
+    start = { mode = "fixed", roomKeys = { "H_Intro" } },
+    continuation = {
+        defaultBatchRuleKey = "FieldsCageBatch",
+        overrides = {},
+    },
+    terminal = {
+        roomKey = "H_PreBoss01",
+        transitionRuleKey = "PrebossEntry",
+        exitPolicy = { kind = "allExitsTerminal" },
+    },
+    bounds = { maxBatches = 5, maxTargets = 10 },
+}
+```
+
 ### Entered Structure
 
-`H_Intro` is the fixed root. H then follows a selected linear continuation
-driven by entered-room counts.
+`H_Intro` is the fixed start. H then follows a selected linear continuation
+whose room legality is driven by entered-room counts.
 
 `H_Bridge01` is force-offered after exactly two entered combat/miniboss rooms
 and becomes ineligible once three combat/miniboss rooms have been entered. It
@@ -251,8 +385,7 @@ rewards.
 
 ### `fieldsMaxDoorsRolled`
 
-The Biome Plan materializer exposes a derived counter matching
-`FieldsMaxDoorsRolled`:
+Lifecycle history derives a counter matching `FieldsMaxDoorsRolled`:
 
 - it begins at zero;
 - a successful Max roll increments it even when capacity clamps the visible
@@ -269,9 +402,31 @@ count of two does not reveal whether a capacity-two batch took Min or Max.
 
 ## I: Tartarus
 
+### Layout Declaration
+
+```lua
+layout = {
+    kind = "LinearBiome",
+    start = { mode = "fixed", roomKeys = { "I_Intro" } },
+    continuation = {
+        defaultBatchRuleKey = "ClockworkDoorBatch",
+        overrides = {},
+    },
+    terminal = {
+        roomKey = "I_PreBoss02",
+        transitionRuleKey = "PrebossEntry",
+        exitPolicy = {
+            kind = "terminalWithCompanions",
+            companionBatchRuleKey = "ClockworkDoorBatch",
+        },
+    },
+    bounds = { maxBatches = 12, maxTargets = 24 },
+}
+```
+
 ### Biome State
 
-`I_Intro` is the fixed root and initializes Clockwork progression. A completed
+`I_Intro` is the fixed start and initializes Clockwork progression. A completed
 I plan explicitly authors only the randomized limit needed by later rules:
 
 ```lua
@@ -312,16 +467,51 @@ same batch. `ClockworkDoorBatch` validates that peer condition directly.
 
 Preboss controls become eligible after remaining goals reaches zero. Once the
 acquired non-goal count reaches `maxNonGoalRewards`, preboss force pressure is
-active. `I_PreBoss02` is the single canonical terminal layout. Its inherited
+active. `I_PreBoss02` is the single declared terminal room. Its inherited
 run-local Clockwork and shop rules remain modeled, while its post-true-ending
 save requirement is intentionally omitted. `I_PreBoss01` is excluded. Save
 progression does not enter the production requirement registry; the selected
 plan must satisfy the requirements the planner declares.
 
+`I_PreBoss02` inherits both `AlwaysForceOncePerRoom` and
+`MaxCreationsPerRoom = 1`. On a two-exit predecessor, it therefore occupies the
+first active exit in physical generation order and the second exit generates
+one ordinary I companion target. The `terminalWithCompanions` exit policy
+authors that companion inside the terminal transition, applies
+`ClockworkDoorBatch` peer rules to the complete physical set, and requires the
+companion's room-local reward state even though it is an unpicked dead leaf.
+The planner always selects the preboss when this terminal transition is
+authored; skipping it and continuing through the companion is outside the
+prescriptive planner surface.
+
 Every configured I plan includes its offer kind and concrete reward state.
 There is no reward-optional or structure-only I mode.
 
 ## N: Ephyra
+
+### Layout Declaration
+
+```lua
+layout = {
+    kind = "HubBiome",
+    entry = {
+        mode = "fixedSequence",
+        roomKeys = { "N_Opening01", "N_PreHub01", "N_Hub" },
+    },
+    hub = {
+        roomKey = "N_Hub",
+        batchRuleKey = "EphyraHubBatch",
+        doorCountStateKey = "hubDoorCount",
+        visitedTargetCount = 6,
+    },
+    terminal = {
+        roomKey = "N_PreBoss01",
+        transitionRuleKey = "PrebossEntry",
+        exitPolicy = { kind = "singleTerminal" },
+    },
+    bounds = { maxBatches = 1, maxTargets = 10 },
+}
+```
 
 ### Fixed Intro and Hub
 
@@ -336,10 +526,12 @@ encounter. Progression-controlled `OpeningEmpty` is not an authored planner
 choice. `N_PreHub01` uses `PreHubGeneratedN`, which is explicitly non-counting.
 These encounter effects belong to encounter profiles, not room counter fields.
 
-`N_Hub` owns one persistent `EphyraHubBatch`. The game catalog maps physical
-hub door IDs to 23 combat rooms, two miniboss rooms, and one story room. On the
-first hub visit it exposes nine or ten pylon doors, preserves forced eligible
-doors, and disables one of the two miniboss doors.
+The `HubBiome` layout owns one persistent batch governed by
+`EphyraHubBatch`; `N_Hub` is its declared physical hub room and owns no
+outgoing topology. The game catalog maps physical hub door IDs to 23 combat
+rooms, two miniboss rooms, and one story room. On the first hub visit the batch
+exposes nine or ten pylon doors, preserves forced eligible doors, and disables
+one of the two miniboss doors.
 
 The planner authors:
 
@@ -426,11 +618,31 @@ created.
 
 ## O: Thessaly
 
+### Layout Declaration
+
+```lua
+layout = {
+    kind = "LinearBiome",
+    start = { mode = "fixed", roomKeys = { "O_Intro" } },
+    continuation = {
+        defaultBatchRuleKey = "Standard",
+        overrides = {},
+    },
+    terminal = {
+        roomKey = "O_PreBoss01",
+        transitionRuleKey = "PrebossEntry",
+        exitPolicy = { kind = "singleTerminal" },
+    },
+    bounds = { maxBatches = 7, maxTargets = 7 },
+}
+```
+
 ### Top-Level Shape
 
-`O_Intro` is the fixed root. Every supported O room has one physical ship exit,
-so every top-level batch has one target and that target is necessarily picked.
-`O_PreBoss01` is terminal and forced at `biomeDepthCache = 7`.
+`O_Intro` is the fixed start. Every supported O source has one physical ship
+exit, so every generated batch has one target and that target is necessarily
+picked. `O_PreBoss01` is forced at `biomeDepthCache = 7` by its Room
+Declaration.
 
 O has no sibling target-choice UI and no biome-specific top-level batch state.
 Its special behavior is entirely room-local.
@@ -451,8 +663,9 @@ history is built; a disabled NPC layer contributes nothing and its natural
 encounters are suppressed within the configured planner prefix.
 
 The game prepares the complete sequence before starting any of these phases.
-At the planner's corresponding `room.prepare_encounters` snapshot, `Combat2`
-is authorable only when the pre-room `BiomeEncounterDepth` is in `[2, 5]`.
+At the planner's corresponding `room.prepare_encounters` lifecycle point,
+`Combat2` is authorable only when the pre-room `BiomeEncounterDepth` is in
+`[2, 5]`.
 The game also gives that phase a nonzero chance. The planner does not simulate
 that probability: completed room state explicitly authors whether the optional
 phase is present.
@@ -478,28 +691,45 @@ separate forced-reward producer.
 Every wheel refreshes the game's pending next-store value. Consequently the
 final active wheel supplies the initial base store for the room's outgoing
 generated batch: `wheel1` when Combat2 is absent, otherwise `wheel2`. The
-ShipCombat snapshot exports that store; the O Biome Plan applies ordinary
-target-store override resolution, including any forced target that replaces
-the working default, and validates the outgoing targets. This dependency does
-not move outgoing topology or target rewards into the Room Control.
+ShipCombat canonical fragment exports that store; outgoing-batch
+materialization applies ordinary target-store override resolution, including
+any forced target that replaces the working default, and validates the
+outgoing targets. This dependency does not move outgoing topology or target
+rewards into the Room Control.
 
 O combat room declarations therefore use
 `incomingReward = { kind = "none" }`. Their encounter profile, rather than
 duplicated room-local declarations, owns
 `wheel1` and `wheel2`. Story, shop, devotion/trial, miniboss, reprieve, and
-direct-preboss controls use their concrete declaration-owned reward bindings.
-Forked prebosses instead compose a World Shop and the free `RunProgress`
-offers activated by their selected predecessor's physical exit count.
+direct-preboss controls use their concrete declaration-owned reward bindings;
+the direct preboss has the `shopOnly` entry policy.
 
 Room commit advances `BiomeDepthCache` once regardless of encounter count.
 Resolved counting encounters advance `BiomeEncounterDepth` independently.
 
 ## P: Mount Olympus
 
-### Root and Termination
+### Layout Declaration
 
-`P_Intro` is the fixed root and has two physical exits. `P_PreBoss01` is
-terminal and forced at `biomeDepthCache = 9`.
+```lua
+layout = {
+    kind = "LinearBiome",
+    start = { mode = "fixed", roomKeys = { "P_Intro" } },
+    continuation = {
+        defaultBatchRuleKey = "Standard",
+        overrides = {},
+    },
+    terminal = {
+        roomKey = "P_PreBoss01",
+        transitionRuleKey = "PrebossEntry",
+        exitPolicy = { kind = "allExitsTerminal" },
+    },
+    bounds = { maxBatches = 9, maxTargets = 18 },
+}
+```
+
+`P_Intro` is the fixed start and has two physical exits. `P_PreBoss01` is
+forced at `biomeDepthCache = 9` by its Room Declaration.
 
 P otherwise uses Standard batches. Supported P combat rooms have two physical
 exits; special rooms retain their concrete one- or two-exit declarations.
@@ -531,6 +761,50 @@ creation caps remain normal declaration predicates.
 
 ## Q: Summit
 
+### Layout Declaration
+
+```lua
+layout = {
+    kind = "LinearBiome",
+    start = { mode = "fixed", roomKeys = { "Q_Intro" } },
+    continuation = {
+        defaultBatchRuleKey = "Standard",
+        overrides = {
+            {
+                key = "Q_Depth3Minibosses",
+                when = {
+                    parentRoomKeys = {
+                        "Q_Combat03",
+                        "Q_Combat05",
+                        "Q_Combat15",
+                    },
+                },
+                batchRuleKey = "QMinibossBatch",
+                targetRoomKeys = { "Q_MiniBoss02", "Q_MiniBoss05" },
+            },
+            {
+                key = "Q_Depth6Minibosses",
+                when = {
+                    parentRoomKeys = {
+                        "Q_Combat12",
+                        "Q_Combat13",
+                        "Q_Combat14",
+                    },
+                },
+                batchRuleKey = "QMinibossBatch",
+                targetRoomKeys = { "Q_MiniBoss03", "Q_MiniBoss04" },
+            },
+        },
+    },
+    terminal = {
+        roomKey = "Q_PreBoss01",
+        transitionRuleKey = "PrebossEntry",
+        exitPolicy = { kind = "singleTerminal" },
+    },
+    bounds = { maxBatches = 7, maxTargets = 10 },
+}
+```
+
 ### Forced Skeleton
 
 Q is a linear biome with a mostly forced depth skeleton:
@@ -559,6 +833,10 @@ At depths 3 and 6 the source's two exits form a specialized batch:
 - the picked target is the next entered room;
 - the unpicked target is a dead leaf.
 
+The layout selects these rules from the explicit predecessor-room sets above,
+not by reading `biomeDepthCache`. Depth remains game-history evidence for room
+force and eligibility validation.
+
 The generic vanilla picker processes physical doors independently and does not
 generally guarantee sampling without replacement. The planner deliberately
 canonicalizes these batches to the two distinct compatible controls. This is
@@ -579,17 +857,33 @@ facts.
 
 Every biome declaration must prove:
 
-- its root and terminal controls exist;
+- it declares exactly one registered layout kind;
+- every start, fixed-entry, hub, and terminal Room Control exists;
+- every default, override, hub-batch, and transition rule is registered;
+- override selectors use only admitted topology-visible structural facts and
+  cannot overlap ambiguously;
+- `PrebossEntry` resolves one terminal control whose terminal exit policy,
+  `entryOfferPolicy`, companion rule, and predecessor exit bound are mutually
+  compatible;
 - every physical exit index and type matches extracted map data;
-- every specialized batch references a registered rule;
 - every local child slot has a finite declaration-derived bound;
 - every canonicalized target family has sufficient compatible controls;
 - modeled requirements have evaluators;
 - every other route-relevant requirement fails catalog construction;
-- the maximum persisted topology fits its declared Lib table bounds.
+- the declared layout bounds contain the maximum authored batches and
+  top-level targets;
+- raw Room Declarations do not duplicate layout roles through generic `fixed`
+  or `terminal` flags;
+- authored persistence does not contain batch or transition dispatch rule
+  keys.
 
 Focused structural tests must cover:
 
+- layout-kind parsing, role derivation, bounds, and `PrebossEntry` policy
+  compatibility;
+- linear batch/terminal mutual exclusion and HubBiome batch/terminal
+  coexistence;
+- I terminal-with-companion behavior for both one- and two-exit predecessors;
 - F/G variable exit counts and force pressure;
 - H cage roll ambiguity, ceiling, and bridge offer/skip behavior;
 - I acquisition-driven Clockwork counters and special peer requirements;
@@ -599,4 +893,5 @@ Focused structural tests must cover:
 - Q both forced miniboss pairs and canonical distinct-control allocation.
 
 No biome rule may fall back to dynamic control creation, copied room payloads
-in topology rows, or runtime reinterpretation of incomplete authored state.
+in authored topology, hidden dispatch by lifecycle counter, or runtime
+reinterpretation of incomplete authored state.

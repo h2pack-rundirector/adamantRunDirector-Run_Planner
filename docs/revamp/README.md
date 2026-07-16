@@ -16,9 +16,11 @@ Completed implementation work and the current frontier are recorded in
 `IMPLEMENTATION_PROGRESS.md`; the complete checkpoint plan remains in
 `IMPLEMENTATION_GUIDE.md`.
 
-The six-document set completed coherent design review and was locked on
-2026-07-14. Questions deliberately assigned to a later biome implementation
-checkpoint are not open architecture blockers.
+The six-document set completed its initial coherent design review on
+2026-07-14. The accepted biome-layout boundary was subsequently reconciled
+through those same authorities, and the set was relocked on 2026-07-16.
+Questions deliberately assigned to a later biome implementation checkpoint
+are not open architecture blockers.
 
 Locked means implementation proceeds from these authorities without another
 speculative redesign pass. It does not prohibit evidence-driven corrections:
@@ -49,6 +51,8 @@ These six documents are the complete, locked revamp design and
 implementation-guidance set. Implementation follows
 `IMPLEMENTATION_GUIDE.md`. `IMPLEMENTATION_PROGRESS.md` is a separate mutable
 status ledger and is not a design authority.
+
+## Supplemental Implementation Contracts
 
 The supplemental `room_controls/` specification set expands the locked Room
 Control direction into one reviewable contract per registered room template.
@@ -102,13 +106,14 @@ Plan snapshot through one pure derived pipeline:
 
 ```text
 catalog + committed Route Controls, Biome Plans, and Room Controls
-  -> for each configured biome in route order:
+  -> normalize topology for every configured biome
+  -> for each normalized biome in route order:
        check biome completeness
        -> materialize one canonical biome snapshot
        -> append lifecycle events to game-language history
        -> validate that biome against prior and current history
        -> stop on incomplete or invalid; otherwise continue
-  -> prepared presentation state for the processed prefix
+  -> prepared presentation state for every configured biome
   -> execution-plan compilation when every configured biome is complete and valid
   -> atomically publish one derived result
 ```
@@ -125,6 +130,10 @@ authored for each biome. An incomplete biome produces completeness feedback
 but no canonical biome snapshot and no validator result. A complete invalid
 biome is validated, produces feedback, and prevents later biomes from being
 processed.
+
+Configured biomes beyond that semantic horizon still receive inactive prepared
+views from their already normalized topology; they are not treated as locally
+checked or valid.
 
 The derived pipeline never writes authored state. Feedback is translated into
 non-persisted presentation state during the commit rebuild. Draw only consumes
@@ -161,10 +170,13 @@ The revamp starts from these decisions:
   every supported top-level concrete game room.
 - Bounded room-internal children use stable parent-local slots rather than
   dynamic or duplicate top-level controls.
-- A Biome Plan owns generated batches, room links, and picked state.
+- A Biome Plan owns generated batches, terminal transitions, companion links,
+  room links, and picked state.
 - A room control owns its authored `incomingReward` and any rewards produced
   by explicit room-local children or encounter offer points.
 - Outgoing topology belongs to the Biome Plan, never to a target room control.
+- Terminal exit population is layout-owned and remains separate from the
+  terminal Room Control's local entry-offer policy.
 - Picked and unpicked generated rooms use the same room-control representation.
 - Unpicked rooms are dead leaves. Their offered rewards remain materialized.
 - The planner requires injective room-control use within a biome plan.

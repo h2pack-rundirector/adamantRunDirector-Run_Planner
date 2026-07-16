@@ -8,10 +8,10 @@ structural requirements.
 
 Verification date: 2026-07-16.
 
-The declaration and catalog reconciliation described by this audit is
-implemented. The audit remains the binding authority for the bottom-up reward
-components that will replace the current prototype. It is not a runtime
-game-data reader.
+This audit is the binding declaration/catalog mapping for the bottom-up reward
+components and biome-specific wrappers. Current implementation status remains
+in `../IMPLEMENTATION_PROGRESS.md`; this audit is not a runtime game-data
+reader or a second progress ledger.
 
 Primary game sources:
 
@@ -331,19 +331,19 @@ target rewards whose legal parent context can vary retain capacity for every
 potentially legal reward. The Ship wheel may omit Devotion capacity because
 its one-exit structural impossibility is fixed for every supported instance.
 
-## Declaration Reconciliation Status
+## Declaration Contract
 
-The declaration authority switch is complete:
+The binding declaration shape requires:
 
-- named filtered surface references and the global surface registry are gone;
+- no named filtered surface references or global surface registry;
 - every room embeds its complete `incomingReward`; local side rooms,
   incoming-kind branches, offer points, and forked preboss free offers embed
   their complete locally named bindings;
 - catalog validation recursively checks every embedded producer kind, store,
   filter, shop profile, constraint, and nested binding;
-- the biome-O exception is removed from `DevotionLootRequirements`.
+- no biome-O exception in `DevotionLootRequirements`.
 
-The remaining hierarchy implementation must:
+Every current and future hierarchy consumer must:
 
 1. compile each counted binding once during control assembly;
 2. apply bag-entry requirements only to bag-backed provenance;
@@ -354,7 +354,7 @@ The remaining hierarchy implementation must:
 
 ## Lock Conditions
 
-The reward model is ready to implement when:
+The reward model remains locked while:
 
 - every supported producer has the stores and filters recorded by this audit;
 - surfaces identify behavior, not filtered option sets;

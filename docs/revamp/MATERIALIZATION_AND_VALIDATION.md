@@ -7,13 +7,14 @@ runtime execution:
 
 ```text
 committed Route Controls, Biome Plans, and Room Controls
-  -> for each configured biome in route order:
+  -> normalize every configured biome topology
+  -> for each normalized biome in route order:
        completeness gate
        -> canonical biome snapshot
        -> append ordered lifecycle history and game-language ledgers
        -> selected-plan and candidate validation
-       -> semantic findings and prepared UI presentation
        -> stop unless the biome is complete and valid
+  -> semantic findings and prepared UI presentation for every configured biome
   -> runtime execution plan when the configured prefix fully passes
   -> atomically publish one derived result
 ```
@@ -25,7 +26,7 @@ plan compilation. `DOMAIN_MODEL.md` owns semantic concepts,
 biome-specific topology.
 
 The pipeline is pure with respect to authored state. It reads one coherent
-committed snapshot and produces replaceable derived caches. It never
+committed authored state and produces replaceable derived caches. It never
 writes defaults, repairs malformed topology, or reaches into widget/storage
 internals.
 
@@ -33,26 +34,58 @@ internals.
 
 One commit-triggered rebuild performs these stages in order:
 
-1. read one coherent committed snapshot and its configured route prefix from
-   committed state, rejecting a prefix outside the active composition domain;
-2. begin with empty route history;
-3. for each configured biome in route order:
-   1. check that biome's local and structural completeness;
-   2. if incomplete, record completeness findings and stop;
-   3. materialize one concrete canonical biome snapshot;
-   4. interpret that snapshot into ordered lifecycle events and append them to
-      route history;
-   5. validate the biome's selected facts and exported candidate projections
-      against the accumulated history;
-   6. record validation findings;
-   7. if invalid, stop; otherwise admit the biome to the validated prefix and
-      continue;
-4. translate findings through semantic owner descriptors into a fresh prepared
-   presentation cache;
-5. compile a runtime execution plan only if every configured biome completed
+1. read one coherent committed authored state and its configured route prefix,
+   rejecting a prefix outside the active composition domain;
+2. normalize the authored topology of every configured biome through its
+   registered layout kind into an unpublished route-local table;
+3. reject any malformed topology, unknown dispatch key, out-of-bound link, or
+   other contact-boundary contract failure found anywhere in that configured
+   prefix;
+4. begin with empty route history;
+5. process normalized configured biomes in route order:
+   1. check structural and referenced-owner completeness;
+   2. if incomplete, record owner-keyed completeness findings and stop;
+   3. drive layout traversal through the common canonical materializer to
+      produce one concrete canonical biome snapshot;
+   4. pass that snapshot to the registered history-layout translator and append
+      its ordered lifecycle events to route history;
+   5. validate the biome's selected facts and independently evaluate exported
+      candidate projections against the accumulated history;
+   6. record blocking selected-plan findings and non-blocking candidate results
+      separately;
+   7. if the selected plan is invalid, stop; otherwise admit the biome to the
+      validated prefix and continue;
+6. translate findings through semantic owner descriptors into fresh owner-keyed
+   presentation state;
+7. ask the registered UI-layout projectors to combine each configured biome's
+   normalized topology, owner presentation, and derived `processingState` into
+   one fresh prepared biome view;
+8. compile a runtime execution plan only if every configured biome completed
    and validated successfully; otherwise explicitly produce no execution plan;
-6. atomically publish the canonical snapshots, history, validation result,
+9. atomically publish the canonical snapshots, history, validation result,
    prepared presentation, and execution result as one derived result.
+
+Topology normalization is a contact-boundary operation, not semantic biome
+processing. Every biome in the configured prefix must pass it because prepared
+UI projection depends on trusted normalized structure. Completeness,
+materialization, history, selected-plan validation, and contextual candidate
+validation still stop at the first incomplete or invalid biome. Dormant biomes
+outside the configured prefix are neither normalized nor processed.
+
+Every configured prepared view carries one derived, non-persisted
+`processingState`:
+
+- `validated`: the biome completed and validated successfully;
+- `invalid`: the biome completed, materialized, and produced a blocking
+  selected-plan finding;
+- `incomplete`: the biome was the first semantic blocker and did not produce a
+  canonical snapshot;
+- `blockedByEarlierBiome`: trusted normalized topology is available, but the
+  biome was not semantically processed because an earlier biome blocked it.
+
+The last state is not a finding about that biome. It exists so the UI can show
+the authored downstream structure as inactive without pretending it was
+checked against history that does not exist.
 
 An empty configured prefix is valid and produces no planner instructions for
 that route. Runtime remains vanilla for the entire route.
@@ -81,9 +114,10 @@ Materialization receives:
 - the Route Control's committed configured-prefix state;
 - the corresponding committed Biome Plans;
 - the statically declared Room Control registry;
-- immutable room, reward, requirement, encounter-profile, exit, batch, and
-  biome declarations;
-- registered room-template and batch-rule materializers;
+- immutable biome-layout, room, reward, requirement, encounter-profile, exit,
+  batch, and transition declarations;
+- registered topology-layout, history-layout, UI-layout, room-template,
+  batch-rule, and terminal-transition implementations;
 - stable candidate providers exported by semantic owners.
 
 Declarations contain possible game facts:
@@ -91,7 +125,7 @@ Declarations contain possible game facts:
 - room identity and template;
 - physical exits and exit constraints;
 - room eligibility, creation caps, appearance caps, and force metadata;
-- baseline encounter phases, presence snapshots, counter effects, and
+- baseline encounter phases, presence-decision phases, counter effects, and
   phase-owned offer points;
 - reward-producer kinds and concrete bindings, stores, counted bags, and shop
   profiles;
@@ -115,16 +149,31 @@ facts. It does not answer whether those facts are legal.
 
 For each configured biome, completeness requires:
 
-- a declared root and terminal shape;
-- well-formed Biome Plan topology within its bounded storage;
-- complete batch state, physical target links, and selection state;
-- one distinct Room Control key for every referenced top-level target;
+- a known layout kind and well-formed normalized topology within its declared
+  bounds;
+- layout-specific structural closure from the declared start or entry sequence
+  through one declared terminal transition;
+- complete generated-batch state, physical target links, and picked or visit
+  order state;
+- complete terminal-companion links for every predecessor exit required by the
+  declared terminal exit policy;
+- linear batch/terminal mutual exclusion or the declared HubBiome separation
+  between its persistent hub batch and post-visit terminal transition;
+- one distinct Room Control key for every referenced top-level room occurrence,
+  including starts, fixed entries, generated targets, and the terminal;
 - a complete local fragment from every referenced Room Control;
 - complete active explicit local-child and phase-derived offer-point slots,
   with inactive optional-phase slots ignored;
 - concrete reward types, payloads, purchases, wheel picks, and other local
   choices required by the selected topology;
-- a selected continuation that reaches the declared terminal rule.
+- a complete terminal Room Control under the immutable context derived by
+  `PrebossEntry`.
+
+Every missing value is reported against the smallest semantic owner that can
+resolve it: layout start, batch, target, visit, terminal transition, Room
+Control, or local slot. Completeness findings use the same stable address
+domain as validation findings. An incomplete biome produces no canonical
+snapshot and no authoritative contextual candidate validity.
 
 Generated but unpicked targets participate because the game created them and
 their rewards were offered. Unreferenced dormant controls do not participate.
@@ -137,13 +186,16 @@ negative acquisition decision; it does not make a missing reward complete.
 Route scope is atomic by biome. If the configured prefix is `F, G, H`, F is
 complete and valid, and G is incomplete, F retains its validated snapshot and
 history for prepared UI state. G produces completeness feedback but no
-snapshot, H is not processed, and no execution plan is compiled. A complete
-invalid G produces a G snapshot and validation feedback, but H is still not
-processed.
+snapshot, H is not processed semantically, and no execution plan is compiled.
+H still receives an inactive prepared view from its normalized topology. A
+complete invalid G produces a G snapshot and validation feedback; H again has
+only its `blockedByEarlierBiome` prepared view.
 
 Malformed persisted topology is not ordinary incompleteness. Duplicate
 top-level Room Control links, unknown control keys, invalid table indexes, and
 storage shapes outside declaration bounds are construction contract failures.
+Normalization checks every configured biome before this sequential example, so
+the same malformed H state fails loudly instead of being hidden by G.
 
 ## Canonical Biome Snapshots and Route Plan
 
@@ -174,18 +226,17 @@ controls.
 
 ### Representative Shape
 
-The exact Lua record names may change, but the semantic shape is:
+The exact Lua record names may change, but canonical biomes have explicit
+layout variants. A representative linear route result is:
 
 ```lua
-routePlan = {
+canonicalRoutePlan = {
     routeKey = "Underworld",
-    sourceAuthoredRevision = 17,
-    rebuildRevision = 42,
-    biomePlans = {
+    biomeSnapshots = {
         {
             biomeStepKey = "Underworld_F",
-            rootRoomControlKey = "Underworld_F_Opening02",
-            rootRoom = {
+            layoutKind = "LinearBiome",
+            startRoom = {
                 roomControlKey = "Underworld_F_Opening02",
                 gameRoomKey = "F_Opening02",
                 roomState = { kind = "Opening" },
@@ -196,7 +247,7 @@ routePlan = {
                 {
                     parentRoomControlKey = "Underworld_F_Opening02",
                     batchKey = "nextDoors",
-                    rule = "Standard",
+                    batchRuleKey = "Standard",
                     state = {},
                     targets = {
                         {
@@ -216,10 +267,68 @@ routePlan = {
                     source = { ... },
                 },
             },
+            terminalEntry = {
+                parentRoomControlKey = "Underworld_F_Combat17",
+                transitionRuleKey = "PrebossEntry",
+                exitPolicyKind = "allExitsTerminal",
+                room = {
+                    roomControlKey = "Underworld_F_PreBoss01",
+                    gameRoomKey = "F_PreBoss01",
+                    roomState = { kind = "ForkedPreboss" },
+                    source = { ... },
+                },
+                offers = { ... },
+                entryMode = "Shop",
+                companionTargets = {},
+                source = { ... },
+            },
         },
     },
 }
 ```
+
+A representative hub biome snapshot is:
+
+```lua
+{
+    biomeStepKey = "Surface_N",
+    layoutKind = "HubBiome",
+    entrySequence = {
+        { roomControlKey = "Surface_N_Opening01", roomState = { ... } },
+        { roomControlKey = "Surface_N_PreHub01", roomState = { ... } },
+        { roomControlKey = "Surface_N_Hub", roomState = { ... } },
+    },
+    hubBatch = {
+        batchKey = "hubDoors",
+        batchRuleKey = "EphyraHubBatch",
+        targets = { ... },
+    },
+    visits = {
+        {
+            order = 1,
+            doorIndex = 4,
+            pylonRoom = { ... },
+            sideRooms = { ... },
+        },
+    },
+    terminalEntry = {
+        transitionRuleKey = "PrebossEntry",
+        room = { ... },
+    },
+}
+```
+
+`layoutKind` is the stable translation key used to select the history-layout
+translator. The canonical snapshot does not embed layout implementations or
+UI projection behavior. Derived `batchRuleKey` and `transitionRuleKey` values
+may appear for typed dispatch, but they never become authored persistence.
+
+For I, `terminalEntry.exitPolicyKind = "terminalWithCompanions"` and
+`companionTargets` contains every ordinary room generated on predecessor exits
+after the selected `I_PreBoss02` exit. These records have the same concrete
+room, incoming-offer, source-address, creation, and offer semantics as ordinary
+generated targets, but are always unpicked dead leaves and never continue the
+canonical path.
 
 `gameRoomKey` is the concrete runtime room name. `roomControlKey` is the
 semantic authored owner. They remain separate even when the current naming
@@ -262,46 +371,117 @@ Batch target fact:
 }
 ```
 
+Hub target or visit fact:
+
+```lua
+{
+    routeKey = "Surface",
+    biomeStepKey = "Surface_N",
+    batchKey = "hubDoors",
+    doorIndex = 4,
+    aspect = "visitOrder",
+}
+```
+
+Terminal-transition fact:
+
+```lua
+{
+    routeKey = "Underworld",
+    biomeStepKey = "Underworld_F",
+    parentRoomControlKey = "Underworld_F_Combat17",
+    transitionKey = "prebossEntry",
+    aspect = "continuation",
+}
+```
+
+A terminal companion fact adds its physical `exitIndex`, referenced
+`roomControlKey`, and `aspect = "companionTargetRoom"` under the same terminal
+transition owner.
+
 Local child fact adds `roomControlKey`, `localSlotKey`, and its semantic
-aspect. Addresses never contain storage row numbers, generated aliases, widget
+aspect. Addresses never contain storage positions, generated aliases, widget
 IDs, or a lookup by game room key alone.
 
 ## Materialization Walk
 
-The route materializer walks configured biome steps in declaration order and
-stops at the first incomplete or invalid biome. A Biome Plan rule determines
-its selected traversal; Room Controls contribute only local fragments.
+After all configured topology has normalized successfully, the route
+coordinator semantically processes biome steps in declaration order and stops
+at the first incomplete or invalid biome. Once completeness succeeds, one
+common canonical materializer owns canonical assembly:
 
-For a Standard batch the walker:
+1. receive the complete normalized topology and its `layoutKind`;
+2. ask the Biome Plan to traverse through
+   `topologyLayouts[layoutKind]`;
+3. handle each structural visit through a common visitor contract;
+4. resolve referenced Room Controls and registered batch or transition rules;
+5. assemble exactly one layout-typed canonical biome snapshot.
 
-1. materializes the entered parent Room Control;
-2. resolves its declared active physical exits;
-3. asks the Biome Plan for the batch and ordered target links;
-4. asks every referenced target Room Control for its concrete incoming reward
-   and typed local fragment;
-5. emits every generated target in physical generation order;
-6. follows only the picked target;
-7. requires unpicked targets to remain dead leaves;
-8. repeats until the terminal room is reached.
+Layout traversal exposes structure; it does not emit lifecycle history.
+`LinearBiome` exposes the start, every generated peer batch on the selected
+path, selected continuations, and the terminal transition including any
+terminal companion targets. `HubBiome` exposes
+the fixed entry sequence, one persistent hub batch, ordered visits, and the
+separate post-visit terminal transition.
 
-Registered specialized rules replace only the traversal they own:
+For a Standard generated batch, the canonical visitor:
+
+1. resolves the entered parent Room Control and its declared active physical
+   exits;
+2. receives the ordered target links from layout traversal;
+3. asks every target Room Control for its concrete incoming reward and typed
+   local fragment;
+4. records every generated target in physical generation order;
+5. records the picked target as the selected continuation;
+6. verifies that unpicked targets remain dead leaves.
+
+Registered batch rules interpret only the peer-wide behavior they own:
 
 - `FieldsCageBatch` derives active cage slots from one batch-authored roll;
 - `ClockworkDoorBatch` associates one concrete incoming offer kind with each
   target;
-- `EphyraHubBatch` emits one persistent hub batch and six ordered visits;
-- `ShipCombat` derives wheel slots from its encounter phases and interleaves
-  their fragments inside one room;
-- Olympus materializers emit declared encounter phases and typed exits;
-- `QMinibossBatch` emits its declared distinct pair.
+- `EphyraHubBatch` materializes the one persistent hub peer set, while
+  `HubBiome` traversal owns visit order and returns;
+- `QMinibossBatch` materializes the exact distinct pair supplied by the
+  resolved layout override.
 
-Template-specific interpretation is registry-driven. The generic walker must
-not grow a central switch over every concrete room name or inspect template
-storage.
+`PrebossEntry` interprets the terminal transition. It derives the one terminal
+Room Control, immutable predecessor context, and terminal exit policy from the
+layout. `allExitsTerminal` delegates all physical entry realizations and
+entry-mode state to the terminal control's declared `entryOfferPolicy`.
+`singleTerminal` admits no companion. `terminalWithCompanions` materializes the
+selected terminal on the first active physical exit and delegates every
+remaining ordinary target to its declared companion batch rule and referenced
+Room Control. None of these policies creates duplicate terminal controls.
+
+Room-template materializers remain local. `ShipCombat` derives wheel slots
+from its encounter phases, while Olympus controls emit their declared phases
+and typed exit facts. Neither becomes a topology-layout or batch rule.
+
+All interpretation is registry-driven. The common canonical materializer must
+not switch on a concrete biome, room name, or UI layout and must not inspect
+template storage.
 
 Canonical combat remapping has already been resolved by authored topology. The
 materializer verifies injectivity and compatibility; it does not silently pick
 a replacement combat control.
+
+## History Layout Translation
+
+Only a complete canonical biome snapshot enters history. The history
+coordinator resolves `historyLayouts[snapshot.layoutKind]` and asks that
+translator to emit the ordered common lifecycle stream. A history translator
+never reads authored persistence, normalized topology, Room Control refs, or
+UI projection state.
+
+`historyLayouts["LinearBiome"]` follows the canonical start, generated
+batches, selected continuations, and terminal entry.
+`historyLayouts["HubBiome"]` emits the fixed entry sequence, hub generation
+batch, six visits, derived hub returns, active side-room/restore sequences, and
+terminal entry. Both use the same game-language event vocabulary below.
+
+The common canonical materializer does not also emit history, and a history
+translator does not rebuild or amend canonical structure.
 
 ## Lifecycle Event Stream
 
@@ -358,7 +538,7 @@ no entry or acquisition event.
 
 Room-local event order comes from the registered room template and the resolved
 spine based on its encounter profile. This is necessary for O. Its complete
-phase sequence is prepared first against the pre-room counter snapshot. The
+phase sequence is prepared first against the pre-room counter state. The
 baseline then emits:
 
 ```text
@@ -385,7 +565,9 @@ Special structures emit ordinary typed facts in their real order:
   targets; the roll event still updates `FieldsMaxDoorsRolled` when capacity
   clamps visible slots or when a no-Fields-target batch emits no cage slots;
 - I decrements remaining Clockwork Goals only on `reward.acquire` and counts
-  acquired non-goal rewards separately;
+  acquired non-goal rewards separately; its selected preboss terminal emits
+  the shop creation/offer first and then every unpicked ordinary companion
+  creation/offer in physical exit order;
 - N emits the hub reward batch once, then ordered pylon entries, parent-local
   side-room creation/entry, parent restores, and hub returns;
 - O resolves optional phase presence at `room.prepare_encounters`, then emits
@@ -419,7 +601,8 @@ specific view they need; no generic planner depth or row coordinate exists.
 | unresolved force set | batch resolution | force declarations not yet generated |
 | pending shop offers | shop interval events | current bounded shop offer context |
 
-Each event is evaluated against an explicit pre-event or post-event snapshot.
+Each event is evaluated against an explicit pre-event or post-event history
+view.
 Requirement declarations or their evaluator registration name that phase. A
 validator must not guess whether a count includes the current fact.
 
@@ -452,8 +635,8 @@ Requirement nodes do not store their evaluation phase. The semantic contact
 supplies one phase for the complete tree: room eligibility and requirement-
 based force use `room.generate_next`, counted reward entries use
 `reward.offer`, and authored encounter presence uses its declared
-`eligibilitySnapshot`. The code-owned kind registry declares which contacts
-each kind supports. A tree cannot mix snapshots.
+`decisionPhase`. The code-owned kind registry declares which contacts
+each kind supports. One requirement tree cannot mix contact phases.
 
 Named requirements are reusable typed expressions, not independent evaluators.
 Their payload and references validate at catalog construction, and every use
@@ -500,7 +683,7 @@ evaluateRequirement(requirement, historyView, contactPhase, evaluationContext)
   }
 ```
 
-Evaluators are pure. They receive the exact history snapshot, source/target
+Evaluators are pure. They receive the exact history view, source/target
 facts, batch peers, exit context, and offer context required by the supplied
 contact phase. They do not read controls, persistence, current ImGui state, or
 runtime game globals.
@@ -517,19 +700,31 @@ invariant failures from authored illegality.
 Construction/invariant checks include:
 
 - every key resolves through the immutable catalogs;
+- the canonical `layoutKind` resolves through the topology and history
+  registries required by the headless pipeline;
 - control/game-room/template relationships match declarations;
 - top-level Room Control references are injective;
 - parent-local slots exist and respect declaration bounds;
-- every batch rule and room materializer is registered;
+- every derived batch rule, terminal transition, and room materializer is
+  registered;
 - selected traversal and generated peers agree;
 - no unpicked dead leaf owns downstream top-level topology;
 - semantic addresses resolve to exactly one owner.
 
+UI-layout registry coverage is not a game-legality check. Composition support
+validates it separately before a biome may claim `plannerActive`; the headless
+validator does not import or depend on UI projection services.
+
 Authored structural and timing validation checks:
 
-- declared roots, terminals, fixed links, and specialized topology;
+- declared start or fixed-entry roles and terminal membership;
+- resolved continuation overrides and their exact structural configuration;
+- linear batch/terminal mutual exclusion and HubBiome persistent-batch/
+  terminal-slot separation;
+- `PrebossEntry` predecessor context, terminal exit policy,
+  `entryOfferPolicy`, and any companion target set;
 - physical exit count, index, type, and target compatibility;
-- target room eligibility at the source's `room.generate_next` snapshot;
+- target room eligibility at the source's `room.generate_next` history view;
 - creation and appearance caps on their separate ledgers;
 - force pressure over the complete peer batch;
 - encounter profiles and all named counter gates;
@@ -539,6 +734,12 @@ Authored structural and timing validation checks:
 Every target in a generated batch is processed in physical generation order.
 After each target, its creation event updates the scratch history used by the
 next target. This is required for creation caps and same-batch behavior.
+
+A `terminalWithCompanions` physical set follows the same sequential rule. The
+terminal creation occupies the first active exit, then each companion creation
+and offer updates scratch history in exit order. Force pressure, peer
+requirements, creation caps, and reward validation see the complete physical
+set even though only the terminal continues traversal.
 
 ## Force Pressure
 
@@ -550,7 +751,7 @@ At biome entry, build the unresolved set of declared force candidates. At each
 `room.generate_next` batch, filter it to candidates that:
 
 - remain unresolved;
-- pass normal eligibility at this batch's pre-generation snapshot;
+- pass normal eligibility against this batch's pre-generation history view;
 - have reached their force-window start;
 - have remaining creation capacity;
 - are compatible with at least one active physical exit.
@@ -716,7 +917,7 @@ to warnings.
 
 ## Candidate Projection
 
-The semantic owner exports each candidate provider once per prepared control.
+Each semantic owner exports its candidate providers once per prepared rebuild.
 A candidate record contains:
 
 - its stable semantic owner address;
@@ -729,29 +930,42 @@ and has produced a canonical snapshot. Before that point, controls expose
 their stable declaration-derived domains and completeness presentation, but no
 contextual valid/invalid candidate coloring is authoritative.
 
-Candidate evaluation uses the history snapshot immediately before the authored
+A `blockedByEarlierBiome` prepared view also exposes only stable
+declaration-derived candidate domains. Its topology is normalized for trusted
+projection, but it has no local completeness result, contextual candidate
+validity, enrichment, or selected-plan findings because semantic processing
+never reached it. The projector marks the entire view inactive from its
+`processingState`; it does not manufacture local failures to explain the
+upstream blocker.
+
+Candidate evaluation uses the history view immediately before the authored
 fact and a bounded scratch projection:
 
 1. replace only the candidate-owned semantic value;
-2. rematerialize the smallest affected room, child, or peer batch fragment;
+2. rematerialize the smallest affected room, child, peer batch, visit, or
+   terminal fragment;
 3. replay the shared validators from that fact through the necessary local
    horizon;
 4. return the failed condition's presentation policy and evidence;
 5. discard scratch state without mutating authored or cached canonical state.
 
-Batch-owned candidates must project the whole batch. Examples include a target
-room, picked exit, H cage roll, Q miniboss peer, or N visit order. Room-owned
-candidates project their concrete reward, payload, wheel choice, shop choice,
-or local child state.
+Layout-owned candidates project the complete structural owner they affect.
+Examples include a target room, picked exit, H cage roll, Q miniboss peer, N
+visit order, terminal transition, or terminal companion target. Room-owned
+candidates project their
+concrete reward, payload, wheel choice, shop choice, entry mode, or local child
+state.
 
 Declaration-time impossible values may be absent from a provider's stable
 domain. Once the current biome is complete and contextual validation exists,
-context-invalid values remain present and receive invalid presentation unless
-the failed requirement explicitly declares a hide policy.
+context-invalid values remain present and receive invalid presentation. No
+requirement may hide a value that belongs to the declaration-derived domain.
 
 Selected facts and candidate values use the same rule functions and evidence.
 An invalid selected value creates both selected-plan feedback and the matching
-candidate result.
+candidate result. An invalid unselected candidate creates candidate
+presentation only; it does not change `processingState`, block the route, or
+withhold an otherwise valid execution plan.
 
 ## Findings and Feedback
 
@@ -790,32 +1004,45 @@ Leaf predicates own reason codes. `all` propagates its failed children and has
 no aggregate code. `any` owns an aggregate code when no alternative passes,
 and `not` owns a code for the case where its child succeeds.
 
+Completeness findings use the same envelope with `severity = "incomplete"`
+and the semantic address of the missing start, batch, target, visit, terminal
+transition, Room Control field, or local slot. They do not require a canonical
+snapshot to exist and do not masquerade as failed game requirements.
+
 Feedback resolution is direct:
 
 ```text
 routeKey
   -> biomeStepKey
-      -> Room Control, Biome Plan batch, or local slot
+      -> Room Control or local slot
+      or layout start, batch, visit, or terminal transition
           -> semantic aspect/provider
 ```
 
 During the committed rebuild, semantic owner descriptors translate findings
-into prepared provider visibility, color, message, marker, and status tables.
+into prepared provider validity, color, message, marker, and status tables.
 Those tables belong to the coordinator's non-persisted route presentation
 cache, not to persisted controls or callback-owned refs. Translation must not
 mutate authored state.
+
+The registered UI-layout projector places owner-keyed presentation into its
+linear or hub prepared view. Feedback translation does not know UI row,
+physical storage, widget, or callback-ref identity.
 
 Findings and provider presentation are produced inside the same unpublished
 rebuild. Feedback resolves by stable semantic owner, provider, and candidate
 keys; it is never queued for a later rebuild or applied by a cached candidate
 index.
 
-The first blocking selected-plan finding defines the presentation horizon.
-Later configured biomes are not processed. Downstream UI content may be
-grey/inactive and enrichment is suppressed, but the current complete biome's
-canonical snapshot and history are not truncated or rewritten. Route status
-and markers are the common invalid-reporting surface; controls do not invent a
-second inline error language.
+The first incomplete or blocking selected-plan finding defines the semantic
+processing horizon. Later configured biomes are not processed, but their
+already normalized authored topology is projected into prepared views with
+`processingState = "blockedByEarlierBiome"`. That downstream content is
+inactive, exposes stable domains only, and suppresses contextual validity and
+enrichment. The current complete biome's canonical snapshot and history are
+not truncated or rewritten. Route status and markers are the common
+invalid-reporting surface; controls do not invent a second inline error
+language.
 
 ## Execution-Plan Compilation
 
@@ -869,7 +1096,7 @@ draw then reads cached state. Required implementation properties are:
 
 - one route history walk per commit-triggered rebuild;
 - stable provider values and labels between domain changes;
-- reused mutable candidate visibility/color/message arrays;
+- reused mutable candidate validity/color/message arrays;
 - mutation only of unpublished build buffers followed by an atomic reference
   swap; the currently published result is immutable;
 - indexed semantic owner lookup for feedback;
@@ -902,6 +1129,10 @@ The pipeline distinguishes:
   into a user-invalid candidate. An inactive configured prefix loaded through
   persistence/import is one such configuration contract failure.
 
+`blockedByEarlierBiome` is not a fourth failure class. It is derived UI
+processing state for a configured biome whose normalized topology is trusted
+but whose semantic evaluation was deliberately not reached.
+
 Runtime mismatches form a separate execution diagnostic. They must not be
 hidden as planner incompleteness.
 
@@ -909,10 +1140,25 @@ hidden as planner incompleteness.
 
 The pipeline test suite must cover:
 
+- topology normalization of the entire configured prefix before semantic
+  processing, including a malformed downstream biome behind an earlier
+  incomplete or invalid biome;
 - sequential biome completeness/validation gates and refusal to process later
   biomes after the first incomplete or invalid biome;
+- one prepared view per configured biome, with downstream views marked
+  `blockedByEarlierBiome` and limited to stable declaration-derived domains;
+- owner-keyed completeness findings without canonical materialization or
+  contextual candidate validity;
+- common canonical materialization driven by registered topology-layout
+  traversal;
+- distinct `LinearBiome` and `HubBiome` canonical variants;
+- history-layout translators consuming complete canonical snapshots only and
+  never rebuilding canonical structure;
+- linear generated-batch/terminal mutual exclusion and HubBiome persistent
+  hub-batch/terminal coexistence;
+- I terminal transitions with zero or one unpicked ordinary companion target;
 - injective top-level links and local-child repeated keys;
-- selected-spine derivation with complete unpicked dead leaves;
+- selected linear continuation with complete unpicked dead leaves;
 - target creation and offer events for every generated peer;
 - acquisition only for picked/entered/purchased facts;
 - sequential peer creation caps and appearance-cap separation;
@@ -928,10 +1174,15 @@ The pipeline test suite must cover:
 - modeled requirement handling and catalog rejection of unknown or evaluator-
   less requirements;
 - selected and candidate use of the same rule functions;
+- invalid unselected candidates producing prepared candidate presentation
+  without blocking an otherwise valid selected plan;
+- context-invalid declaration values remaining present with invalid
+  presentation;
 - finding resolution by stable semantic owner/provider/candidate keys inside
   the same rebuild;
-- one published prepared view per draw and replacement publication before the
-  draw following a commit;
+- one published prepared route result per draw, containing one view per
+  configured biome, and replacement publication before the draw following a
+  commit;
 - rejection of inactive configured-prefix imports without clamping;
 - atomic published-result replacement after a successful rebuild and
   previous-result clearing after a failed rebuild;
@@ -952,7 +1203,7 @@ This pipeline does not:
 - validate incomplete plans by inventing defaults;
 - store canonical/history/validation documents as a second profile format;
 - introduce dynamic occurrence or node IDs;
-- let validators inspect widgets, storage rows, or private control aliases;
+- let validators inspect widgets, storage positions, or private control aliases;
 - collapse offers and acquisitions or reward stores and counted bags;
 - treat force deadlines as eligibility maxima;
 - let runtime hooks reinterpret planner intent.

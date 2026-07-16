@@ -20,6 +20,13 @@ into the revamp branch.
 
 ## Completed Checkpoints
 
+Completion below is scoped to each checkpoint's retained outputs. The later
+layout review deliberately superseded the topology-facing declaration and
+storage scaffolds from Checkpoints 1 and 2. Their accepted catalog facts,
+controls, Room Control persistence, state-access boundary, and reset behavior
+remain complete; the final layout authority is an entry gate of Checkpoint 3,
+not a retroactive claim about the earlier implementations.
+
 ### Checkpoint 0: Archive and Green Reset
 
 Completed by `733eb58 refactor!: reset planner for revamp`.
@@ -38,11 +45,17 @@ declaration commits.
 
 - declared both routes and the complete F-Q room universe explicitly;
 - normalized rooms, encounters, reward producers, requirements, batch rules,
-  counters, caps, force windows, and finite topology bounds;
+  counters, caps, force windows, and the game facts used to derive finite
+  topology bounds;
 - established strict parsing, coverage, capacity, and game-data audits;
 - embedded reward bindings as the single declaration authority;
 - kept save-progression predicates and unfinished requirements out of
   production declarations.
+
+The room, encounter, reward, requirement, counter, and structural game facts
+established here remain the catalog foundation. The original topology-facing
+declaration shape is the bounded superseded artifact; it is replaced at the
+start of Checkpoint 3 as described below.
 
 ### Checkpoint 2: Static Controls and Managed Storage
 
@@ -51,7 +64,8 @@ Room Control sequence through
 `5357f6d feat(planner): build focused room controls`.
 
 - generated static Route and Room Control manifests from the catalog;
-- bounded persistent storage for every route, biome, room, and local slot;
+- bounded persistent storage for every route, biome, room, and local control
+  slot;
 - added managed UI/runtime state access and reset-to-defaults behavior;
 - centralized composition in `systems.lua` with subsystem-local dependency
   injection;
@@ -61,6 +75,11 @@ Room Control sequence through
 - retained dormant bounded adapters for H, I, N, O, P, and Q;
 - added implementation-support evidence without claiming topology,
   materialization, headless-pipeline, or planner-active support.
+
+The focused Room Controls, reward components, managed-state boundary, and
+composition root remain valid. The biome topology descriptors and their
+persisted dispatch columns are the bounded superseded Checkpoint 2 artifact;
+they are not the final Biome Plan storage model.
 
 ## Delivered Ahead of the Plan
 
@@ -78,9 +97,29 @@ Checkpoint 3 topology and the remaining Checkpoint 4 materializer contracts.
 
 ## Current Frontier
 
-Checkpoint 3, Biome Plan and Standard Topology, is the next implementation
-checkpoint. No production route editor, canonical biome snapshot, validator,
-execution compiler, or runtime hook is active.
+Checkpoint 3, Layout Topology and the F Structural Slice, is the next
+implementation checkpoint. It begins with a bounded declaration, catalog, and
+storage reconciliation before new topology behavior is added:
+
+- replace raw `root`, `terminalRoomKeys`, top-level `batchRuleKey`,
+  specialized-rule lists, deterministic-pair side tables, and room-level
+  `fixed`/`terminal` flags with validated biome `layout` declarations;
+- derive start, terminal, batch-rule, transition-rule, bounds, and persistent
+  topology descriptors, including terminal exit policies and bounded companion
+  links, from the selected layout kind instead of persisting dispatch keys;
+- rename authored encounter phase data to `decisionPhase` at the same authority
+  switch, leaving no competing legacy field;
+- keep verified room-local eligibility, force, exit, reward, encounter, and
+  counter facts unchanged.
+
+This is reconciliation required by Checkpoint 3, not a newly completed
+checkpoint. The switch must be atomic: old and new topology authorities must
+not coexist in production declarations or normalized catalog records.
+
+After that switch, Checkpoint 3 can add the common Biome Plan wrapper, layout
+registry, bounded semantic commands, `LinearBiome` topology, and the F
+structural evidence slice. No production route editor, canonical biome
+snapshot, validator, execution compiler, or runtime hook is active.
 
 The lifecycle design has also been simplified before its Checkpoint 5
 implementation: activation, meaningful commit, and meaningful reload will call

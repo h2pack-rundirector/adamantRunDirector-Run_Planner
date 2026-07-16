@@ -11,6 +11,10 @@ These rooms use one shop realization and fill every other physical door of the
 selected predecessor with a free reward. Devotion and `RoomMoneyDrop` are
 ineligible free rewards.
 
+Their biome terminal declarations use the `allExitsTerminal` exit policy. The
+layout therefore maps every predecessor exit to a realization of this same one
+terminal Room Control; none of those exits contains an ordinary companion room.
+
 `PrebossShopOrFreeReward` is not a reward surface. The behavior is a
 preboss-level offer policy combining a shop component with bounded ordinary
 bag-backed reward choices.
@@ -80,7 +84,9 @@ two exits   -> Shop + Reward1
 three exits -> Shop + Reward1 + Reward2
 ```
 
-The Biome Plan derives and caches this context on commit:
+During normalized topology construction, the registered `PrebossEntry`
+structural rule validates `allExitsTerminal` and derives this immutable context
+from the selected predecessor and its Room Declaration:
 
 ```lua
 {
@@ -92,16 +98,18 @@ The Biome Plan derives and caches this context on commit:
 
 The control never queries the leading Room Control and never persists any of
 these derived facts. Its ordinary read returns the complete bounded authored
-state. Contextual completeness, materialization, candidates, feedback, and UI
-projection receive the cached context from the Biome Plan. Draw only consumes
-the committed projection.
+state. The committed rebuild passes the derived transition context to local
+completeness, the terminal materializer, candidates, and feedback preparation.
+The LinearBiome UI projector places their prepared owner-keyed state into the
+published terminal view. The long-lived Biome Plan does not cache the context,
+and draw only consumes the published projection.
 
 This preserves one-way ownership:
 
 ```text
 selected topology
   -> leading room declaration
-  -> incoming exit context
+  -> PrebossEntry context
   -> active ForkedPreboss offers
 ```
 
@@ -114,8 +122,10 @@ no longer names an active offer becomes invalid and is not silently coerced.
 All active offers must be completely authored because reward simulation uses
 picked and unpicked offers. `entryMode` must select exactly one active offer.
 
-The values belong to the ForkedPreboss control, but the Biome Plan emits their
-offer events while the leading room generates its physical exits, in order:
+The values belong to the ForkedPreboss control. The `PrebossEntry` terminal
+materializer places their concrete offers into the canonical terminal entry in
+physical order, and `historyLayouts["LinearBiome"]` emits their offer events
+while the leading room generates its physical exits:
 
 ```text
 offer Shop
@@ -137,4 +147,4 @@ acquired-reward field is persisted.
 
 Addresses use the preboss room owner plus semantic `shop` or `freeRewardN`
 local keys. Physical exits, the leading room selection, offer-event timing,
-and boss linkage remain biome-owned.
+and boss linkage remain layout/transition-owned.

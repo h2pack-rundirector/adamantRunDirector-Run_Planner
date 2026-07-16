@@ -26,8 +26,9 @@ The control owns one concrete `RunProgress` opening reward:
 Logical persistence is `rewardType` plus the conditional Boon `source`. The
 opening exclusions are explicit facts on the normalized room binding.
 
-The fixed `PreHubGeneratedN` encounter profile and fixed link into `N_Hub`
-are declaration/topology facts, not authored control state.
+The fixed `PreHubGeneratedN` encounter profile is a Room Declaration fact. The
+`N_PreHub01 -> N_Hub` link is part of the `HubBiome` fixed entry sequence.
+Neither is authored control state.
 
 ## Completeness and Addressing
 

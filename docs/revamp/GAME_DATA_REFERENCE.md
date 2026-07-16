@@ -110,12 +110,24 @@ selected leading room's physical exit count minus one. In G this can vary
 up to two free rewards as the selected predecessor changes. F/H/P can expose
 at most one because their declared predecessor topology has at most two exits.
 
-N/O/I/Q have a direct shop-only terminal shape in the supported topology.
-Vanilla selects `I_PreBoss01` before the true ending or for dream runs and
-`I_PreBoss02` after the true ending. The planner does not model that save-state
-branch and canonically uses the later `I_PreBoss02` layout. It inherits
-`MaxCreationsPerRoom = 1` and the explicit `I_WorldShop` from `I_PreBoss01`.
-Q uses `Q_WorldShop`; N/O use the ordinary World Shop.
+N/O/Q have a direct shop-only terminal shape with no companion target in the
+supported topology. Q uses `Q_WorldShop`; N/O use the ordinary World Shop.
+
+I is structurally different. Vanilla selects `I_PreBoss01` before the true
+ending or for dream runs and `I_PreBoss02` after the true ending. The planner
+does not model that save-state branch and canonically uses the later
+`I_PreBoss02` layout. It inherits the explicit `I_WorldShop`,
+`AlwaysForceOncePerRoom = true`, and `MaxCreationsPerRoom = 1` from
+`I_PreBoss01`. Because I predecessors may have two physical exits, the first
+generated exit receives the forced preboss while the cap makes it ineligible
+for the second; that remaining exit receives an ordinary real I room with its
+own reward offer.
+
+The planner represents a selected I terminal as one shop-only preboss plus any
+required unpicked ordinary companion target. It does not model skipping that
+offered preboss and continuing through the companion. This is a deliberate
+prescriptive narrowing: every generated companion and its reward remain
+materialized, but the terminal room is the selected continuation.
 
 `AutocompleteSurfaceShopDelivery` is unrelated to this entry split. The
 planner preserves the multi-door behavior as one unique preboss control with
@@ -335,7 +347,7 @@ It must account for:
 
 - actual physical exit count of each possible source room;
 - deterministic generated sets;
-- terminal batches;
+- terminal realizations and I terminal companion targets;
 - mandatory forced noncombat creations;
 - mutual exclusion and eligibility;
 - depth-local combat eligibility;

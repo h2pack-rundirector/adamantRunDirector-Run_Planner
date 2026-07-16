@@ -1,9 +1,7 @@
 # Reward Hierarchy
 
-Status: locked. The counted-choice, fixed/absent, primitive-choice, and shop
-branches are implemented. Their shared Room Control consumers cover every F/G
-room. Remaining biome-specific structural wrappers are phased by their first
-concrete template consumers.
+Status: locked implementation contract. Current completion and rollout status
+remain in `../IMPLEMENTATION_PROGRESS.md`.
 
 ## Purpose
 
@@ -274,8 +272,9 @@ entry.
 
 `localSlots` owns bounded cage keys and delegates every cage to the same
 compiled RunProgress binding with the BaseH Devotion exclusion. The wrapper
-owns active slots and semantic addresses. The Fields batch validator owns
-cross-cage uniqueness.
+owns the bounded slot addresses; the applicable `FieldsCageBatch` context
+determines how many are active. The Fields batch validator owns cross-cage
+uniqueness.
 
 ### Ephyra side rooms
 
@@ -314,8 +313,16 @@ for the room's outgoing door batch.
 ### Forked preboss offers
 
 Each free slot contains a RunProgress counted binding with Devotion and gold
-excluded. The preboss wrapper owns active free-slot count and entry mode from
-committed predecessor context. It does not alter the child reward domain.
+excluded. The preboss wrapper owns its bounded free slots and authored
+`entryMode`. It consumes the active free-slot count derived from immutable
+`PrebossEntry` predecessor context; it does not own or persist that count and
+does not alter the child reward domain.
+
+Terminal exit population is outside this reward hierarchy. Forked prebosses
+pair this surface with `allExitsTerminal`; I pairs the ordinary direct shop
+surface with `terminalWithCompanions`. Any I companion reward is produced by
+the companion Room Control through the normal Clockwork target path, not by the
+DirectPreboss or shop component.
 
 ## Separate Shop Branch
 
@@ -466,7 +473,7 @@ enumeration, or descriptor allocation.
 
 ## Implementation Sequence
 
-The implemented F/G vertical slice follows the hierarchy bottom-up:
+The F/G vertical slice follows the hierarchy bottom-up:
 
 1. construct payload-domain collaborators from validated declarations;
 2. construct primitive collaborators over those payload domains;
@@ -480,7 +487,8 @@ The implemented F/G vertical slice follows the hierarchy bottom-up:
 8. implement the shared `FixedOpening`, `FixedIntro`, `StandardCombat`,
    `Miniboss`, `Story`, `Fountain`, and `Shop` templates;
 9. compose counted free rewards and a World Shop inside `ForkedPreboss` while
-   leaving active free-reward count in predecessor topology context;
+   consuming the active free-reward count from `PrebossEntry` predecessor
+   context;
 10. remove the generic `store_choice.lua` prototype after the replacement
     passes its typed API and storage tests.
 
@@ -492,9 +500,9 @@ valid shared implementation for another biome.
 Candidates, feedback, canonical materialization, draw views, and history
 simulation remain in their existing later checkpoints.
 
-## Acceptance Questions
+## Acceptance Conditions
 
-This hierarchy is ready to implement when review agrees that:
+This hierarchy remains accepted while:
 
 - surfaces represent behavior rather than filtered option sets;
 - concrete producers own their stores and positive/negative filters;

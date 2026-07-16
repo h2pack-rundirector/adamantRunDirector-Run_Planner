@@ -9,7 +9,8 @@ The central split is:
 
 ```text
 Static semantic leaves -> Lib controls
-Dynamic topology       -> planner-owned Biome Plan objects over Lib storage
+Authored topology      -> layout-specific state behind common Biome Plans
+Prepared layout views  -> layout-specific UI projectors
 Derived route state    -> non-persisted caches rebuilt after commit
 ```
 
@@ -131,13 +132,13 @@ A Biome Plan is a planner-owned Lua object, not a Lib control.
 
 It is constructed once for one route-biome step with targeted dependencies:
 
-- immutable biome and room declarations;
+- the immutable biome layout declaration and room declarations;
 - the route-biome room-control registry;
-- immutable topology and biome-global storage descriptors;
+- the layout-specific topology and biome-global storage descriptor;
+- the registered topology-layout implementation;
 - registered batch-rule implementations;
-- materialization/candidate/feedback collaborators.
 
-It owns semantic topology methods and hides storage row details from draw,
+It owns semantic topology methods and hides physical storage details from draw,
 validation, and room controls.
 
 The module declares the finite topology storage roots before activation. The
@@ -146,47 +147,161 @@ Each semantic operation receives the current UI or runtime state-access
 surface. The long-lived Biome Plan never caches callback-owned data refs,
 control refs, draw services, or ImGui objects.
 
-## Persisted Shape
-
-The semantic topology is a selected tree/spine with dead peer leaves. Physical
-storage may normalize it into bounded tables.
-
-Representative semantic roots for one biome step:
+Topology, history, and UI behavior are registered separately under the shared
+layout-kind key:
 
 ```text
-BiomeState
-Batches
-Targets
-BatchRuleState
+topologyLayouts[layoutKind]
+historyLayouts[layoutKind]
+uiLayouts[layoutKind]
 ```
 
-Representative rows:
+The Biome Plan receives only its topology implementation. The common canonical
+materializer, history coordinator, and UI preparation coordinator receive their
+own registries through system composition; the Biome Plan is not a shared
+behavior container for all three layers.
+
+## Persisted Shape
+
+There is no universal physical topology schema. Each registered layout kind
+has one finite authored-state descriptor declared before module activation and
+translates it into a normalized semantic topology.
+
+### `LinearBiome` Authored State
+
+Representative semantic state:
 
 ```lua
-Batch = {
-    parentRoomControlKey = "Underworld_F_Opening02",
-    rule = "Standard",
-}
+LinearBiomeAuthoredState = {
+    selectedStartRoomControlKey = "Underworld_F_Opening02",
 
-Target = {
-    parentRoomControlKey = "Underworld_F_Opening02",
-    exitIndex = 1,
-    roomControlKey = "Underworld_F_Combat03",
-    picked = true,
+    batches = {
+        {
+            parentRoomControlKey = "Underworld_F_Opening02",
+        },
+    },
+
+    targets = {
+        {
+            parentRoomControlKey = "Underworld_F_Opening02",
+            exitIndex = 1,
+            roomControlKey = "Underworld_F_Combat03",
+            picked = true,
+        },
+    },
+
+    terminalTransition = {
+        parentRoomControlKey = "Underworld_F_Combat17",
+    },
 }
 ```
 
-The exact Lib table schema is an implementation detail, but it must preserve
-these contracts:
+A fixed start is declaration-derived and consumes no persisted choice. A
+`oneOf` start persists the selected Room Control key and defaults to
+unselected. Authored state persists batch and transition presence, structural
+links, selection, and batch-authored values. It does not persist batch-rule,
+continuation-override, terminal-room, or transition-rule keys; normalization
+derives them from the validated layout declaration.
 
-- topology links use stable room-control keys;
-- rows do not duplicate room-local payloads;
-- one room-control key appears in at most one target row;
-- target ordering or explicit exit index preserves game generation order;
-- batch state belongs to its parent/batch key;
-- storage has a declaration-proven finite maximum;
-- malformed profile rows fail at the Biome Plan construction/materialization
-  boundary.
+The terminal-transition semantic state above is fixed. Its physical Lib
+encoding may be a dedicated bounded root or a tagged bounded continuation
+record, provided the layout reader returns the same semantic topology and no
+consumer can observe the encoding.
+
+When the declared terminal exit policy is `terminalWithCompanions`, the same
+transition record additionally owns bounded ordinary target links for every
+nonterminal predecessor exit:
+
+```lua
+terminalTransition = {
+    parentRoomControlKey = "Underworld_I_Combat12",
+    companionTargets = {
+        {
+            exitIndex = 2,
+            roomControlKey = "Underworld_I_Combat17",
+        },
+    },
+}
+```
+
+The terminal exit is the first active physical exit in declaration generation
+order and is derived rather than persisted. Companion links carry no `picked`
+field: the terminal is selected and every companion is an unpicked dead leaf.
+I predecessors admit at most one companion. Layout target bounds include these
+links even though they do not belong to an ordinary continuing batch.
+
+### `HubBiome` Authored State
+
+Representative semantic state:
+
+```lua
+HubBiomeAuthoredState = {
+    hubDoorCount = 10,
+
+    hubTargets = {
+        {
+            doorIndex = 1,
+            roomControlKey = "Surface_N_Combat01",
+            visitOrder = 3,
+        },
+        {
+            doorIndex = 2,
+            roomControlKey = "Surface_N_Combat02",
+            visitOrder = 0,
+        },
+    },
+
+    terminalTransition = true,
+}
+```
+
+`visitOrder = 0` means generated but unvisited. Positive values are unique and
+form `1..6` in a complete N topology. The fixed entry sequence, hub room,
+batch rule, visited-target count, and terminal room are declaration-derived.
+Hub returns are derived and never persisted as repeated rooms or cycles.
+
+### Normalized Topology Boundary
+
+`biomePlan:readTopology(stateAccess)` copies the relevant authored state and
+returns one normalized variant:
+
+```text
+LinearBiomeTopology
+HubBiomeTopology
+```
+
+This is not a canonical snapshot. It contains structural references, authored
+layout state, and declaration-derived dispatch facts, but no materialized Room
+Control fragments, history counters, findings, widgets, or presentation.
+
+Normalization may attach `continuationOverrideKey`, `batchRuleKey`, immutable
+rule configuration, `transitionRuleKey`, terminal exit policy, and companion
+batch-rule configuration for downstream dispatch. Those facts never become raw
+persistence.
+
+The topology contact boundary rejects malformed persisted state such as:
+
+- unknown, cross-route, or cross-biome Room Control keys;
+- duplicate control use where the layout requires injectivity;
+- duplicate physical exit or hub-door indexes;
+- target or batch counts outside declared bounds;
+- contradictory batch selection or visit-order state;
+- downstream structure owned by an unselected dead leaf;
+- a terminal transition with an unknown or unselected predecessor;
+- missing, excess, picked, or exit-incompatible terminal companion targets;
+- a selected linear source with both a generated batch and terminal
+  transition;
+- state not admitted by the registered layout kind.
+
+Incomplete but well-formed authored state remains readable. Examples include
+an unselected `oneOf` start, a missing target, a batch without a picked target,
+fewer than six N visits, or a selected nonterminal continuation with no next
+batch or terminal transition.
+
+Every physical descriptor must preserve stable Room Control keys, physical
+exit or hub-door order, parent-owned batch state, and declaration-proven finite
+bounds. It must not duplicate Room Control payloads or canonical materialized
+data.
 
 There is no persisted global `PlannerDraft`, occurrence ID allocator, revision
 counter, dynamic control schema, or copied canonical document.
@@ -196,14 +311,17 @@ counter, dynamic control schema, or copied canonical document.
 | State | Semantic owner | Physical persistence |
 | --- | --- | --- |
 | Route prefix and route globals | Route Control | Route-control storage |
-| Biome globals | Biome Plan | Module data roots scoped to biome step |
-| Generated batches and links | Biome Plan | Module table roots scoped to biome step |
-| Picked state / visit order | Biome Plan or batch rule | Module table roots scoped to biome step |
+| Layout kind and structural roles | Biome Layout Declaration | Immutable catalog data; not persisted |
+| Biome globals | Biome Plan | Layout-specific module roots scoped to biome step |
+| Generated batches, terminal transitions, companion targets, and links | Biome Plan | Layout-specific bounded module storage |
+| Picked state / visit order | Biome Plan | Layout-specific bounded module storage |
+| Batch and transition dispatch keys | Biome Layout Declaration and normalized topology | Derived; not persisted |
 | Room-local fields | Room Control | Room-control private storage |
 | Bounded room-internal child state | Parent Room Control | Parent-control private storage |
 | Optional encounter presence and phase offers | Parent Room Control | Parent-control private storage |
 | Generated target reward | Target Room Control | Room-control private storage |
-| Peer-wide batch state | Batch rule | Biome Plan batch-state storage |
+| Terminal entry mode, shop state, and free-reward slots | Terminal Room Control | Room-control private storage |
+| Peer-wide authored batch state | Generated batch governed by its batch rule | Layout-specific batch storage |
 | Selected tab/filter/view state | UI composition | Transient module data |
 | Materialized canonical plan | Route derived cache | Non-persisted Lua state |
 | History and validation result | Route derived cache | Non-persisted Lua state |
@@ -215,35 +333,92 @@ counter, dynamic control schema, or copied canonical document.
 Representative semantic operations:
 
 ```lua
-biomePlan:rootRoomControlKey()
-biomePlan:batch(parentRoomControlKey)
-biomePlan:linkTarget(parentRoomControlKey, exitIndex, roomControlKey)
-biomePlan:unlinkTarget(parentRoomControlKey, exitIndex)
-biomePlan:setPicked(parentRoomControlKey, exitIndex)
-biomePlan:removeDownstream(parentRoomControlKey)
-biomePlan:clearTopology()
-biomePlan:isComplete(context)
-biomePlan:materialize(context)
-biomePlan:exportCandidates(out, context)
-biomePlan:preparePresentation(findings, out, context)
+biomePlan:readTopology(stateAccess)
+biomePlan:checkStructure(topology)
+biomePlan:apply(uiStateAccess, command)
+biomePlan:traverse(topology, visitor)
+biomePlan:semanticAddress(subject)
+biomePlan:clearTopology(uiStateAccess)
 ```
 
 Exact names may change. The invariants do not:
 
 - the Biome Plan is the only topology write boundary;
+- the registered topology-layout implementation interprets every operation;
 - it validates the complete mutation before staging writes;
 - it maintains injective room-control references;
-- replacing or removing a picked link removes downstream topology;
+- changing a start, selected continuation, or continuation form removes the
+  incompatible downstream topology;
 - topology removal does not reset the unlinked room control;
 - room controls never write parent/peer topology.
 
-Multi-field edits are semantic operations performed during one draw call. They
-must validate their intended final state first and then stage all required Lib
-writes before returning.
+The Biome Plan does not materialize canonical snapshots, build history, or
+prepare UI views. The common materializer and registered history/UI consumers
+use its normalized traversal and semantic addresses through their own
+composition roots.
 
-Read-only traversal, completeness, and materialization operations accept both
-UI and runtime state-access surfaces. Topology mutation operations require the
+Multi-field edits are semantic commands performed during one draw call. A
+command reads current topology, constructs and validates the full proposed
+replacement in unpublished Lua state, and only then stages every required Lib
+write. Callers never manipulate bounded storage records directly.
+
+Read-only topology reads, structure checks, and traversal accept both UI and
+runtime state-access surfaces. Topology mutation operations require the
 writable UI surface and are not present on `RuntimeStateAccess`.
+
+### `LinearBiome` Commands
+
+Representative commands are:
+
+```lua
+{ kind = "SelectStart", roomControlKey = ... }
+{ kind = "CreateBatch", parentRoomControlKey = ... }
+{ kind = "SetTarget", parentRoomControlKey = ..., exitIndex = ..., roomControlKey = ... }
+{ kind = "SetPicked", parentRoomControlKey = ..., exitIndex = ... }
+{ kind = "RemoveTarget", parentRoomControlKey = ..., exitIndex = ... }
+{ kind = "RemoveBatch", parentRoomControlKey = ... }
+{ kind = "CreateTerminalTransition", parentRoomControlKey = ... }
+{ kind = "SetTerminalCompanion", exitIndex = ..., roomControlKey = ... }
+{ kind = "RemoveTerminalCompanion", exitIndex = ... }
+{ kind = "RemoveTerminalTransition" }
+{ kind = "ReplaceWithBatch", parentRoomControlKey = ... }
+{ kind = "ReplaceWithTerminalTransition", parentRoomControlKey = ... }
+{ kind = "ClearTopology" }
+```
+
+Changing a selected start clears topology under the previous start. Changing
+the picked target clears topology under the former selected continuation and
+leaves the new continuation incomplete. Room Control persistence remains
+untouched.
+
+`CreateBatch` and `CreateTerminalTransition` reject a source that already owns
+the opposite continuation form. The two `ReplaceWith...` commands are the
+explicit atomic operations that remove one form and install the other. Force,
+eligibility, normalization, and validation never invoke these mutations.
+
+Terminal-companion commands exist only when the layout declaration admits
+them. They mutate links inside the terminal transition, never create a second
+continuing batch, and reject the derived terminal exit. Removing the terminal
+transition removes its companion links but does not reset their Room Control
+persistence.
+
+### `HubBiome` Commands
+
+Representative commands are:
+
+```lua
+{ kind = "SetHubDoorCount", count = 9 }
+{ kind = "SetHubTarget", doorIndex = ..., roomControlKey = ... }
+{ kind = "SetVisitOrder", doorIndex = ..., visitOrder = ... }
+{ kind = "ClearHubTarget", doorIndex = ... }
+{ kind = "CreateTerminalTransition" }
+{ kind = "RemoveTerminalTransition" }
+{ kind = "ClearTopology" }
+```
+
+These are commands of the `HubBiome` implementation, not conditional cases in
+the linear command handler. Its persistent hub batch and separate post-visit
+terminal transition may coexist.
 
 ## Room Control Interface
 
@@ -276,30 +451,49 @@ callback-owned control ref or persisted control state.
 
 ## UI Composition
 
-The draw surface is ordinary immediate-mode Lua composition:
+UI projectors are registered separately from topology implementations. During
+the committed rebuild, `uiLayouts[layoutKind]` combines normalized topology,
+owner-keyed candidate state, owner-keyed feedback, and `processingState` into a
+prepared biome view. One view is prepared for every configured biome after all
+configured topology has passed normalization, including inactive views beyond
+the semantic processing horizon. Draw is then ordinary immediate-mode Lua
+composition:
 
 ```text
 draw route shell
   -> draw selected biome navigation
-  -> ask Biome Plan for selected topology
-  -> draw parent batch
-  -> draw each referenced Room Control
-  -> follow picked continuation
+  -> consume the published prepared biome view
+  -> draw layout-owned structure
+  -> draw referenced Room Controls through current UI refs
+  -> stage semantic commands for user edits
 ```
 
 The draw code threads the current `ui` callback surface through calls. It does
 not cache `ui.data`, `ui.controls`, `ui.draw`, or writable refs for runtime use.
 
-Room controls render their own local state. The Biome Plan renderer owns batch
-layout, peer grouping, picked affordances, and branch mutation controls.
+The `LinearBiome` projector may present a starting section, one decision row
+per generated batch on the selected path, and a terminal section. That
+terminal section also presents any layout-owned unpicked companion targets and
+their Room Controls. The
+`HubBiome` projector may present a fixed-entry summary, physical hub-door grid,
+ordered visit list, visited pylon panels, and terminal section. UI rows, cards,
+columns, and display ordinals are transient presentation only and never become
+topology identity or gameplay counters.
+
+Room Controls render their own local state. The layout projector owns
+structural grouping, peer/visit affordances, and placement of owner-keyed
+presentation. The Biome Plan itself is not a renderer. Draw never builds
+canonical snapshots, history, validation, or topology projection.
 
 Declaration-time impossible room options may be omitted. Once the current
 biome is complete and contextual validation exists, context-invalid options
 remain visible and receive invalid presentation. Before completeness, the
 stable declaration-derived domain and completeness presentation are the only
-authoritative state. Downstream content after the first blocking invalid may
-be grey/inactive. Route status and markers are the common invalid-reporting
-path; inline invalid labels are not a second feedback language.
+authoritative state. Downstream content after the first incomplete or blocking
+invalid biome is grey/inactive and marked `blockedByEarlierBiome` rather than
+receiving invented local findings. Route status and markers are the common
+invalid-reporting path; inline invalid labels are not a second feedback
+language.
 
 ## Candidates and Feedback
 
@@ -325,6 +519,54 @@ Batch candidate address:
     parentRoomControlKey = "Underworld_F_Combat02",
     exitIndex = 2,
     aspect = "targetRoom",
+}
+```
+
+Hub target address:
+
+```lua
+{
+    routeKey = "Surface",
+    biomeStepKey = "Surface_N",
+    batchKey = "hubDoors",
+    doorIndex = 4,
+    aspect = "targetRoom",
+}
+```
+
+Terminal-transition address:
+
+```lua
+{
+    routeKey = "Underworld",
+    biomeStepKey = "Underworld_F",
+    parentRoomControlKey = "Underworld_F_Combat17",
+    transitionKey = "prebossEntry",
+    aspect = "continuation",
+}
+```
+
+Terminal companion address:
+
+```lua
+{
+    routeKey = "Underworld",
+    biomeStepKey = "Underworld_I",
+    parentRoomControlKey = "Underworld_I_Combat12",
+    transitionKey = "prebossEntry",
+    exitIndex = 2,
+    aspect = "companionTargetRoom",
+}
+```
+
+Terminal Room Control entry-mode address:
+
+```lua
+{
+    routeKey = "Underworld",
+    biomeStepKey = "Underworld_F",
+    roomControlKey = "Underworld_F_PreBoss01",
+    aspect = "entryMode",
 }
 ```
 
@@ -360,20 +602,30 @@ Feedback resolution during the committed rebuild is direct:
 
 ```text
 biomeStepKey
-  -> Biome Plan
-      -> roomControlKey or parent batch
-          -> semantic provider/component
+  -> semantic owner address
+      -> Room Control/local-slot translator
+      or layout batch/visit/terminal translator
+          -> owner-keyed presentation
+              -> layout-specific prepared UI view
 ```
 
-There is no mapping from game room keys to dynamic occurrence rows. The room
-template, local-slot descriptor, or batch descriptor is already the semantic
-presentation translator for its owner address.
+There is no mapping from game room keys to dynamic occurrence rows. The Room
+Control template, local-slot descriptor, or layout-owned structural descriptor
+is already the semantic translator for its owner address. The UI projector
+decides where that translated state appears without changing the address.
 
-Providers use stable candidate arrays. Validation rebuilds mutable visibility,
-color, and message arrays only when committed route state changes. The
-coordinator stores the translated per-owner views in the route-derived cache;
-feedback preparation never requires a live UI ref, widget alias lookup, or
-storage-row arithmetic.
+Providers use stable declaration-derived candidate arrays. Context-invalid
+values remain present and receive mutable validity, color, and message state;
+only declaration-impossible values are absent. Before biome completeness,
+providers expose the stable domain and owner-keyed completeness presentation,
+not authoritative contextual validity. The coordinator stores translated
+per-owner views in the route-derived cache; feedback preparation never
+requires a live UI ref, widget alias lookup, or storage-position arithmetic.
+
+Applying a structural candidate produces a semantic Biome Plan command.
+Applying a room-local candidate calls the owning Room Control's semantic
+interface. Neither path writes dropdown indexes, private aliases, or bounded
+table records directly.
 
 ## Profiles, Commit, and Derived State
 
@@ -386,14 +638,25 @@ One commit publication cycle is:
 2. draw stages semantic edits through UI-only refs and returns;
 3. Lib commits dirty state;
 4. `module.onCommit(...)` observes `hadConfigChanges()` and reads one coherent
-   committed snapshot;
-5. the planner walks configured biomes in order through completeness,
-   materialization, history, and validation;
-6. semantic findings are translated by their room-template, local-slot, or
-   batch descriptors into a fresh non-persisted presentation cache;
-7. the planner compiles a complete execution plan or leaves it absent;
-8. presentation, canonical/history/validation, and execution results are
+   committed authored state;
+5. the planner normalizes every configured biome topology, failing loudly if
+   any configured structure violates its contact-boundary contract;
+6. the planner walks those normalized biomes in order through completeness,
+   materialization, history, and validation until the first blocker;
+7. semantic findings are translated by their Room Control, local-slot, or
+   layout-structural descriptors into owner-keyed presentation;
+8. `uiLayouts[layoutKind]` projects normalized topology, owner presentation,
+   and derived `processingState` into one fresh non-persisted view for every
+   configured biome;
+9. the planner compiles a complete execution plan or leaves it absent;
+10. prepared views, canonical/history/validation, and execution results are
    atomically published as one derived result.
+
+Configured biomes after the first incomplete or invalid biome receive
+`processingState = "blockedByEarlierBiome"`. Their normalized authored rows
+remain visible but inactive, with stable declaration-derived value domains and
+without local completeness findings, contextual candidate validity, or
+enrichment. `processingState` is presentation-only and is never persisted.
 
 Draw must not flush config, rebuild derived state, apply feedback, or publish
 half-edited canonical plans. One draw call consumes one published prepared view
@@ -401,7 +664,7 @@ without trying to revise feedback after a widget stages an edit. The edit frame
 may therefore display the prior committed presentation. `onCommit` rebuilds and
 publishes before the next draw, so same-frame feedback is not a contract.
 
-If rebuilding the committed snapshot hits a contract failure, the failure
+If rebuilding the committed authored state hits a contract failure, the failure
 remains loud and the coordinator clears the previously published result before
 surfacing it. The planner must not retain or reactivate the previous plan, clamp
 malformed input, or translate the failure into ordinary user-invalid feedback.
@@ -421,13 +684,15 @@ does not rebuild.
 
 Topology editing and full persisted reset are different operations.
 
-`unlink target`
-: Removes the topology link and downstream branch. It preserves the now-dormant
-  room control's local state.
+`remove or replace a continuation`
+: Uses the applicable layout command to remove the target, batch, terminal
+  transition, visit, or incompatible downstream structure. It preserves every
+  now-dormant Room Control's local state.
 
 `clear biome topology`
-: Clears that Biome Plan's topology and biome-global state. Room controls are
-  preserved and become dormant when no longer referenced.
+: Uses the layout's `ClearTopology` command to clear that Biome Plan's authored
+  structure and biome-global state. Room Controls are preserved and become
+  dormant when no longer referenced.
 
 `reset to defaults`
 : Uses Lib's full module reset lifecycle. It resets all persisted module data
@@ -444,10 +709,11 @@ Draw is a hot path. The revamp uses one commit-rebuild boundary:
 
 ```text
 committed authored change
+  -> normalize topology for every configured biome
   -> process complete biomes in route order
   -> materialize, append history, and validate each biome once
   -> stop at the first incomplete or invalid biome
-  -> translate findings into a fresh prepared presentation cache
+  -> translate findings and project every configured biome into a fresh cache
   -> compile or clear the execution plan
   -> atomically publish one derived result
   -> draw authored values plus that prepared view until next commit
@@ -460,7 +726,7 @@ Required practices:
 - cache declaration-derived topology keys and index metadata;
 - pass the current callback state-access surface into semantic operations;
 - reuse option/value/label arrays;
-- mutate prepared color/visibility/message arrays only in an unpublished build
+- mutate prepared validity/color/message arrays only in an unpublished build
   buffer;
 - never mutate the currently published presentation result; reusable buffers
   become writable again only after they are no longer published;
@@ -475,7 +741,7 @@ Required practices:
 
 Do not rebuild:
 
-- one global root draft that owns every route, topology row, and payload;
+- one global root draft that owns every route, topology record, and payload;
 - occurrence IDs separate from room controls;
 - multiple logical control instances for one concrete room control;
 - reward vessels for unpicked combat rooms;

@@ -11,9 +11,10 @@ dynamic topology:
 ```text
 Route Plan
   -> ordered Biome Plans
-      -> generated batches owned by entered rooms
-          -> unique concrete Room Controls
-              -> room-local authored state and rewards
+      -> one declared Biome Layout per route-biome step
+          -> authored topology in that layout's structural language
+              -> unique concrete Room Controls
+                  -> room-local authored state and rewards
 ```
 
 The planner is prescriptive. It constructs one concrete legal route and all
@@ -66,9 +67,28 @@ exceptions.
   authored controls and state.
 
 `Biome Plan`
-: The topology and biome-global authored state for one route-biome step. It is
-  the only owner of generated batches, target links, picked state, and
-  biome-specific structural decisions.
+: The authored topology and biome-global state for one route-biome step. It
+  delegates structural interpretation to the step's declared layout kind and
+  is the only owner of structural choices such as generated batches, target
+  links, picked state, ordered visits, and terminal-transition presence.
+
+`Biome Layout Declaration`
+: The immutable structural contract for one biome. It selects a registered
+  layout kind and declares relationships and roles such as starts, fixed entry
+  sequences, continuation rules, specialized structural overrides, the
+  terminal room, and topology bounds. It does not copy intrinsic Room
+  Declaration facts such as eligibility, force, or physical exits.
+
+`Biome Layout Kind`
+: A registered structural language that defines the bounded authored topology,
+  structural completeness, semantic mutations, and traversal contract for a
+  family of biomes. The current domain requires `LinearBiome` and `HubBiome`.
+
+`Authored Biome Topology`
+: The route-biome step's committed structural choices interpreted under its
+  Biome Layout Declaration. It contains domain relationships such as batches,
+  targets, selected continuations, visits, and terminal transitions. It is not
+  a UI row model, canonical snapshot, or lifecycle history.
 
 `Room Declaration`
 : Verified game data for one concrete game room key such as `F_Combat04`. It
@@ -81,7 +101,7 @@ exceptions.
   stable phase keys, order, kind, optional presence, baseline encounter
   identity and `biomeEncounterDepth` effect, and any reward offer point attached
   to that phase. Optional presence is decided at an explicitly named lifecycle
-  snapshot, not recomputed while later phases execute. Concrete baseline keys
+  point, not recomputed while later phases execute. Concrete baseline keys
   remain leaf facts on the profile phase; there is no parallel registry of
   empty encounter-name records.
 
@@ -114,8 +134,19 @@ exceptions.
 
 `Generated Batch`
 : The complete set of rooms generated together from a source room. It owns
-  physical exit association, peer membership, picked state, batch rules, and
-  batch-authored state.
+  physical exit association, peer membership, picked state or selection order,
+  and batch-authored state. Its governing rule is derived from the validated
+  Biome Layout Declaration and structural context rather than authored as an
+  independent topology choice.
+
+`Terminal Transition`
+: A structural continuation that closes a biome at its one declared terminal
+  room. Every supported biome uses `PrebossEntry`. The layout's terminal exit
+  policy determines how the predecessor's physical exits are populated, while
+  the terminal Room Control's entry-offer policy determines only its local
+  shop/free-reward realization. A terminal transition may therefore contain
+  bounded unpicked companion targets without becoming an ordinary continuing
+  batch.
 
 `Dormant Room Control`
 : A declared room control that is not referenced by the current topology. Its
@@ -196,8 +227,12 @@ Room Control's canonical fragment.
 
 ### Injective Topology References
 
-Within one Biome Plan, one top-level room control may be referenced by at most
-one generated target. The topology-to-control mapping is injective:
+Within one Biome Plan, one top-level Room Control represents at most one room
+occurrence in the authored topology. It may occupy a declared start or fixed
+entry role, a generated target role, or the terminal role. A control already
+occupying one occurrence cannot be introduced as a second generated target or
+second terminal occurrence. Generated-target allocation is therefore
+injective:
 
 ```text
 one generated target -> one room control
@@ -278,12 +313,12 @@ It does not own room-local payloads or duplicate biome topology inside one root
 document.
 
 After a meaningful committed configuration lifecycle event, route orchestration
-reads one coherent committed snapshot and rebuilds into unpublished local state.
-Success atomically replaces the processed biome snapshots, history, validation
-result, prepared presentation state, and execution plan as one derived result.
-A contract failure clears the previously published result before surfacing the
-error, so no old execution plan remains active for changed configuration. None
-of this derived state is persisted.
+reads one coherent committed authored state and rebuilds into unpublished local
+state. Success atomically replaces the canonical biome snapshots, history,
+validation result, one prepared view per configured biome, and execution plan
+as one derived result. A contract failure clears the previously published
+result before surfacing the error, so no old execution plan remains active for
+changed configuration. None of this derived state is persisted.
 
 ## Room Catalog and Templates
 
@@ -332,57 +367,51 @@ state between concrete rooms.
 
 ## Biome Topology
 
-The Biome Plan stores links between room controls. A representative ordinary
-shape is:
+The raw biome declaration field is `layout`. `Topology` is reserved for the
+authored or normalized structural state interpreted under that declaration.
+The common Biome Plan delegates structural reads, completeness, mutation, and
+traversal to the registered implementation for its layout kind. It does not
+switch on concrete biome or room names.
 
-```lua
-biomePlan = {
-    biomeStepKey = "Underworld_F",
-    rootRoomControlKey = "Underworld_F_Opening02",
-    batches = {
-        {
-            parentRoomControlKey = "Underworld_F_Opening02",
-            rule = "Standard",
-            targets = {
-                {
-                    exitIndex = 1,
-                    roomControlKey = "Underworld_F_Combat03",
-                    picked = true,
-                },
-                {
-                    exitIndex = 2,
-                    roomControlKey = "Underworld_F_Combat06",
-                    picked = false,
-                },
-            },
-        },
-    },
-}
-```
+`LinearBiome` models a declared start followed by a selected chain of
+continuations. A continuation is either:
 
-For an ordinary batch:
+- one generated batch whose selection identifies the next entered target; or
+- one terminal transition to the declared terminal Room Control.
 
-- every target references one existing room control;
-- target room controls are distinct within the entire Biome Plan;
-- targets reference declared physical exits by index;
-- exactly one target is picked;
-- the picked target is the next entered room;
-- only the picked target may own the next outgoing batch;
-- unpicked targets are dead leaves;
-- terminal rooms own no outgoing batch.
+These continuation forms are mutually exclusive at every selected source,
+including while the topology is incomplete. A declared terminal exit policy
+may place ordinary unpicked companion targets on physical exits beside the
+selected terminal room; those targets are owned inside the terminal transition
+and never continue traversal. All other unpicked generated targets are likewise
+dead leaves. There is no independent entered-room list that can disagree with
+the selected path.
 
-The selected biome path is derived by starting at the root and repeatedly
-following the picked target. There is no independent entered-room list that
-can disagree with batch selection.
+`HubBiome` models a fixed entry sequence, one persistent hub batch, ordered
+visits selected from that batch, derived returns to the same physical hub, and
+a separate post-visit terminal transition. Its persistent batch and terminal
+transition occupy different structural slots and may coexist. Repeated hub
+visits never create repeated `N_Hub` controls or cyclic control links.
 
-Biome-specific batch rules may replace `exactly one picked` with a richer
-selection rule, but they must retain explicit ownership and deterministic
-materialization. N hub visit order, H cage batches, and Q deterministic sets
-are extensions, not exceptions hidden in the generic walker.
+Every generated target references an existing Room Control, a declared
+physical exit, and a unique topology occurrence. The applicable batch rule is
+derived from the layout's default continuation rule and any explicit ordered
+structural override. Override selectors may inspect topology-visible
+structural context, but never lifecycle counters or history. Batch and
+transition rule keys are normalized declaration facts, not persisted authored
+choices.
 
-Cycles are not represented by linking a room control to itself. A biome such
-as N that revisits a physical hub models hub traversal as biome-owned structure
-and ordered visits. It does not create repeated `N_Hub` controls.
+Every supported layout closes through one `PrebossEntry` terminal transition.
+That transition references the single terminal Room Control declared by the
+layout and interprets the layout's declared terminal exit policy. It may derive
+immutable predecessor context such as physical exit count, materialize several
+reward realizations of the same terminal room, or carry bounded ordinary
+companion targets. It never manufactures duplicate terminal controls.
+
+Room eligibility, force, and caps never mutate topology. They determine the
+legality of explicit authored choices and the feedback attached to them.
+Context-invalid choices remain representable; only declaration-impossible or
+structurally malformed choices are absent or rejected.
 
 ## State Ownership
 
@@ -390,17 +419,35 @@ and ordered visits. It does not create repeated `N_Hub` controls.
 
 The Biome Plan owns:
 
-- root selection;
-- outgoing batches;
-- parent-to-target links;
-- picked flags or specialized selection order;
+- its one declared layout association;
+- layout-specific authored topology;
+- start selection where the declaration provides alternatives;
+- generated batches and parent-to-target links;
+- picked flags or ordered visits;
 - physical exit indexes;
-- peer-level batch rules;
 - batch-authored state;
+- terminal-transition presence, structural predecessor relationship, and
+  policy-admitted companion target links;
 - biome-global authored state;
 - topology mutation and structural completeness.
 
 Outgoing topology never belongs to a target room control.
+
+### Biome Layout Declaration
+
+The Biome Layout Declaration owns immutable structure:
+
+- layout kind;
+- start alternatives or fixed entry sequence;
+- default continuation rule and explicit structural overrides;
+- persistent hub structure where applicable;
+- terminal-room membership, terminal-transition rule, and terminal exit
+  policy;
+- declaration-proven topology bounds.
+
+Start, fixed-entry, and terminal roles are not independently authored booleans
+on Room Declarations. A normalized catalog may expose derived role annotations
+for efficient lookup, but the layout declaration remains their only authority.
 
 ### Room Control
 
@@ -424,14 +471,27 @@ calling the control.
 
 A batch owns facts that require seeing peers simultaneously:
 
-- selection rule;
+- peer selection or visit-order state governed by its derived rule;
 - duplicate restrictions;
 - peer generation order;
 - force-pressure occupancy;
 - H cage roll or other peer-wide state;
 - batch completeness and validation candidates.
 
-Batch rules must not be copied into each child room.
+Batch state and behavior must not be copied into each child room. The rule key
+that selects that behavior comes from the validated layout declaration and
+normalized structural context, not authored persistence.
+
+### Terminal Transition
+
+The terminal transition owns the structural fact that a selected continuation
+closes at the layout's declared terminal. Its declared exit policy also owns
+the association between predecessor exits, the one selected terminal
+realization, and any bounded unpicked companion targets. It does not own the
+terminal room's shop, free-reward choices, entry mode, or other local authored
+state. Those remain on the one terminal Room Control, which receives immutable
+predecessor context when materialized. Companion target rewards and local state
+remain owned by their referenced Room Controls.
 
 ## Reward Ownership and Timing
 
@@ -495,15 +555,23 @@ This keeps topology editing separate from destructive data reset.
 ## Completeness, Materialization, and Validation
 
 Completeness and legality are separate and are applied one biome at a time in
-route order.
+route order. Before that semantic walk begins, every configured Biome Plan is
+normalized at its topology contact boundary. A malformed configured topology
+is an invariant failure even when an earlier biome would later block semantic
+processing.
 
 Local completeness asks whether every referenced owner has enough authored
 state to materialize:
 
+- the layout-specific topology is structurally closed;
 - referenced room controls are complete for their template;
-- batches have complete peers, exits, selection, and batch state;
+- generated batches have complete peers, exits, selection or visit order, and
+  batch state;
+- the declared terminal transition is present and structurally complete,
+  including every active companion target required by its exit policy;
 - biome-global required state is complete;
-- the selected continuation reaches a declared terminal.
+- every selected continuation reaches the declared terminal under that
+  layout's traversal contract.
 
 Only referenced controls participate. A complete biome may still be illegal
 under game rules.
@@ -515,10 +583,20 @@ validated. Only a valid biome allows the next configured biome to be
 processed. No execution plan is compiled unless every configured biome passes
 this sequence.
 
+Prepared UI structure has a wider horizon than semantic processing. Every
+configured biome whose topology normalized successfully receives a prepared
+view. Biomes after the first incomplete or invalid one are marked
+`blockedByEarlierBiome`; their authored structure remains visible and inactive,
+but they produce no local completeness, history, validation, contextual
+candidate, or enrichment result.
+
 Materialization produces concrete canonical facts:
 
+- the layout kind and concrete structural roles needed for traversal;
 - selected physical room sequence;
 - every generated peer target;
+- the concrete terminal entry, immutable predecessor context, and any unpicked
+  terminal companion targets;
 - every generated reward offer;
 - selected acquisitions;
 - typed room and batch state;
@@ -544,7 +622,7 @@ biome.complete
 
 `room.prepare_encounters` resolves the complete phase sequence, including
 optional-phase presence and any enabled persistent encounter replacement,
-against the pre-sequence counter snapshot. The sequence then emits each
+against the pre-sequence counter state. The sequence then emits each
 effective phase's events in order. A counting combat phase may therefore emit:
 
 ```text
