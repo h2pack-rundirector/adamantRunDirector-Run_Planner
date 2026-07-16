@@ -4,22 +4,31 @@ local terminalTransitions = deps.terminalTransitions
 
 local linearBiome = {}
 
+local function supportsImplementation(implementation)
+    return type(implementation) == "table"
+        and type(implementation.normalize) == "function"
+        and type(implementation.checkStructure) == "function"
+end
+
 function linearBiome.supports(biome)
     local continuation = biome.layout.continuation
-    if batchImplementations[continuation.defaultBatchRuleKey] == nil then
+    if not supportsImplementation(
+        batchImplementations[continuation.defaultBatchRuleKey]
+    ) then
         return false
     end
     for _, override in ipairs(continuation.overrides) do
-        if batchImplementations[override.batchRuleKey] == nil then
+        if not supportsImplementation(batchImplementations[override.batchRuleKey]) then
             return false
         end
     end
     local terminal = biome.layout.terminal
-    if terminalTransitions[terminal.transitionRuleKey] == nil then
+    if not supportsImplementation(terminalTransitions[terminal.transitionRuleKey]) then
         return false
     end
     local companionRuleKey = terminal.exitPolicy.companionBatchRuleKey
-    return companionRuleKey == nil or batchImplementations[companionRuleKey] ~= nil
+    return companionRuleKey == nil
+        or supportsImplementation(batchImplementations[companionRuleKey])
 end
 
 local function fail(context, path, message)
@@ -234,6 +243,9 @@ local function normalizeCompanions(context, authored, claims)
             roomControlKey = targetRoom.control.key,
         }
     end
+    table.sort(result, function(left, right)
+        return left.exitIndex < right.exitIndex
+    end)
     return result
 end
 
@@ -411,6 +423,232 @@ function linearBiome.readTopology(context, authored)
         batches = orderedBatches,
         terminalTransition = terminal,
     }
+end
+
+local function semanticAddress(context, subject)
+    if type(subject) ~= "table" then
+        fail(context, "semanticAddress", "expected a semantic subject")
+    end
+    local address = {
+        routeKey = context.biome.routeKey,
+        biomeStepKey = context.biome.biomeStepKey,
+    }
+    if subject.kind == "start" then
+        address.ownerKind = "layoutStart"
+        address.ownerKey = "start"
+        address.aspect = "startRoom"
+    elseif subject.kind == "batch" then
+        address.ownerKind = "batch"
+        address.ownerKey = subject.parentRoomControlKey
+        address.parentRoomControlKey = subject.parentRoomControlKey
+        address.batchKey = "nextDoors"
+        address.aspect = "batch"
+    elseif subject.kind == "batchTarget" then
+        address.ownerKind = "batchTarget"
+        address.ownerKey = subject.parentRoomControlKey
+        address.parentRoomControlKey = subject.parentRoomControlKey
+        address.batchKey = "nextDoors"
+        address.exitIndex = subject.exitIndex
+        address.aspect = "targetRoom"
+    elseif subject.kind == "batchContinuation" then
+        address.ownerKind = "batch"
+        address.ownerKey = subject.parentRoomControlKey
+        address.parentRoomControlKey = subject.parentRoomControlKey
+        address.batchKey = "nextDoors"
+        address.aspect = "continuation"
+    elseif subject.kind == "continuation" then
+        address.ownerKind = "continuation"
+        address.ownerKey = subject.parentRoomControlKey
+        address.parentRoomControlKey = subject.parentRoomControlKey
+        address.aspect = "continuation"
+    elseif subject.kind == "terminalTransition" then
+        address.ownerKind = "terminalTransition"
+        address.ownerKey = subject.parentRoomControlKey
+        address.parentRoomControlKey = subject.parentRoomControlKey
+        address.transitionKey = "prebossEntry"
+        address.aspect = "continuation"
+    elseif subject.kind == "terminalCompanion" then
+        address.ownerKind = "terminalTransition"
+        address.ownerKey = subject.parentRoomControlKey
+        address.parentRoomControlKey = subject.parentRoomControlKey
+        address.transitionKey = "prebossEntry"
+        address.exitIndex = subject.exitIndex
+        if subject.roomControlKey ~= nil then
+            address.roomControlKey = subject.roomControlKey
+        end
+        address.aspect = "companionTargetRoom"
+    else
+        fail(context, "semanticAddress", "unknown semantic subject kind '"
+            .. tostring(subject.kind) .. "'")
+    end
+    return address
+end
+
+local function incompleteFinding(context, code, subject, providerKey, evidence)
+    return {
+        code = code,
+        severity = "incomplete",
+        phase = "topology.structure",
+        origin = semanticAddress(context, subject),
+        providerKey = providerKey,
+        evidence = evidence or {},
+    }
+end
+
+function linearBiome.checkStructure(context, topology)
+    local findings = {}
+    local function add(code, subject, providerKey, evidence)
+        findings[#findings + 1] = incompleteFinding(
+            context,
+            code,
+            subject,
+            providerKey,
+            evidence
+        )
+    end
+
+    if topology.startRoomControlKey == nil then
+        add("start_room_required", { kind = "start" }, "startRoom")
+        return findings
+    end
+
+    local selectedRoomControlKey = topology.startRoomControlKey
+    local continuationIsIncomplete = false
+    for _, batch in ipairs(topology.batches) do
+        local parent = context.rooms.lookup[batch.parentRoomControlKey]
+        local implementation = batchImplementations[batch.batchRuleKey]
+        implementation.checkStructure({
+            batch = batch,
+            parent = parent,
+            rule = context.catalog.batchRules.lookup[batch.batchRuleKey],
+            reportMissingTarget = function(exitIndex, requiredTargetCount)
+                add(
+                    "target_room_required",
+                    {
+                        kind = "batchTarget",
+                        parentRoomControlKey = batch.parentRoomControlKey,
+                        exitIndex = exitIndex,
+                    },
+                    "targetRoom",
+                    {
+                        requiredTargetCount = requiredTargetCount,
+                        actualTargetCount = #batch.targets,
+                    }
+                )
+            end,
+            reportMissingPickedTarget = function()
+                continuationIsIncomplete = true
+                add(
+                    "picked_target_required",
+                    {
+                        kind = "batchContinuation",
+                        parentRoomControlKey = batch.parentRoomControlKey,
+                    },
+                    "pickedTarget",
+                    { requiredPickedCount = 1, actualPickedCount = 0 }
+                )
+            end,
+        })
+        for _, target in ipairs(batch.targets) do
+            if target.picked then
+                selectedRoomControlKey = target.roomControlKey
+                break
+            end
+        end
+    end
+
+    local transition = topology.terminalTransition
+    if transition == nil then
+        if not continuationIsIncomplete then
+            add(
+                "continuation_required",
+                {
+                    kind = "continuation",
+                    parentRoomControlKey = selectedRoomControlKey,
+                },
+                "continuation"
+            )
+        end
+        return findings
+    end
+
+    local transitionImplementation = terminalTransitions[transition.transitionRuleKey]
+    transitionImplementation.checkStructure({
+        transition = transition,
+        parent = context.rooms.lookup[transition.parentRoomControlKey],
+        reportMissingCompanion = function(exitIndex)
+            add(
+                "terminal_companion_required",
+                {
+                    kind = "terminalCompanion",
+                    parentRoomControlKey = transition.parentRoomControlKey,
+                    exitIndex = exitIndex,
+                },
+                "companionTargetRoom"
+            )
+        end,
+    })
+    return findings
+end
+
+function linearBiome.semanticAddress(context, subject)
+    return semanticAddress(context, subject)
+end
+
+local function emit(context, visitor, subject)
+    visitor:visit(subject, semanticAddress(context, subject))
+end
+
+function linearBiome.traverse(context, topology, visitor)
+    if type(visitor) ~= "table" or type(visitor.visit) ~= "function" then
+        fail(context, "traverse.visitor", "expected a visitor with a visit function")
+    end
+    local findings = linearBiome.checkStructure(context, topology)
+    if #findings > 0 then
+        fail(context, "traverse", "cannot traverse incomplete topology ("
+            .. findings[1].code .. ")")
+    end
+
+    emit(context, visitor, {
+        kind = "start",
+        roomControlKey = topology.startRoomControlKey,
+    })
+    for _, batch in ipairs(topology.batches) do
+        emit(context, visitor, {
+            kind = "batch",
+            parentRoomControlKey = batch.parentRoomControlKey,
+            batchRuleKey = batch.batchRuleKey,
+            continuationOverrideKey = batch.continuationOverrideKey,
+        })
+        for _, target in ipairs(batch.targets) do
+            emit(context, visitor, {
+                kind = "batchTarget",
+                parentRoomControlKey = batch.parentRoomControlKey,
+                batchRuleKey = batch.batchRuleKey,
+                exitIndex = target.exitIndex,
+                roomControlKey = target.roomControlKey,
+                picked = target.picked,
+            })
+        end
+    end
+
+    local transition = topology.terminalTransition
+    emit(context, visitor, {
+        kind = "terminalTransition",
+        parentRoomControlKey = transition.parentRoomControlKey,
+        transitionRuleKey = transition.transitionRuleKey,
+        exitPolicyKind = transition.exitPolicyKind,
+        terminalRoomControlKey = transition.terminalRoomControlKey,
+    })
+    for _, target in ipairs(transition.companionTargets) do
+        emit(context, visitor, {
+            kind = "terminalCompanion",
+            parentRoomControlKey = transition.parentRoomControlKey,
+            transitionRuleKey = transition.transitionRuleKey,
+            exitIndex = target.exitIndex,
+            roomControlKey = target.roomControlKey,
+        })
+    end
 end
 
 return linearBiome

@@ -129,10 +129,26 @@ payload or presentation state. Plans are constructed only where every
 declaration-selected executable dependency is registered; this does not claim
 topology capability for any biome yet.
 
-The next slice adds explicit structural checks, traversal, semantic addresses,
-and owner-keyed F completeness findings before mutation commands are exposed.
-No production route editor, canonical biome snapshot, route validator,
-execution compiler, or runtime hook is active.
+The second read-only topology slice is also implemented. Biome Plans now
+delegate structural checks, ordered traversal, and semantic addressing to the
+registered layout implementation. Standard batches require one target per
+physical exit and one picked continuation; a selected linear source must close
+through another batch or `PrebossEntry`. F incompleteness returns ordered
+findings for its start, physical target, picked continuation, or missing
+continuation against the same semantic owner addresses traversal emits.
+Complete F topology traverses its start, each batch and generated peer,
+including unpicked dead leaves, and its terminal transition without ImGui,
+canonical assembly, or history work. Traversal rejects incomplete topology.
+
+Missing terminal companion links are likewise structural incompleteness;
+illegal companion exits remain contact-boundary failures. This establishes the
+contract needed by I without claiming I topology support. No biome claims the
+`topology` capability yet.
+
+The next Checkpoint 3 slice adds the writable UI-state topology commands and
+their atomic replacement/cleanup semantics. No production route editor,
+canonical biome snapshot, route validator, execution compiler, or runtime hook
+is active.
 
 The lifecycle design has also been simplified before its Checkpoint 5
 implementation: activation, meaningful commit, and meaningful reload will call

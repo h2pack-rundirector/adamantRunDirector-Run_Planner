@@ -115,8 +115,13 @@ function TestBiomePlan.testComposesExecutableRegistriesAndLongLivedPlans()
     h.withImport(function()
         local systems = load()
         lu.assertIsFunction(systems.route.topologyLayouts.LinearBiome.readTopology)
+        lu.assertIsFunction(systems.route.topologyLayouts.LinearBiome.checkStructure)
+        lu.assertIsFunction(systems.route.topologyLayouts.LinearBiome.traverse)
+        lu.assertIsFunction(systems.route.topologyLayouts.LinearBiome.semanticAddress)
         lu.assertIsFunction(systems.route.batchImplementations.Standard.normalize)
+        lu.assertIsFunction(systems.route.batchImplementations.Standard.checkStructure)
         lu.assertIsFunction(systems.route.terminalTransitions.PrebossEntry.normalize)
+        lu.assertIsFunction(systems.route.terminalTransitions.PrebossEntry.checkStructure)
         lu.assertEquals(#systems.route.biomePlans.ordered, 4)
         lu.assertEquals(systems.route.biomePlans.unavailable.Underworld_H, "LinearBiome")
         lu.assertEquals(systems.route.biomePlans.unavailable.Underworld_I, "LinearBiome")
@@ -254,6 +259,223 @@ function TestBiomePlan.testNormalizesCompleteFTopologyThroughUiAndRuntimeAccess(
         })
         lu.assertNil(runtimeTopology.batches[1].targets[1].roomState)
         lu.assertNil(runtimeTopology.batches[1].targets[1].incomingReward)
+    end)
+end
+
+local function collectTraversal(plan, topology)
+    local visits = {}
+    plan:traverse(topology, {
+        visit = function(_, subject, address)
+            visits[#visits + 1] = { subject = subject, address = address }
+        end,
+    })
+    return visits
+end
+
+function TestBiomePlan.testChecksAndTraversesCompleteFTopologyThroughUiAndRuntimeAccess()
+    h.withImport(function()
+        local systems = load()
+        local plan = systems.route.biomePlans.lookup.Underworld_F
+        local runtime, ui = stateAdapters(systems, completeFState())
+        local runtimeTopology = plan:readTopology(runtime)
+        local uiTopology = plan:readTopology(ui)
+
+        lu.assertEquals(plan:checkStructure(runtimeTopology), {})
+        lu.assertEquals(plan:checkStructure(uiTopology), {})
+        local runtimeVisits = collectTraversal(plan, runtimeTopology)
+        local uiVisits = collectTraversal(plan, uiTopology)
+        lu.assertEquals(uiVisits, runtimeVisits)
+        lu.assertEquals({
+            runtimeVisits[1].subject.kind,
+            runtimeVisits[2].subject.kind,
+            runtimeVisits[3].subject.kind,
+            runtimeVisits[4].subject.kind,
+            runtimeVisits[5].subject.kind,
+            runtimeVisits[6].subject.kind,
+            runtimeVisits[7].subject.kind,
+        }, {
+            "start",
+            "batch",
+            "batchTarget",
+            "batch",
+            "batchTarget",
+            "batchTarget",
+            "terminalTransition",
+        })
+        lu.assertEquals(runtimeVisits[1].subject.roomControlKey, "Underworld_F_Opening02")
+        lu.assertEquals(runtimeVisits[3].subject, {
+            kind = "batchTarget",
+            parentRoomControlKey = "Underworld_F_Opening02",
+            batchRuleKey = "Standard",
+            exitIndex = 1,
+            roomControlKey = "Underworld_F_Combat03",
+            picked = true,
+        })
+        lu.assertEquals(runtimeVisits[6].subject.roomControlKey, "Underworld_F_Combat05")
+        lu.assertFalse(runtimeVisits[6].subject.picked)
+        lu.assertEquals(runtimeVisits[7].subject.terminalRoomControlKey,
+            "Underworld_F_PreBoss01")
+    end)
+end
+
+function TestBiomePlan.testUsesStableSemanticAddressesForLinearOwners()
+    h.withImport(function()
+        local plan = load().route.biomePlans.lookup.Underworld_F
+        lu.assertEquals(plan:semanticAddress({
+            kind = "batchTarget",
+            parentRoomControlKey = "Underworld_F_Combat03",
+            exitIndex = 2,
+        }), {
+            routeKey = "Underworld",
+            biomeStepKey = "Underworld_F",
+            ownerKind = "batchTarget",
+            ownerKey = "Underworld_F_Combat03",
+            parentRoomControlKey = "Underworld_F_Combat03",
+            batchKey = "nextDoors",
+            exitIndex = 2,
+            aspect = "targetRoom",
+        })
+        lu.assertEquals(plan:semanticAddress({
+            kind = "terminalTransition",
+            parentRoomControlKey = "Underworld_F_Combat04",
+        }), {
+            routeKey = "Underworld",
+            biomeStepKey = "Underworld_F",
+            ownerKind = "terminalTransition",
+            ownerKey = "Underworld_F_Combat04",
+            parentRoomControlKey = "Underworld_F_Combat04",
+            transitionKey = "prebossEntry",
+            aspect = "continuation",
+        })
+    end)
+end
+
+function TestBiomePlan.testReportsOwnerKeyedFStructuralIncompleteness()
+    h.withImport(function()
+        local plan = load().route.biomePlans.lookup.Underworld_F
+
+        local topology = plan:readTopology(directAccess({
+            layoutKind = "LinearBiome",
+            selectedStartRoomControlKey = "",
+            batches = {},
+            targets = {},
+            terminalTransition = { parentRoomControlKey = "" },
+        }))
+        lu.assertEquals(plan:checkStructure(topology), {
+            {
+                code = "start_room_required",
+                severity = "incomplete",
+                phase = "topology.structure",
+                origin = {
+                    routeKey = "Underworld",
+                    biomeStepKey = "Underworld_F",
+                    ownerKind = "layoutStart",
+                    ownerKey = "start",
+                    aspect = "startRoom",
+                },
+                providerKey = "startRoom",
+                evidence = {},
+            },
+        })
+
+        local missingTarget = completeFState()
+        table.remove(missingTarget.targets, 2)
+        topology = plan:readTopology(directAccess(missingTarget))
+        local findings = plan:checkStructure(topology)
+        lu.assertEquals(#findings, 1)
+        lu.assertEquals(findings[1].code, "target_room_required")
+        lu.assertEquals(findings[1].providerKey, "targetRoom")
+        lu.assertEquals(findings[1].origin.parentRoomControlKey,
+            "Underworld_F_Combat03")
+        lu.assertEquals(findings[1].origin.exitIndex, 2)
+        lu.assertEquals(findings[1].evidence, {
+            requiredTargetCount = 2,
+            actualTargetCount = 1,
+        })
+
+        local missingPicked = completeFState()
+        missingPicked.batches = { missingPicked.batches[1] }
+        missingPicked.targets = { missingPicked.targets[1] }
+        missingPicked.targets[1].picked = false
+        missingPicked.terminalTransition.parentRoomControlKey = ""
+        topology = plan:readTopology(directAccess(missingPicked))
+        findings = plan:checkStructure(topology)
+        lu.assertEquals(#findings, 1)
+        lu.assertEquals(findings[1].code, "picked_target_required")
+        lu.assertEquals(findings[1].origin.ownerKind, "batch")
+        lu.assertEquals(findings[1].origin.parentRoomControlKey,
+            "Underworld_F_Opening02")
+        lu.assertErrorMsgContains("cannot traverse incomplete topology", function()
+            collectTraversal(plan, topology)
+        end)
+
+        local missingContinuation = completeFState()
+        missingContinuation.terminalTransition.parentRoomControlKey = ""
+        topology = plan:readTopology(directAccess(missingContinuation))
+        findings = plan:checkStructure(topology)
+        lu.assertEquals(#findings, 1)
+        lu.assertEquals(findings[1].code, "continuation_required")
+        lu.assertEquals(findings[1].origin.ownerKind, "continuation")
+        lu.assertEquals(findings[1].origin.parentRoomControlKey,
+            "Underworld_F_Combat04")
+    end)
+end
+
+function TestBiomePlan.testTreatsMissingTerminalCompanionsAsIncomplete()
+    h.withImport(function()
+        local implementation = h.testImport("mods/route/transitions/preboss_entry.lua")
+        local parent = {
+            control = { key = "Underworld_I_Combat12" },
+            room = { exits = { {}, {}, {} } },
+        }
+        local transition = implementation.normalize({
+            companionTargets = {
+                { exitIndex = 3, roomControlKey = "Underworld_I_Combat14" },
+            },
+            declaration = {
+                transitionRuleKey = "PrebossEntry",
+                exitPolicy = {
+                    kind = "terminalWithCompanions",
+                    companionBatchRuleKey = "ClockworkDoorBatch",
+                },
+            },
+            fail = function(path, message)
+                error(path .. ": " .. message, 0)
+            end,
+            parent = parent,
+            path = "terminalTransition",
+            terminal = { control = { key = "Underworld_I_PreBoss02" } },
+        })
+        local missing = {}
+        implementation.checkStructure({
+            transition = transition,
+            parent = parent,
+            reportMissingCompanion = function(exitIndex)
+                missing[#missing + 1] = exitIndex
+            end,
+        })
+        lu.assertEquals(missing, { 2 })
+
+        lu.assertErrorMsgContains("must use physical exits 2..N", function()
+            implementation.normalize({
+                companionTargets = {
+                    { exitIndex = 1, roomControlKey = "Underworld_I_Combat14" },
+                },
+                declaration = {
+                    transitionRuleKey = "PrebossEntry",
+                    exitPolicy = {
+                        kind = "terminalWithCompanions",
+                        companionBatchRuleKey = "ClockworkDoorBatch",
+                    },
+                },
+                fail = function(path, message)
+                    error(path .. ": " .. message, 0)
+                end,
+                parent = parent,
+                path = "terminalTransition",
+                terminal = { control = { key = "Underworld_I_PreBoss02" } },
+            })
+        end)
     end)
 end
 

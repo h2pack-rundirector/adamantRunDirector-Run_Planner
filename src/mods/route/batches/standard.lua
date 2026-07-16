@@ -40,4 +40,25 @@ function standard.normalize(specification)
     }
 end
 
+function standard.checkStructure(specification)
+    local targetByExit = {}
+    local pickedCount = 0
+    for _, target in ipairs(specification.batch.targets) do
+        targetByExit[target.exitIndex] = target
+        if target.picked then
+            pickedCount = pickedCount + 1
+        end
+    end
+
+    local requiredTargetCount = #specification.parent.room.exits
+    for exitIndex = 1, requiredTargetCount do
+        if targetByExit[exitIndex] == nil then
+            specification.reportMissingTarget(exitIndex, requiredTargetCount)
+        end
+    end
+    if pickedCount == 0 then
+        specification.reportMissingPickedTarget()
+    end
+end
+
 return standard
