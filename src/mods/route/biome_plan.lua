@@ -29,6 +29,25 @@ function biomePlan.create(specification)
         return specification.topologyLayout.semanticAddress(specification.context, subject)
     end
 
+    function plan.apply(_, uiStateAccess, command)
+        if type(uiStateAccess) ~= "table"
+            or type(uiStateAccess.replaceBiomeTopology) ~= "function"
+        then
+            error("biome plan '" .. plan.key .. "' mutation requires UiStateAccess", 0)
+        end
+        local authored, topology = specification.topologyLayout.apply(
+            specification.context,
+            uiStateAccess:readBiome(plan.key),
+            command
+        )
+        uiStateAccess:replaceBiomeTopology(plan.key, authored)
+        return topology
+    end
+
+    function plan.clearTopology(_, uiStateAccess)
+        return plan:apply(uiStateAccess, { kind = "ClearTopology" })
+    end
+
     return plan
 end
 

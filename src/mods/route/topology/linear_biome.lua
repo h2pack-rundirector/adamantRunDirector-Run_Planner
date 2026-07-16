@@ -1,5 +1,6 @@
 local deps = ...
 local batchImplementations = deps.batchImplementations
+local commandImplementation = deps.commandImplementation
 local terminalTransitions = deps.terminalTransitions
 
 local linearBiome = {}
@@ -423,6 +424,20 @@ function linearBiome.readTopology(context, authored)
         batches = orderedBatches,
         terminalTransition = terminal,
     }
+end
+
+function linearBiome.apply(context, authored, command)
+    return commandImplementation.apply({
+        authored = authored,
+        command = command,
+        fail = function(path, message)
+            fail(context, path, message)
+        end,
+        layout = context.biome.layout,
+        normalize = function(proposed)
+            return linearBiome.readTopology(context, proposed)
+        end,
+    })
 end
 
 local function semanticAddress(context, subject)

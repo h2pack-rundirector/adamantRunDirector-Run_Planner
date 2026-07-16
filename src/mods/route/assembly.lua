@@ -4,6 +4,8 @@ local storageManifest = deps.storageManifest or import("mods/route/storage_manif
 local stateAccess = deps.stateAccess or import("mods/route/state_access.lua")
 local standardBatch = deps.standardBatch or import("mods/route/batches/standard.lua")
 local prebossEntry = deps.prebossEntry or import("mods/route/transitions/preboss_entry.lua")
+local linearBiomeCommands = deps.linearBiomeCommands
+    or import("mods/route/topology/linear_biome_commands.lua")
 local biomePlan = deps.biomePlan or import("mods/route/biome_plan.lua")
 local biomePlans = deps.biomePlans or import("mods/route/biome_plans.lua", nil, {
     biomePlan = biomePlan,
@@ -17,6 +19,7 @@ local terminalTransitions = deps.terminalTransitions or {
 local topologyLayouts = deps.topologyLayouts or {
     LinearBiome = import("mods/route/topology/linear_biome.lua", nil, {
         batchImplementations = batchImplementations,
+        commandImplementation = linearBiomeCommands,
         terminalTransitions = terminalTransitions,
     }),
 }

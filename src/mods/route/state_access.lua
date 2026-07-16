@@ -36,6 +36,28 @@ local function readAllowedScalar(data, root, path)
     return value
 end
 
+local function preparedRows(root, rows, path)
+    if #rows > root.storage.maxRows then
+        error(path .. " exceeds its bounded row capacity", 0)
+    end
+    local result = {}
+    for rowIndex, row in ipairs(rows) do
+        local physical = {}
+        for semanticKey, physicalKey in pairs(root.columns) do
+            physical[physicalKey] = row[semanticKey]
+        end
+        result[rowIndex] = physical
+    end
+    return result
+end
+
+local function replaceRows(handle, rows)
+    handle:clear()
+    for _, row in ipairs(rows) do
+        handle:append(row)
+    end
+end
+
 local function createCommon(surface, catalog, storage)
     local access = {}
 
@@ -127,6 +149,67 @@ function stateAccess.createUi(ui, catalog, storage)
             )
         end
         ui.data.get(global.alias):write(value)
+    end
+
+    function access.replaceBiomeTopology(_, biomeStepKey, authored)
+        local descriptor = storage.biomes.lookup[biomeStepKey]
+        if descriptor == nil then
+            error("unknown biome plan '" .. tostring(biomeStepKey) .. "'", 0)
+        end
+        if descriptor.layoutKind ~= "LinearBiome" then
+            error(
+                "biome plan '" .. biomeStepKey
+                    .. "' has no writable topology adapter for '"
+                    .. descriptor.layoutKind .. "'",
+                0
+            )
+        end
+        if authored.layoutKind ~= descriptor.layoutKind then
+            error(
+                "biome plan '" .. biomeStepKey .. "' expected topology layout '"
+                    .. descriptor.layoutKind .. "'",
+                0
+            )
+        end
+
+        local batches = preparedRows(
+            descriptor.batches,
+            authored.batches,
+            "biome plan '" .. biomeStepKey .. "' batches"
+        )
+        local targets = preparedRows(
+            descriptor.targets,
+            authored.targets,
+            "biome plan '" .. biomeStepKey .. "' targets"
+        )
+        local companions
+        if descriptor.companionTargets ~= nil then
+            companions = preparedRows(
+                descriptor.companionTargets,
+                authored.terminalTransition.companionTargets or {},
+                "biome plan '" .. biomeStepKey .. "' terminal companions"
+            )
+        end
+
+        local batchHandle = ui.data.get(descriptor.batches.alias)
+        local targetHandle = ui.data.get(descriptor.targets.alias)
+        local terminalHandle = ui.data.get(descriptor.terminalTransition.alias)
+        local startHandle = descriptor.selectedStart
+            and ui.data.get(descriptor.selectedStart.alias)
+            or nil
+        local companionHandle = descriptor.companionTargets
+            and ui.data.get(descriptor.companionTargets.alias)
+            or nil
+
+        replaceRows(batchHandle, batches)
+        replaceRows(targetHandle, targets)
+        terminalHandle:write(authored.terminalTransition.parentRoomControlKey)
+        if startHandle ~= nil then
+            startHandle:write(authored.selectedStartRoomControlKey)
+        end
+        if companionHandle ~= nil then
+            replaceRows(companionHandle, companions)
+        end
     end
 
     function access.resetAll(_)

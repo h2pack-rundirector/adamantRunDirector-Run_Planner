@@ -85,12 +85,27 @@ local function stateAdapters(systems, state)
     end
     function data.get(alias)
         local rows = tables[alias]
+        if rows ~= nil then
+            return {
+                count = function()
+                    return #rows
+                end,
+                read = function(_, rowIndex, column)
+                    return rows[rowIndex][column]
+                end,
+                clear = function()
+                    for index = #rows, 1, -1 do
+                        rows[index] = nil
+                    end
+                end,
+                append = function(_, row)
+                    rows[#rows + 1] = row
+                end,
+            }
+        end
         return {
-            count = function()
-                return #rows
-            end,
-            read = function(_, rowIndex, column)
-                return rows[rowIndex][column]
+            write = function(_, value)
+                values[alias] = value
             end,
         }
     end
@@ -108,7 +123,7 @@ local function stateAdapters(systems, state)
         data = data,
         resetAll = function() end,
     }, systems.catalog, systems.route.storage)
-    return runtime, ui
+    return runtime, ui, { values = values, tables = tables }
 end
 
 function TestBiomePlan.testComposesExecutableRegistriesAndLongLivedPlans()
@@ -476,6 +491,289 @@ function TestBiomePlan.testTreatsMissingTerminalCompanionsAsIncomplete()
                 terminal = { control = { key = "Underworld_I_PreBoss02" } },
             })
         end)
+    end)
+end
+
+function TestBiomePlan.testBuildsCompleteFTopologyThroughUiOnlyCommands()
+    h.withImport(function()
+        local systems = load()
+        local plan = systems.route.biomePlans.lookup.Underworld_F
+        local runtime, ui = stateAdapters(systems, {
+            layoutKind = "LinearBiome",
+            selectedStartRoomControlKey = "",
+            batches = {},
+            targets = {},
+            terminalTransition = { parentRoomControlKey = "" },
+        })
+        lu.assertNil(runtime.replaceBiomeTopology)
+        lu.assertErrorMsgContains("mutation requires UiStateAccess", function()
+            plan:apply(runtime, {
+                kind = "SelectStart",
+                roomControlKey = "Underworld_F_Opening02",
+            })
+        end)
+
+        plan:apply(ui, {
+            kind = "SelectStart",
+            roomControlKey = "Underworld_F_Opening02",
+        })
+        plan:apply(ui, {
+            kind = "CreateBatch",
+            parentRoomControlKey = "Underworld_F_Opening02",
+        })
+        plan:apply(ui, {
+            kind = "SetTarget",
+            parentRoomControlKey = "Underworld_F_Opening02",
+            exitIndex = 1,
+            roomControlKey = "Underworld_F_Combat03",
+        })
+        plan:apply(ui, {
+            kind = "SetPicked",
+            parentRoomControlKey = "Underworld_F_Opening02",
+            exitIndex = 1,
+        })
+        plan:apply(ui, {
+            kind = "CreateBatch",
+            parentRoomControlKey = "Underworld_F_Combat03",
+        })
+        plan:apply(ui, {
+            kind = "SetTarget",
+            parentRoomControlKey = "Underworld_F_Combat03",
+            exitIndex = 1,
+            roomControlKey = "Underworld_F_Combat04",
+        })
+        plan:apply(ui, {
+            kind = "SetTarget",
+            parentRoomControlKey = "Underworld_F_Combat03",
+            exitIndex = 2,
+            roomControlKey = "Underworld_F_Combat05",
+        })
+        plan:apply(ui, {
+            kind = "SetPicked",
+            parentRoomControlKey = "Underworld_F_Combat03",
+            exitIndex = 1,
+        })
+        local topology = plan:apply(ui, {
+            kind = "CreateTerminalTransition",
+            parentRoomControlKey = "Underworld_F_Combat04",
+        })
+
+        lu.assertEquals(plan:checkStructure(topology), {})
+        lu.assertEquals(plan:readTopology(runtime), topology)
+        lu.assertEquals(#collectTraversal(plan, topology), 7)
+    end)
+end
+
+function TestBiomePlan.testChangingSelectedFLinksClearsOnlyDownstreamTopology()
+    h.withImport(function()
+        local systems = load()
+        local plan = systems.route.biomePlans.lookup.Underworld_F
+        local _, ui = stateAdapters(systems, completeFState())
+
+        local topology = plan:apply(ui, {
+            kind = "SetPicked",
+            parentRoomControlKey = "Underworld_F_Combat03",
+            exitIndex = 2,
+        })
+        lu.assertNil(topology.terminalTransition)
+        lu.assertEquals(topology.batches[2].targets, {
+            {
+                exitIndex = 1,
+                roomControlKey = "Underworld_F_Combat04",
+                picked = false,
+            },
+            {
+                exitIndex = 2,
+                roomControlKey = "Underworld_F_Combat05",
+                picked = true,
+            },
+        })
+
+        plan:apply(ui, {
+            kind = "CreateBatch",
+            parentRoomControlKey = "Underworld_F_Combat05",
+        })
+        topology = plan:apply(ui, {
+            kind = "RemoveBatch",
+            parentRoomControlKey = "Underworld_F_Combat05",
+        })
+        lu.assertEquals(#topology.batches, 2)
+        lu.assertNil(topology.terminalTransition)
+
+        topology = plan:apply(ui, {
+            kind = "RemoveTarget",
+            parentRoomControlKey = "Underworld_F_Combat03",
+            exitIndex = 2,
+        })
+        lu.assertEquals(topology.batches[2].targets, {
+            {
+                exitIndex = 1,
+                roomControlKey = "Underworld_F_Combat04",
+                picked = false,
+            },
+        })
+
+        local replacementRuntime, replacementUi = stateAdapters(systems, completeFState())
+        topology = plan:apply(replacementUi, {
+            kind = "SetTarget",
+            parentRoomControlKey = "Underworld_F_Opening02",
+            exitIndex = 1,
+            roomControlKey = "Underworld_F_Combat06",
+        })
+        lu.assertEquals(#topology.batches, 1)
+        lu.assertEquals(topology.batches[1].targets[1].roomControlKey,
+            "Underworld_F_Combat06")
+        lu.assertTrue(topology.batches[1].targets[1].picked)
+        lu.assertNil(topology.terminalTransition)
+
+        topology = plan:apply(replacementUi, {
+            kind = "SelectStart",
+            roomControlKey = "Underworld_F_Opening03",
+        })
+        lu.assertEquals(topology.startRoomControlKey, "Underworld_F_Opening03")
+        lu.assertEquals(topology.batches, {})
+        lu.assertNil(topology.terminalTransition)
+
+        topology = plan:clearTopology(replacementUi)
+        lu.assertNil(topology.startRoomControlKey)
+        lu.assertEquals(topology.batches, {})
+        lu.assertEquals(plan:readTopology(replacementRuntime), topology)
+    end)
+end
+
+function TestBiomePlan.testContinuationReplacementIsExplicitAndAtomic()
+    h.withImport(function()
+        local systems = load()
+        local plan = systems.route.biomePlans.lookup.Underworld_F
+        local runtime, ui = stateAdapters(systems, completeFState())
+        local before = plan:readTopology(runtime)
+
+        lu.assertErrorMsgContains("terminal transition must be replaced explicitly", function()
+            plan:apply(ui, {
+                kind = "CreateBatch",
+                parentRoomControlKey = "Underworld_F_Combat04",
+            })
+        end)
+        lu.assertEquals(plan:readTopology(runtime), before)
+
+        lu.assertErrorMsgContains("is already used", function()
+            plan:apply(ui, {
+                kind = "SetTarget",
+                parentRoomControlKey = "Underworld_F_Combat03",
+                exitIndex = 2,
+                roomControlKey = "Underworld_F_Combat04",
+            })
+        end)
+        lu.assertEquals(plan:readTopology(runtime), before)
+
+        local topology = plan:apply(ui, {
+            kind = "ReplaceWithBatch",
+            parentRoomControlKey = "Underworld_F_Combat04",
+        })
+        lu.assertNil(topology.terminalTransition)
+        lu.assertEquals(topology.batches[3], {
+            parentRoomControlKey = "Underworld_F_Combat04",
+            batchRuleKey = "Standard",
+            targets = {},
+        })
+        lu.assertErrorMsgContains("generated batch must be replaced explicitly", function()
+            plan:apply(ui, {
+                kind = "CreateTerminalTransition",
+                parentRoomControlKey = "Underworld_F_Combat04",
+            })
+        end)
+
+        plan:apply(ui, {
+            kind = "SetTarget",
+            parentRoomControlKey = "Underworld_F_Combat04",
+            exitIndex = 1,
+            roomControlKey = "Underworld_F_Combat06",
+        })
+        plan:apply(ui, {
+            kind = "SetTarget",
+            parentRoomControlKey = "Underworld_F_Combat04",
+            exitIndex = 2,
+            roomControlKey = "Underworld_F_Combat07",
+        })
+        plan:apply(ui, {
+            kind = "SetPicked",
+            parentRoomControlKey = "Underworld_F_Combat04",
+            exitIndex = 1,
+        })
+        topology = plan:apply(ui, {
+            kind = "ReplaceWithTerminalTransition",
+            parentRoomControlKey = "Underworld_F_Combat04",
+        })
+        lu.assertEquals(#topology.batches, 2)
+        lu.assertEquals(#topology.batches[2].targets, 2)
+        lu.assertEquals(topology.terminalTransition.parentRoomControlKey,
+            "Underworld_F_Combat04")
+
+        topology = plan:apply(ui, { kind = "RemoveTerminalTransition" })
+        lu.assertNil(topology.terminalTransition)
+    end)
+end
+
+function TestBiomePlan.testTerminalCompanionCommandsRemainPolicyScoped()
+    h.withImport(function()
+        local commands = h.testImport("mods/route/topology/linear_biome_commands.lua")
+        local authored = {
+            layoutKind = "LinearBiome",
+            batches = {},
+            targets = {},
+            terminalTransition = {
+                parentRoomControlKey = "Underworld_I_Combat12",
+                companionTargets = {
+                    { exitIndex = 2, roomControlKey = "Underworld_I_Combat13" },
+                },
+            },
+        }
+        local function apply(value, command)
+            return commands.apply({
+                authored = value,
+                command = command,
+                fail = function(path, message)
+                    error(path .. ": " .. message, 0)
+                end,
+                layout = {
+                    start = { mode = "fixed" },
+                    terminal = { exitPolicy = { kind = "terminalWithCompanions" } },
+                },
+                normalize = function()
+                    return { batches = {} }
+                end,
+            })
+        end
+
+        authored = apply(authored, {
+            kind = "SetTerminalCompanion",
+            exitIndex = 3,
+            roomControlKey = "Underworld_I_Combat14",
+        })
+        lu.assertEquals(authored.terminalTransition.companionTargets, {
+            { exitIndex = 2, roomControlKey = "Underworld_I_Combat13" },
+            { exitIndex = 3, roomControlKey = "Underworld_I_Combat14" },
+        })
+        authored = apply(authored, {
+            kind = "RemoveTerminalCompanion",
+            exitIndex = 2,
+        })
+        lu.assertEquals(authored.terminalTransition.companionTargets, {
+            { exitIndex = 3, roomControlKey = "Underworld_I_Combat14" },
+        })
+
+        local systems = load()
+        local plan = systems.route.biomePlans.lookup.Underworld_F
+        local runtime, ui = stateAdapters(systems, completeFState())
+        local before = plan:readTopology(runtime)
+        lu.assertErrorMsgContains("does not admit companion targets", function()
+            plan:apply(ui, {
+                kind = "SetTerminalCompanion",
+                exitIndex = 2,
+                roomControlKey = "Underworld_F_Combat06",
+            })
+        end)
+        lu.assertEquals(plan:readTopology(runtime), before)
     end)
 end
 

@@ -145,10 +145,26 @@ illegal companion exits remain contact-boundary failures. This establishes the
 contract needed by I without claiming I topology support. No biome claims the
 `topology` capability yet.
 
-The next Checkpoint 3 slice adds the writable UI-state topology commands and
-their atomic replacement/cleanup semantics. No production route editor,
-canonical biome snapshot, route validator, execution compiler, or runtime hook
-is active.
+The writable topology slice is also implemented. The Biome Plan accepts the
+complete LinearBiome command set only through `UiStateAccess`; runtime state
+access remains read-only. Each command reads staged authored state, constructs
+an unpublished full replacement, normalizes that proposal through the same
+contact boundary as ordinary reads, and only then stages one bounded semantic
+replacement. Invalid commands and malformed proposals therefore leave staged
+state untouched.
+
+Changing a selected start, picked target, or picked target link removes only
+the incompatible downstream batches, targets, terminal transition, and
+terminal companions. Explicit `ReplaceWithBatch` and
+`ReplaceWithTerminalTransition` commands own continuation-form changes.
+Unlinked Room Control persistence is never reset. Terminal-companion commands
+are restricted to the policy that admits them, while `ClearTopology` clears
+only layout-owned authored state.
+
+The next Checkpoint 3 closeout slice wires validated `topology = true` evidence
+for F and reviews the complete checkpoint contract. No production route
+editor, canonical biome snapshot, route validator, execution compiler, or
+runtime hook is active.
 
 The lifecycle design has also been simplified before its Checkpoint 5
 implementation: activation, meaningful commit, and meaningful reload will call
