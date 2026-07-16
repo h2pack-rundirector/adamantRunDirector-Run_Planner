@@ -11,21 +11,10 @@ The superseded `docs/system_design/` and `docs/progress/` trees are archived on
 non-authoritative audit evidence. Neither can override documents in this
 directory.
 
-The legacy implementation is archived on `codex/fresh-planner-spine`. The live
-rewrite branch now implements the managed-module skeleton, headless catalog,
-and the static-control and managed-persistence foundation of Checkpoint 2. The
-bottom-up reward hierarchy now implements payload domains, primitives, counted
-bags, compiled bindings, counted and fixed choices, shop option sets and
-profiles, and their persistence components. Focused Room Control templates
-cover every F and G room without the transitional adapter. Because shared
-templates are registered globally, the same implementations cover 106 room
-instances across the full catalog. Biome-specific structural templates outside
-F/G remain on the explicit transitional adapter. An evidence-backed biome
-implementation-support manifest records F/G as focused-control complete while
-leaving every topology, materialization, headless-pipeline, and planner-active
-capability false. System-wide composition and subsystem-local dependency
-injection are in place. The production UI remains the explicit
-unavailable-status shell.
+The legacy implementation is archived on `codex/fresh-planner-spine`.
+Completed implementation work and the current frontier are recorded in
+`IMPLEMENTATION_PROGRESS.md`; future checkpoint work remains in
+`IMPLEMENTATION_GUIDE.md`.
 
 The six-document set completed coherent design review and was locked on
 2026-07-14. Questions deliberately assigned to a later biome implementation
@@ -54,12 +43,12 @@ than adding a workaround.
    defines lifecycle history, counter views, force pressure, reward bags,
    validation, and canonical/execution-plan compilation.
 6. `IMPLEMENTATION_GUIDE.md`
-   defines the clean-reset sequence, checkpoints, tests, and removal
-   criteria for the current code.
+   defines the remaining checkpoints, tests, and completion criteria.
 
 These six documents are the complete, locked revamp design and
 implementation-guidance set. Implementation follows
-`IMPLEMENTATION_GUIDE.md`.
+`IMPLEMENTATION_GUIDE.md`. `IMPLEMENTATION_PROGRESS.md` is a separate mutable
+status ledger and is not a design authority.
 
 The supplemental `room_controls/` specification set expands the locked Room
 Control direction into one reviewable contract per registered room template.
@@ -69,15 +58,12 @@ not begin until the corresponding specification has been reviewed.
 
 The locked
 [`REWARD_HIERARCHY.md`](room_controls/REWARD_HIERARCHY.md) defines the bottom-up
-reward-component graph. Its counted-choice foundation and first consuming Room
-Control slice are implemented. Fixed/absent rewards, shop profiles, and the
-forked-preboss composition are also implemented; the remaining biome-specific
-structural wrappers stay phased by their first concrete template consumers.
+reward-component graph and the order in which its primitives, bundles,
+surfaces, and consuming Room Controls are composed.
 
 [`REWARD_CONSUMER_AUDIT.md`](room_controls/REWARD_CONSUMER_AUDIT.md) verifies
 the concrete store, inherited filter, and forced-reward provenance for every
-supported reward producer. Its declaration reconciliation is implemented; the
-compiled counted-choice hierarchy is implemented.
+supported reward producer.
 
 ## Authority Boundaries
 
@@ -91,6 +77,9 @@ Each fact has one home:
 | Biome-specific topology and reward extensions | `BIOME_RULES.md` |
 | History, validation, and compilation | `MATERIALIZATION_AND_VALIDATION.md` |
 | Rewrite order and acceptance checks | `IMPLEMENTATION_GUIDE.md` |
+
+Current implementation status is intentionally absent from this authority
+table; it lives in `IMPLEMENTATION_PROGRESS.md`.
 
 Documents should reference an authority instead of copying its rules. Biome
 documents must not redefine the general room model. UI documents must not
@@ -108,8 +97,8 @@ raw declarations
   -> templates, batch rules, and static control/storage manifests
 ```
 
-Each committed Route Plan revision then processes its configured biomes in
-route order through one pure derived pipeline:
+Each meaningful configuration lifecycle rebuild processes the committed Route
+Plan snapshot through one pure derived pipeline:
 
 ```text
 catalog + committed Route Controls, Biome Plans, and Room Controls
@@ -121,7 +110,7 @@ catalog + committed Route Controls, Biome Plans, and Room Controls
        -> stop on incomplete or invalid; otherwise continue
   -> prepared presentation state for the processed prefix
   -> execution-plan compilation when every configured biome is complete and valid
-  -> atomically publish one derived revision
+  -> atomically publish one derived result
 ```
 
 The short form is:
@@ -188,8 +177,9 @@ The revamp starts from these decisions:
   not inspect widget or storage internals.
 - Runtime consumes a compiled execution plan and does not re-solve authored UI
   decisions.
-- Every published result is tied to its source authored revision; committed
-  changes make older execution plans unusable before rebuilding.
+- Every meaningful configuration lifecycle event synchronously rebuilds one
+  committed snapshot. Success atomically replaces the published result; failure
+  clears it before surfacing the error.
 - A configured prefix outside the currently active contiguous domain is
   rejected rather than clamped or allowed to expose a headless biome.
 - The current implementation and its persisted draft shape are not migration

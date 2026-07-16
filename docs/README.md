@@ -4,6 +4,10 @@ The locked revamp design under `revamp/` is the sole architecture and
 implementation-guidance authority for the clean Run Planner rewrite. Begin
 with `revamp/README.md` and follow its declared reading order.
 
+Current implementation status is tracked separately in
+`revamp/IMPLEMENTATION_PROGRESS.md`; the remaining plan lives in
+`revamp/IMPLEMENTATION_GUIDE.md`.
+
 The superseded `system_design/` and `progress/` trees are preserved on the
 `codex/fresh-planner-spine` branch and in Git history. They are intentionally
 absent from the live rewrite branch so searches cannot confuse them with the

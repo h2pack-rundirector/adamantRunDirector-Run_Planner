@@ -648,35 +648,3 @@ function TestManagedPersistence.testStateAccessKeepsRuntimeReadOnlyAndValidatesA
         end)
     end)
 end
-
-function TestManagedPersistence.testConfigurationRevisionNormalizesCommitAndReloadWithoutDuplicates()
-    h.withImport(function()
-        local callbacks = {}
-        local module = {
-            onActivate = function(callback)
-                callbacks.activate = callback
-            end,
-            onCommit = function(callback)
-                callbacks.commit = callback
-            end,
-            onReload = function(callback)
-                callbacks.reload = callback
-            end,
-        }
-        local observed = {}
-        local service = h.testImport("mods/composition/configuration_revision.lua").install(module, {
-            onAdvance = function(_, _, event)
-                observed[#observed + 1] = event.revision
-            end,
-        })
-
-        callbacks.activate({}, {})
-        callbacks.commit({}, {}, { hadConfigChanges = function() return false end })
-        callbacks.commit({}, {}, { hadConfigChanges = function() return true end })
-        callbacks.reload({}, {}, { hadSettingChanges = function() return false end })
-        callbacks.reload({}, {}, { hadSettingChanges = function() return true end })
-
-        lu.assertEquals(observed, { 1, 2, 3 })
-        lu.assertEquals(service.current(), 3)
-    end)
-end

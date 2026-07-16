@@ -208,7 +208,7 @@ counter, dynamic control schema, or copied canonical document.
 | Materialized canonical plan | Route derived cache | Non-persisted Lua state |
 | History and validation result | Route derived cache | Non-persisted Lua state |
 | Prepared provider decoration, markers, and status | Route derived cache | Non-persisted Lua state |
-| Runtime execution plan | Planner coordinator, read by runtime | Non-persisted published route revision |
+| Runtime execution plan | Planner coordinator, read by runtime | Non-persisted published route result |
 
 ## Biome Plan Interface
 
@@ -385,17 +385,15 @@ One commit publication cycle is:
 1. draw reads staged authored values and the last published prepared view;
 2. draw stages semantic edits through UI-only refs and returns;
 3. Lib commits dirty state;
-4. `module.onCommit(...)` observes `hadConfigChanges()`, advances the
-   coordinator's non-persisted authored revision, and reads that one coherent
-   committed revision; the prior execution plan is now ineligible by revision;
+4. `module.onCommit(...)` observes `hadConfigChanges()` and reads one coherent
+   committed snapshot;
 5. the planner walks configured biomes in order through completeness,
    materialization, history, and validation;
 6. semantic findings are translated by their room-template, local-slot, or
    batch descriptors into a fresh non-persisted presentation cache;
-7. the planner compiles a complete execution plan or explicitly clears it;
+7. the planner compiles a complete execution plan or leaves it absent;
 8. presentation, canonical/history/validation, and execution results are
-   atomically published as one derived revision tagged with its source authored
-   revision.
+   atomically published as one derived result.
 
 Draw must not flush config, rebuild derived state, apply feedback, or publish
 half-edited canonical plans. One draw call consumes one published prepared view
@@ -403,21 +401,21 @@ without trying to revise feedback after a widget stages an edit. The edit frame
 may therefore display the prior committed presentation. `onCommit` rebuilds and
 publishes before the next draw, so same-frame feedback is not a contract.
 
-If rebuilding the new authored revision hits a contract failure, the failure
-remains loud and no execution plan matches the current authored revision. The
-planner must not retain or reactivate the previous plan, clamp malformed input,
-or translate the failure into ordinary user-invalid feedback.
+If rebuilding the committed snapshot hits a contract failure, the failure
+remains loud and the coordinator clears the previously published result before
+surfacing it. The planner must not retain or reactivate the previous plan, clamp
+malformed input, or translate the failure into ordinary user-invalid feedback.
 
 Profile load, profile reset, hash import, and explicit configuration reload
 must all run the same rebuild-and-publication lifecycle as a normal committed
-change. Module initialization publishes the default empty-prefix revision by
-the same path. The lifecycle signal and derived revision are not persisted.
+change. Module initialization publishes the default empty-prefix result by the
+same path. Derived state is not persisted.
 
-Lib commit and reload remain distinct lifecycle events. The planner normalizes
-`onActivate`, configuration-changing `onCommit`, and setting-changing
-`onReload` observations into its one authored revision signal. A no-op reload,
-including the follow-up reload after a hash/profile commit, does not advance the
-planner revision or cause a duplicate rebuild.
+Lib commit and reload remain distinct lifecycle events. The coordinator calls
+the same synchronous rebuild function directly from `onActivate`, a
+configuration-changing `onCommit`, and a setting-changing `onReload`. A no-op
+commit or reload, including the follow-up reload after a hash/profile commit,
+does not rebuild.
 
 ## Topology Clearing and Reset
 
@@ -451,7 +449,7 @@ committed authored change
   -> stop at the first incomplete or invalid biome
   -> translate findings into a fresh prepared presentation cache
   -> compile or clear the execution plan
-  -> atomically publish one derived revision
+  -> atomically publish one derived result
   -> draw authored values plus that prepared view until next commit
 ```
 
@@ -464,7 +462,7 @@ Required practices:
 - reuse option/value/label arrays;
 - mutate prepared color/visibility/message arrays only in an unpublished build
   buffer;
-- never mutate the currently published presentation revision; reusable buffers
+- never mutate the currently published presentation result; reusable buffers
   become writable again only after they are no longer published;
 - keep static draw option tables module-local and caller-owned;
 - avoid string concatenation and inline tables in room/batch draw loops;

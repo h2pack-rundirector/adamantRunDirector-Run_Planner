@@ -2,15 +2,21 @@
 
 ## Purpose and Status
 
-This document defines how to replace the current Run Planner implementation
-with the architecture in this directory. It owns implementation order,
-checkpoint scope, test gates, reset boundaries, and removal criteria. It does
-not redefine the domain, game facts, persistence ownership, biome rules, or
-validation semantics owned by the preceding revamp documents.
+This document defines the remaining plan for implementing the Run Planner
+architecture in this directory. It owns future implementation order,
+checkpoint scope, test gates, and completion criteria. Completed work and the
+current implementation frontier are recorded separately in
+`IMPLEMENTATION_PROGRESS.md` so historical execution does not obscure the
+forward plan.
 
-The rewrite is a total implementation reset. Existing source is available
-through Git as reference material, but no current planner implementation file,
-test, persisted shape, or internal API is a compatibility contract.
+This document does not redefine the domain, game facts, persistence ownership,
+biome rules, or validation semantics owned by the preceding revamp documents.
+
+The rewrite began as a total implementation reset. The reset and completed
+foundation checkpoints are recorded in `IMPLEMENTATION_PROGRESS.md`. Existing
+pre-revamp source remains available through Git as reference material, but no
+old planner implementation file, test, persisted shape, or internal API is a
+compatibility contract.
 
 The implementation rule is:
 
@@ -36,88 +42,13 @@ Implementation work must read the revamp set in this order:
 4. `BIOME_RULES.md` for specialized F-Q topology;
 5. `MATERIALIZATION_AND_VALIDATION.md` for canonical history, requirements,
    rewards, feedback, and compilation;
-6. this document for execution order.
+6. this document for the remaining execution order;
+7. `IMPLEMENTATION_PROGRESS.md` for completed work and the current frontier.
 
 The old branch and removed documents may answer historical questions. They
 cannot override this set. A disagreement is resolved by game-data
 reverification and an update to the appropriate revamp authority before code
 continues.
-
-## Reset Strategy
-
-### Git Boundary
-
-Use these branch roles:
-
-```text
-codex/fresh-planner-spine  pre-revamp implementation and document archive
-codex/planner-revamp       clean implementation branch
-```
-
-Before creating the revamp branch:
-
-1. commit the current pending UI work on `codex/fresh-planner-spine`;
-2. commit the completed revamp documents and pending legacy design work as a
-   pre-revamp documentation checkpoint;
-3. run the current focused tests and lint so the archive has a known state;
-4. push `codex/fresh-planner-spine`;
-5. create `codex/planner-revamp` from that committed checkpoint.
-
-Do not carry untracked or unstaged work across the branch boundary. A stash is
-not the archive.
-
-The old implementation remains accessible with ordinary Git operations:
-
-```bash
-git show codex/fresh-planner-spine:src/mods/history/builder.lua
-git log codex/fresh-planner-spine -- src/mods/validation
-git diff codex/fresh-planner-spine...codex/planner-revamp
-```
-
-Do not cherry-pick planner implementation commits into the revamp branch. Copy
-only reverified facts or deliberately reimplement an algorithm against the new
-interfaces.
-
-### Source Reset Boundary
-
-No current planner implementation file is retained by default.
-
-The first revamp commit should:
-
-- remove the current `src/mods/` implementation;
-- rewrite `src/main.lua` as a minimal revamp composition entry point;
-- remove planner behavior tests that encode `PlannerDraft`, positional rooms,
-  form addresses, or the old UI;
-- rebuild `tests/all.lua` around the new checkpoint suite;
-- retain only contract-neutral packaging, assets, licenses, smoke metadata,
-  and test/import infrastructure;
-- keep the complete `docs/revamp/` set;
-- update `docs/README.md` to make the revamp set authoritative;
-- remove superseded `docs/system_design/` and `docs/progress/` material from
-  the new branch.
-
-`docs/gameinfo/` may remain temporarily as non-authoritative audit evidence.
-Each file must either be cited by the new executable catalog work or removed
-once its facts are harvested. Git remains the permanent archive.
-
-The reset commit must still load a minimal managed module and run a minimal
-test suite. It must not leave broken imports as an intermediate checkpoint.
-
-### External Contracts Retained
-
-The reset preserves only:
-
-- plugin, modpack, and module identity;
-- manifest/package metadata and dependency declarations;
-- the public fact that Run Planner is a managed ModpackLib module;
-- source licensing and assets;
-- shell-repo submodule/release integration;
-- any external shared-data or runtime-hook contract explicitly rediscovered
-  and adopted by a later checkpoint.
-
-The old profile schema is not retained. No `PlannerDraft` migration, storage
-alias compatibility, occurrence ID translation, or hot-reload bridge is
-implemented.
 
 ## Target Dependency Shape
 
@@ -186,8 +117,6 @@ The coordinator may retain:
 - immutable catalog and registries;
 - stable route, biome-step, room-control, and storage descriptor keys;
 - non-persisted canonical/history/validation/presentation/execution caches;
-- the current non-persisted authored revision and source revision of every
-  published route result;
 - dirty/rebuild status.
 
 It must not retain callback-owned `ui.data`, `runtime.data`, writable fields,
@@ -214,12 +143,6 @@ do not match assembled subsystem evidence, and non-contiguous planner-active
 route prefixes. A biome can benefit from a globally shared focused template
 without claiming `focusedRoomControls`; that capability means every Room
 Control needed by the biome has left the transitional adapter.
-
-The initial support declaration claims focused Room Controls for F and G only.
-All topology, materialization, headless-pipeline, and planner-active capabilities
-remain false until their owning checkpoints land. H, I, N, O, P, and Q retain
-bounded dormant storage but defer their biome-specific semantic Room Controls
-to their Checkpoint 7 slices.
 
 ## State-Access Threading
 
@@ -276,7 +199,9 @@ table or serialized root draft is not an optimization.
 
 ## Checkpoint Discipline
 
-Every checkpoint must be independently reviewable and green.
+Every remaining checkpoint must be independently reviewable and green.
+Checkpoint completion is recorded in `IMPLEMENTATION_PROGRESS.md`; completed
+checkpoint specifications do not remain embedded in this forward plan.
 
 Required properties:
 
@@ -302,177 +227,6 @@ checkpoints named below.
 
 Do not use a passing unit suite as proof of in-game ImGui or hook behavior.
 Those surfaces require explicit runtime probes.
-
-## Checkpoint 0: Archive and Green Reset
-
-### Deliverables
-
-- pre-revamp branch committed and pushed;
-- `codex/planner-revamp` created;
-- old implementation and behavior tests removed;
-- minimal managed-module activation rewritten without old imports;
-- minimal test runner and import harness working;
-- revamp docs authoritative on the new branch;
-- no compatibility or migration code.
-
-The module may expose a clearly labeled unavailable/under-construction tab or
-no planner tab, depending on the current Lib module contract. It must not show
-the old planner UI.
-
-### Acceptance
-
-- module source imports cleanly in the test harness;
-- module activation smoke succeeds with no planner behavior registered;
-- lint and diff checks pass;
-- repository search finds no `PlannerDraft`, positional form address, or old
-  planner package import in live source;
-- the old branch can retrieve every removed file.
-
-## Checkpoint 1: Complete Catalog Foundation
-
-The full supported universe must exist before static controls are generated.
-This checkpoint is declaration-only.
-
-### Deliverables
-
-- Underworld and Surface route declarations with ordered biome-step keys;
-- complete F, G, H, I, N, O, P, and Q concrete room catalogs;
-- roots, terminals, room kinds, template keys, physical exits/types, reward
-  surfaces, fixed and sequenced baseline encounter profiles, phase presence
-  snapshots, canonical baseline encounter keys where required, phase-owned
-  offer points, counters, caps, force metadata, and modeled eligibility;
-- explicit per-room records with no generated room ranges, semantic defaults,
-  or implicit counter/cap/profile/reward facts;
-- reward primitives, normalized acquisition names, unique stores, counted
-  bags, shop profiles, offer profiles, payload domains, and batch constraints;
-- code-owned requirement-kind registry with supported contact phases, payload
-  schemas, evaluator contracts, and static/dynamic capacity classification;
-- batch-rule and room-template declaration registries;
-- finite local-child and topology bounds;
-- mechanically generated stable Route and Room Control keys;
-- a static control manifest descriptor, without Lib control implementation.
-
-### Requirement Gate
-
-Every production requirement must have a registered evaluator contract.
-Missing evaluators, unknown kinds, unknown named predicates, and malformed
-payloads fail catalog construction. External save/profile predicates and
-unfinished requirements do not enter production declarations.
-
-### Game-Data Gate
-
-Tests and generated audits must prove:
-
-- route and room keys are unique in their declared scope;
-- each room's template accepts its room kind;
-- every room explicitly declares tags, exits, its complete incoming-reward
-  binding, encounter-profile key, structural counter effects, caps,
-  terminal/fixed state, and local children, including empty and false values;
-- every encounter profile explicitly declares its phases, including each
-  phase's baseline encounter identity and encounter-depth effect where the
-  concrete identity affects planner semantics;
-- creation caps and appearance caps remain separate fields;
-- ordinary combat canonicalization is not encoded as
-  `MaxCreationsThisRun = 1`;
-- physical exits match extracted map data;
-- Q forced pairs, H cage metadata, I/N biome state, and N physical hub-door
-  mappings are closed, typed, and internally consistent;
-- each canonicalized family has sufficient compatible controls under maximum
-  topology demand, and every declared canonical family has exactly one proof;
-- all declared force windows preserve start, deadline, and independent
-  eligibility bounds;
-- every reward binding, including nested slots, branches, and offer points,
-  resolves to a known producer kind, declared stores/profile, valid
-  positive/negative filters, and reward/payload types.
-
-NPC catalogs, persistence, targeting, and validation are not Checkpoint 1
-deliverables. The foundation reserves stable `roomControlKey + phaseKey`
-addresses and resolves history from an effective room spine so those entities
-can later merge before history without changing Room Control identity. Mixed
-vanilla encounter sets containing progression and NPC variants are not
-production baseline declarations.
-
-### Acceptance
-
-- the catalog loads without UI, Lib refs, history, or runtime state;
-- every F-Q declaration passes the coverage audit;
-- capacity tests use compatible matching, not raw room counts, and report every
-  dynamic predicate excluded from the static proof;
-- changing one malformed fixture fails at the catalog boundary with a precise
-  invariant message;
-- no placeholder biome or reward declaration is counted as implemented.
-
-## Checkpoint 2: Static Controls and Managed Storage
-
-This checkpoint proves the physical persistence model before topology or UI is
-built.
-
-Before specializing a Room Control template, review its contract in
-`room_controls/` together with `room_controls/REWARD_COMPONENTS.md`. If that
-review changes domain ownership, biome behavior, or canonical semantics,
-correct the owning authority document first. Do not implement a generic
-producer/template combination that the corresponding specification has not
-admitted.
-
-### Deliverables
-
-- one statically declared Route Control instance per route, produced through
-  the registered Route Control template;
-- complete declared Room Control template taxonomy and bounded storage schema;
-- one statically declared Room Control per top-level concrete room in every
-  route-biome step;
-- parent-local bounded child storage inside the appropriate Room Control
-  templates;
-- finite module storage for each Biome Plan's topology and biome-global state;
-- static control and storage manifests generated from the validated catalog;
-- focused UI and runtime control refs exposing semantic reads, not private
-  aliases, for every F and G room;
-- explicit dormant transitional adapters for biome-specific H, I, N, O, P,
-  and Q templates, used only to prove bounded storage before those biomes are
-  implemented;
-- an evidence-backed implementation-support record for every route-biome step;
-- `UiStateAccess` and `RuntimeStateAccess` adapters;
-- Lib full reset-to-defaults integration for all persisted module and control
-  state;
-- one normalized configuration-revision signal covering normal commit,
-  profile switch, hash import, Lib reset, and configuration reload, ready for
-  the derived coordinator introduced in Checkpoint 5. The normalized authored
-  revision advances before downstream rebuild notification.
-
-Both Route Controls default their configured prefix to empty. Fresh profiles
-and Lib reset to defaults therefore persist no configured planner biome for
-either route. Once compilation exists, that default publishes no execution
-plan and leaves both routes vanilla.
-
-Every Room Control must declare its complete intended storage schema at this
-checkpoint, including bounded special slots. The transitional adapter may own
-that physical schema for a dormant non-F/G template, but it is not a semantic
-Room Control implementation and cannot be used by materialization. Adding H,
-I, N, O, P, or Q later must replace the corresponding adapter without adding
-dynamic controls or migrating storage.
-
-### Acceptance
-
-- expected Route and Room Control counts match the catalog-generated manifest;
-- every control name satisfies Lib stable-identifier rules;
-- every F/G Room Control is focused and no F/G instance uses the transitional
-  adapter;
-- UI and runtime refs for focused controls read the same committed semantic
-  values;
-- UI-only writes cannot be reached from runtime refs;
-- implementation-support claims match assembled evidence and cannot activate
-  a biome with transitional controls;
-- fresh profile creation and Lib reset to defaults restore an empty configured
-  prefix for both routes;
-- profile switch, hash import, Lib reset to defaults, normal commit, and
-  configuration reload emit the same normalized configuration-revision
-  signal;
-- Lib reset to defaults resets all module and control persistence, including
-  dormant leaves;
-- no test or source accesses a generated private control alias.
-
-There is still no production route editor in this checkpoint. Focused semantic
-Room Controls for non-F/G biomes are intentionally deferred to Checkpoint 7.
 
 ## Checkpoint 3: Biome Plan and Standard Topology
 
@@ -550,7 +304,7 @@ the first option, mutate a control, or repair topology.
 - canonical materialization works through both UI and runtime read adapters;
 - canonical materialization runs only from an explicit headless invocation at
   this checkpoint and never during draw. Checkpoint 5 wires it to the
-  configuration-revision rebuild lifecycle.
+  synchronous configuration lifecycle rebuild.
 
 ## Checkpoint 5: F Headless Vertical Slice
 
@@ -566,16 +320,16 @@ F proves the complete planning pipeline before production UI is introduced.
 - exact reward domain, payload, entry, batch, counted-bag, and acquisition
   validation;
 - stable candidate providers and bounded scratch projection;
-- direct versioned feedback resolution by semantic owner;
+- direct feedback resolution by semantic owner;
 - execution compiler producing concrete headless F instructions;
 - derived-cache coordinator for completeness, canonical, history, validation,
   prepared presentation, and compilation;
-- one rebuild path, triggered by commit or the equivalent normalized
-  configuration-revision signal, that atomically publishes the complete
-  derived revision and either a complete execution plan or no plan;
-- source-authored-revision tagging and rejection of every older execution plan;
+- one synchronous rebuild path called directly by activation, meaningful
+  commit, and meaningful reload lifecycle callbacks;
+- atomic replacement with the complete derived result on success, and clearing
+  of the previous published result before surfacing a contract failure;
 - unpublished presentation build buffers swapped atomically into the published
-  route revision.
+  route result.
 
 Do not defer counted bag simulation. The F slice is not complete if rewards are
 validated only by store membership or selected-entry requirements.
@@ -593,11 +347,10 @@ validated only by store membership or selected-entry requirements.
 - counted bags preserve ineligible entries and refill only under the declared
   append-on-no-eligible rule;
 - selected values and candidate projections call the same validators;
-- stale provider feedback is rejected;
 - no partial canonical, presentation, or execution result becomes visible
   during a rebuild;
-- a contract failure after an authored revision change fails loudly and leaves
-  no execution plan eligible for that revision;
+- a contract failure fails loudly, clears the previous published result, and
+  leaves no execution plan available;
 - rebuilding never mutates the currently published presentation arrays;
 - repeated rebuild of unchanged committed state is avoided.
 
@@ -804,7 +557,7 @@ runtime hook consumes it.
 - route-wide error horizon and status aggregation;
 - Underworld and Surface integration fixtures;
 - execution-plan concatenation with explicit prefix termination;
-- atomic publication of each complete derived route revision after commit.
+- atomic publication of each complete derived route result after commit.
 
 ### Acceptance
 
@@ -822,8 +575,8 @@ runtime hook consumes it.
   events;
 - changing the configured prefix rebuilds and atomically publishes once after
   commit;
-- every published execution plan carries the current authored revision, and an
-  older revision is unusable immediately after configuration changes;
+- every meaningful configuration change synchronously rebuilds once, atomically
+  replaces the published result on success, and clears it on failure;
 - all active prefix values and production biome editors are available, while
   runtime hooks are still absent.
 
@@ -851,7 +604,7 @@ branch hook name is not evidence that the callback is still correct.
 - hook registration through the module's supported Lib surface;
 - live-to-stable context translators at hook boundaries;
 - ordered instruction cursor/state;
-- authored-revision verification before instruction consumption;
+- current-plan lookup before instruction consumption;
 - concrete target, reward, payload, and room-local instruction consumers;
 - explicit configured-prefix activation and vanilla suffix handoff;
 - stable runtime mismatch diagnostics;
@@ -862,10 +615,10 @@ branch hook name is not evidence that the callback is still correct.
 - hooks consume instructions without importing validators or candidate code;
 - runtime never chooses a fallback target/reward inside configured scope;
 - an unexpected room, exit, offer point, or cursor produces a clear diagnostic
-  and disables stale plan use;
+  and disables current plan use;
 - changing profiles or resetting configuration cannot leave the prior plan
   active;
-- a rebuild contract failure cannot leave an older authored revision active;
+- a rebuild contract failure cannot leave the previous execution plan active;
 - unconfigured route suffixes use vanilla behavior;
 - focused in-game probes cover each callback row before full deploy testing.
 
@@ -990,7 +743,7 @@ The revamp implementation is complete only when:
   defaults clears all persisted planner state;
 - complete plans materialize every generated peer and local child correctly;
 - lifecycle history and validation cover every supported room/reward rule;
-- candidate feedback is semantic, versioned, and allocation-stable;
+- candidate feedback is semantic, directly resolved, and allocation-stable;
 - valid configured prefixes compile to concrete runtime instructions;
 - runtime consumes those instructions and hands unconfigured suffixes to
   vanilla;

@@ -277,17 +277,13 @@ The Route Plan owns:
 It does not own room-local payloads or duplicate biome topology inside one root
 document.
 
-After committed authored state changes, route orchestration derives and
-atomically publishes one coherent revision containing the processed biome
-snapshots, history, validation result, prepared presentation state, and either
-a complete execution plan or no execution plan. None of that derived revision
-is persisted authored state.
-
-Every derived revision records the authored configuration revision from which
-it was built. Runtime may consume an execution plan only while that source
-revision still matches the current committed authored revision. A committed
-change therefore makes the previous execution plan unusable before the
-replacement rebuild succeeds or fails.
+After a meaningful committed configuration lifecycle event, route orchestration
+reads one coherent committed snapshot and rebuilds into unpublished local state.
+Success atomically replaces the processed biome snapshots, history, validation
+result, prepared presentation state, and execution plan as one derived result.
+A contract failure clears the previously published result before surfacing the
+error, so no old execution plan remains active for changed configuration. None
+of this derived state is persisted.
 
 ## Room Catalog and Templates
 

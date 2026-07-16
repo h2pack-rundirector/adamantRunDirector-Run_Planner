@@ -15,7 +15,7 @@ committed Route Controls, Biome Plans, and Room Controls
        -> semantic findings and prepared UI presentation
        -> stop unless the biome is complete and valid
   -> runtime execution plan when the configured prefix fully passes
-  -> atomically publish one derived revision
+  -> atomically publish one derived result
 ```
 
 This is the authority for canonical shape, history timing, requirement
@@ -24,8 +24,8 @@ plan compilation. `DOMAIN_MODEL.md` owns semantic concepts,
 `UI_PERSISTENCE_MODEL.md` owns authored persistence, and `BIOME_RULES.md` owns
 biome-specific topology.
 
-The pipeline is pure with respect to authored state. It reads one committed
-configuration revision and produces replaceable derived caches. It never
+The pipeline is pure with respect to authored state. It reads one coherent
+committed snapshot and produces replaceable derived caches. It never
 writes defaults, repairs malformed topology, or reaches into widget/storage
 internals.
 
@@ -33,7 +33,7 @@ internals.
 
 One commit-triggered rebuild performs these stages in order:
 
-1. read one coherent authored revision and its configured route prefix from
+1. read one coherent committed snapshot and its configured route prefix from
    committed state, rejecting a prefix outside the active composition domain;
 2. begin with empty route history;
 3. for each configured biome in route order:
@@ -44,7 +44,7 @@ One commit-triggered rebuild performs these stages in order:
       route history;
    5. validate the biome's selected facts and exported candidate projections
       against the accumulated history;
-   6. record versioned validation findings;
+   6. record validation findings;
    7. if invalid, stop; otherwise admit the biome to the validated prefix and
       continue;
 4. translate findings through semantic owner descriptors into a fresh prepared
@@ -52,13 +52,12 @@ One commit-triggered rebuild performs these stages in order:
 5. compile a runtime execution plan only if every configured biome completed
    and validated successfully; otherwise explicitly produce no execution plan;
 6. atomically publish the canonical snapshots, history, validation result,
-   prepared presentation, and execution result as one derived revision tagged
-   with its source authored revision.
+   prepared presentation, and execution result as one derived result.
 
 An empty configured prefix is valid and produces no planner instructions for
 that route. Runtime remains vanilla for the entire route.
 
-The output belongs to one immutable rebuild revision. Draw may read the
+The output belongs to one immutable published result. Draw may read the
 prepared canonical status, feedback, and candidate decoration until committed
 configuration changes again. No intermediate result is visible to draw or
 runtime consumers.
@@ -68,11 +67,11 @@ history may remain prepared for UI feedback, but an incomplete or invalid
 configured biome clears or withholds the entire prior runtime plan rather than
 leaving stale instructions active.
 
-The current authored revision advances before rebuilding. A previously
-published execution plan whose source revision no longer matches is unusable
-even if the replacement rebuild encounters a contract failure and publishes no
-normal derived result. Contract failure remains a loud invariant failure, not
-an `Invalid` planner finding.
+Every meaningful configuration lifecycle event rebuilds synchronously into
+unpublished local state. Success atomically replaces the published result. If
+the rebuild encounters a contract failure, the coordinator clears the previous
+published result before surfacing the error, so no execution plan remains
+available. Contract failure is not an `Invalid` planner finding.
 
 ## Inputs and Declaration Boundary
 
@@ -717,11 +716,11 @@ to warnings.
 
 ## Candidate Projection
 
-The semantic owner exports each candidate provider once per prepared control
-revision. A candidate record contains:
+The semantic owner exports each candidate provider once per prepared control.
+A candidate record contains:
 
 - its stable semantic owner address;
-- provider key and version;
+- provider key;
 - stable candidate key and optional cached index;
 - a game-language projection operation.
 
@@ -772,7 +771,6 @@ A finding contains:
         requirementPath = {},
     },
     providerKey = "targetRoom",
-    providerVersion = 12,
     candidateKey = "Underworld_F_Story01",
     evidence = {
         requiredBiomeDepthMin = 4,
@@ -807,11 +805,10 @@ Those tables belong to the coordinator's non-persisted route presentation
 cache, not to persisted controls or callback-owned refs. Translation must not
 mutate authored state.
 
-Provider feedback applies only when its version matches the committed provider
-revision being rebuilt. Because one rebuild reads one captured authored
-revision, an unexpected mismatch is a provider contract failure that aborts
-publication; it must never apply a stale candidate index or silently schedule a
-corrective retry.
+Findings and provider presentation are produced inside the same unpublished
+rebuild. Feedback resolves by stable semantic owner, provider, and candidate
+keys; it is never queued for a later rebuild or applied by a cached candidate
+index.
 
 The first blocking selected-plan finding defines the presentation horizon.
 Later configured biomes are not processed. Downstream UI content may be
@@ -828,7 +825,6 @@ complete and has no blocking validation findings.
 The execution plan is an ordered, callback-oriented instruction stream. It
 contains concrete runtime decisions such as:
 
-- the source authored revision required for consumption;
 - expected route, biome, current room, and lifecycle phase;
 - physical exit-to-target room assignments in generation order;
 - concrete effective encounter assignments and suppression policy for
@@ -843,10 +839,11 @@ Instructions have compiler-owned sequential IDs or cursors for runtime
 diagnostics. These are runtime identities, not UI occurrence identities and
 are never persisted back into authored topology.
 
-Runtime hooks consume the next instruction matching their declared callback
-boundary only when the plan's source authored revision matches the coordinator's
-current authored revision. They may translate live game objects into stable
-keys and verify the expected context, but they do not:
+Runtime hooks retrieve the coordinator's currently published execution plan and
+consume the next instruction matching their declared callback boundary. Plan
+replacement also resets its instruction cursor; hooks do not retain instructions
+from a previous plan. They may translate live game objects into stable keys and
+verify the expected context, but they do not:
 
 - rerun room eligibility, force pressure, reward bags, or candidate logic;
 - choose among unresolved rooms, rewards, or payloads;
@@ -874,7 +871,7 @@ draw then reads cached state. Required implementation properties are:
 - stable provider values and labels between domain changes;
 - reused mutable candidate visibility/color/message arrays;
 - mutation only of unpublished build buffers followed by an atomic reference
-  swap; the currently published revision is immutable;
+  swap; the currently published result is immutable;
 - indexed semantic owner lookup for feedback;
 - no callback-owned UI refs required for feedback translation;
 - bounded scratch state for candidate projection;
@@ -931,12 +928,13 @@ The pipeline test suite must cover:
 - modeled requirement handling and catalog rejection of unknown or evaluator-
   less requirements;
 - selected and candidate use of the same rule functions;
-- provider-version rejection of stale feedback;
+- finding resolution by stable semantic owner/provider/candidate keys inside
+  the same rebuild;
 - one published prepared view per draw and replacement publication before the
   draw following a commit;
 - rejection of inactive configured-prefix imports without clamping;
-- authored-revision mismatch preventing stale execution after normal or failed
-  rebuilds;
+- atomic published-result replacement after a successful rebuild and
+  previous-result clearing after a failed rebuild;
 - compilation refusal for incomplete or invalid configured prefixes;
 - runtime instruction order, context mismatch, and vanilla suffix handoff;
 - zero materialization/history/validation work on unchanged draw frames.
