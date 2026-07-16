@@ -2,9 +2,9 @@
 
 ## Coverage
 
-| Biome step | Room | Reward surface | Encounter profile |
-| --- | --- | --- | --- |
-| `Surface_N` | `N_PreHub01` | `OpeningReward` | `FixedPreHub` |
+| Biome step | Room | Counted store | Ineligible | Encounter profile |
+| --- | --- | --- | --- | --- |
+| `Surface_N` | `N_PreHub01` | RunProgress | Devotion, gold, max health, max magick | `FixedPreHub` |
 
 This is the only valid template combination.
 
@@ -23,8 +23,8 @@ The control owns one concrete `RunProgress` opening reward:
 }
 ```
 
-Logical persistence is `rewardType` plus the conditional Boon `source`.
-Opening filters are inherited from `OpeningReward`.
+Logical persistence is `rewardType` plus the conditional Boon `source`. The
+opening exclusions are explicit facts on the normalized room binding.
 
 The fixed `PreHubGeneratedN` encounter profile and fixed link into `N_Hub`
 are declaration/topology facts, not authored control state.

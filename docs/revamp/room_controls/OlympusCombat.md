@@ -2,9 +2,9 @@
 
 ## Coverage
 
-| Biome step | Rooms | Reward surface | Encounter profile |
-| --- | --- | --- | --- |
-| `Surface_P` | `P_Combat01..19` | `RunProgressMinorMajor` | `OlympusCombat` |
+| Biome step | Rooms | Counted stores | Ineligible | Encounter profile |
+| --- | --- | --- | --- | --- |
+| `Surface_P` | `P_Combat01..19` | RunProgress, MetaProgress | Devotion | `OlympusCombat` |
 
 ## Owned State
 
@@ -22,7 +22,9 @@ The authored state and persistence are the same concrete incoming
 }
 ```
 
-Logical fields are `storeKey`, `rewardType`, `source1`, and `source2`.
+BaseP excludes Devotion. Logical fields are therefore `storeKey`,
+`rewardType`, and one conditional Boon `source1`; the component does not
+reserve a second source that no valid P combat reward can use.
 
 The separate template exists because its fixed room spine contains a
 non-counting `Intro` followed by counting `Combat`. Indoor/outdoor tags and

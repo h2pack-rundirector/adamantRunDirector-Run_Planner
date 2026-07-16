@@ -130,7 +130,7 @@ lanes:
 src/mods/
   biomes/        room facts, biome declarations, structural rules, catalog
   controls/      Route and Room Control templates and static instance manifest
-  rewards/       primitives, stores, bags, surfaces, payloads, simulation
+  rewards/       primitives, stores, bags, producer bindings, payloads, simulation
   route/         Biome Plan, batches, state access, canonical/history/validation
   candidates/    stable providers, projection records, presentation preparation
   compiler/      validated canonical/history to execution instructions
@@ -336,9 +336,9 @@ Tests and generated audits must prove:
 
 - route and room keys are unique in their declared scope;
 - each room's template accepts its room kind;
-- every room explicitly declares tags, exits, reward surface, encounter-profile
-  key, structural counter effects, caps, terminal/fixed state, and local
-  children, including empty and false values;
+- every room explicitly declares tags, exits, its complete reward-producer
+  binding, encounter-profile key, structural counter effects, caps,
+  terminal/fixed state, and local children, including empty and false values;
 - every encounter profile explicitly declares its phases, including each
   phase's baseline encounter identity and encounter-depth effect where the
   concrete identity affects planner semantics;
@@ -352,8 +352,9 @@ Tests and generated audits must prove:
   topology demand, and every declared canonical family has exactly one proof;
 - all declared force windows preserve start, deadline, and independent
   eligibility bounds;
-- every reward surface, including nested branches and incoming-kind variants,
-  resolves to declared stores/profiles and reward/payload types.
+- every reward binding, including nested slots, branches, and offer points,
+  resolves to a known producer kind, declared stores/profile, valid
+  positive/negative filters, and reward/payload types.
 
 NPC catalogs, persistence, targeting, and validation are not Checkpoint 1
 deliverables. The foundation reserves stable `roomControlKey + phaseKey`
@@ -381,7 +382,7 @@ Before specializing a Room Control template, review its contract in
 `room_controls/` together with `room_controls/REWARD_COMPONENTS.md`. If that
 review changes domain ownership, biome behavior, or canonical semantics,
 correct the owning authority document first. Do not implement a generic
-surface/template combination that the corresponding specification has not
+producer/template combination that the corresponding specification has not
 admitted.
 
 ### Deliverables

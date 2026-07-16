@@ -28,15 +28,21 @@ function instances.build(catalog, activePrefixEnds)
         }
     end
     for _, room in ipairs(catalog.controlManifest.rooms.ordered) do
-        result[room.key] = {
+        local instance = {
             template = room.templateKey,
             routeKey = room.routeKey,
             biomeStepKey = room.biomeStepKey,
             gameRoomKey = room.gameRoomKey,
             rewardSurfaceKey = room.rewardSurfaceKey,
             entryOfferPolicy = room.entryOfferPolicy,
-            state = room.state,
         }
+        if room.state ~= nil then
+            instance.state = room.state
+        end
+        if room.generatedReward ~= nil then
+            instance.generatedReward = room.generatedReward
+        end
+        result[room.key] = instance
     end
     return result
 end

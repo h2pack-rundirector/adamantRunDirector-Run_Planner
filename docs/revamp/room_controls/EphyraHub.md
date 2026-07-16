@@ -2,9 +2,9 @@
 
 ## Coverage
 
-| Biome step | Room | Reward surface | Encounter profile |
+| Biome step | Room | Reward binding | Encounter profile |
 | --- | --- | --- | --- |
-| `Surface_N` | `N_Hub` | `None` | `None` |
+| `Surface_N` | `N_Hub` | none | `None` |
 
 ## Owned State
 

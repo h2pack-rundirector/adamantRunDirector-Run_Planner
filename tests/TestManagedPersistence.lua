@@ -184,10 +184,9 @@ end
 function TestManagedPersistence.testControlAssemblyDoesNotMutateValidatedCatalog()
     h.withImport(function()
         local catalogAssembly = h.testImport("mods/catalog/assembly.lua")
-        local controlsAssembly = h.testImport("mods/controls/assembly.lua")
         local catalog = catalogAssembly.create()
 
-        local controls = controlsAssembly.create(catalog)
+        local controls = h.testImport("mods/systems.lua").create({ catalog = catalog }).controls
 
         lu.assertNil(catalog.controlManifest)
         lu.assertNotNil(controls.catalog.controlManifest)
@@ -198,13 +197,16 @@ end
 
 function TestManagedPersistence.testRoomSchemasCoverEveryBoundedSpecialSurface()
     h.withImport(function()
-        local catalog = load()
+        local catalog, _, instances, templates = load()
 
-        local f = storageLookup(catalog.controlManifest.rooms.lookup.Underworld_F_Combat04.state.storage)
+        local standardCombat = instances.Underworld_F_Combat04
+        local f = storageLookup(templates.StandardCombat.storage(standardCombat))
         lu.assertNotNil(f.RewardStoreKey)
         lu.assertNotNil(f.RewardType)
         lu.assertNotNil(f.RewardPayload1)
         lu.assertNotNil(f.RewardPayload2)
+        lu.assertNil(standardCombat.state)
+        lu.assertNotNil(standardCombat.generatedReward)
 
         local fields = storageLookup(catalog.controlManifest.rooms.lookup.Underworld_H_Combat01.state.storage)
         lu.assertNotNil(fields.Cage1RewardType)
@@ -234,6 +236,135 @@ function TestManagedPersistence.testRoomSchemasCoverEveryBoundedSpecialSurface()
         lu.assertNotNil(shop.RewardBoonType)
         lu.assertNotNil(shop.RewardBoonPurchased)
         lu.assertNotNil(shop.RewardMinorPurchased)
+    end)
+end
+
+function TestManagedPersistence.testStandardCombatUsesTypedRewardInterface()
+    h.withImport(function()
+        local _, _, instances, templates = load()
+        local name = "Underworld_F_Combat04"
+        local instance = namedInstance(instances[name], name)
+        local template = templates[instance.template]
+        local fields = fieldsFor(template.storage(instance))
+        local runtime = template.createRuntime(fields, instance)
+        local ui = template.createUi(fields, instance)
+
+        lu.assertEquals(runtime:read(), {
+            kind = "StandardCombat",
+            generatedReward = {},
+        })
+        lu.assertNil(runtime.write)
+        lu.assertNil(runtime.setGeneratedReward)
+        lu.assertNil(runtime.field)
+        lu.assertNil(ui.write)
+
+        ui:setGeneratedReward({
+            storeKey = "RunProgress",
+            rewardType = "Boon",
+        })
+        lu.assertEquals(runtime:read().generatedReward, {
+            storeKey = "RunProgress",
+            rewardType = "Boon",
+        })
+
+        ui:setGeneratedReward({
+            storeKey = "RunProgress",
+            rewardType = "Boon",
+            payload = { source = "ApolloUpgrade" },
+        })
+        lu.assertEquals(runtime:read(), {
+            kind = "StandardCombat",
+            generatedReward = {
+                storeKey = "RunProgress",
+                rewardType = "Boon",
+                payload = { source = "ApolloUpgrade" },
+            },
+        })
+
+        ui:setGeneratedReward({
+            storeKey = "RunProgress",
+            rewardType = "Devotion",
+            payload = { sources = { "ApolloUpgrade", "ZeusUpgrade" } },
+        })
+        lu.assertEquals(runtime:read().generatedReward, {
+            storeKey = "RunProgress",
+            rewardType = "Devotion",
+            payload = { sources = { "ApolloUpgrade", "ZeusUpgrade" } },
+        })
+
+        lu.assertErrorMsgContains("is not available from store 'MetaProgress'", function()
+            ui:setGeneratedReward({
+                storeKey = "MetaProgress",
+                rewardType = "Devotion",
+            })
+        end)
+        lu.assertErrorMsgContains("unknown source 'MissingUpgrade'", function()
+            ui:setGeneratedReward({
+                storeKey = "RunProgress",
+                rewardType = "Boon",
+                payload = { source = "MissingUpgrade" },
+            })
+        end)
+        lu.assertErrorMsgContains("sources must be distinct", function()
+            ui:setGeneratedReward({
+                storeKey = "RunProgress",
+                rewardType = "Devotion",
+                payload = { sources = { "ApolloUpgrade", "ApolloUpgrade" } },
+            })
+        end)
+        lu.assertEquals(runtime:read().generatedReward, {
+            storeKey = "RunProgress",
+            rewardType = "Devotion",
+            payload = { sources = { "ApolloUpgrade", "ZeusUpgrade" } },
+        })
+
+        ui:setGeneratedReward({})
+        lu.assertEquals(runtime:read(), {
+            kind = "StandardCombat",
+            generatedReward = {},
+        })
+
+        fields.RewardStoreKey:write("MetaProgress")
+        fields.RewardType:write("Boon")
+        lu.assertErrorMsgContains("is not available from store 'MetaProgress'", function()
+            runtime:read()
+        end)
+    end)
+end
+
+function TestManagedPersistence.testEveryStandardCombatUsesSpecializedPreparation()
+    h.withImport(function()
+        local catalog, _, instances = load()
+        local count = 0
+        for _, room in ipairs(catalog.controlManifest.rooms.ordered) do
+            if room.templateKey == "StandardCombat" then
+                count = count + 1
+                lu.assertNil(room.state, room.key)
+                lu.assertNotNil(room.generatedReward, room.key)
+                lu.assertNil(instances[room.key].state, room.key)
+                lu.assertIs(instances[room.key].generatedReward, room.generatedReward)
+            end
+        end
+        lu.assertEquals(count, 56)
+    end)
+end
+
+function TestManagedPersistence.testTemplateRegistryRejectsImplicitFallbacks()
+    local transitional = { template = {}, prepare = function() return {} end }
+    local specialized = { template = {}, prepare = function() return {} end }
+    local registry = h.testImport("mods/controls/templates.lua", nil, {
+        route = {},
+        transitionalRoom = transitional,
+        standardCombat = specialized,
+    })
+    local catalog = {
+        roomTemplates = {
+            ordered = { { key = "UnknownTemplate" } },
+        },
+    }
+
+    lu.assertErrorMsgContains("no control implementation registered", function()
+        registry.build(catalog)
     end)
 end
 

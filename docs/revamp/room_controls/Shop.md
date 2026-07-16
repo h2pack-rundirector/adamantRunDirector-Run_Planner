@@ -2,9 +2,9 @@
 
 ## Coverage
 
-| Biome steps | Rooms | Reward surface | Encounter profile |
+| Biome steps | Rooms | Reward binding | Encounter profile |
 | --- | --- | --- | --- |
-| `Underworld_F/G`, `Surface_O/P` | `F_Shop01`, `G_Shop01`, `O_Shop01`, `P_Shop01` | `WorldShop` | `Shop` |
+| `Underworld_F/G`, `Surface_O/P` | `F_Shop01`, `G_Shop01`, `O_Shop01`, `P_Shop01` | shop: WorldShop | `Shop` |
 
 ## Owned State
 

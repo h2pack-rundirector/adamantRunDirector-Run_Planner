@@ -2,18 +2,18 @@
 
 ## Coverage
 
-| Biome step | Rooms | Reward surface | Encounter profile |
-| --- | --- | --- | --- |
-| `Underworld_F` | `F_Opening01..03` | `OpeningReward` | `F_Opening` |
-| `Surface_N` | `N_Opening01` | `OpeningReward` | `N_Opening` |
+| Biome step | Rooms | Counted store | Ineligible | Encounter profile |
+| --- | --- | --- | --- | --- |
+| `Underworld_F` | `F_Opening01..03` | RunProgress | Devotion, gold, max health, max magick | `F_Opening` |
+| `Surface_N` | `N_Opening01` | RunProgress | Devotion, gold, max health, max magick | `N_Opening` |
 
-No other surface or encounter profile is valid for this template.
+No other reward binding or encounter profile is valid for this template.
 
 ## Owned State
 
-The control owns the concrete incoming opening reward. `OpeningReward` fixes
-the store to `RunProgress` and excludes Devotion, gold, max-health, and
-max-magick rewards.
+The control owns the concrete incoming opening reward. Each room binding fixes
+RunProgress and explicitly excludes Devotion, gold, max-health, and max-magick
+rewards.
 
 Logical persistence:
 

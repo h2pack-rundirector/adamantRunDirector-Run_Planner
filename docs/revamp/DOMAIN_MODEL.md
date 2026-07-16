@@ -73,7 +73,7 @@ exceptions.
 `Room Declaration`
 : Verified game data for one concrete game room key such as `F_Combat04`. It
   owns type, tags, eligibility, force, caps, exits, its encounter-profile key,
-  and reward surface facts. It does not duplicate encounter phases or their
+  and concrete reward-producer binding. It does not duplicate encounter phases or their
   counter effects.
 
 `Encounter Profile`
@@ -225,7 +225,7 @@ standard-combat room key. The selected rooms and all offered rewards remain
 representable.
 
 Replacement is allowed only between semantically compatible declarations. A
-replacement must preserve the template, reward surface, physical-exit and
+replacement must preserve the template, compiled reward binding, physical-exit and
 room-internal structure relevant to the plan, and eligibility at that target.
 For example, a specialized N combat room with side-room behavior is not spare
 capacity for a plain combat target merely because both declarations are tagged
@@ -308,7 +308,12 @@ F_Combat04 = {
         {},
     },
     encounterProfile = "StandardCombat",
-    rewardSurface = "RunProgressMinorMajor",
+    reward = {
+        kind = "countedChoice",
+        storeKeys = { "RunProgress", "MetaProgress" },
+        eligibleRewardTypes = {},
+        ineligibleRewardTypes = {},
+    },
 }
 ```
 
@@ -406,7 +411,7 @@ Outgoing topology never belongs to a target room control.
 A Room Control owns only facts local to its concrete room:
 
 - its template-specific authored fields;
-- its generated/entered reward surface and concrete reward choices;
+- its generated/entered reward-producer binding and concrete reward choices;
 - room-local encounter structure when the room type requires it;
 - bounded local child slots declared by its template;
 - room-local completeness;
@@ -433,7 +438,7 @@ Batch rules must not be copied into each child room.
 ## Reward Ownership and Timing
 
 The target Room Control owns the authored reward value because the target room
-declaration owns the reward surface. This lets heterogeneous peers expose
+declaration owns the reward-producer binding. This lets heterogeneous peers expose
 different typed reward interfaces:
 
 ```text
@@ -446,10 +451,11 @@ The Biome Plan does not need to inspect or rewrite internal reward widgets. It
 asks each referenced room control for its concrete generated reward fragment.
 
 The reward primitive is the sole owner of its payload domain and normalized
-acquisition identity. A reward surface selects fixed primitives, stores, shop
-profiles, and batch constraints; it does not redeclare a fixed primitive's
-payload domain. Store filters may only include concrete reward types exposed by
-their referenced stores, and eligible/ineligible filters cannot overlap.
+acquisition identity. A producer binding selects behavior, counted stores or a
+shop profile, and positive/negative reward filters; it does not redeclare a
+fixed primitive's payload domain. Filters may only include concrete reward
+types exposed by their referenced stores, and eligible/ineligible filters
+cannot overlap. Filtered store combinations do not become new producer kinds.
 
 Domain ownership does not change game timing:
 

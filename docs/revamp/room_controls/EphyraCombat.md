@@ -5,29 +5,29 @@
 All 23 `Surface_N` controls `N_Combat01..23` use encounter profile
 `EphyraCombat`. Their incoming surfaces and child slots are declaration-fixed.
 
-| Room | Incoming surface | Side slots (`slot = game room : surface`) |
+| Room | Incoming counted binding | Side slots (`slot = game room : store`) |
 | --- | --- | --- |
-| `N_Combat01` | `HubReward` | none |
-| `N_Combat02` | `HubReward` | `sideDoor1 = N_Sub01 : SubRoomReward`; `sideDoor2 = N_Sub03 : SubRoomReward` |
-| `N_Combat03` | `HubReward` | `sideDoor1 = N_Sub04 : SubRoomReward` |
-| `N_Combat04` | `HubReward` | `sideDoor1 = N_Sub02 : SubRoomReward`; `sideDoor2 = N_Sub06 : SubRoomReward` |
-| `N_Combat05` | `HubReward` | `sideDoor1 = N_Sub02 : SubRoomReward`; `sideDoor2 = N_Sub07 : SubRoomReward`; `sideDoor3 = N_Sub03 : SubRoomReward` |
-| `N_Combat06` | `HubReward` | `sideDoor1 = N_Sub10 : SubRoomHardReward`; `sideDoor2 = N_Sub05 : SubRoomReward` |
-| `N_Combat07..08` | `HubReward` | none |
-| `N_Combat09` | `HubReward` | `sideDoor1 = N_Sub11 : SubRoomHardReward`; `sideDoor2 = N_Sub08 : SubRoomReward`; `sideDoor3 = N_Sub14 : SubRoomHardReward` |
-| `N_Combat10` | `HubReward` | `sideDoor1 = N_Sub05 : SubRoomReward`; `sideDoor2 = N_Sub09 : SubRoomHardReward` |
-| `N_Combat11` | `HubReward` | `sideDoor1 = N_Sub01 : SubRoomReward` |
-| `N_Combat12` | `HubRewardNoHammerHermes` | `sideDoor1 = N_Sub09 : SubRoomHardReward`; `sideDoor2 = N_Sub10 : SubRoomHardReward`; `sideDoor3 = N_Sub07 : SubRoomReward` |
-| `N_Combat13..14` | `HubReward` | none |
-| `N_Combat15` | `HubReward` | `sideDoor1 = N_Sub03 : SubRoomReward` |
-| `N_Combat16` | `HubReward` | `sideDoor1 = N_Sub04 : SubRoomReward` |
-| `N_Combat17` | `HubRewardNoHammerHermes` | `sideDoor1 = N_Sub11 : SubRoomHardReward` |
-| `N_Combat18` | `HubReward` | `sideDoor1 = N_Sub12 : SubRoomReward` |
-| `N_Combat19` | `HubReward` | none |
-| `N_Combat20` | `HubReward` | `sideDoor1 = N_Sub06 : SubRoomReward` |
-| `N_Combat21` | `HubReward` | none |
-| `N_Combat22` | `HubReward` | `sideDoor1 = N_Sub14 : SubRoomHardReward`; `sideDoor2 = N_Sub02 : SubRoomReward` |
-| `N_Combat23` | `HubReward` | `sideDoor1 = N_Sub12 : SubRoomReward`; `sideDoor2 = N_Sub13 : SubRoomReward`; `sideDoor3 = N_Sub15 : SubRoomReward` |
+| `N_Combat01` | HubRewards | none |
+| `N_Combat02` | HubRewards | `sideDoor1 = N_Sub01 : SubRoomRewards`; `sideDoor2 = N_Sub03 : SubRoomRewards` |
+| `N_Combat03` | HubRewards | `sideDoor1 = N_Sub04 : SubRoomRewards` |
+| `N_Combat04` | HubRewards | `sideDoor1 = N_Sub02 : SubRoomRewards`; `sideDoor2 = N_Sub06 : SubRoomRewards` |
+| `N_Combat05` | HubRewards | `sideDoor1 = N_Sub02 : SubRoomRewards`; `sideDoor2 = N_Sub07 : SubRoomRewards`; `sideDoor3 = N_Sub03 : SubRoomRewards` |
+| `N_Combat06` | HubRewards | `sideDoor1 = N_Sub10 : SubRoomRewardsHard`; `sideDoor2 = N_Sub05 : SubRoomRewards` |
+| `N_Combat07..08` | HubRewards | none |
+| `N_Combat09` | HubRewards | `sideDoor1 = N_Sub11 : SubRoomRewardsHard`; `sideDoor2 = N_Sub08 : SubRoomRewards`; `sideDoor3 = N_Sub14 : SubRoomRewardsHard` |
+| `N_Combat10` | HubRewards | `sideDoor1 = N_Sub05 : SubRoomRewards`; `sideDoor2 = N_Sub09 : SubRoomRewardsHard` |
+| `N_Combat11` | HubRewards | `sideDoor1 = N_Sub01 : SubRoomRewards` |
+| `N_Combat12` | HubRewards; exclude WeaponUpgrade/HermesUpgrade | `sideDoor1 = N_Sub09 : SubRoomRewardsHard`; `sideDoor2 = N_Sub10 : SubRoomRewardsHard`; `sideDoor3 = N_Sub07 : SubRoomRewards` |
+| `N_Combat13..14` | HubRewards | none |
+| `N_Combat15` | HubRewards | `sideDoor1 = N_Sub03 : SubRoomRewards` |
+| `N_Combat16` | HubRewards | `sideDoor1 = N_Sub04 : SubRoomRewards` |
+| `N_Combat17` | HubRewards; exclude WeaponUpgrade/HermesUpgrade | `sideDoor1 = N_Sub11 : SubRoomRewardsHard` |
+| `N_Combat18` | HubRewards | `sideDoor1 = N_Sub12 : SubRoomRewards` |
+| `N_Combat19` | HubRewards | none |
+| `N_Combat20` | HubRewards | `sideDoor1 = N_Sub06 : SubRoomRewards` |
+| `N_Combat21` | HubRewards | none |
+| `N_Combat22` | HubRewards | `sideDoor1 = N_Sub14 : SubRoomRewardsHard`; `sideDoor2 = N_Sub02 : SubRoomRewards` |
+| `N_Combat23` | HubRewards | `sideDoor1 = N_Sub12 : SubRoomRewards`; `sideDoor2 = N_Sub13 : SubRoomRewards`; `sideDoor3 = N_Sub15 : SubRoomRewards` |
 
 Repeated `N_SubXX` keys are intentional. Identity is parent control plus slot
 key, not the child game-room key.
@@ -56,8 +56,9 @@ key, not the child game-room key.
 }
 ```
 
-The incoming store is fixed. `HubRewardNoHammerHermes` further excludes Hammer
-and Hermes outcomes. Incoming persistence is `rewardType` plus one conditional
+The incoming store is fixed. N_Combat12 and N_Combat17 declare negative
+WeaponUpgrade and HermesUpgrade filters. Incoming persistence is `rewardType`
+plus one conditional
 Boon source.
 
 Each side slot persists an explicit generation enum, `enteredOrder`, and one

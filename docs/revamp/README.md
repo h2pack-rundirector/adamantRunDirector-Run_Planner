@@ -13,10 +13,13 @@ directory.
 
 The legacy implementation is archived on `codex/fresh-planner-spine`. The live
 rewrite branch now implements the managed-module skeleton, headless catalog,
-and the static-control and managed-persistence foundation of Checkpoint 2. Room
-template specialization remains before the checkpoint is complete. System-wide
-composition and subsystem-local dependency injection are in place. The
-production UI remains the explicit unavailable-status shell.
+and the static-control and managed-persistence foundation of Checkpoint 2. The
+first specialized prototype implements typed `StandardCombat` controls with a
+generic bag-selection component; the reward-hierarchy review below will
+replace that component before the slice is finalized. The remaining room
+templates still use an explicit transitional adapter. System-wide composition
+and subsystem-local dependency injection are in place. The production UI
+remains the explicit unavailable-status shell.
 
 The six-document set completed coherent design review and was locked on
 2026-07-14. Questions deliberately assigned to a later biome implementation
@@ -58,9 +61,19 @@ It is subordinate to the six authority documents above, but it is the
 implementation contract for Checkpoints 2 and 4. Template implementation must
 not begin until the corresponding specification has been reviewed.
 
-[`ROOM_CONTROL_HANDOFF.md`](ROOM_CONTROL_HANDOFF.md) records the current
-post-Checkpoint-2 design state, verified game-data findings, and the exact
-production-catalog work that remains before Room Control implementation.
+The review-draft
+[`REWARD_HIERARCHY.md`](room_controls/REWARD_HIERARCHY.md) defines the proposed
+bottom-up reward-component graph. Reward-control implementation is paused at
+the current prototype until that hierarchy is reviewed and locked.
+
+[`REWARD_CONSUMER_AUDIT.md`](room_controls/REWARD_CONSUMER_AUDIT.md) verifies
+the concrete store, inherited filter, and forced-reward provenance for every
+supported reward producer. Its listed declaration reconciliations precede the
+hierarchy implementation.
+
+[`ROOM_CONTROL_HANDOFF.md`](ROOM_CONTROL_HANDOFF.md) records the reviewed Room
+Control design state, verified game-data findings, and the sequencing context
+for the remaining template implementations.
 
 ## Authority Boundaries
 
@@ -156,7 +169,8 @@ The revamp starts from these decisions:
 - Bounded room-internal children use stable parent-local slots rather than
   dynamic or duplicate top-level controls.
 - A Biome Plan owns generated batches, room links, and picked state.
-- A room control owns the authored state and reward surface local to that room.
+- A room control owns the authored state and reward-producer binding local to
+  that room.
 - Outgoing topology belongs to the Biome Plan, never to a target room control.
 - Picked and unpicked generated rooms use the same room-control representation.
 - Unpicked rooms are dead leaves. Their offered rewards remain materialized.

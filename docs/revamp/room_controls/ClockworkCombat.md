@@ -4,11 +4,12 @@
 
 All 24 `Underworld_I` rooms `I_Combat01..24` use:
 
-- reward surface `ClockworkGoalOrTartarus`;
+- an `incomingKind` reward producer whose Goal branch is fixed ClockworkGoal
+  and whose NonGoal branch uses TartarusRewards with Boon excluded;
 - encounter profile `ClockworkCombat`;
 - no local child slots.
 
-No other surface/profile combination is valid.
+No other producer/profile combination is valid.
 
 ## Owned State
 
@@ -54,7 +55,9 @@ remains persisted but dormant while Goal is selected.
 ## Completeness and Ownership
 
 An empty incoming kind is incomplete. Goal is locally complete immediately.
-NonGoal requires a complete Tartarus reward and payload.
+NonGoal requires a complete reward from its compiled TartarusRewards binding.
+`I_BaseCombat` supplies the Boon exclusion for every supported I combat room;
+Devotion remains valid and retains its two-source payload.
 
 `ClockworkDoorBatch` enforces exactly one Goal offer when required and owns
 peer constraints. Goal acquisition counters are derived from picked topology;

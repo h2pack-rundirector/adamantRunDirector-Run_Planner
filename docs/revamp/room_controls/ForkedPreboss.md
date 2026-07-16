@@ -13,26 +13,29 @@ ineligible free rewards.
 
 `PrebossShopOrFreeReward` is not a reward surface. The behavior is a
 preboss-level offer policy combining a shop component with bounded ordinary
-store-choice reward components.
+bag-backed reward choices.
 
 Every covered room declares that composition explicitly:
 
 ```lua
 {
     templateKey = "ForkedPreboss",
-    rewardSurfaceKey = "WorldShop",
+    reward = { kind = "shop", shopProfileKey = "WorldShop" },
     entryOfferPolicy = {
         kind = "shopThenFillRemainingExits",
-        freeRewardSurfaceKey = "PrebossFreeReward",
+        freeReward = {
+            kind = "countedChoice",
+            storeKeys = { "RunProgress" },
+            ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
+        },
         maxFreeRewards = 1, -- F/H/P; G declares 2
     },
 }
 ```
 
-`PrebossFreeReward` is an ordinary `storeChoice` surface over `RunProgress`
-with Devotion and `RoomMoneyDrop` excluded. The shared template supports two
-slots, while the catalog requires each instance bound to match its biome's
-maximum declared predecessor exits minus one.
+Each free slot receives the compiled counted binding shown above. The shared
+template supports two slots, while the catalog requires each instance bound
+to match its biome's maximum declared predecessor exits minus one.
 
 ## Bounded Authored State
 

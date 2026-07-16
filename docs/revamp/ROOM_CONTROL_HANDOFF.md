@@ -10,8 +10,8 @@ The last implementation commit before this design pass is
 `1e8307b refactor(planner): centralize system wiring` on
 `codex/planner-revamp`. The committed implementation has the Checkpoint 2
 managed-state foundation and the preferred Systems -> DI -> subsystem
-composition direction. Real specialized Room Control templates have not been
-implemented yet.
+composition direction. At the time of this design handoff, real specialized
+Room Control templates had not been implemented yet.
 
 This pass deliberately stopped before implementation and produced the
 supplemental [`room_controls/`](room_controls/) contract set. Review each
@@ -122,7 +122,7 @@ used as its model.
 ### Planner representation
 
 `PrebossShopOrFreeReward` should be deleted. It incorrectly turns a room-level
-offer set into a generic reward surface.
+offer set into a generic named component.
 
 Preboss uses two explicit templates with a shared profile-parameterized shop
 component:
@@ -188,23 +188,48 @@ The declaration and catalog layer now reflects the reviewed model:
 
 - `I_PreBoss02` is the sole I terminal room and `I_PreBoss01` is excluded;
 - `DirectPreboss` and `ForkedPreboss` replace the generic Preboss template;
-- `PrebossFreeReward` is an ordinary store-choice surface, while each preboss
-  room explicitly declares its entry-offer policy;
-- the catalog rejects missing or mismatched preboss policies and surfaces;
+- every forked preboss policy embeds an ordinary RunProgress counted binding
+  with Devotion and gold excluded;
+- the catalog rejects missing or mismatched preboss policies and producer
+  bindings;
 - `H_Bridge01` uses the Story control template while retaining its bridge
   encounter profile and topology facts.
 
 The next production work is deliberately narrower:
 
-1. split real control templates into focused modules assembled through the
-   existing control subsystem DI layer;
-2. implement reward components first, then F/G, H/I, N/O, and P/Q templates;
-3. add storage-manifest, typed read/write, dormancy, and profile-capacity tests
+1. reconcile reward producer bindings against
+   [`REWARD_CONSUMER_AUDIT.md`](room_controls/REWARD_CONSUMER_AUDIT.md);
+2. replace the generic reward prototype with the bottom-up hierarchy;
+3. continue real control templates through the existing control subsystem DI
+   layer in F/G, H/I, N/O, and P/Q order;
+4. add storage-manifest, typed read/write, dormancy, and profile-capacity tests
    before proceeding to Checkpoint 4 materialization.
 
 Do not add NPC support, runtime fallback interpretation, or candidate/feedback
 production code merely to complete Checkpoint 2. Those remain later explicit
 checkpoints.
+
+## Implementation Progress
+
+The first specialized production prototype now covers all 56 `StandardCombat`
+instances across F, G, and Q. It introduces typed whole-control runtime
+snapshots and a semantic UI mutation operation. Its initial generic reward
+component is deliberately not final:
+[`REWARD_HIERARCHY.md`](room_controls/REWARD_HIERARCHY.md) defines the
+bottom-up replacement being reviewed. The companion
+[`REWARD_CONSUMER_AUDIT.md`](room_controls/REWARD_CONSUMER_AUDIT.md) found
+store and filter corrections that must land before that replacement:
+no-Devotion minor/major contexts, Tartarus-backed I minibosses, and the
+no-Boon Clockwork NonGoal branch. These are explicit producer bindings, not
+new named reward components. Every other room template is named explicitly in
+the control registry and remains on the transitional address-based adapter;
+there is no implicit generic fallback.
+
+This slice intentionally does not add draw views, completeness,
+materialization, candidates, feedback, or execution behavior. The next Room
+Control slice should continue replacing registry entries with focused template
+modules and reuse the reward component contracts rather than extending the
+transitional adapter.
 
 ## Verification Sources
 

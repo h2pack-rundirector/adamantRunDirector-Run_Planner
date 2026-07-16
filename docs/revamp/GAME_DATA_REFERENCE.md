@@ -140,6 +140,25 @@ If exact game-data conformance checking is added later, it must operate as a
 separate development-time extraction/audit tool against the source game data.
 Manually copied external paths do not belong in the runtime catalog.
 
+## Reward Producer Context
+
+`ChooseRoomReward` does not define one universal room-reward domain. The
+effective domain combines the selected counted store with inherited
+`EligibleRewards`/`IneligibleRewards`, bag-entry requirements, and the exact
+producer path. `ForcedReward` returns before ordinary bag-entry selection.
+
+The verified per-room mapping lives in
+[`room_controls/REWARD_CONSUMER_AUDIT.md`](room_controls/REWARD_CONSUMER_AUDIT.md).
+Its major consequences are:
+
+- no-Devotion RunProgress and no-Devotion minor/major choices are distinct;
+- O ship wheels can select RunProgress or MetaProgress but cannot select
+  Devotion in their one-exit context;
+- forced `O_Devotion01` is not a Devotion bag-entry selection;
+- BaseI makes I miniboss Boons Tartarus-backed and makes I combat NonGoal
+  rewards exclude Boon;
+- BaseH fixes cage rewards to RunProgress and excludes Devotion.
+
 ## Planner Canonicalization
 
 Run Planner intentionally narrows the combat rule:
@@ -163,7 +182,7 @@ repeat cannot be represented by duplicating a top-level control instance.
 
 Combat remapping is safe only while each biome can injectively assign distinct,
 semantically compatible, eligible combat rooms to all combat target slots.
-Compatibility includes template, reward surface, relevant room-internal
+Compatibility includes template, resolved reward binding, relevant room-internal
 structure, and target-time eligibility. Capacity is a declaration invariant
 and must be tested per compatible pool.
 
@@ -441,7 +460,7 @@ Re-run the relevant audit when any of these change:
 - force or eligibility translation;
 - room-control uniqueness policy;
 - maximum topology supported by the UI;
-- reward surfaces or acquisition timing.
+- reward-producer bindings or acquisition timing.
 
 A capacity failure must block the declaration update. It must not fall back to
 sharing one room control between generated targets.

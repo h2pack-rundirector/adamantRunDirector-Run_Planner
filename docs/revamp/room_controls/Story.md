@@ -2,10 +2,10 @@
 
 ## Coverage
 
-| Biome steps | Rooms | Reward surface | Encounter profile |
+| Biome steps | Rooms | Reward binding | Encounter profile |
 | --- | --- | --- | --- |
-| `Underworld_F/G/I`, `Surface_N/O/P` | `F_Story01`, `G_Story01`, `I_Story01`, `N_Story01`, `O_Story01`, `P_Story01` | `FixedStory` | `Story` |
-| `Underworld_H` | `H_Bridge01` | `FixedStory` | `FieldsBridge` |
+| `Underworld_F/G/I`, `Surface_N/O/P` | `F_Story01`, `G_Story01`, `I_Story01`, `N_Story01`, `O_Story01`, `P_Story01` | fixed Story | `Story` |
+| `Underworld_H` | `H_Bridge01` | fixed Story | `FieldsBridge` |
 
 ## Owned State
 

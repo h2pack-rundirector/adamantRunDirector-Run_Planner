@@ -51,7 +51,7 @@ before Lib prepares the instance:
     biomeStepKey = "Underworld_F",
     gameRoomKey = "F_Combat04",
     roomKind = "Combat",
-    rewardSurface = <validated resolved descriptor>,
+    reward = <validated compiled producer binding>,
     encounterProfile = <validated resolved descriptor>,
     localSlots = <validated bounded descriptors>,
     metadata = <template-relevant immutable facts>,
@@ -111,12 +111,22 @@ and candidate application. Checkpoint 6 adds production views. Storage must be
 complete now for every later operation; later checkpoints must not require a
 schema migration.
 
-## Reward Components
+## Reward Hierarchy and Components
+
+[`REWARD_HIERARCHY.md`](REWARD_HIERARCHY.md) defines the bottom-up composition
+from payload domains through primitives, counted reward bags, concrete
+producer bindings, compiled choice views, structural components, shops, and
+Room Controls.
+
+[`REWARD_CONSUMER_AUDIT.md`](REWARD_CONSUMER_AUDIT.md) derives the exact
+behavior, stores, filters, and structural requirements for every supported
+producer from current game data. Declaration reconciliation must follow that
+mapping before component implementation expands.
 
 [`REWARD_COMPONENTS.md`](REWARD_COMPONENTS.md) defines the reusable authored
-reward shapes used by the templates. Components are ordinary injected Lua
-collaborators, not nested Lib controls. A room template explicitly selects and
-configures its components.
+and structural shapes built from that hierarchy. Components are ordinary
+injected Lua collaborators, not nested Lib controls. A room template
+explicitly selects and configures its components.
 
 ## Template Specifications
 
@@ -126,16 +136,16 @@ configures its components.
 | `FixedIntro` | 6 | [`FixedIntro.md`](FixedIntro.md) | none or incoming opening reward |
 | `FixedPreHub` | 1 | [`FixedPreHub.md`](FixedPreHub.md) | incoming opening reward |
 | `EphyraHub` | 1 | [`EphyraHub.md`](EphyraHub.md) | no room-local authored state |
-| `StandardCombat` | 56 | [`StandardCombat.md`](StandardCombat.md) | incoming store choice |
+| `StandardCombat` | 56 | [`StandardCombat.md`](StandardCombat.md) | incoming minor/major reward choice |
 | `FieldsCombat` | 15 | [`FieldsCombat.md`](FieldsCombat.md) | three bounded cage rewards |
 | `ClockworkCombat` | 24 | [`ClockworkCombat.md`](ClockworkCombat.md) | goal/non-goal incoming reward |
 | `EphyraCombat` | 23 | [`EphyraCombat.md`](EphyraCombat.md) | hub reward and side rooms |
 | `ShipCombat` | 15 | [`ShipCombat.md`](ShipCombat.md) | optional phase and two wheels |
-| `OlympusCombat` | 19 | [`OlympusCombat.md`](OlympusCombat.md) | incoming store choice |
+| `OlympusCombat` | 19 | [`OlympusCombat.md`](OlympusCombat.md) | incoming minor/major reward choice |
 | `Story` | 7 | [`Story.md`](Story.md) | fixed story reward |
-| `Fountain` | 5 | [`Fountain.md`](Fountain.md) | incoming store choice |
+| `Fountain` | 5 | [`Fountain.md`](Fountain.md) | incoming counted reward choice |
 | `Shop` | 4 | [`Shop.md`](Shop.md) | World Shop slots |
-| `Miniboss` | 20 | [`Miniboss.md`](Miniboss.md) | incoming store choice |
+| `Miniboss` | 20 | [`Miniboss.md`](Miniboss.md) | incoming counted reward choice |
 | `Devotion` | 1 | [`Devotion.md`](Devotion.md) | fixed Trial with source pair |
 | `DirectPreboss` | 4 | [`DirectPreboss.md`](DirectPreboss.md) | profile-selected shop |
 | `ForkedPreboss` | 4 | [`ForkedPreboss.md`](ForkedPreboss.md) | contextual shop plus free offers |
@@ -146,7 +156,7 @@ configures its components.
 Before implementation is accepted:
 
 - every concrete catalog room is covered by exactly one specification;
-- every observed template/surface/profile/local-slot combination is listed;
+- every observed template/producer/profile/local-slot combination is listed;
 - assembly rejects combinations not listed by the owning template;
 - every persisted field contributes to an active authored branch or is
   explicitly documented as dormant;
@@ -158,10 +168,11 @@ Before implementation is accepted:
 
 ## Review Order
 
-1. reward components;
-2. F/G templates;
-3. H/I templates;
-4. N/O templates;
-5. P/Q variants;
-6. exact catalog coverage and storage-manifest comparison;
-7. implementation.
+1. reward hierarchy;
+2. reward components;
+3. F/G templates;
+4. H/I templates;
+5. N/O templates;
+6. P/Q variants;
+7. exact catalog coverage and storage-manifest comparison;
+8. implementation.

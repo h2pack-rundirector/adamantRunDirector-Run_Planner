@@ -94,7 +94,8 @@ Declarations contain possible game facts:
 - room eligibility, creation caps, appearance caps, and force metadata;
 - baseline encounter phases, presence snapshots, counter effects, and
   phase-owned offer points;
-- reward surfaces, stores, counted bags, and shop profiles;
+- reward-producer kinds and concrete bindings, stores, counted bags, and shop
+  profiles;
 - normalized requirements with registered evaluators.
 
 The canonical plan contains only the concrete choices made from those facts.
@@ -624,19 +625,49 @@ offers belong to target Room Controls semantically but emit during the parent
 batch. Offer/acquisition timing is derived from topology except where the room
 surface owns an independent purchase or selection.
 
+### Generated-Door Store Resolution
+
+An ordinary generated-door batch owns one working default store. The default
+normally comes from the source room's prepared next-store choice. The batch
+creates all targets and resolves stores in two stages:
+
+1. scan targets in declared door order; every valid `ForcedRewardStore`
+   replaces the working default, so the final such override becomes the
+   default for otherwise ordinary peers;
+2. resolve each target to its `IndividualRewardStore`, otherwise its own valid
+   `ForcedRewardStore`, otherwise the final working default.
+
+The canonical batch record derives the effective default and resolved target
+stores from its targets; it does not persist another copy of a store choice.
+When there is no forced override, ordinary peer target tags must agree and
+that shared tag witnesses the authorable default. When a forced override
+exists, the last one in door order determines the default for ordinary peers.
+If every target has an individual or forced store, the unobserved base default
+has no materialized effect. Target Room Controls own their concrete tagged
+reward values but do not inspect peers.
+
+O specializes only the source of the initial default: every Ship wheel
+refreshes it, so the final active wheel's store supplies the outgoing batch
+default when no later target forced-store prepass replaces it. Target override
+resolution remains the common algorithm.
+
 ### Validation Order
 
 Each offer point is checked in event order:
 
-1. **Offer domain**: the concrete reward belongs to the declared store/shop
-   surface and passes room eligible/ineligible filters.
+1. **Offer domain**: the concrete reward belongs to the declared counted
+   binding or shop profile and passes positive/negative reward filters.
 2. **Payload integrity**: source gods, Devotion pairs, random-loot resolution,
    branch selection, and other typed payload are complete and internally
    legal.
-3. **Source entry requirement**: at least one matching counted bag entry or
-   shop option has satisfied source-specific requirements at this event.
-4. **Batch constraints**: peers obey `AllowDuplicates`, H cage duplicate
-   behavior, shop group rules, and other same-generation restrictions.
+3. **Source entry requirement**: for a bag-backed or shop-backed offer, at
+   least one matching counted bag entry or shop option has satisfied
+   source-specific requirements at this event. Fixed and forced primitives do
+   not borrow requirements from a same-named counted bag entry.
+4. **Batch constraints**: peers obey `AllowDuplicates`, the selected shared
+   store for ordinary door batches subject to explicit target-store overrides,
+   the one shared store within each Ship wheel, H cage duplicate behavior,
+   shop group rules, and other same-generation restrictions.
 5. **Bag simulation**: match and remove the exact counted entry selected by the
    configured offer.
 6. **Acquisition fold**: only an acquisition event updates normalized loot and
@@ -648,7 +679,9 @@ counted entries even though both offer `WeaponUpgrade`.
 
 ### Counted Bag Algorithm
 
-Each bag starts as an ordered copy of its declaration. For one concrete offer:
+Each bag starts as an ordered copy of its declaration. This algorithm runs
+only for values whose producer provenance is that counted bag. For one
+concrete offer:
 
 1. evaluate every remaining entry against the current history, room filters,
    batch duplicate set, and entry requirements;

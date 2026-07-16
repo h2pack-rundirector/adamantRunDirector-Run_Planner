@@ -2,9 +2,17 @@
 
 ## Purpose
 
-Reward surfaces are declaration data. Reward components translate a validated
-surface into Room Control storage, typed authored values, completeness,
-candidate operations, and later UI views.
+[`REWARD_HIERARCHY.md`](REWARD_HIERARCHY.md) defines the bottom-up implementation
+from payload domains and primitives through counted bindings, compiled choice
+views, and shop profiles. This document defines the concrete authored and
+structural shapes composed inside Room Controls.
+
+[`REWARD_CONSUMER_AUDIT.md`](REWARD_CONSUMER_AUDIT.md) is the binding authority
+for each supported producer's behavior, stores, and filters.
+
+Reward surfaces identify behavior, not filtered option sets. Control assembly
+compiles each concrete counted binding and injects the resulting immutable
+choice view. Shops remain a separate branch.
 
 A component is not a Lib control and owns no independent profile identity. Its
 fields are flattened into the parent Room Control's private storage.
@@ -51,7 +59,7 @@ value.
 
 ## `none`
 
-`none` means the room has no incoming reward surface.
+`none` means the room has no incoming reward producer.
 
 - persistence: none;
 - authored value: `nil`;
@@ -84,10 +92,11 @@ without a payload consumes no storage.
 Completeness requires every payload member and all domain constraints. A
 Devotion pair must contain two distinct concrete Boon sources.
 
-## `storeChoice`
+## Counted reward choice
 
-The declaration supplies one or more counted reward stores plus optional
-reward filters.
+A counted binding supplies one concrete reward from its declared stores.
+Positive and negative room filters are resolved into one anonymous immutable
+view during assembly.
 
 Logical persistence:
 
@@ -101,15 +110,17 @@ Logical persistence:
 ```
 
 The typed read always includes the resolved concrete `storeKey`, including
-when it is declaration-fixed and therefore not persisted.
+when one bag is declaration-fixed and therefore not persisted.
 
-Completeness requires a permitted store, a concrete reward type available
-from that surface, and the selected primitive's complete payload. Payload
+Completeness requires a permitted bag, a concrete reward type available
+from the compiled binding, and the selected primitive's complete payload. Payload
 fields allocated for another reward type are dormant and ignored.
 
-The component does not validate counted-bag history during read or write.
+The choice does not validate counted-bag history during read or write.
 Checkpoint 4 exports candidates, and the route validator evaluates the
-concrete selection against history.
+concrete selection against history. Bounded wrappers such as Fields cages and
+Ship wheels delegate each concrete reward to their injected compiled counted
+binding.
 
 ## `shop`
 

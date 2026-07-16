@@ -6,7 +6,7 @@ This document defines the structural extensions by which F through Q specialize
 the common Route Plan, Biome Plan, Room Control, and Generated Batch model.
 
 It does not duplicate complete room declarations. Concrete eligibility, force,
-caps, physical exits, reward surfaces, and encounter profiles remain catalog
+caps, physical exits, reward-producer bindings, and encounter profiles remain catalog
 data. This document owns only the rules needed to interpret those declarations
 as biome topology and typed room-local state.
 
@@ -60,7 +60,7 @@ Biome rules may classify another bounded family as canonicalizable when:
 
 - the picked concrete game-room identity is preserved;
 - the replaced target is an unpicked dead leaf;
-- the replacement has the same planner-relevant template and reward surface;
+- the replacement has the same planner-relevant template and compiled reward binding;
 - room-internal structure relevant to offered rewards is preserved;
 - the compatible control pool is declaration-proven sufficient.
 
@@ -458,7 +458,8 @@ that probability: completed room state explicitly authors whether the optional
 phase is present.
 
 Each counting phase owns one `ShipWheel` offer point. The offer point authors
-one or two concrete rewards and exactly one picked reward. Its lifecycle is:
+one shared RunProgress-or-MetaProgress store selection, one or two concrete
+rewards from that store, and exactly one picked reward. Its lifecycle is:
 
 ```text
 encounter.start and increment BiomeEncounterDepth
@@ -469,12 +470,24 @@ encounter completes
 ```
 
 Only then may the next encounter begin. Separate wheels are not merged into a
-room-wide batch. `Combat2`'s `wheel2` slot is dormant when that phase is absent.
+room-wide batch and may select different stores. `Combat2`'s `wheel2` slot is
+dormant when that phase is absent. O's one-exit room context makes the
+RunProgress Devotion entry ineligible, while fixed `O_Devotion01` remains a
+separate forced-reward producer.
 
-O combat room declarations therefore use the `None` incoming reward surface;
+Every wheel refreshes the game's pending next-store value. Consequently the
+final active wheel supplies the initial base store for the room's outgoing
+generated batch: `wheel1` when Combat2 is absent, otherwise `wheel2`. The
+ShipCombat snapshot exports that store; the O Biome Plan applies ordinary
+target-store override resolution, including any forced target that replaces
+the working default, and validates the outgoing targets. This dependency does
+not move outgoing topology or target rewards into the Room Control.
+
+O combat room declarations therefore use an incoming reward binding with
+`kind = "none"`;
 their encounter profile, rather than duplicated room-local declarations, owns
 `wheel1` and `wheel2`. Story, shop, devotion/trial, miniboss, reprieve, and
-direct-preboss controls use their concrete declaration-owned reward surfaces.
+direct-preboss controls use their concrete declaration-owned reward bindings.
 Forked prebosses instead compose a World Shop and the free `RunProgress`
 offers activated by their selected predecessor's physical exit count.
 
@@ -559,7 +572,7 @@ current-run validation.
 
 Q combat rooms do not gain reward slots merely because they have two exits.
 Reward ownership follows each concrete target declaration. Forced miniboss
-pairing is topology; physical exit count and reward surface remain separate
+pairing is topology; physical exit count and reward binding remain separate
 facts.
 
 ## Declaration and Test Obligations

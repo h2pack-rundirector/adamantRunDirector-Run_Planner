@@ -4,7 +4,8 @@
 
 All 15 `Underworld_H` rooms `H_Combat01..15` use:
 
-- reward surface `FieldsCages`;
+- a `localSlots` reward producer whose child counted binding uses
+  RunProgress with Devotion excluded;
 - encounter profile `FieldsCombat`;
 - local slots `cage1`, `cage2`, and `cage3`.
 
@@ -41,8 +42,9 @@ The control owns three bounded cage reward selections:
 }
 ```
 
-Each slot fixes the store to `RunProgress` and persists `rewardType`,
-`source1`, and `source2`; Devotion requires the second source. The physical
+Each slot fixes the store to RunProgress and uses the resolved BaseH Devotion
+exclusion. Its compiled binding persists `rewardType` plus one conditional
+Boon `source1`; no valid cage value requires a second source. The physical
 room declaration supplies the three stable slot keys.
 
 The control does not persist an active cage count. `FieldsCageBatch` owns the

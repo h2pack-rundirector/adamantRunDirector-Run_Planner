@@ -23,14 +23,14 @@ count:
 ```lua
 {
     templateKey = "DirectPreboss",
-    rewardSurfaceKey = "TartarusShop", -- profile-selected shop surface
+    reward = { kind = "shop", shopProfileKey = "I_WorldShop" },
     entryOfferPolicy = { kind = "shopOnly" },
 }
 ```
 
-The catalog validates that `rewardSurfaceKey` resolves to a shop surface and
-that the direct policy has no alternate-offer fields. The control's authored
-value then has this shape:
+The catalog validates that `reward` is a shop binding and that the direct
+policy has no alternate-offer fields. The control's authored value then has
+this shape:
 
 ```lua
 {

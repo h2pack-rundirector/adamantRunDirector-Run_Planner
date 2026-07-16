@@ -1,5 +1,5 @@
 local deps = ...
-local stateManifest = deps.stateManifest
+local templates = deps.templates
 
 local manifest = {}
 
@@ -9,6 +9,18 @@ local function roomControlKey(biomeStepKey, gameRoomKey, biomeKey)
         error("room key '" .. gameRoomKey .. "' does not match biome '" .. biomeKey .. "'", 0)
     end
     return biomeStepKey .. "_" .. string.sub(gameRoomKey, #prefix + 1)
+end
+
+local function attachPreparedDescriptor(descriptor, prepared)
+    if type(prepared) ~= "table" then
+        error("room control preparation must return a table", 0)
+    end
+    for key, value in pairs(prepared) do
+        if descriptor[key] ~= nil then
+            error("room control preparation cannot replace descriptor field '" .. tostring(key) .. "'", 0)
+        end
+        descriptor[key] = value
+    end
 end
 
 function manifest.build(catalog)
@@ -45,8 +57,8 @@ function manifest.build(catalog)
                 rewardSurfaceKey = room.rewardSurfaceKey,
                 entryOfferPolicy = room.entryOfferPolicy,
                 localSlots = {},
-                state = stateManifest.build(catalog, room),
             }
+            attachPreparedDescriptor(descriptor, templates.prepareRoom(catalog, room))
             local encounterProfile = catalog.encounterProfiles.lookup[room.encounterProfileKey]
             for _, phase in ipairs(encounterProfile.phases) do
                 if phase.offerPoint ~= nil then

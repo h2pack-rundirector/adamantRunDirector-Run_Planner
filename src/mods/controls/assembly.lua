@@ -1,10 +1,9 @@
-local deps = ... or {}
+local deps = ...
 
-local stateManifest = deps.stateManifest or import("mods/controls/state_manifest.lua")
+local templateBuilder = deps.templates
 local manifestBuilder = deps.manifest or import("mods/controls/manifest.lua", nil, {
-    stateManifest = stateManifest,
+    templates = templateBuilder,
 })
-local templateBuilder = deps.templates or import("mods/controls/templates.lua")
 local instanceBuilder = deps.instances or import("mods/controls/instances.lua")
 
 local assembly = {}

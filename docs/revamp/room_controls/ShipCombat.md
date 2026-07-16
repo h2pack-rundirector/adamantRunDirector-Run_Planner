@@ -4,7 +4,7 @@
 
 All 15 `Surface_O` rooms `O_Combat01..15` use:
 
-- incoming reward surface `None`;
+- incoming reward producer `none`;
 - encounter profile `ShipCombat`;
 - phase-derived offer slots `wheel1` and `wheel2`;
 - no explicit room-declared local children.
@@ -32,6 +32,7 @@ the baseline encounter names or counter effects.
             wheel = {
                 offerCount = 2,
                 pickedIndex = 1,
+                storeKey = "RunProgress",
                 offers = {
                     {
                         storeKey = "RunProgress",
@@ -39,8 +40,8 @@ the baseline encounter names or counter effects.
                         payload = { source = "ApolloUpgrade" },
                     },
                     {
-                        storeKey = "MetaProgress",
-                        rewardType = "GiftDrop",
+                        storeKey = "RunProgress",
+                        rewardType = "MaxHealthDrop",
                     },
                 },
             },
@@ -58,18 +59,24 @@ Logical persistence is bounded:
 {
     encounterCount = 0, -- 0 | 2 | 3; zero is incomplete
     wheel1 = {
+        storeKey = "",
         offerCount = 0,
         pickedIndex = 0,
-        offer1 = { storeKey = "", rewardType = "", source1 = "", source2 = "" },
-        offer2 = { storeKey = "", rewardType = "", source1 = "", source2 = "" },
+        offer1 = { rewardType = "", source1 = "" },
+        offer2 = { rewardType = "", source1 = "" },
     },
     wheel2 = { -- same bounded fields as wheel1
     },
 }
 ```
 
-`ShipWheel` allows `RunProgress` and `MetaProgress`; two source fields are
-needed because RunProgress can produce Devotion.
+`ShipWheel` selects `RunProgress` or `MetaProgress` once per wheel, and all
+active offers use that same bag. The typed offers still include the resolved
+`storeKey`, but it is persisted only once at wheel level. Every O combat room
+has one physical exit and the RunProgress Devotion entry requires two.
+Consequently assembly compiles Devotion out of this structurally fixed wheel
+context without adding a room negative filter. Each offer needs at most one
+Boon source field.
 
 ## Completeness and Legality
 
@@ -81,6 +88,12 @@ Combat1; three encounters means Intro plus Combat1 plus Combat2. Zero is the
 incomplete persisted value. Selecting two makes all `wheel2` state dormant;
 selecting three activates it with the same completeness rules as `wheel1`.
 Stored wheel2 values survive a switch back to two.
+
+The final active wheel's `storeKey` is also the initial base store for the
+room's outgoing generated-door batch. The control owns and exports that
+room-local fact. The Biome Plan owns the outgoing targets and validates their
+concrete stores after applying the common forced-store prepass and
+target-specific individual or forced overrides.
 
 The pre-room `biomeEncounterDepth` window `[2, 5]` determines whether three is
 legal at `room.prepare_encounters`. Encounter count remains an authored choice

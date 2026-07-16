@@ -2,9 +2,9 @@
 
 ## Coverage
 
-| Biome step | Room | Reward surface | Encounter profile |
+| Biome step | Room | Reward binding | Encounter profile |
 | --- | --- | --- | --- |
-| `Surface_O` | `O_Devotion01` | `ForcedDevotion` | `Devotion` |
+| `Surface_O` | `O_Devotion01` | fixed Devotion | `Devotion` |
 
 ## Owned State
 
