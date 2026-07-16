@@ -225,13 +225,13 @@ function TestManagedPersistence.testSystemsComposesInjectedSubsystemsInOrder()
     lu.assertEquals(calls[2], { name = "rewards", value = rawRewards })
     lu.assertIs(calls[3].catalog, rawCatalog)
     lu.assertEquals(calls[3].opts.activePrefixEnds, { Underworld = "Underworld_G" })
-    lu.assertEquals(calls[4], {
+    lu.assertIs(calls[4].catalog, enrichedCatalog)
+    lu.assertEquals(calls[5], {
         name = "biomeSupport",
         catalog = enrichedCatalog,
         manifest = controls.manifest,
         evidence = { topology = {} },
     })
-    lu.assertIs(calls[5].catalog, enrichedCatalog)
 end
 
 function TestManagedPersistence.testControlAssemblyDoesNotMutateValidatedCatalog()

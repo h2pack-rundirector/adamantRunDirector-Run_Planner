@@ -97,8 +97,8 @@ Checkpoint 3 topology and the remaining Checkpoint 4 materializer contracts.
 
 ## Current Frontier
 
-Checkpoint 3, Layout Topology and the F Structural Slice, is active. Its atomic
-declaration, catalog, and storage reconciliation is implemented:
+Checkpoint 3, Layout Topology and the F/G Structural Slice, is complete. Its
+atomic declaration, catalog, and storage reconciliation is implemented:
 
 - replaced raw `root`, `terminalRoomKeys`, top-level `batchRuleKey`,
   specialized-rule lists, deterministic-pair side tables, and room-level
@@ -124,26 +124,26 @@ Biome Plan. `LinearBiome` reads layout-authored state through either runtime or
 UI state access, derives Standard batches and `PrebossEntry`, walks the picked
 spine, preserves unpicked peers, and rejects malformed ownership, identity,
 exit, bound, selection, and continuation state. Incomplete but well-formed F
-state remains readable, and normalized topology contains no Room Control
+and G states remain readable, and normalized topology contains no Room Control
 payload or presentation state. Plans are constructed only where every
-declaration-selected executable dependency is registered; this does not claim
-topology capability for any biome yet.
+declaration-selected executable dependency is registered. Plan availability
+alone does not claim topology capability.
 
 The second read-only topology slice is also implemented. Biome Plans now
 delegate structural checks, ordered traversal, and semantic addressing to the
 registered layout implementation. Standard batches require one target per
 physical exit and one picked continuation; a selected linear source must close
-through another batch or `PrebossEntry`. F incompleteness returns ordered
-findings for its start, physical target, picked continuation, or missing
+through another batch or `PrebossEntry`. F and G structural gaps return ordered
+findings for the start, physical target, picked continuation, or missing
 continuation against the same semantic owner addresses traversal emits.
-Complete F topology traverses its start, each batch and generated peer,
-including unpicked dead leaves, and its terminal transition without ImGui,
+Complete F and G topologies traverse each start, batch, and generated peer,
+including unpicked dead leaves, and their terminal transitions without ImGui,
 canonical assembly, or history work. Traversal rejects incomplete topology.
 
 Missing terminal companion links are likewise structural incompleteness;
 illegal companion exits remain contact-boundary failures. This establishes the
-contract needed by I without claiming I topology support. No biome claims the
-`topology` capability yet.
+contract needed by I without claiming I topology support. This read-only slice
+did not yet publish topology capability evidence.
 
 The writable topology slice is also implemented. The Biome Plan accepts the
 complete LinearBiome command set only through `UiStateAccess`; runtime state
@@ -161,10 +161,14 @@ Unlinked Room Control persistence is never reset. Terminal-companion commands
 are restricted to the policy that admits them, while `ClearTopology` clears
 only layout-owned authored state.
 
-The next Checkpoint 3 closeout slice wires validated `topology = true` evidence
-for F and reviews the complete checkpoint contract. No production route
-editor, canonical biome snapshot, route validator, execution compiler, or
-runtime hook is active.
+G additionally proves fixed-start clearing and three-exit Standard batches;
+its force, eligibility, and room-local differences remain outside topology.
+Route composition now publishes validated `topology = true` evidence for F and
+G, and biome support accepts exactly those two claims. This closes Checkpoint
+3. Checkpoint 4 begins canonical materialization with F; G retains topology
+support without claiming materialization or later capabilities. No production
+route editor, canonical biome snapshot, route validator, execution compiler,
+or runtime hook is active.
 
 The lifecycle design has also been simplified before its Checkpoint 5
 implementation: activation, meaningful commit, and meaningful reload will call

@@ -2,7 +2,7 @@ return {
     {
         biomeStepKey = "Underworld_F",
         focusedRoomControls = true,
-        topology = false,
+        topology = true,
         materialization = false,
         headlessPipeline = false,
         plannerActive = false,
@@ -10,7 +10,7 @@ return {
     {
         biomeStepKey = "Underworld_G",
         focusedRoomControls = true,
-        topology = false,
+        topology = true,
         materialization = false,
         headlessPipeline = false,
         plannerActive = false,

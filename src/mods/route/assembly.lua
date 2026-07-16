@@ -23,18 +23,63 @@ local topologyLayouts = deps.topologyLayouts or {
         terminalTransitions = terminalTransitions,
     }),
 }
+local topologyCapabilityBiomeSteps = deps.topologyCapabilityBiomeSteps or {
+    "Underworld_F",
+    "Underworld_G",
+}
 
 local assembly = {}
 
+local function topologyCapabilityEvidence(plans, storage)
+    local evidence = {}
+    local requiredOperations = {
+        "readTopology",
+        "checkStructure",
+        "traverse",
+        "semanticAddress",
+        "apply",
+        "clearTopology",
+    }
+    for _, biomeStepKey in ipairs(topologyCapabilityBiomeSteps) do
+        local plan = plans.lookup[biomeStepKey]
+        if plan == nil then
+            error("topology capability biome '" .. biomeStepKey .. "' has no Biome Plan", 0)
+        end
+        local descriptor = storage.biomes.lookup[biomeStepKey]
+        if descriptor == nil or descriptor.layoutKind ~= plan.layoutKind then
+            error(
+                "topology capability biome '" .. biomeStepKey
+                    .. "' has no matching storage descriptor",
+                0
+            )
+        end
+        for _, operation in ipairs(requiredOperations) do
+            if type(plan[operation]) ~= "function" then
+                error(
+                    "topology capability biome '" .. biomeStepKey
+                        .. "' is missing operation '" .. operation .. "'",
+                    0
+                )
+            end
+        end
+        evidence[biomeStepKey] = true
+    end
+    return evidence
+end
+
 function assembly.create(catalog)
     local storage = storageManifest.build(catalog)
+    local plans = biomePlans.build(catalog, storage, topologyLayouts)
     return {
         storage = storage,
         stateAccess = stateAccess,
         batchImplementations = batchImplementations,
         terminalTransitions = terminalTransitions,
         topologyLayouts = topologyLayouts,
-        biomePlans = biomePlans.build(catalog, storage, topologyLayouts),
+        biomePlans = plans,
+        capabilityEvidence = {
+            topology = topologyCapabilityEvidence(plans, storage),
+        },
     }
 end
 

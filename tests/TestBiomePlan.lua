@@ -43,6 +43,45 @@ local function completeFState()
     }
 end
 
+local function completeGState()
+    return {
+        layoutKind = "LinearBiome",
+        batches = {
+            { parentRoomControlKey = "Underworld_G_Intro" },
+            { parentRoomControlKey = "Underworld_G_Combat02" },
+        },
+        targets = {
+            {
+                parentRoomControlKey = "Underworld_G_Intro",
+                exitIndex = 1,
+                roomControlKey = "Underworld_G_Combat02",
+                picked = true,
+            },
+            {
+                parentRoomControlKey = "Underworld_G_Combat02",
+                exitIndex = 1,
+                roomControlKey = "Underworld_G_Combat03",
+                picked = true,
+            },
+            {
+                parentRoomControlKey = "Underworld_G_Combat02",
+                exitIndex = 2,
+                roomControlKey = "Underworld_G_Combat04",
+                picked = false,
+            },
+            {
+                parentRoomControlKey = "Underworld_G_Combat02",
+                exitIndex = 3,
+                roomControlKey = "Underworld_G_Combat05",
+                picked = false,
+            },
+        },
+        terminalTransition = {
+            parentRoomControlKey = "Underworld_G_Combat03",
+        },
+    }
+end
+
 local function directAccess(state)
     return {
         readBiome = function(_, biomeStepKey)
@@ -52,7 +91,7 @@ local function directAccess(state)
     }
 end
 
-local function stateAdapters(systems, state)
+local function stateAdaptersFor(systems, biomeStepKey, state)
     local values = {}
     local tables = {}
     for _, descriptor in ipairs(systems.route.storage.moduleStorage) do
@@ -62,21 +101,33 @@ local function stateAdapters(systems, state)
             values[descriptor.alias] = descriptor.default
         end
     end
-    values.Underworld_F_SelectedStartRoomControlKey = state.selectedStartRoomControlKey
-    values.Underworld_F_TerminalParentRoomControlKey =
-        state.terminalTransition.parentRoomControlKey
+    local descriptor = systems.route.storage.biomes.lookup[biomeStepKey]
+    if descriptor.selectedStart ~= nil then
+        values[descriptor.selectedStart.alias] = state.selectedStartRoomControlKey
+    end
+    values[descriptor.terminalTransition.alias] = state.terminalTransition.parentRoomControlKey
     for index, batch in ipairs(state.batches) do
-        tables.Underworld_F_Batches[index] = {
-            ParentRoomControlKey = batch.parentRoomControlKey,
-        }
+        local row = {}
+        for semanticKey, physicalKey in pairs(descriptor.batches.columns) do
+            row[physicalKey] = batch[semanticKey]
+        end
+        tables[descriptor.batches.alias][index] = row
     end
     for index, target in ipairs(state.targets) do
-        tables.Underworld_F_Targets[index] = {
-            ParentRoomControlKey = target.parentRoomControlKey,
-            ExitIndex = target.exitIndex,
-            RoomControlKey = target.roomControlKey,
-            Picked = target.picked,
-        }
+        local row = {}
+        for semanticKey, physicalKey in pairs(descriptor.targets.columns) do
+            row[physicalKey] = target[semanticKey]
+        end
+        tables[descriptor.targets.alias][index] = row
+    end
+    if descriptor.companionTargets ~= nil then
+        for index, target in ipairs(state.terminalTransition.companionTargets or {}) do
+            local row = {}
+            for semanticKey, physicalKey in pairs(descriptor.companionTargets.columns) do
+                row[physicalKey] = target[semanticKey]
+            end
+            tables[descriptor.companionTargets.alias][index] = row
+        end
     end
 
     local data = {}
@@ -126,6 +177,11 @@ local function stateAdapters(systems, state)
     return runtime, ui, { values = values, tables = tables }
 end
 
+
+local function stateAdapters(systems, state)
+    return stateAdaptersFor(systems, "Underworld_F", state)
+end
+
 function TestBiomePlan.testComposesExecutableRegistriesAndLongLivedPlans()
     h.withImport(function()
         local systems = load()
@@ -145,6 +201,10 @@ function TestBiomePlan.testComposesExecutableRegistriesAndLongLivedPlans()
         local plan = systems.route.biomePlans.lookup.Underworld_F
         lu.assertEquals(plan.key, "Underworld_F")
         lu.assertEquals(plan.layoutKind, "LinearBiome")
+        lu.assertEquals(systems.route.capabilityEvidence.topology, {
+            Underworld_F = true,
+            Underworld_G = true,
+        })
     end)
 end
 
@@ -178,6 +238,7 @@ function TestBiomePlan.testRouteAssemblyPreservesInjectedRegistryBoundaries()
             batchImplementations = batchImplementations,
             terminalTransitions = terminalTransitions,
             topologyLayouts = topologyLayouts,
+            topologyCapabilityBiomeSteps = {},
         })
 
         local result = assembly.create(catalog)
@@ -189,6 +250,7 @@ function TestBiomePlan.testRouteAssemblyPreservesInjectedRegistryBoundaries()
         lu.assertIs(result.terminalTransitions, terminalTransitions)
         lu.assertIs(result.topologyLayouts, topologyLayouts)
         lu.assertIs(result.biomePlans, plans)
+        lu.assertEquals(result.capabilityEvidence.topology, {})
     end)
 end
 
@@ -774,6 +836,70 @@ function TestBiomePlan.testTerminalCompanionCommandsRemainPolicyScoped()
             })
         end)
         lu.assertEquals(plan:readTopology(runtime), before)
+    end)
+end
+
+function TestBiomePlan.testGUsesTheLinearTopologyContractWithFixedStartAndThreeExits()
+    h.withImport(function()
+        local systems = load()
+        local plan = systems.route.biomePlans.lookup.Underworld_G
+        local runtime, ui = stateAdaptersFor(systems, "Underworld_G", completeGState())
+        local topology = plan:readTopology(runtime)
+
+        lu.assertEquals(topology.startRoomControlKey, "Underworld_G_Intro")
+        lu.assertEquals(#topology.batches[2].targets, 3)
+        lu.assertEquals(plan:checkStructure(topology), {})
+        lu.assertEquals(#collectTraversal(plan, topology), 8)
+
+        local missingExit = completeGState()
+        table.remove(missingExit.targets, 4)
+        local missingRuntime = stateAdaptersFor(systems, "Underworld_G", missingExit)
+        local findings = plan:checkStructure(plan:readTopology(missingRuntime))
+        lu.assertEquals(#findings, 1)
+        lu.assertEquals(findings[1].code, "target_room_required")
+        lu.assertEquals(findings[1].origin.exitIndex, 3)
+
+        local before = plan:readTopology(runtime)
+        lu.assertErrorMsgContains("fixed-start topology does not admit SelectStart", function()
+            plan:apply(ui, {
+                kind = "SelectStart",
+                roomControlKey = "Underworld_G_Intro",
+            })
+        end)
+        lu.assertEquals(plan:readTopology(runtime), before)
+
+        topology = plan:apply(ui, {
+            kind = "SetPicked",
+            parentRoomControlKey = "Underworld_G_Combat02",
+            exitIndex = 2,
+        })
+        lu.assertNil(topology.terminalTransition)
+        lu.assertFalse(topology.batches[2].targets[1].picked)
+        lu.assertTrue(topology.batches[2].targets[2].picked)
+
+        local replacementRuntime, replacementUi = stateAdaptersFor(
+            systems,
+            "Underworld_G",
+            completeGState()
+        )
+        topology = plan:apply(replacementUi, {
+            kind = "ReplaceWithBatch",
+            parentRoomControlKey = "Underworld_G_Combat03",
+        })
+        lu.assertNil(topology.terminalTransition)
+        lu.assertEquals(#topology.batches, 3)
+        topology = plan:apply(replacementUi, {
+            kind = "ReplaceWithTerminalTransition",
+            parentRoomControlKey = "Underworld_G_Combat03",
+        })
+        lu.assertEquals(topology.terminalTransition.parentRoomControlKey,
+            "Underworld_G_Combat03")
+
+        topology = plan:clearTopology(replacementUi)
+        lu.assertEquals(topology.startRoomControlKey, "Underworld_G_Intro")
+        lu.assertEquals(topology.batches, {})
+        lu.assertNil(topology.terminalTransition)
+        lu.assertEquals(plan:readTopology(replacementRuntime), topology)
     end)
 end
 

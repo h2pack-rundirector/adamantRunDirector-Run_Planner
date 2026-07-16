@@ -37,6 +37,15 @@ local function loadAssembly(declarations)
     })
 end
 
+local function currentEvidence()
+    return {
+        topology = {
+            Underworld_F = true,
+            Underworld_G = true,
+        },
+    }
+end
+
 function TestBiomeSupport.testDeclaresAndVerifiesCurrentBiomeCapabilities()
     h.withImport(function()
         local systems = h.testImport("mods/systems.lua").create()
@@ -45,6 +54,8 @@ function TestBiomeSupport.testDeclaresAndVerifiesCurrentBiomeCapabilities()
         lu.assertEquals(#support.biomes.ordered, 8)
         lu.assertTrue(support.biomes.lookup.Underworld_F.focusedRoomControls)
         lu.assertTrue(support.biomes.lookup.Underworld_G.focusedRoomControls)
+        lu.assertTrue(support.biomes.lookup.Underworld_F.topology)
+        lu.assertTrue(support.biomes.lookup.Underworld_G.topology)
         for _, biomeStepKey in ipairs({
             "Underworld_H", "Underworld_I", "Surface_N", "Surface_O", "Surface_P", "Surface_Q",
         }) do
@@ -83,19 +94,31 @@ function TestBiomeSupport.testRejectsClaimsThatDoNotMatchAssembledEvidence()
         local hClaim = clone(base)
         record(hClaim, "Underworld_H").focusedRoomControls = true
         assertFails(function()
-            loadAssembly(hClaim).create(systems.catalog, systems.controls.manifest)
+            loadAssembly(hClaim).create(
+                systems.catalog,
+                systems.controls.manifest,
+                currentEvidence()
+            )
         end, "room control 'Underworld_H_Combat01' is transitional")
 
-        local fClaim = clone(base)
-        record(fClaim, "Underworld_F").topology = true
+        local missingTopologyEvidence = clone(base)
         assertFails(function()
-            loadAssembly(fClaim).create(systems.catalog, systems.controls.manifest)
+            loadAssembly(missingTopologyEvidence).create(
+                systems.catalog,
+                systems.controls.manifest
+            )
         end, "biomes[1].topology: does not match assembled implementation evidence")
 
         local fDenial = clone(base)
-        record(fDenial, "Underworld_F").focusedRoomControls = false
+        local deniedF = record(fDenial, "Underworld_F")
+        deniedF.focusedRoomControls = false
+        deniedF.topology = false
         assertFails(function()
-            loadAssembly(fDenial).create(systems.catalog, systems.controls.manifest)
+            loadAssembly(fDenial).create(
+                systems.catalog,
+                systems.controls.manifest,
+                currentEvidence()
+            )
         end, "biomes[1].focusedRoomControls: does not match assembled implementation evidence")
     end)
 end
@@ -106,9 +129,15 @@ function TestBiomeSupport.testRejectsMissingDependenciesAndNoncontiguousActivati
         local base = h.testImport("mods/composition/biome_support_declarations.lua")
 
         local missingDependency = clone(base)
-        record(missingDependency, "Underworld_F").materialization = true
+        local missingTopology = record(missingDependency, "Underworld_F")
+        missingTopology.topology = false
+        missingTopology.materialization = true
         assertFails(function()
-            loadAssembly(missingDependency).create(systems.catalog, systems.controls.manifest)
+            loadAssembly(missingDependency).create(
+                systems.catalog,
+                systems.controls.manifest,
+                currentEvidence()
+            )
         end, "materialization: requires topology")
 
         local noncontiguous = clone(base)
@@ -141,19 +170,31 @@ function TestBiomeSupport.testRejectsIncompleteOrUnknownBiomeDeclarations()
         local incomplete = clone(base)
         table.remove(incomplete)
         assertFails(function()
-            loadAssembly(incomplete).create(systems.catalog, systems.controls.manifest)
+            loadAssembly(incomplete).create(
+                systems.catalog,
+                systems.controls.manifest,
+                currentEvidence()
+            )
         end, "missing declaration for biome 'Surface_Q'")
 
         local unknown = clone(base)
         unknown[8].biomeStepKey = "Surface_Missing"
         assertFails(function()
-            loadAssembly(unknown).create(systems.catalog, systems.controls.manifest)
+            loadAssembly(unknown).create(
+                systems.catalog,
+                systems.controls.manifest,
+                currentEvidence()
+            )
         end, "unknown biome 'Surface_Missing'")
 
         local implicit = clone(base)
         implicit[1].topology = nil
         assertFails(function()
-            loadAssembly(implicit).create(systems.catalog, systems.controls.manifest)
+            loadAssembly(implicit).create(
+                systems.catalog,
+                systems.controls.manifest,
+                currentEvidence()
+            )
         end, "topology: expected an explicit boolean")
     end)
 end

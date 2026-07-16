@@ -502,7 +502,7 @@ dynamic controls or migrating storage.
 There is still no production route editor in this checkpoint. Focused semantic
 Room Controls for non-F/G biomes are intentionally deferred to Checkpoint 7.
 
-## Checkpoint 3: Layout Topology and F Structural Slice
+## Checkpoint 3: Layout Topology and F/G Structural Slice
 
 Build the dynamic topology boundary without ImGui, canonical materialization,
 history, or game legality.
@@ -544,15 +544,15 @@ topology-facing declaration and storage scaffolds are superseded here.
 - structural `PrebossEntry` implementation deriving the one terminal Room
   Control, terminal exit policy, predecessor context, and bounded companion
   links without materializing reward surfaces yet;
-- F start selection, generated targets, picked continuation, downstream
-  structure, and terminal-transition state;
+- F start selection, G fixed-start behavior, generated targets, picked
+  continuation, downstream structure, and terminal-transition state;
 - explicit `ReplaceWithBatch` and `ReplaceWithTerminalTransition` atomic
   operations plus the remaining LinearBiome commands;
 - injective top-level Room Control use and dormant-control preservation;
 - declaration-derived `continuationOverrideKey`, `batchRuleKey`, and
   `transitionRuleKey` during normalization, never authored persistence;
-- owner-keyed structural completeness findings for F;
-- validated `topology = true` subsystem evidence for F only.
+- owner-keyed structural completeness findings for F and G;
+- validated `topology = true` subsystem evidence for F and G only.
 
 ### Acceptance
 
@@ -584,8 +584,8 @@ topology-facing declaration and storage scaffolds are superseded here.
 - force, eligibility, normalization, and validation never mutate continuation
   form;
 - unpicked targets remain dead leaves;
-- a complete F topology closes through one `PrebossEntry` and traverses without
-  ImGui or canonical/history work;
+- complete F and G topologies close through one `PrebossEntry` and traverse
+  without ImGui or canonical/history work;
 - normalized topology contains no copied room-local reward/payload state or UI
   row identity;
 - malformed persisted state fails at the Biome Plan boundary while incomplete

@@ -102,6 +102,17 @@ local function createControlsAssembly(opts, rewardServices)
     })
 end
 
+local function capabilityEvidence(route, supplied)
+    local assembled = route.capabilityEvidence or {}
+    supplied = supplied or {}
+    return {
+        topology = supplied.topology or assembled.topology,
+        materialization = supplied.materialization or assembled.materialization,
+        headlessPipeline = supplied.headlessPipeline or assembled.headlessPipeline,
+        plannerActive = supplied.plannerActive or assembled.plannerActive,
+    }
+end
+
 function systems.create(opts)
     opts = opts or {}
     local catalog = opts.catalog or catalogAssembly.create(opts.catalogOverrides)
@@ -116,12 +127,12 @@ function systems.create(opts)
         })
     end
     local enrichedCatalog = controls.catalog
+    local route = opts.route or routeAssembly.create(enrichedCatalog)
     local biomeSupport = opts.biomeSupport or biomeSupportAssembly.create(
         enrichedCatalog,
         controls.manifest,
-        opts.biomeCapabilityEvidence
+        capabilityEvidence(route, opts.biomeCapabilityEvidence)
     )
-    local route = opts.route or routeAssembly.create(enrichedCatalog)
     local managedState = opts.managedState or import("mods/composition/managed_state.lua", nil, {
         storage = route.storage,
         templates = controls.templates,
