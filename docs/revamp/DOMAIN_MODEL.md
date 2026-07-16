@@ -67,10 +67,12 @@ exceptions.
   authored controls and state.
 
 `Biome Plan`
-: The authored topology and biome-global state for one route-biome step. It
-  delegates structural interpretation to the step's declared layout kind and
-  is the only owner of structural choices such as generated batches, target
-  links, picked state, ordered visits, and terminal-transition presence.
+: The planner-owned decision-tree object for one route-biome step. It owns the
+  bounded persistence descriptor and reversible codec for authored topology
+  and biome-global state, delegates structural interpretation to the step's
+  declared layout kind, and is the only owner of structural choices such as
+  generated batches, target links, picked state, ordered visits, and
+  terminal-transition presence. It is not a Lib control.
 
 `Biome Layout Declaration`
 : The immutable structural contract for one biome. It selects a registered
@@ -190,6 +192,11 @@ Room-control keys are used consistently for:
 
 There is no planner occurrence ID in the revamp model.
 
+Injective top-level Room Control use makes the unique Room Control key the
+occurrence identity shared by topology, UI projection, materialization, and
+leaf feedback. A structural slot that does not yet contain a room is identified
+by its semantic parent and physical exit or door index instead.
+
 ### Local Child Identity
 
 A bounded room-internal child or phase-owned offer point is addressed through
@@ -300,6 +307,12 @@ It is the persisted default for every Route Plan, including a fresh profile and
 Lib reset to defaults. The Route Plan is already identified by its route key.
 Active UI route/biome selection is transient navigation, while runtime route
 identity comes from live game context.
+
+The configured prefix is authored scope, not proof that every downstream
+planner subsystem is already active. Composition exposes only the contiguous
+prefix backed by an `authoredEditor`; configured editor-only state may exist
+before canonical materialization or the headless pipeline. Full semantic
+planner activation is a separate capability boundary.
 
 The Route Plan owns:
 
@@ -420,6 +433,8 @@ structurally malformed choices are absent or rejected.
 The Biome Plan owns:
 
 - its one declared layout association;
+- its layout-derived bounded persistence descriptor and reversible
+  authored-state codec;
 - layout-specific authored topology;
 - start selection where the declaration provides alternatives;
 - generated batches and parent-to-target links;
@@ -429,7 +444,7 @@ The Biome Plan owns:
 - terminal-transition presence, structural predecessor relationship, and
   policy-admitted companion target links;
 - biome-global authored state;
-- topology mutation and structural completeness.
+- topology mutation, structural completeness, and semantic spine addresses.
 
 Outgoing topology never belongs to a target room control.
 

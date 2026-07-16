@@ -22,8 +22,9 @@ committed Route Controls, Biome Plans, and Room Controls
 This is the authority for canonical shape, history timing, requirement
 evaluation, force pressure, reward bags, candidate projection, and execution
 plan compilation. `DOMAIN_MODEL.md` owns semantic concepts,
-`UI_PERSISTENCE_MODEL.md` owns authored persistence, and `BIOME_RULES.md` owns
-biome-specific topology.
+`UI_PERSISTENCE_MODEL.md` owns the broad authored persistence lifecycle,
+`UI_EDITOR_MODEL.md` owns editor projection and semantic owner-to-presentation
+resolution, and `BIOME_RULES.md` owns biome-specific topology.
 
 The pipeline is pure with respect to authored state. It reads one coherent
 committed authored state and produces replaceable derived caches. It never
@@ -35,7 +36,8 @@ internals.
 One commit-triggered rebuild performs these stages in order:
 
 1. read one coherent committed authored state and its configured route prefix,
-   rejecting a prefix outside the active composition domain;
+   rejecting a prefix outside the composition's editable domain or any
+   configured biome without headless-pipeline support;
 2. normalize the authored topology of every configured biome through its
    registered layout kind into an unpublished route-local table;
 3. reject any malformed topology, unknown dispatch key, out-of-bound link, or
@@ -712,8 +714,10 @@ Construction/invariant checks include:
 - semantic addresses resolve to exactly one owner.
 
 UI-layout registry coverage is not a game-legality check. Composition support
-validates it separately before a biome may claim `plannerActive`; the headless
-validator does not import or depend on UI projection services.
+validates the authored projector and permanent views before a biome may claim
+`authoredEditor`, then validates contextual UI integration separately before
+it may claim `plannerActive`; the headless validator does not import or depend
+on UI projection services.
 
 Authored structural and timing validation checks:
 
@@ -1126,8 +1130,10 @@ The pipeline distinguishes:
 `Contract failure`
 : Catalog, storage, registration, address, or internal shape contradicts a
   construction invariant. Fails loudly at its boundary and is not converted
-  into a user-invalid candidate. An inactive configured prefix loaded through
-  persistence/import is one such configuration contract failure.
+  into a user-invalid candidate. A configured prefix beyond
+  `maximumEditablePrefix` loaded through persistence/import is one such
+  configuration contract failure. Once the semantic coordinator is installed,
+  an editable prefix that extends beyond contiguous headless support is another.
 
 `blockedByEarlierBiome` is not a fourth failure class. It is derived UI
 processing state for a configured biome whose normalized topology is trusted
@@ -1183,7 +1189,11 @@ The pipeline test suite must cover:
 - one published prepared route result per draw, containing one view per
   configured biome, and replacement publication before the draw following a
   commit;
-- rejection of inactive configured-prefix imports without clamping;
+- rejection of configured-prefix imports beyond `maximumEditablePrefix`
+  without clamping;
+- support-composition rejection when `maximumEditablePrefix` extends beyond
+  contiguous headless-pipeline coverage after the semantic coordinator is
+  installed;
 - atomic published-result replacement after a successful rebuild and
   previous-result clearing after a failed rebuild;
 - compilation refusal for incomplete or invalid configured prefixes;

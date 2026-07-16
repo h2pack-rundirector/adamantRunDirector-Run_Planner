@@ -5,6 +5,12 @@
 This document maps the revamp domain to ModpackLib managed state and
 immediate-mode ImGui composition.
 
+`UI_EDITOR_MODEL.md` is the focused authority for the authored editor built on
+these contracts. It defines the Biome Plan persistence codec, published
+authored view, semantic topology widgets, unique-room identity invariant, and
+spine-feedback resolution. This document retains authority over the broader
+Lib, profile, reset, state-access, and final derived-publication lifecycle.
+
 The central split is:
 
 ```text
@@ -47,10 +53,20 @@ route-global planner inputs. Its configured prefix defaults to empty, which
 leaves that route entirely vanilla after fresh profile creation or Lib reset
 to defaults.
 
-The active composition supplies the Route Control's current contiguous prefix
-domain. A persisted or imported prefix outside that domain is rejected at the
-Route Control semantic boundary. It is never clamped, silently shortened, or
-allowed to activate a headless biome.
+Implementation support supplies the Route Control's current contiguous prefix
+domain through `maximumEditablePrefix`. A persisted or imported prefix outside
+that domain is rejected at the Route Control semantic boundary. It is never
+clamped or silently shortened.
+
+Editability and full planner activation are separate. An `authoredEditor`
+biome may enter the configured prefix before materialization or the headless
+pipeline exists; its authored view is useful but it produces no execution
+plan. `maximumActivePrefix` separately records the contiguous prefix whose
+authored editor and headless semantic pipeline have been integrated and probed.
+
+Shrinking configured scope never clears excluded Biome Plan or Room Control
+persistence. Those values become dormant and return unchanged if the prefix is
+expanded again.
 
 Representative keys:
 
@@ -134,18 +150,22 @@ It is constructed once for one route-biome step with targeted dependencies:
 
 - the immutable biome layout declaration and room declarations;
 - the route-biome room-control registry;
-- the layout-specific topology and biome-global storage descriptor;
 - the registered topology-layout implementation;
 - registered batch-rule implementations;
 
-It owns semantic topology methods and hides physical storage details from draw,
+It owns the layout-derived bounded persistence descriptor, the reversible
+codec between physical Lib roots and semantic authored choices, and the
+semantic topology methods. It hides physical storage details from draw,
 validation, and room controls.
 
-The module declares the finite topology storage roots before activation. The
-Biome Plan wraps those roots rather than dynamically declaring storage.
-Each semantic operation receives the current UI or runtime state-access
-surface. The long-lived Biome Plan never caches callback-owned data refs,
-control refs, draw services, or ImGui objects.
+The registered topology-layout implementation derives the finite topology
+storage roots and codec from the validated layout bounds. The Biome Plan
+declares those roots during system composition, and the module manifest merely
+collects them before activation. The plan never dynamically declares storage.
+
+Each semantic operation uses a short-lived plan ref bound to the current UI or
+runtime state-access surface. The long-lived Biome Plan never caches
+callback-owned data refs, control refs, draw services, or ImGui objects.
 
 Topology, history, and UI behavior are registered separately under the shared
 layout-kind key:
@@ -164,8 +184,11 @@ behavior container for all three layers.
 ## Persisted Shape
 
 There is no universal physical topology schema. Each registered layout kind
-has one finite authored-state descriptor declared before module activation and
-translates it into a normalized semantic topology.
+provides the finite descriptor and reversible authored-state codec used by its
+Biome Plan before module activation. The module-level storage manifest collects
+those plan-owned roots; state access does not interpret `LinearBiome` or
+`HubBiome` physical layouts. Each plan translates its authored state into a
+normalized semantic topology.
 
 ### `LinearBiome` Authored State
 
@@ -262,8 +285,8 @@ Hub returns are derived and never persisted as repeated rooms or cycles.
 
 ### Normalized Topology Boundary
 
-`biomePlan:readTopology(stateAccess)` copies the relevant authored state and
-returns one normalized variant:
+A state-bound Biome Plan ref decodes the relevant authored state and returns
+one normalized variant:
 
 ```text
 LinearBiomeTopology
@@ -333,17 +356,23 @@ counter, dynamic control schema, or copied canonical document.
 Representative semantic operations:
 
 ```lua
-biomePlan:readTopology(stateAccess)
+biomePlan:storage()
+runtimePlan = biomePlan:bind(runtimeStateAccess)
+uiPlan = biomePlan:bind(uiStateAccess)
+runtimePlan:readAuthored()
+runtimePlan:readTopology()
 biomePlan:checkStructure(topology)
-biomePlan:apply(uiStateAccess, command)
+uiPlan:apply(command)
 biomePlan:traverse(topology, visitor)
 biomePlan:semanticAddress(subject)
-biomePlan:clearTopology(uiStateAccess)
+uiPlan:clearTopology()
 ```
 
 Exact names may change. The invariants do not:
 
 - the Biome Plan is the only topology write boundary;
+- its selected layout implementation owns one reversible persistence codec;
+- its declared storage capacity derives from the validated layout bounds;
 - the registered topology-layout implementation interprets every operation;
 - it validates the complete mutation before staging writes;
 - it maintains injective room-control references;
@@ -362,9 +391,9 @@ command reads current topology, constructs and validates the full proposed
 replacement in unpublished Lua state, and only then stages every required Lib
 write. Callers never manipulate bounded storage records directly.
 
-Read-only topology reads, structure checks, and traversal accept both UI and
-runtime state-access surfaces. Topology mutation operations require the
-writable UI surface and are not present on `RuntimeStateAccess`.
+Read-only plan refs can bind either the UI or runtime state-access surface.
+Topology mutation operations exist only on the UI-bound ref and are absent
+from the runtime-bound ref.
 
 ### `LinearBiome` Commands
 
@@ -450,6 +479,9 @@ coordinator's non-persisted route presentation cache rather than into a
 callback-owned control ref or persisted control state.
 
 ## UI Composition
+
+`UI_EDITOR_MODEL.md` owns the concrete authored projection, transient selector,
+semantic-command, and referenced-leaf draw contracts summarized here.
 
 UI projectors are registered separately from topology implementations. During
 the committed rebuild, `uiLayouts[layoutKind]` combines normalized topology,
@@ -614,6 +646,13 @@ Control template, local-slot descriptor, or layout-owned structural descriptor
 is already the semantic translator for its owner address. The UI projector
 decides where that translated state appears without changing the address.
 
+Injective top-level Room Control use makes the Room Control key the occurrence
+identity for every existing leaf. A batch is identified by its unique parent
+Room Control key, while an empty or populated physical target slot is
+identified by parent key plus exit index. The prepared UI owner index uses
+those semantic addresses directly; it never scans persisted or rendered rows
+to recover a finding destination.
+
 Providers use stable declaration-derived candidate arrays. Context-invalid
 values remain present and receive mutable validity, color, and message state;
 only declaration-impossible values are absent. Before biome completeness,
@@ -673,6 +712,13 @@ Profile load, profile reset, hash import, and explicit configuration reload
 must all run the same rebuild-and-publication lifecycle as a normal committed
 change. Module initialization publishes the default empty-prefix result by the
 same path. Derived state is not persisted.
+
+Before the headless coordinator exists, Checkpoint 4A runs the authored subset
+of that lifecycle for every configured biome: normalization, structural and
+local completeness, UI projection, and atomic publication. Once the headless
+coordinator exists, every biome through `maximumEditablePrefix` must also have
+headless support before the full semantic lifecycle processes configured
+state.
 
 Lib commit and reload remain distinct lifecycle events. The coordinator calls
 the same synchronous rebuild function directly from `onActivate`, a

@@ -16,9 +16,12 @@ Completed implementation work and the current frontier are recorded in
 `IMPLEMENTATION_PROGRESS.md`; the complete checkpoint plan remains in
 `IMPLEMENTATION_GUIDE.md`.
 
-The six-document set completed its initial coherent design review on
+The original six-document set completed its initial coherent design review on
 2026-07-14. The accepted biome-layout boundary was subsequently reconciled
-through those same authorities, and the set was relocked on 2026-07-16.
+through those same authorities, and the set was relocked on 2026-07-16. The
+focused authored-editor contract was added afterward as
+`UI_EDITOR_MODEL.md`; it refines the UI boundary without replacing the broader
+domain or persistence authorities.
 Questions deliberately assigned to a later biome implementation checkpoint
 are not open architecture blockers.
 
@@ -39,15 +42,19 @@ than adding a workaround.
 3. `UI_PERSISTENCE_MODEL.md`
    maps the domain to ModpackLib controls, managed storage, profiles, reset,
    candidates, feedback, and immediate-mode drawing.
-4. `BIOME_RULES.md`
+4. `UI_EDITOR_MODEL.md`
+   defines the concrete authored editor, Biome Plan persistence codec,
+   decision-tree identity, semantic command binding, and spine-feedback
+   resolution used by Checkpoint 4A.
+5. `BIOME_RULES.md`
    defines only the structural extensions for F through Q.
-5. `MATERIALIZATION_AND_VALIDATION.md`
+6. `MATERIALIZATION_AND_VALIDATION.md`
    defines lifecycle history, counter views, force pressure, reward bags,
    validation, and canonical/execution-plan compilation.
-6. `IMPLEMENTATION_GUIDE.md`
+7. `IMPLEMENTATION_GUIDE.md`
    defines all checkpoints, tests, and completion criteria.
 
-These six documents are the complete, locked revamp design and
+These seven documents are the complete, locked revamp design and
 implementation-guidance set. Implementation follows
 `IMPLEMENTATION_GUIDE.md`. `IMPLEMENTATION_PROGRESS.md` is a separate mutable
 status ledger and is not a design authority.
@@ -56,9 +63,9 @@ status ledger and is not a design authority.
 
 The supplemental `room_controls/` specification set expands the locked Room
 Control direction into one reviewable contract per registered room template.
-It is subordinate to the six authority documents above, but it is the
-implementation contract for Checkpoints 2 and 4. Template implementation must
-not begin until the corresponding specification has been reviewed.
+It is subordinate to the seven authority documents above, but it is the
+implementation contract for Checkpoints 2, 4A, and 4B. Template implementation
+must not begin until the corresponding specification has been reviewed.
 
 The locked
 [`REWARD_HIERARCHY.md`](room_controls/REWARD_HIERARCHY.md) defines the bottom-up
@@ -78,6 +85,7 @@ Each fact has one home:
 | Planner concepts and semantic ownership | `DOMAIN_MODEL.md` |
 | Vanilla behavior and planner divergences | `GAME_DATA_REFERENCE.md` |
 | Lib controls, storage, profiles, reset, and draw lifecycle | `UI_PERSISTENCE_MODEL.md` |
+| Authored editor composition, Biome Plan codec, and UI feedback addressing | `UI_EDITOR_MODEL.md` |
 | Biome-specific topology and reward extensions | `BIOME_RULES.md` |
 | History, validation, and compilation | `MATERIALIZATION_AND_VALIDATION.md` |
 | Rewrite order and acceptance checks | `IMPLEMENTATION_GUIDE.md` |
@@ -98,7 +106,8 @@ construction establishes the immutable vocabulary:
 ```text
 raw declarations
   -> normalized catalog
-  -> templates, batch rules, and static control/storage manifests
+  -> templates, batch rules, static controls, and plan-owned storage codecs
+  -> collected module storage manifest
 ```
 
 Each meaningful configuration lifecycle rebuild processes the committed Route
@@ -164,14 +173,19 @@ The revamp starts from these decisions:
 - The configured scope is an ordered route prefix of zero through all declared
   biomes. The persisted default is an empty prefix for both routes, leaving
   both routes entirely vanilla after profile creation or reset.
+- The Route Control domain is capped by the contiguous
+  `maximumEditablePrefix`; configuration expresses authored scope and does not
+  by itself claim materialization, headless processing, or planner activation.
 - The universe of routes, route-biome steps, game rooms, room templates, and
   room controls is known before module activation.
 - Each route-biome step has one statically materialized control instance for
   every supported top-level concrete game room.
 - Bounded room-internal children use stable parent-local slots rather than
   dynamic or duplicate top-level controls.
-- A Biome Plan owns generated batches, terminal transitions, companion links,
-  room links, and picked state.
+- A Biome Plan is a decision-tree object, not a Lib control. It owns its
+  layout-derived bounded storage descriptor, reversible authored-state codec,
+  generated batches, terminal transitions, companion links, room links, and
+  picked state.
 - A room control owns its authored `incomingReward` and any rewards produced
   by explicit room-local children or encounter offer points.
 - Outgoing topology belongs to the Biome Plan, never to a target room control.
@@ -180,6 +194,9 @@ The revamp starts from these decisions:
 - Picked and unpicked generated rooms use the same room-control representation.
 - Unpicked rooms are dead leaves. Their offered rewards remain materialized.
 - The planner requires injective room-control use within a biome plan.
+- That injectivity makes the unique Room Control key the top-level occurrence
+  identity used by persistence, UI projection, materialization, and feedback;
+  no separate occurrence ID exists.
 - For ordinary combat rooms this is deliberately stricter than vanilla:
   repeated unentered combat-map creation is canonicalized to distinct eligible
   combat room keys.
@@ -192,8 +209,9 @@ The revamp starts from these decisions:
 - Every meaningful configuration lifecycle event synchronously rebuilds one
   committed snapshot. Success atomically replaces the published result; failure
   clears it before surfacing the error.
-- A configured prefix outside the currently active contiguous domain is
-  rejected rather than clamped or allowed to expose a headless biome.
+- A configured prefix outside the currently editable contiguous domain is
+  rejected rather than clamped. `maximumActivePrefix` separately bounds full
+  planner-active semantic integration.
 - The current implementation and its persisted draft shape are not migration
   contracts.
 

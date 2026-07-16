@@ -396,7 +396,9 @@ it with `nil`, invents a default, or clears dormant siblings.
 
 ## Candidate Composition
 
-Checkpoint 4 builds candidates bottom-up:
+Checkpoint 4A builds stable authored domains and candidate application
+bottom-up; Checkpoint 4B exports the same semantic candidate chain to the
+headless pipeline:
 
 - payload collaborators expose valid payload values;
 - primitive collaborators produce concrete primitive candidates;

@@ -21,8 +21,8 @@ The implementation rule is:
 ```text
 reverify facts
 -> implement the smallest upstream contract
--> prove it headlessly
--> add its UI or runtime consumer
+-> add only the consumer admitted by the current checkpoint
+-> prove the boundary headlessly and probe live surfaces explicitly
 -> remove any temporary scaffold before advancing
 ```
 
@@ -37,11 +37,13 @@ Implementation work must read the revamp set in this order:
 2. `GAME_DATA_REFERENCE.md` for verified vanilla behavior and deliberate
    planner divergences;
 3. `UI_PERSISTENCE_MODEL.md` for controls, storage, profiles, reset, and draw;
-4. `BIOME_RULES.md` for specialized F-Q topology;
-5. `MATERIALIZATION_AND_VALIDATION.md` for canonical history, requirements,
+4. `UI_EDITOR_MODEL.md` for the authored editor, Biome Plan persistence codec,
+   decision-tree identity, and UI feedback addressing;
+5. `BIOME_RULES.md` for specialized F-Q topology;
+6. `MATERIALIZATION_AND_VALIDATION.md` for canonical history, requirements,
    rewards, feedback, and compilation;
-6. this document for the complete execution order;
-7. `IMPLEMENTATION_PROGRESS.md` for completed work and the current frontier.
+7. this document for the complete execution order;
+8. `IMPLEMENTATION_PROGRESS.md` for completed work and the current frontier.
 
 The old branch and removed documents may answer historical questions. They
 cannot override this set. A disagreement is resolved by game-data
@@ -174,12 +176,13 @@ One composition root constructs immutable services in dependency order:
 ```text
 raw declarations
   -> normalized catalog and validated layout declarations
-  -> template, batch, transition, and topology-layout registries
-  -> layout-derived static control/storage manifest
-  -> Route/Biome Plan descriptors
+  -> template, batch, transition, topology-layout, and UI-layout registries
+  -> static control manifests and Biome Plan objects
   -> common canonical materializer
-  -> history-layout, validator, candidate, compiler, and UI-layout services
+  -> history-layout, validator, candidate, and compiler services
   -> validated biome implementation support from assembled subsystem evidence
+  -> Route and Room Control instances bounded by that support view
+  -> collected static control storage and plan-owned layout storage
   -> planner coordinator
   -> UI and runtime adapters
 ```
@@ -215,27 +218,46 @@ capabilities for every route-biome step:
 ```text
 focusedRoomControls
 -> topology
--> materialization
--> headlessPipeline
+   -> authoredEditor
+   -> materialization
+      -> headlessPipeline
+
+authoredEditor + headlessPipeline
 -> plannerActive
 ```
 
 Every capability is an explicit boolean. The support validator rejects missing
 or unknown biomes, missing fields, broken capability dependencies, claims that
-do not match assembled subsystem evidence, and non-contiguous planner-active
-route prefixes. A biome can benefit from a globally shared focused template
-without claiming `focusedRoomControls`; that capability means every Room
-Control needed by the biome has left the transitional adapter.
+do not match assembled subsystem evidence, and non-contiguous editable or
+planner-active route prefixes. A biome can benefit from a globally shared
+focused template without claiming `focusedRoomControls`; that capability means
+every Room Control needed by the biome has left the transitional adapter.
 
 Evidence remains subsystem-specific even when the public support record stays
 compact. `topology` requires the declared layout kind, its topology
 implementation, every referenced batch/transition rule, and its storage
-descriptor. `materialization` requires the common materializer plus all
-referenced Room Control and rule materializers. `headlessPipeline` additionally
-requires history-layout, validation, candidate, and compiler coverage.
-`plannerActive` additionally requires the UI-layout projector and successful
-contiguous-prefix integration. No subsystem may infer another subsystem's
-coverage from a single biome boolean.
+descriptor. `authoredEditor` requires the plan-owned persistence codec,
+permanent Route and Room Control views, the applicable UI-layout projector,
+and a focused authored-editor probe. `materialization` requires the common
+materializer plus all referenced Room Control and rule materializers.
+`headlessPipeline` additionally requires history-layout, validation, candidate,
+and compiler coverage.
+`plannerActive` requires both `authoredEditor` and `headlessPipeline`, plus
+contextual candidate/feedback integration and a successful contiguous-prefix
+probe. No subsystem may infer another subsystem's coverage from a single biome
+boolean.
+
+Implementation support derives two route bounds. `maximumEditablePrefix`
+limits the persistent Route Control option domain. `maximumActivePrefix`
+records the contiguous prefix with full planner-active integration. Checkpoint
+4A may therefore admit F as configured authored intent without claiming that
+its semantic pipeline is active.
+
+Checkpoint 4A's authored-only coordinator is the sole phase in which an
+editable biome may lack `headlessPipeline`. Before Checkpoint 5 installs the
+full semantic coordinator, support composition must prove that every biome
+through `maximumEditablePrefix` has headless coverage. Later rollout phases
+therefore establish headless support before expanding the editable domain.
 
 ## State-Access Threading
 
@@ -247,10 +269,14 @@ Biome Plans and the common canonical materializer receive a narrow semantic
 access surface capable of:
 
 - reading Route Control state by route key;
-- reading biome-global state and topology by biome-step key;
 - resolving a Room Control by stable control key;
 - reading a Room Control's semantic authored state or canonical fragment
   through its public interface.
+
+The current surface also supplies generic module-data access used internally
+by a bound Biome Plan's layout codec. State access does not interpret
+`LinearBiome` or `HubBiome` physical records or expose those aliases to
+callers.
 
 The semantic code must not ask the adapter for storage aliases or bounded
 storage positions.
@@ -285,11 +311,12 @@ the authored model.
 
 ### Descriptor Rule
 
-A long-lived Biome Plan stores its immutable layout declaration, layout-specific
-storage descriptor, stable scoped keys, declaration bounds, and registered
-topology implementation. Batch and transition implementations arrive through
-that topology composition. Each operation receives the current state-access
-surface. It never caches callback-owned data or control refs.
+A long-lived Biome Plan stores its immutable layout declaration, plan-owned
+layout storage descriptor and codec, stable scoped keys, declaration bounds,
+and registered topology implementation. Batch and transition implementations
+arrive through that topology composition. Each operation uses a short-lived
+ref bound to the current state-access surface. The plan never caches
+callback-owned data or control refs.
 
 This is the accepted threading cost. Replacing it with a global mutable service
 table or serialized root draft is not an optimization.
@@ -591,7 +618,115 @@ topology-facing declaration and storage scaffolds are superseded here.
 - malformed persisted state fails at the Biome Plan boundary while incomplete
   but well-formed state remains readable.
 
-## Checkpoint 4: Common Canonical Materializer and F Fragments
+## Checkpoint 4A: Authored F Editor Foundation
+
+Mount the permanent authored editor before the semantic pipeline, using only
+the topology, persistence, and Room Control boundaries already established.
+This is an earlier consumer of the authored model, not a temporary debug form
+and not a planner-active claim.
+
+The checkpoint begins with one biome-persistence ownership consolidation. A
+Biome Plan must own the layout-derived storage descriptor and reversible codec
+for its decision tree. The module storage manifest becomes a collector of
+plan-owned roots, and generic state access stops interpreting physical
+`LinearBiome` or `HubBiome` records. Do not leave the current global storage
+reader/writer and the plan-owned codec as competing authorities.
+
+### Deliverables
+
+- one plan-owned bounded storage descriptor and reversible authored-state
+  codec per constructed Biome Plan;
+- storage capacity derived from layout `maxBatches`, `maxTargets`, start mode,
+  terminal companion bounds, and authored biome globals;
+- short-lived UI/runtime plan refs bound to generic state-access surfaces;
+- module storage collection over all Route Control, Room Control, and Biome
+  Plan roots without layout-kind persistence branches in state access;
+- a permanent Route Control prefix view whose Underworld domain is exactly
+  empty or F, whose Surface domain is empty, and whose values come from the
+  support route view's `maximumEditablePrefix`;
+- control assembly split between static manifest/template preparation and
+  instance construction so implementation support is composed before Route
+  Control option domains; production composition has no independent
+  `activePrefixEnds` authority;
+- transient route/biome navigation and bounded semantic-selector fields with
+  `persist = false` and `hash = false`;
+- stable declaration-derived room, reward, payload, entry-mode, and structural
+  option domains prepared outside draw;
+- bottom-up reward/payload draw collaborators for one-of payloads, distinct
+  pairs, primitive choices, counted choices, shops, and purchase state;
+- permanent Route and focused F Room Control views, including topology-context
+  handling for the forked preboss;
+- `uiLayouts["LinearBiome"]` authored projection for incomplete and complete F
+  topology, with F/G focused fixtures proving the layout implementation is not
+  F-specific;
+- route shell and transient navigation over the committed configured views;
+- start, Standard batch, physical target, picked continuation, continuation
+  replacement, terminal, and topology-clearing interactions through semantic
+  Biome Plan commands;
+- referenced picked and unpicked Room Control drawing by stable control key;
+- owner-keyed structural and local-completeness presentation without
+  contextual legality;
+- one authored-result coordinator that reads the committed Route Control,
+  normalizes and projects every configured plan on activation, meaningful
+  commit, and setting-changing reload, then atomically publishes the complete
+  authored view;
+- validated `authoredEditor = true` subsystem evidence for F only, deriving
+  `maximumEditablePrefix = "Underworld_F"` while both routes retain an empty
+  default and `maximumActivePrefix` remains absent;
+- explicit editor-only status while no canonical snapshot or execution plan
+  exists.
+
+The UI and feedback details are authoritative in `UI_EDITOR_MODEL.md`. This
+checkpoint must use final ownership interfaces. It cannot introduce a mutable
+route document, positional participant registry, raw topology-table editor,
+or planner-owned replacement for Lib dropdown widgets.
+
+### Acceptance
+
+- every Biome Plan can round-trip its semantic authored state through its own
+  codec using both UI and runtime state-access test adapters;
+- the Underworld Route Control offers exactly empty and F, Surface offers only
+  empty, and neither draw nor control construction hard-codes that domain;
+- the module storage manifest merely collects the exact roots declared by the
+  plans and has no independent layout persistence interpretation;
+- malformed persisted topology still fails at the Biome Plan contact boundary,
+  while incomplete but well-formed topology remains projectable;
+- draw consumes one published authored view and never decodes, normalizes, or
+  projects topology;
+- dynamic topology selectors write transient fields and translate changes into
+  semantic Biome Plan commands during the same draw call;
+- structural widgets cannot stage a proposal that violates the Biome Plan
+  contact boundary;
+- an empty F plan can be authored through one selected start, complete Standard
+  batches, picked continuations, and one `PrebossEntry` terminal transition;
+- all physical peers are visible and editable, including unpicked dead leaves;
+- changing the selected start, picked target, or continuation form clears only
+  incompatible downstream topology and preserves Room Control persistence;
+- forked-preboss presentation exposes only the free-reward capacity admitted
+  by immutable predecessor exit context;
+- dormant unreferenced Room Controls are neither drawn nor included in
+  completeness;
+- completeness remains a biome-level blocker while semantic owner addresses
+  localize missing leaf or spine state;
+- no UI address contains a persisted table row, rendered row, display ordinal,
+  widget ID, or occurrence ID;
+- unchanged draw frames perform no normalization, projection,
+  materialization, history, validation, provider-domain rebuild, or feedback
+  translation;
+- route and room draw paths reuse stable option and option-state tables;
+- profile load, hash reload, commit, and Lib reset reproduce the authored tree
+  through the same codec and publication path;
+- the authored result contains one view per configured biome, while transient
+  navigation only selects among those published views;
+- fake-ImGui tests cover planner projection and command wiring without
+  retesting Lib widget internals;
+- an in-game probe proves dropdown opening, selection, next-frame commit
+  publication, profile reload, and reset-to-defaults;
+- F is configurable and claims authored-editor support without claiming
+  materialization, headless-pipeline, or planner-active support; G remains
+  outside the configurable and planner-active domains.
+
+## Checkpoint 4B: Common Canonical Materializer and F Fragments
 
 This checkpoint completes canonical materialization for F. Shared component
 implementations may already serve G or later room kinds, but no other biome
@@ -599,9 +734,9 @@ claims materialization until its Checkpoint 7 headless slice is complete.
 
 ### Deliverables
 
-- composed semantic completeness/materialization interface for Route and Room
-  Controls over the component-local predicates established with their typed
-  storage contracts;
+- composed semantic materialization interface for Route and Room Controls over
+  the completeness predicates and typed storage contracts already exercised by
+  Checkpoint 4A;
 - reusable reward/payload components inside Room Control templates;
 - concrete generated-target reward fragments owned by target Room Controls;
 - active/inactive local-child slot materialization;
@@ -612,9 +747,11 @@ claims materialization until its Checkpoint 7 headless slice is complete.
   realization and `entryMode` to the terminal Room Control;
 - the canonical `LinearBiome` snapshot variant and composed route-plan shape
   with stable semantic return addresses;
-- owner-keyed completeness findings before canonical materialization;
-- stable candidate-provider export from Room Controls and layout structural
-  owners, without contextual legality yet;
+- reuse of Checkpoint 4A owner-keyed completeness findings before canonical
+  materialization;
+- stable candidate-provider semantic export from Room Controls and layout
+  structural owners, extending rather than replacing the editor's prepared
+  domains;
 - configured-prefix completeness horizon;
 - validated `materialization = true` support evidence for F only.
 
@@ -641,12 +778,14 @@ the first option, mutate a control, or repair topology.
   emits no history;
 - canonical materialization works through both UI and runtime read adapters;
 - canonical materialization runs only from an explicit headless invocation at
-  this checkpoint and never during draw. Checkpoint 5 wires it to the
+  this checkpoint and never during draw. The authored editor continues to
+  operate without invoking it. Checkpoint 5 wires it to the
   synchronous configuration lifecycle rebuild.
 
 ## Checkpoint 5: F Headless Vertical Slice
 
-F proves the complete planning pipeline before production UI is introduced.
+F proves the complete planning pipeline before its semantic results are joined
+to the authored editor introduced in Checkpoint 4A.
 
 ### Deliverables
 
@@ -662,9 +801,10 @@ F proves the complete planning pipeline before production UI is introduced.
 - stable candidate providers and bounded scratch projection;
 - direct feedback resolution by semantic owner;
 - execution compiler producing concrete headless F instructions;
-- derived-cache coordinator that first normalizes every configured topology,
-  then owns completeness, canonical, history, validation, owner-keyed
-  presentation, per-biome `processingState`, and compilation;
+- expansion of the Checkpoint 4A authored-result coordinator so it first
+  normalizes every configured topology, then owns completeness, canonical,
+  history, validation, owner-keyed presentation, per-biome `processingState`,
+  and compilation;
 - one synchronous rebuild path called directly by activation, meaningful
   commit, and meaningful reload lifecycle callbacks;
 - atomic replacement with the complete derived result on success, and clearing
@@ -679,6 +819,8 @@ validated only by store membership or selected-entry requirements.
 ### Acceptance
 
 - a complete legal F prefix reaches `valid` and compiles;
+- the installed semantic coordinator proves that every value admitted through
+  `maximumEditablePrefix` has contiguous headless-pipeline support;
 - incomplete and modeled-invalid configured prefixes do not compile;
 - the Linear history translator accepts canonical snapshots only and never
   reads authored topology or rebuilds canonical structure;
@@ -703,29 +845,26 @@ validated only by store membership or selected-entry requirements.
 Golden tests must compare the full ordered event stream for representative F
 plans, not only final counters.
 
-## Checkpoint 6: F Production UI
+## Checkpoint 6: F Semantic UI Integration and Production Hardening
 
-Only after the headless F pipeline is authoritative should the immediate-mode
-editor be mounted.
+Join the authoritative F headless pipeline to the authored editor already
+mounted in Checkpoint 4A. This checkpoint adds semantic presentation and
+production activation; it does not replace the editor's persistence, layout,
+or Room Control view boundaries.
 
 ### Deliverables
 
-- route shell and Route Control prefix editor;
-- implementation-support activation updated to expose only Underworld F and
-  the empty Surface prefix;
-- transient route/biome navigation state;
-- `uiLayouts["LinearBiome"]` projector producing F start, decision-row, and
-  terminal presentation from normalized topology, owner-keyed state, and
-  derived `processingState`;
-- Room Control views threaded through draw by stable key;
-- target linking, picking, continuation replacement, and topology clearing
-  through semantic Biome Plan commands;
+- implementation support updated to claim `plannerActive = true` and derive
+  `maximumActivePrefix = "Underworld_F"` without changing the already-live
+  Route Control option domain;
+- enrichment of the existing `uiLayouts["LinearBiome"]` authored projector
+  with owner-keyed candidate, feedback, and derived `processingState` data;
 - candidate-aware dropdown/value presentation;
 - common route status, markers, and first-blocking horizon;
 - prepared invalid/muted/enrichment state;
-- commit-triggered rebuild and atomic publication of prepared presentation and
-  execution state;
-- dumb draw consumption of the currently published prepared view;
+- atomic publication of the prepared editor view and execution state already
+  built by the Checkpoint 5 coordinator;
+- performance hardening of the existing dumb draw path;
 - validated `plannerActive = true` subsystem evidence for F only.
 
 The UI must not contain a mutable route document, duplicate canonical plan,
@@ -750,6 +889,8 @@ positional form participant registry, or direct reward-table editor.
 - one draw uses one published prepared view; an edit frame may display that
   prior committed presentation, and `onCommit` publishes the replacement before
   the next draw;
+- the Checkpoint 4A authored editor behaves identically when semantic
+  presentation is absent, incomplete, invalid, or enriched;
 - draw never translates findings, mutates prepared presentation, or applies a
   deferred feedback pass;
 - unchanged draw frames perform no materialization, history, validation,
@@ -758,8 +899,9 @@ positional form participant registry, or direct reward-table editor.
   decoration, and dropdown option iteration;
 - an in-game probe proves candidate dropdown opening, selection, preview color,
   tooltip, Lib reset to defaults, profile reload, and commit publication;
-- a profile/hash prefix beyond `maximumActivePrefix` is rejected without
-  clamping and cannot publish an execution plan.
+- a profile/hash prefix beyond `maximumEditablePrefix` is rejected without
+  clamping, and no configured prefix beyond `maximumActivePrefix` can publish
+  a production-active semantic result.
 
 Unit tests with fake ImGui are necessary but not sufficient for this
 checkpoint.
@@ -772,19 +914,26 @@ Biome implementation and planner exposure are separate gates.
 : Its catalog and static schema have been audited and its
   topology-layout traversal, canonical materialization, history-layout
   translation, validation, candidate projection, and focused fixtures exist.
-  The biome is absent from the production prefix domain and has no production
-  editor surface.
+  The biome is absent from the configured-prefix option domain and has no
+  production editor surface.
+
+`authored-editor`
+: The biome has permanent authored Route/Room Control views, its UI-layout
+  projection and persistence round trips are proven, and it is available as
+  the next contiguous value in the Route Control domain. This capability does
+  not imply canonical materialization, contextual validation, or compilation.
 
 `planner-active`
-: The biome is available as the next contiguous value in the Route Control's
-  configured-prefix domain and its production UI/integration has passed an
-  in-game probe. Planner activation does not mean runtime-hook activation;
-  runtime remains deferred to Checkpoint 9.
+: The authored editor and headless pipeline are joined into contextual
+  candidate/feedback presentation for the real contiguous route prefix and
+  have passed an in-game integration probe. Planner activation does not mean
+  runtime-hook activation; runtime remains deferred to Checkpoint 9.
 
 The Route Control option domain is bounded by the validated implementation-
-support route view's `maximumActivePrefix`. The full catalog and static controls
-may already exist, but dormant headless biomes beyond that bound cannot be
-selected or exposed as implemented UI.
+support route view's `maximumEditablePrefix`. The separately derived
+`maximumActivePrefix` records the fully integrated semantic prefix. The full
+catalog and static controls may already exist, but dormant headless biomes
+beyond the editable bound cannot be selected or exposed as implemented UI.
 
 Each headless slice follows:
 
@@ -798,8 +947,9 @@ focused Room Control replacement and static-schema audit
 -> focused headless fixtures
 ```
 
-Activation adds the applicable UI-layout projection, integration with the real
-prior route prefix, prefix-domain expansion, and a focused in-game probe.
+Activation adds the applicable authored UI projection, integration with the
+real prior route prefix, editable- and active-prefix expansion, and a focused
+in-game probe.
 The phase updates implementation support only after the assembled focused
 controls and downstream subsystem registries prove the claimed capability.
 
@@ -809,9 +959,9 @@ Reuse `LinearBiome`, `Standard`, and `PrebossEntry`; prove two- and three-exit
 batches, direct combat-depth predicates, shop exit-count requirements,
 persistent force pressure, the tight compatible-control capacity bound, and
 `allExitsTerminal` / `shopThenFillRemainingExits` with up to two active
-free-reward slots. Add G
-production UI, validate it after a real F canonical snapshot/history, and
-expand the Underworld active prefix to `F/G`.
+free-reward slots. Add G production UI, validate it after a real F canonical
+snapshot/history, and expand both the Underworld editable and planner-active
+prefixes to `F/G`.
 
 ### 7B: P Headless and Dormant
 
@@ -842,9 +992,8 @@ default. Prove bridge offer/skip history, terminal entered-count logic, shared
 Min/Max roll state, active cage slots, the three-starting capacity fold
 including a no-Fields-target batch, `FieldsMaxDoorsRolled` ceiling behavior,
 and one active `allExitsTerminal` forked-preboss free-reward slot when
-applicable. Add H
-production UI, validate it after the real F/G prefix, and expand the Underworld
-active prefix to `F/G/H`.
+applicable. Add H production UI, validate it after the real F/G prefix, and
+expand both Underworld bounds to `F/G/H`.
 
 ### 7E: I Implementation and Underworld Activation
 
@@ -857,7 +1006,7 @@ predecessors, the terminal on the first physical exit, at most one ordinary
 unpicked companion governed by `ClockworkDoorBatch`, complete companion reward
 offers, and no companion continuation. The planner does not expose skipping
 the offered preboss. Add I production UI, validate it after the real F/G/H
-prefix, and expand the Underworld active prefix to all four biomes.
+prefix, and expand both Underworld bounds to all four biomes.
 
 ### 7F: N Implementation and Activation
 
@@ -869,7 +1018,7 @@ repeated side-room game keys, side-room entry order, combat restores, and final
 `singleTerminal` / `shopOnly` preboss transition. Reverify and implement the
 exact sequential side-door minimum-availability rule at this checkpoint; it is
 not an earlier catalog foundation requirement. Add N production UI and expand
-the Surface active prefix to N.
+both Surface bounds to N.
 
 ### 7G: O Implementation and Activation
 
@@ -881,15 +1030,15 @@ offers/selects at encounter start and acquires after combat. Derive stable
 wheel storage slots from the profile instead of duplicating them in every O
 room declaration, and prove O's `singleTerminal` / `shopOnly` terminal. Add O
 production UI, validate it after the real N canonical snapshot/history, and
-expand the Surface active prefix to `N/O`.
+expand both Surface bounds to `N/O`.
 
 ### 7H: P/Q Surface Activation
 
 Mount the already headless-proven P and Q production UI, replace fixture-only
 prior history with real N/O/P route progression, and rerun their integration
-and candidate suites against the composed Surface route. Expand the Surface
-active prefix first to `N/O/P` and then to all four biomes only after each
-contiguous prefix passes its focused in-game probe.
+and candidate suites against the composed Surface route. Expand both Surface
+bounds first to `N/O/P` and then to all four biomes only after each contiguous
+prefix passes its focused in-game probe.
 
 ### Per-Phase Acceptance
 
@@ -900,16 +1049,18 @@ contiguous prefix passes its focused in-game probe.
 - all new requirements resolve to registered evaluators;
 - all local slots and topology remain declaration-bounded;
 - no biome claiming focused controls retains a transitional Room Control;
-- capability claims match separate assembled topology, materialization,
-  history, validation/candidate/compiler, and UI evidence;
+- capability claims match separate assembled topology, authored-editor,
+  materialization, history, validation/candidate/compiler, and contextual UI
+  evidence;
 - compatible-control capacity is reproven;
 - event order and counter timing have golden fixtures;
 - rewards use the common offer/acquisition/bag pipeline;
 - candidate and selected validation remain the same functions;
 - a headless dormant biome is absent from the configured-prefix option domain
   and production UI;
-- profiles and hashes cannot activate a headless dormant biome by storing a
-  prefix beyond `maximumActivePrefix`;
+- profiles and hashes cannot configure a biome beyond
+  `maximumEditablePrefix`, and planner-active publication cannot exceed
+  `maximumActivePrefix`;
 - fixture prior history proves the biome contract, not cross-biome integration;
 - activation expands only the next contiguous route prefix and requires the
   real prior prefix to materialize and validate;
@@ -925,7 +1076,7 @@ runtime hook consumes it.
 ### Deliverables
 
 - Route Control configured-prefix state for zero through four ordered biomes,
-  with both `maximumActivePrefix` bounds now four;
+  with both `maximumEditablePrefix` and `maximumActivePrefix` bounds now four;
 - sequential biome completeness, canonical snapshot, history, and validation
   progression across biome boundaries;
 - cleared-biome, encounter, loot, use, creation, and spacing ledgers across the
@@ -961,8 +1112,8 @@ runtime hook consumes it.
   commit;
 - every meaningful configuration change synchronously rebuilds once, atomically
   replaces the published result on success, and clears it on failure;
-- all active prefix values and production biome editors are available, while
-  runtime hooks are still absent.
+- all editable and planner-active prefix values and production biome editors
+  are available, while runtime hooks are still absent.
 
 ## Checkpoint 9: Runtime Hook Audit and Execution
 

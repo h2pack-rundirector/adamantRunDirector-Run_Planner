@@ -74,7 +74,8 @@ Room Control sequence through
   and G room;
 - retained dormant bounded adapters for H, I, N, O, P, and Q;
 - added implementation-support evidence without claiming topology,
-  materialization, headless-pipeline, or planner-active support.
+  authored-editor, materialization, headless-pipeline, or planner-active
+  support.
 
 The focused Room Controls, reward components, managed-state boundary, and
 composition root remain valid. The biome topology descriptors and their
@@ -83,7 +84,7 @@ they are not the final Biome Plan storage model.
 
 ## Delivered Ahead of the Plan
 
-Some Checkpoint 4 prerequisites were implemented while completing the static
+Some Checkpoint 4B prerequisites were implemented while completing the static
 control layer because they define the focused F/G control contracts:
 
 - payload domains, reward primitives, counted bags, fixed and counted choices,
@@ -92,8 +93,9 @@ control layer because they define the focused F/G control contracts:
   Controls;
 - room-control specification and reward-consumer audit documents.
 
-This does not complete Checkpoint 4. Canonical materialization still depends on
-Checkpoint 3 topology and the remaining Checkpoint 4 materializer contracts.
+This does not complete Checkpoint 4B. Canonical materialization still depends
+on the remaining materializer contracts after the Checkpoint 4A editor
+foundation.
 
 ## Current Frontier
 
@@ -114,9 +116,12 @@ atomic declaration, catalog, and storage reconciliation is implemented:
 The production catalog now derives room roles and layout-specific persistence
 from those declarations. Linear and hub authored state have separate bounded
 descriptors; terminal companion capacity is declaration-derived; no persisted
-batch, override, terminal-room, or transition dispatch key remains. UI/runtime
-state access reads those layout-specific authored shapes. This is a completed
-Checkpoint 3 foundation slice, not completion of the checkpoint.
+batch, override, terminal-room, or transition dispatch key remains. The
+completed Checkpoint 3 implementation currently centralizes physical authored
+shape reads and writes in UI/runtime state access. Checkpoint 4A will
+consolidate that accepted persistence behavior into plan-owned descriptors and
+reversible codecs before the editor consumes it; the current adapter shape is
+the explicitly superseded artifact, not a second authority to retain.
 
 The first read-only topology slice is also implemented. Executable topology,
 batch, and terminal-transition registries now compose a common long-lived
@@ -165,10 +170,17 @@ G additionally proves fixed-start clearing and three-exit Standard batches;
 its force, eligibility, and room-local differences remain outside topology.
 Route composition now publishes validated `topology = true` evidence for F and
 G, and biome support accepts exactly those two claims. This closes Checkpoint
-3. Checkpoint 4 begins canonical materialization with F; G retains topology
-support without claiming materialization or later capabilities. No production
-route editor, canonical biome snapshot, route validator, execution compiler,
-or runtime hook is active.
+3.
+
+Checkpoint 4A next consolidates Biome Plan persistence ownership, mounts the
+thin authored F editor, and expands the Underworld Route Control's
+`maximumEditablePrefix` to F while retaining an empty default. F earns
+`authoredEditor` without claiming materialization, headless-pipeline, or
+planner-active support. Checkpoint 4B then begins canonical materialization
+with F; G retains topology support without claiming authored-editor,
+materialization, or later capabilities. No planner-active semantic editor,
+canonical biome snapshot, route validator, execution compiler, or runtime hook
+is active.
 
 The lifecycle design has also been simplified before its Checkpoint 5
 implementation: activation, meaningful commit, and meaningful reload will call

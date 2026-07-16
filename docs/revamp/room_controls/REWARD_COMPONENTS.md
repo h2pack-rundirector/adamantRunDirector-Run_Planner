@@ -117,10 +117,11 @@ from the compiled binding, and the selected primitive's complete payload. Payloa
 fields allocated for another reward type are dormant and ignored.
 
 The choice does not validate counted-bag history during read or write.
-Checkpoint 4 exports candidates, and the route validator evaluates the
-concrete selection against history. Bounded wrappers such as Fields cages and
-Ship wheels delegate each concrete reward to their injected compiled counted
-binding.
+Checkpoint 4A exposes its stable authored domain, Checkpoint 4B exports the
+semantic candidates consumed by the pipeline, and the route validator
+evaluates the concrete selection against history. Bounded wrappers such as
+Fields cages and Ship wheels delegate each concrete reward to their injected
+compiled counted binding.
 
 ## `shop`
 

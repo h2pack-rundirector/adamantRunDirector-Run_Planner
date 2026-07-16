@@ -71,7 +71,7 @@ control:read() -> template-specific authored state
 ```
 
 This is a room-local authored value, not the canonical biome record. At
-Checkpoint 4 the template materializer separates `generatedReward` from the
+At Checkpoint 4B the template materializer separates `generatedReward` from the
 typed `roomState`, adds semantic source addresses, and returns both to the
 common canonical materializer. The materializer combines those fragments while
 driving registered layout traversal. Control identity, game-room identity,
@@ -112,11 +112,13 @@ UI/runtime reads, writes, and component-local completeness for F/G focused
 controls. Dormant biome-specific H, I, N, O, P, and Q templates may use the
 explicit transitional adapter only for their complete physical schema. Their
 Checkpoint 7 slices replace that adapter with the semantic operations in this
-document before claiming focused-control support. Checkpoint 4 composes F's
-predicates across referenced controls and topology, then adds canonical
-materialization, candidate export, and candidate application. Checkpoint 6 adds
-production views. Storage must be complete now for every later operation;
-later checkpoints must not require a schema migration.
+document before claiming focused-control support. Checkpoint 4A adds permanent
+F views, stable candidate domains, candidate application, and composed
+completeness across referenced controls and topology. Checkpoint 4B adds
+canonical materialization and semantic candidate export. Checkpoint 6 joins
+contextual candidate and feedback presentation to the existing views. Storage
+must be complete now for every later operation; later checkpoints must not
+require a schema migration.
 
 ## Reward Hierarchy and Components
 
