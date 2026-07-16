@@ -5,7 +5,7 @@ implementation-guidance authority for the clean Run Planner rewrite. Begin
 with `revamp/README.md` and follow its declared reading order.
 
 Current implementation status is tracked separately in
-`revamp/IMPLEMENTATION_PROGRESS.md`; the remaining plan lives in
+`revamp/IMPLEMENTATION_PROGRESS.md`; the complete plan lives in
 `revamp/IMPLEMENTATION_GUIDE.md`.
 
 The superseded `system_design/` and `progress/` trees are preserved on the

@@ -2,21 +2,19 @@
 
 ## Purpose and Status
 
-This document defines the remaining plan for implementing the Run Planner
-architecture in this directory. It owns future implementation order,
-checkpoint scope, test gates, and completion criteria. Completed work and the
-current implementation frontier are recorded separately in
-`IMPLEMENTATION_PROGRESS.md` so historical execution does not obscure the
-forward plan.
+This document defines the complete plan for implementing the Run Planner
+architecture in this directory. It owns implementation order, checkpoint
+scope, test gates, reset boundaries, and completion criteria. Completed work
+and the current implementation frontier are recorded separately in
+`IMPLEMENTATION_PROGRESS.md`; status never changes the checkpoint contracts in
+this guide.
 
 This document does not redefine the domain, game facts, persistence ownership,
 biome rules, or validation semantics owned by the preceding revamp documents.
 
-The rewrite began as a total implementation reset. The reset and completed
-foundation checkpoints are recorded in `IMPLEMENTATION_PROGRESS.md`. Existing
-pre-revamp source remains available through Git as reference material, but no
-old planner implementation file, test, persisted shape, or internal API is a
-compatibility contract.
+The rewrite is a total implementation reset. Existing pre-revamp source remains
+available through Git as reference material, but no old planner implementation
+file, test, persisted shape, or internal API is a compatibility contract.
 
 The implementation rule is:
 
@@ -42,13 +40,89 @@ Implementation work must read the revamp set in this order:
 4. `BIOME_RULES.md` for specialized F-Q topology;
 5. `MATERIALIZATION_AND_VALIDATION.md` for canonical history, requirements,
    rewards, feedback, and compilation;
-6. this document for the remaining execution order;
+6. this document for the complete execution order;
 7. `IMPLEMENTATION_PROGRESS.md` for completed work and the current frontier.
 
 The old branch and removed documents may answer historical questions. They
 cannot override this set. A disagreement is resolved by game-data
 reverification and an update to the appropriate revamp authority before code
 continues.
+
+## Reset Strategy
+
+### Git Boundary
+
+Use these branch roles:
+
+```text
+codex/fresh-planner-spine  pre-revamp implementation and document archive
+codex/planner-revamp       clean implementation branch
+```
+
+Before creating the revamp branch:
+
+1. commit the current pending UI work on `codex/fresh-planner-spine`;
+2. commit the completed revamp documents and pending legacy design work as a
+   pre-revamp documentation checkpoint;
+3. run the current focused tests and lint so the archive has a known state;
+4. push `codex/fresh-planner-spine`;
+5. create `codex/planner-revamp` from that committed checkpoint.
+
+Do not carry untracked or unstaged work across the branch boundary. A stash is
+not the archive.
+
+The old implementation remains accessible with ordinary Git operations:
+
+```bash
+git show codex/fresh-planner-spine:src/mods/history/builder.lua
+git log codex/fresh-planner-spine -- src/mods/validation
+git diff codex/fresh-planner-spine...codex/planner-revamp
+```
+
+Do not cherry-pick planner implementation commits into the revamp branch. Copy
+only reverified facts or deliberately reimplement an algorithm against the new
+interfaces.
+
+### Source Reset Boundary
+
+No current planner implementation file is retained by default.
+
+The first revamp commit should:
+
+- remove the current `src/mods/` implementation;
+- rewrite `src/main.lua` as a minimal revamp composition entry point;
+- remove planner behavior tests that encode `PlannerDraft`, positional rooms,
+  form addresses, or the old UI;
+- rebuild `tests/all.lua` around the new checkpoint suite;
+- retain only contract-neutral packaging, assets, licenses, smoke metadata,
+  and test/import infrastructure;
+- keep the complete `docs/revamp/` set;
+- update `docs/README.md` to make the revamp set authoritative;
+- remove superseded `docs/system_design/` and `docs/progress/` material from
+  the new branch.
+
+`docs/gameinfo/` may remain temporarily as non-authoritative audit evidence.
+Each file must either be cited by the new executable catalog work or removed
+once its facts are harvested. Git remains the permanent archive.
+
+The reset commit must still load a minimal managed module and run a minimal
+test suite. It must not leave broken imports as an intermediate checkpoint.
+
+### External Contracts Retained
+
+The reset preserves only:
+
+- plugin, modpack, and module identity;
+- manifest/package metadata and dependency declarations;
+- the public fact that Run Planner is a managed ModpackLib module;
+- source licensing and assets;
+- shell-repo submodule/release integration;
+- any external shared-data or runtime-hook contract explicitly rediscovered
+  and adopted by a later checkpoint.
+
+The old profile schema is not retained. No `PlannerDraft` migration, storage
+alias compatibility, occurrence ID translation, or hot-reload bridge is
+implemented.
 
 ## Target Dependency Shape
 
@@ -199,9 +273,9 @@ table or serialized root draft is not an optimization.
 
 ## Checkpoint Discipline
 
-Every remaining checkpoint must be independently reviewable and green.
-Checkpoint completion is recorded in `IMPLEMENTATION_PROGRESS.md`; completed
-checkpoint specifications do not remain embedded in this forward plan.
+Every checkpoint must be independently reviewable and green. Checkpoint
+completion is recorded in `IMPLEMENTATION_PROGRESS.md`; the contracts here
+remain unchanged when a checkpoint is completed.
 
 Required properties:
 
@@ -227,6 +301,170 @@ checkpoints named below.
 
 Do not use a passing unit suite as proof of in-game ImGui or hook behavior.
 Those surfaces require explicit runtime probes.
+
+## Checkpoint 0: Archive and Green Reset
+
+### Deliverables
+
+- pre-revamp branch committed and pushed;
+- `codex/planner-revamp` created;
+- old implementation and behavior tests removed;
+- minimal managed-module activation rewritten without old imports;
+- minimal test runner and import harness working;
+- revamp docs authoritative on the new branch;
+- no compatibility or migration code.
+
+The module may expose a clearly labeled unavailable/under-construction tab or
+no planner tab, depending on the current Lib module contract. It must not show
+the old planner UI.
+
+### Acceptance
+
+- module source imports cleanly in the test harness;
+- module activation smoke succeeds with no planner behavior registered;
+- lint and diff checks pass;
+- repository search finds no `PlannerDraft`, positional form address, or old
+  planner package import in live source;
+- the old branch can retrieve every removed file.
+
+## Checkpoint 1: Complete Catalog Foundation
+
+The full supported universe must exist before static controls are generated.
+This checkpoint is declaration-only.
+
+### Deliverables
+
+- Underworld and Surface route declarations with ordered biome-step keys;
+- complete F, G, H, I, N, O, P, and Q concrete room catalogs;
+- roots, terminals, room kinds, template keys, physical exits/types, reward
+  surfaces, fixed and sequenced baseline encounter profiles, phase presence
+  snapshots, canonical baseline encounter keys where required, phase-owned
+  offer points, counters, caps, force metadata, and modeled eligibility;
+- explicit per-room records with no generated room ranges, semantic defaults,
+  or implicit counter/cap/profile/reward facts;
+- reward primitives, normalized acquisition names, unique stores, counted
+  bags, shop profiles, offer profiles, payload domains, and batch constraints;
+- code-owned requirement-kind registry with supported contact phases, payload
+  schemas, evaluator contracts, and static/dynamic capacity classification;
+- batch-rule and room-template declaration registries;
+- finite local-child and topology bounds;
+- mechanically generated stable Route and Room Control keys;
+- a static control manifest descriptor, without Lib control implementation.
+
+### Requirement Gate
+
+Every production requirement must have a registered evaluator contract.
+Missing evaluators, unknown kinds, unknown named predicates, and malformed
+payloads fail catalog construction. External save/profile predicates and
+unfinished requirements do not enter production declarations.
+
+### Game-Data Gate
+
+Tests and generated audits must prove:
+
+- route and room keys are unique in their declared scope;
+- each room's template accepts its room kind;
+- every room explicitly declares tags, exits, its complete incoming-reward
+  binding, encounter-profile key, structural counter effects, caps,
+  terminal/fixed state, and local children, including empty and false values;
+- every encounter profile explicitly declares its phases, including each
+  phase's baseline encounter identity and encounter-depth effect where the
+  concrete identity affects planner semantics;
+- creation caps and appearance caps remain separate fields;
+- ordinary combat canonicalization is not encoded as
+  `MaxCreationsThisRun = 1`;
+- physical exits match extracted map data;
+- Q forced pairs, H cage metadata, I/N biome state, and N physical hub-door
+  mappings are closed, typed, and internally consistent;
+- each canonicalized family has sufficient compatible controls under maximum
+  topology demand, and every declared canonical family has exactly one proof;
+- all declared force windows preserve start, deadline, and independent
+  eligibility bounds;
+- every reward binding, including nested slots, branches, and offer points,
+  resolves to a known producer kind, declared stores/profile, valid
+  positive/negative filters, and reward/payload types.
+
+NPC catalogs, persistence, targeting, and validation are not Checkpoint 1
+deliverables. The foundation reserves stable `roomControlKey + phaseKey`
+addresses and resolves history from an effective room spine so those entities
+can later merge before history without changing Room Control identity. Mixed
+vanilla encounter sets containing progression and NPC variants are not
+production baseline declarations.
+
+### Acceptance
+
+- the catalog loads without UI, Lib refs, history, or runtime state;
+- every F-Q declaration passes the coverage audit;
+- capacity tests use compatible matching, not raw room counts, and report every
+  dynamic predicate excluded from the static proof;
+- changing one malformed fixture fails at the catalog boundary with a precise
+  invariant message;
+- no placeholder biome or reward declaration is counted as implemented.
+
+## Checkpoint 2: Static Controls and Managed Storage
+
+This checkpoint proves the physical persistence model before topology or UI is
+built.
+
+Before specializing a Room Control template, review its contract in
+`room_controls/` together with `room_controls/REWARD_COMPONENTS.md`. If that
+review changes domain ownership, biome behavior, or canonical semantics,
+correct the owning authority document first. Do not implement a generic
+producer/template combination that the corresponding specification has not
+admitted.
+
+### Deliverables
+
+- one statically declared Route Control instance per route, produced through
+  the registered Route Control template;
+- complete declared Room Control template taxonomy and bounded storage schema;
+- one statically declared Room Control per top-level concrete room in every
+  route-biome step;
+- parent-local bounded child storage inside the appropriate Room Control
+  templates;
+- finite module storage for each Biome Plan's topology and biome-global state;
+- static control and storage manifests generated from the validated catalog;
+- focused UI and runtime control refs exposing semantic reads, not private
+  aliases, for every F and G room;
+- explicit dormant transitional adapters for biome-specific H, I, N, O, P,
+  and Q templates, used only to prove bounded storage before those biomes are
+  implemented;
+- an evidence-backed implementation-support record for every route-biome step;
+- `UiStateAccess` and `RuntimeStateAccess` adapters;
+- Lib full reset-to-defaults integration for all persisted module and control
+  state.
+
+Both Route Controls default their configured prefix to empty. Fresh profiles
+and Lib reset to defaults therefore persist no configured planner biome for
+either route. Once compilation exists, that default publishes no execution
+plan and leaves both routes vanilla.
+
+Every Room Control must declare its complete intended storage schema at this
+checkpoint, including bounded special slots. The transitional adapter may own
+that physical schema for a dormant non-F/G template, but it is not a semantic
+Room Control implementation and cannot be used by materialization. Adding H,
+I, N, O, P, or Q later must replace the corresponding adapter without adding
+dynamic controls or migrating storage.
+
+### Acceptance
+
+- expected Route and Room Control counts match the catalog-generated manifest;
+- every control name satisfies Lib stable-identifier rules;
+- every F/G Room Control is focused and no F/G instance uses the transitional
+  adapter;
+- UI and runtime refs for focused controls read the same committed semantic
+  values;
+- UI-only writes cannot be reached from runtime refs;
+- implementation-support claims match assembled evidence and cannot activate
+  a biome with transitional controls;
+- fresh profile creation and Lib reset to defaults restore an empty configured
+  prefix for both routes;
+- Lib reset to defaults resets all module and control persistence, including
+  dormant leaves;
+- no test or source accesses a generated private control alias.
+
+There is still no production route editor in this checkpoint. Focused semantic
+Room Controls for non-F/G biomes are intentionally deferred to Checkpoint 7.
 
 ## Checkpoint 3: Biome Plan and Standard Topology
 

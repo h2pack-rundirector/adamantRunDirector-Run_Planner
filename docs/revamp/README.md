@@ -13,7 +13,7 @@ directory.
 
 The legacy implementation is archived on `codex/fresh-planner-spine`.
 Completed implementation work and the current frontier are recorded in
-`IMPLEMENTATION_PROGRESS.md`; future checkpoint work remains in
+`IMPLEMENTATION_PROGRESS.md`; the complete checkpoint plan remains in
 `IMPLEMENTATION_GUIDE.md`.
 
 The six-document set completed coherent design review and was locked on
@@ -43,7 +43,7 @@ than adding a workaround.
    defines lifecycle history, counter views, force pressure, reward bags,
    validation, and canonical/execution-plan compilation.
 6. `IMPLEMENTATION_GUIDE.md`
-   defines the remaining checkpoints, tests, and completion criteria.
+   defines all checkpoints, tests, and completion criteria.
 
 These six documents are the complete, locked revamp design and
 implementation-guidance set. Implementation follows
