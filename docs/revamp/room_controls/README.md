@@ -100,7 +100,7 @@ Expected semantic mutation families are:
 | Clockwork offer | `setIncomingReward(kind, reward)` |
 | Ephyra side room | `setSideGeneration`, `setSideEnteredOrder`, `setSideReward` |
 | Ship phase/wheel | `setEncounterCount`, `setWheelOfferCount`, `setWheelOffer`, `setWheelPick` |
-| preboss entry | `setEntryMode`, `setFreeReward` |
+| forked preboss entry | `setEntryMode`, `setFreeReward` |
 
 Exact method names may be normalized during implementation, but these are
 semantic operations. No caller writes an internal field or dropdown index.
@@ -137,7 +137,8 @@ configures its components.
 | `Shop` | 4 | [`Shop.md`](Shop.md) | World Shop slots |
 | `Miniboss` | 20 | [`Miniboss.md`](Miniboss.md) | incoming store choice |
 | `Devotion` | 1 | [`Devotion.md`](Devotion.md) | fixed Trial with source pair |
-| `Preboss` | 8 | [`Preboss.md`](Preboss.md) | shop with bounded entry offers |
+| `DirectPreboss` | 4 | [`DirectPreboss.md`](DirectPreboss.md) | profile-selected shop |
+| `ForkedPreboss` | 4 | [`ForkedPreboss.md`](ForkedPreboss.md) | contextual shop plus free offers |
 | **Total** | **209** | | |
 
 ## Cross-Template Acceptance

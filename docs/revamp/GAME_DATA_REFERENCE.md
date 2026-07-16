@@ -9,7 +9,7 @@ It is a verified reference, not a copy of the game files. Room declarations in
 code remain the executable catalog. Biome-specific structural interpretation
 will live in `BIOME_RULES.md`.
 
-Verification date: 2026-07-14.
+Verification date: 2026-07-16.
 
 Primary extracted sources:
 
@@ -91,6 +91,34 @@ mapping per pylon room. No supported ordinary combat declaration declares
 Special rooms commonly declare `MaxCreationsThisRun = 1`, including shops,
 stories, reprieves, and miniboss variants. Exact ownership must be copied from
 the concrete room declaration rather than inferred from room kind.
+
+## Terminal Preboss Offers
+
+F/G/H/P preboss declarations combine `ForcedFirstReward = "Shop"` with no
+`MaxCreationsPerRoom` cap. When their selected leading room has several
+physical exits, vanilla may assign the same forced `X_PreBoss01` room to every
+door. `ChooseRoomReward` scans rewards already offered by that leading room:
+
+- the first preboss copy receives Shop;
+- every remaining copy falls through to the declared `RunProgress` store;
+- Devotion and `RoomMoneyDrop` are excluded from those free rewards.
+
+Entering any of those doors loads the same concrete preboss map. The selected
+copy's `ChosenRewardType` determines whether the map initializes the World Shop
+or spawns its free reward. The number of active free offers is therefore the
+selected leading room's physical exit count minus one. In G this can vary
+between one and two free rewards as the selected predecessor changes.
+
+N/O/I/Q have a direct shop-only terminal shape in the supported topology.
+Vanilla selects `I_PreBoss01` before the true ending or for dream runs and
+`I_PreBoss02` after the true ending. The planner does not model that save-state
+branch and canonically uses the later `I_PreBoss02` layout. It inherits
+`MaxCreationsPerRoom = 1` and the explicit `I_WorldShop` from `I_PreBoss01`.
+Q uses `Q_WorldShop`; N/O use the ordinary World Shop.
+
+`AutocompleteSurfaceShopDelivery` is unrelated to this entry split. The
+planner preserves the multi-door behavior as one unique preboss control with
+contextual entry offers rather than duplicating the game room identity.
 
 ## Requirement Scope Boundary
 

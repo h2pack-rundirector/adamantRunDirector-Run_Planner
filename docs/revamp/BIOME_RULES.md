@@ -312,7 +312,9 @@ same batch. `ClockworkDoorBatch` validates that peer condition directly.
 
 Preboss controls become eligible after remaining goals reaches zero. Once the
 acquired non-goal count reaches `maxNonGoalRewards`, preboss force pressure is
-active. Both concrete preboss layouts remain authored candidates. Save
+active. `I_PreBoss02` is the single canonical terminal layout. Its inherited
+run-local Clockwork and shop rules remain modeled, while its post-true-ending
+save requirement is intentionally omitted. `I_PreBoss01` is excluded. Save
 progression does not enter the production requirement registry; the selected
 plan must satisfy the requirements the planner declares.
 
@@ -472,7 +474,9 @@ room-wide batch. `Combat2`'s `wheel2` slot is dormant when that phase is absent.
 O combat room declarations therefore use the `None` incoming reward surface;
 their encounter profile, rather than duplicated room-local declarations, owns
 `wheel1` and `wheel2`. Story, shop, devotion/trial, miniboss, reprieve, and
-preboss controls use their concrete declaration-owned reward surfaces.
+direct-preboss controls use their concrete declaration-owned reward surfaces.
+Forked prebosses instead compose a World Shop and the free `RunProgress`
+offers activated by their selected predecessor's physical exit count.
 
 Room commit advances `BiomeDepthCache` once regardless of encounter count.
 Resolved counting encounters advance `BiomeEncounterDepth` independently.

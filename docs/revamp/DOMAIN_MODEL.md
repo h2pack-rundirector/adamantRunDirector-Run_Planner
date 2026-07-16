@@ -94,9 +94,11 @@ exceptions.
 
 `Room Template`
 : Reusable typed behavior such as `StandardCombat`, `FieldsCombat`,
-  `ShipCombat`, `ClockworkCombat`, `Story`, `Shop`, or `Preboss`. A template
-  defines the authored schema and semantic interface shared by room controls
-  of that type.
+  `ShipCombat`, `ClockworkCombat`, `Story`, `Shop`, `DirectPreboss`, or
+  `ForkedPreboss`. A template defines the authored schema and semantic
+  interface shared by room controls of that type. A contextual template may
+  receive immutable Biome Plan context without owning or persisting the source
+  topology.
 
 `Room Control`
 : One statically materialized instance for one top-level concrete room

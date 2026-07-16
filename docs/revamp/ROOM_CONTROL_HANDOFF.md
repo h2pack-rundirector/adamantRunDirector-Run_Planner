@@ -1,6 +1,8 @@
 # Room Control Design Handoff
 
-Date: 2026-07-15
+Started: 2026-07-15
+
+Last updated: 2026-07-16
 
 ## Starting Point
 
@@ -93,11 +95,12 @@ inventing partial NPC production behavior.
 
 ### One terminal room per biome
 
-`I_PreBoss02` is a post-true-ending progression variant. It inherits
-`I_PreBoss01` and requires `ReachedTrueEnding = true` on a non-dream run.
-Because save progression is outside the planner baseline, only
-`I_PreBoss01` is supported. The resulting catalog has one terminal preboss
-room in every biome.
+`I_PreBoss02` is the later post-true-ending layout. It inherits the run-local
+Clockwork and shop behavior of `I_PreBoss01`, then replaces the save-gated
+presentation/layout variant. Because save progression is outside the planner
+baseline, the planner canonically supports `I_PreBoss02` and excludes
+`I_PreBoss01`. The resulting catalog has one terminal preboss room in every
+biome.
 
 ### How vanilla creates Shop and free offers
 
@@ -121,14 +124,26 @@ used as its model.
 `PrebossShopOrFreeReward` should be deleted. It incorrectly turns a room-level
 offer set into a generic reward surface.
 
-F/G/H/P use one Preboss control with maximum storage for:
+Preboss uses two explicit templates with a shared profile-parameterized shop
+component:
+
+- `DirectPreboss` covers N/O/I/Q and is always a shop;
+- `ForkedPreboss` covers F/G/H/P and combines a shop with free rewards derived
+  from its incoming fork.
+
+This split follows the entry contract rather than the shop profile. It keeps
+the direct template free of entry-mode, free-reward, and predecessor-context
+branches while avoiding duplicated shop implementation.
+
+Every ForkedPreboss control reserves maximum storage for:
 
 - one complete World Shop inventory;
 - `freeRewards[1]`;
 - `freeRewards[2]`;
 - `entryMode = "" | "Shop" | "Reward1" | "Reward2"`.
 
-The preceding room's physical exit count is immutable context and activates:
+The selected leading room's concrete physical exit count is immutable context
+and activates:
 
 ```text
 1 exit  -> Shop
@@ -136,9 +151,20 @@ The preceding room's physical exit count is immutable context and activates:
 3 exits -> Shop + Reward1 + Reward2
 ```
 
-F/H/P cannot activate Reward2. G can activate it when the concrete source has
-three exits. All active offers must be authored because reward simulation
-uses picked and unpicked offers. Exactly one active entry mode is selected.
+F/H/P cannot activate Reward2. G can activate it when the concrete leading
+room has three exits. All active offers must be authored because reward
+simulation uses picked and unpicked offers. Exactly one active entry mode is
+selected.
+
+The Biome Plan derives `leadingRoomControlKey`, `incomingExitCount`, and
+`activeFreeRewardCount` on commit. ForkedPreboss neither queries the leading
+Room Control nor persists those facts. Its bounded authored read is combined
+with the cached context for completeness, materialization, candidates,
+feedback, and UI projection. Draw consumes that committed projection.
+
+Changing the selected predecessor recomputes context without clearing dormant
+storage or coercing `entryMode`. An entry mode that no longer names an active
+offer becomes a normal contextual validation error.
 
 Acquisition is derived, never persisted twice:
 
@@ -147,24 +173,25 @@ Acquisition is derived, never persisted twice:
 - Reward2 entry acquires only free reward 2;
 - unselected offers affect offered-reward simulation but not acquisition.
 
-I/N/O/Q are shop-only preboss controls and need no entry dropdown. I uses
+DirectPreboss controls need no entry dropdown or predecessor context. I uses
 `I_WorldShop`, Q uses `Q_WorldShop`, and N/O use `WorldShop`. I's fixed
-Clockwork Goal door marker remains execution metadata; it does not create a
-free-reward branch.
+Clockwork Goal door marker remains execution metadata; it does not create an
+alternate realization.
 
 ## Production Code Still To Reconcile
 
 The design docs now state the intended model, but the declaration/catalog code
 still reflects the pre-review model. Before implementing controls:
 
-1. remove `I_PreBoss02` from `i_tartarus.lua`, including terminal keys and
+1. remove `I_PreBoss01` from `i_tartarus.lua`, including terminal keys and
    catalog coverage;
 2. remove `PrebossShopOrFreeReward` from reward surfaces and replace the
-   F/G/H/P declaration use with explicit Preboss entry-offer capability;
+   F/G/H/P declaration use with explicit ForkedPreboss entry-offer policy;
 3. map `H_Bridge01` to the Story control template and remove the standalone
    `FieldsBridge` control-template registration;
-4. split real control templates into focused modules assembled through the
-   existing control subsystem DI layer;
+4. replace the generic Preboss template registration with `DirectPreboss` and
+   `ForkedPreboss`, then split real control templates into focused modules
+   assembled through the existing control subsystem DI layer;
 5. implement reward components first, then F/G, H/I, N/O, and P/Q templates;
 6. add storage-manifest, typed read/write, dormancy, and profile-capacity tests
    before proceeding to Checkpoint 4 materialization.
@@ -183,5 +210,6 @@ Relevant live game-data locations used during the design review:
 - `Scripts/StoreLogic.lua`: Shop reward defaulting to `WorldShop`;
 - `Scripts/RoomDataF.lua`, `RoomDataG.lua`, `RoomDataH.lua`, and
   `RoomDataP.lua`: multi-offer preboss declarations;
-- `Scripts/RoomDataI.lua`: I shop profile and the progression-only
-  `I_PreBoss02` variant.
+- `Scripts/RoomDataI.lua`: the inherited I shop/Clockwork behavior and the two
+  save-progression layout variants; the planner canonically keeps
+  `I_PreBoss02`.
