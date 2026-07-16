@@ -118,10 +118,21 @@ batch, override, terminal-room, or transition dispatch key remains. UI/runtime
 state access reads those layout-specific authored shapes. This is a completed
 Checkpoint 3 foundation slice, not completion of the checkpoint.
 
-The next slice adds the common Biome Plan wrapper, topology implementation
-registry, bounded semantic commands, `LinearBiome` topology, and the F
-structural evidence slice. No production route editor, canonical biome
-snapshot, validator, execution compiler, or runtime hook is active.
+The first read-only topology slice is also implemented. Executable topology,
+batch, and terminal-transition registries now compose a common long-lived
+Biome Plan. `LinearBiome` reads layout-authored state through either runtime or
+UI state access, derives Standard batches and `PrebossEntry`, walks the picked
+spine, preserves unpicked peers, and rejects malformed ownership, identity,
+exit, bound, selection, and continuation state. Incomplete but well-formed F
+state remains readable, and normalized topology contains no Room Control
+payload or presentation state. Plans are constructed only where every
+declaration-selected executable dependency is registered; this does not claim
+topology capability for any biome yet.
+
+The next slice adds explicit structural checks, traversal, semantic addresses,
+and owner-keyed F completeness findings before mutation commands are exposed.
+No production route editor, canonical biome snapshot, route validator,
+execution compiler, or runtime hook is active.
 
 The lifecycle design has also been simplified before its Checkpoint 5
 implementation: activation, meaningful commit, and meaningful reload will call
