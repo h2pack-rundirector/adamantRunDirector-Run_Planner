@@ -97,26 +97,28 @@ Checkpoint 3 topology and the remaining Checkpoint 4 materializer contracts.
 
 ## Current Frontier
 
-Checkpoint 3, Layout Topology and the F Structural Slice, is the next
-implementation checkpoint. It begins with a bounded declaration, catalog, and
-storage reconciliation before new topology behavior is added:
+Checkpoint 3, Layout Topology and the F Structural Slice, is active. Its atomic
+declaration, catalog, and storage reconciliation is implemented:
 
-- replace raw `root`, `terminalRoomKeys`, top-level `batchRuleKey`,
+- replaced raw `root`, `terminalRoomKeys`, top-level `batchRuleKey`,
   specialized-rule lists, deterministic-pair side tables, and room-level
   `fixed`/`terminal` flags with validated biome `layout` declarations;
-- derive start, terminal, batch-rule, transition-rule, bounds, and persistent
+- derived start, terminal, batch-rule, transition-rule, bounds, and persistent
   topology descriptors, including terminal exit policies and bounded companion
   links, from the selected layout kind instead of persisting dispatch keys;
-- rename authored encounter phase data to `decisionPhase` at the same authority
+- renamed authored encounter phase data to `decisionPhase` at the same authority
   switch, leaving no competing legacy field;
-- keep verified room-local eligibility, force, exit, reward, encounter, and
+- kept verified room-local eligibility, force, exit, reward, encounter, and
   counter facts unchanged.
 
-This is reconciliation required by Checkpoint 3, not a newly completed
-checkpoint. The switch must be atomic: old and new topology authorities must
-not coexist in production declarations or normalized catalog records.
+The production catalog now derives room roles and layout-specific persistence
+from those declarations. Linear and hub authored state have separate bounded
+descriptors; terminal companion capacity is declaration-derived; no persisted
+batch, override, terminal-room, or transition dispatch key remains. UI/runtime
+state access reads those layout-specific authored shapes. This is a completed
+Checkpoint 3 foundation slice, not completion of the checkpoint.
 
-After that switch, Checkpoint 3 can add the common Biome Plan wrapper, layout
+The next slice adds the common Biome Plan wrapper, topology implementation
 registry, bounded semantic commands, `LinearBiome` topology, and the F
 structural evidence slice. No production route editor, canonical biome
 snapshot, validator, execution compiler, or runtime hook is active.

@@ -455,8 +455,9 @@ end
 
 local function biomeFreeRewardMaximum(biome)
     local maxExits = 0
+    local terminalRoomKey = biome.layout.terminal.roomKey
     for _, candidate in ipairs(biome.rooms.ordered) do
-        if not candidate.terminal and #candidate.exits > maxExits then
+        if candidate.key ~= terminalRoomKey and #candidate.exits > maxExits then
             maxExits = #candidate.exits
         end
     end
@@ -511,20 +512,6 @@ local function validateEntryOfferPolicy(room, template, rewards, path)
     end
 end
 
-local function validateForkedPrebossTopology(biome, path)
-    local topologyMaximum = biomeFreeRewardMaximum(biome)
-    for roomIndex, room in ipairs(biome.rooms.ordered) do
-        if room.templateKey == "ForkedPreboss"
-            and room.entryOfferPolicy.maxFreeRewards ~= topologyMaximum
-        then
-            fail(
-                path .. ".rooms[" .. tostring(roomIndex) .. "].entryOfferPolicy.maxFreeRewards",
-                "must match biome topology maximum of " .. tostring(topologyMaximum)
-            )
-        end
-    end
-end
-
 local function validateBatchRules(batchRules)
     for _, rule in ipairs(batchRules.ordered) do
         local path = "batchRules." .. rule.key
@@ -554,18 +541,18 @@ local function validateEncounterPhase(phase, profileKind, requirements, rewards,
         end
         local presencePath = path .. ".presence"
         requiredTable(phase.presence, presencePath)
-        s.onlyKeys(phase.presence, { "eligibilitySnapshot", "kind", "requirement" }, presencePath)
+        s.onlyKeys(phase.presence, { "decisionPhase", "kind", "requirement" }, presencePath)
         s.enum(phase.presence.kind, { "authoredOptional" }, presencePath .. ".kind")
         s.enum(
-            phase.presence.eligibilitySnapshot,
+            phase.presence.decisionPhase,
             { "room.prepare_encounters" },
-            presencePath .. ".eligibilitySnapshot"
+            presencePath .. ".decisionPhase"
         )
         requirementSchema.validateNode(
             phase.presence.requirement,
             requirements,
             presencePath .. ".requirement",
-            phase.presence.eligibilitySnapshot
+            phase.presence.decisionPhase
         )
     end
     if phase.offerPoint ~= nil then
@@ -951,67 +938,333 @@ local function validateRoomMetadata(biome, room, hubDoorIds, path)
     end
 end
 
-local function validateDeterministicPairs(biome, path)
-    if biome.key ~= "Q" then
-        if biome.deterministicPairs ~= nil then
-            fail(path .. ".deterministicPairs", "only biome Q declares deterministic room pairs")
+local function validateLayoutShape(biome, batchRules, path)
+    local layoutPath = path .. ".layout"
+    requiredTable(biome.layout, layoutPath)
+    s.enum(biome.layout.kind, { "LinearBiome", "HubBiome" }, layoutPath .. ".kind")
+
+    requiredTable(biome.layout.bounds, layoutPath .. ".bounds")
+    s.onlyKeys(
+        biome.layout.bounds,
+        { "maxBatches", "maxTargets" },
+        layoutPath .. ".bounds"
+    )
+    positiveInteger(biome.layout.bounds.maxBatches, layoutPath .. ".bounds.maxBatches")
+    positiveInteger(biome.layout.bounds.maxTargets, layoutPath .. ".bounds.maxTargets")
+
+    requiredTable(biome.layout.terminal, layoutPath .. ".terminal")
+    s.onlyKeys(
+        biome.layout.terminal,
+        { "exitPolicy", "roomKey", "transitionRuleKey" },
+        layoutPath .. ".terminal"
+    )
+    nonEmptyString(biome.layout.terminal.roomKey, layoutPath .. ".terminal.roomKey")
+    s.enum(
+        biome.layout.terminal.transitionRuleKey,
+        { "PrebossEntry" },
+        layoutPath .. ".terminal.transitionRuleKey"
+    )
+    requiredTable(biome.layout.terminal.exitPolicy, layoutPath .. ".terminal.exitPolicy")
+    local policy = biome.layout.terminal.exitPolicy
+    s.enum(
+        policy.kind,
+        { "allExitsTerminal", "singleTerminal", "terminalWithCompanions" },
+        layoutPath .. ".terminal.exitPolicy.kind"
+    )
+    if policy.kind == "terminalWithCompanions" then
+        s.onlyKeys(
+            policy,
+            { "companionBatchRuleKey", "kind" },
+            layoutPath .. ".terminal.exitPolicy"
+        )
+        nonEmptyString(
+            policy.companionBatchRuleKey,
+            layoutPath .. ".terminal.exitPolicy.companionBatchRuleKey"
+        )
+        if batchRules.lookup[policy.companionBatchRuleKey] == nil then
+            fail(
+                layoutPath .. ".terminal.exitPolicy.companionBatchRuleKey",
+                "unknown batch rule '" .. policy.companionBatchRuleKey .. "'"
+            )
         end
-        return
+    else
+        s.onlyKeys(policy, { "kind" }, layoutPath .. ".terminal.exitPolicy")
     end
-    s.list(biome.deterministicPairs, path .. ".deterministicPairs", true)
-    if not contains(biome.specializedBatchRuleKeys, "QMinibossBatch") then
-        fail(path .. ".specializedBatchRuleKeys", "Q deterministic pairs require QMinibossBatch")
+
+    if biome.layout.kind == "LinearBiome" then
+        s.onlyKeys(
+            biome.layout,
+            { "bounds", "continuation", "kind", "start", "terminal" },
+            layoutPath
+        )
+        requiredTable(biome.layout.start, layoutPath .. ".start")
+        s.onlyKeys(biome.layout.start, { "mode", "roomKeys" }, layoutPath .. ".start")
+        s.enum(biome.layout.start.mode, { "fixed", "oneOf" }, layoutPath .. ".start.mode")
+        s.stringList(biome.layout.start.roomKeys, layoutPath .. ".start.roomKeys", true)
+        if biome.layout.start.mode == "fixed" and #biome.layout.start.roomKeys ~= 1 then
+            fail(layoutPath .. ".start.roomKeys", "fixed start must contain exactly one room")
+        end
+
+        requiredTable(biome.layout.continuation, layoutPath .. ".continuation")
+        s.onlyKeys(
+            biome.layout.continuation,
+            { "defaultBatchRuleKey", "overrides" },
+            layoutPath .. ".continuation"
+        )
+        nonEmptyString(
+            biome.layout.continuation.defaultBatchRuleKey,
+            layoutPath .. ".continuation.defaultBatchRuleKey"
+        )
+        if batchRules.lookup[biome.layout.continuation.defaultBatchRuleKey] == nil then
+            fail(
+                layoutPath .. ".continuation.defaultBatchRuleKey",
+                "unknown batch rule '" .. biome.layout.continuation.defaultBatchRuleKey .. "'"
+            )
+        end
+        s.list(biome.layout.continuation.overrides, layoutPath .. ".continuation.overrides", false)
+        local overrideKeys = {}
+        local claimedParents = {}
+        for overrideIndex, override in ipairs(biome.layout.continuation.overrides) do
+            local overridePath = layoutPath .. ".continuation.overrides["
+                .. tostring(overrideIndex) .. "]"
+            requiredTable(override, overridePath)
+            s.onlyKeys(
+                override,
+                { "batchRuleKey", "key", "targetRoomKeys", "when" },
+                overridePath
+            )
+            nonEmptyString(override.key, overridePath .. ".key")
+            if overrideKeys[override.key] then
+                fail(overridePath .. ".key", "duplicate override key '" .. override.key .. "'")
+            end
+            overrideKeys[override.key] = true
+            requiredTable(override.when, overridePath .. ".when")
+            s.onlyKeys(override.when, { "parentRoomKeys" }, overridePath .. ".when")
+            s.stringList(override.when.parentRoomKeys, overridePath .. ".when.parentRoomKeys", true)
+            for parentIndex, parentRoomKey in ipairs(override.when.parentRoomKeys) do
+                if claimedParents[parentRoomKey] ~= nil then
+                    fail(
+                        overridePath .. ".when.parentRoomKeys[" .. tostring(parentIndex) .. "]",
+                        "overlaps override '" .. claimedParents[parentRoomKey] .. "'"
+                    )
+                end
+                claimedParents[parentRoomKey] = override.key
+            end
+            nonEmptyString(override.batchRuleKey, overridePath .. ".batchRuleKey")
+            local batchRule = batchRules.lookup[override.batchRuleKey]
+            if batchRule == nil then
+                fail(
+                    overridePath .. ".batchRuleKey",
+                    "unknown batch rule '" .. override.batchRuleKey .. "'"
+                )
+            end
+            s.stringList(override.targetRoomKeys, overridePath .. ".targetRoomKeys", true)
+            if #override.targetRoomKeys > batchRule.maxTargets then
+                fail(overridePath .. ".targetRoomKeys", "exceeds batch-rule target capacity")
+            end
+        end
+    else
+        s.onlyKeys(
+            biome.layout,
+            { "bounds", "entry", "hub", "kind", "terminal" },
+            layoutPath
+        )
+        requiredTable(biome.layout.entry, layoutPath .. ".entry")
+        s.onlyKeys(biome.layout.entry, { "mode", "roomKeys" }, layoutPath .. ".entry")
+        s.enum(biome.layout.entry.mode, { "fixedSequence" }, layoutPath .. ".entry.mode")
+        s.stringList(biome.layout.entry.roomKeys, layoutPath .. ".entry.roomKeys", true)
+        requiredTable(biome.layout.hub, layoutPath .. ".hub")
+        s.onlyKeys(
+            biome.layout.hub,
+            { "batchRuleKey", "doorCountStateKey", "roomKey", "visitedTargetCount" },
+            layoutPath .. ".hub"
+        )
+        nonEmptyString(biome.layout.hub.roomKey, layoutPath .. ".hub.roomKey")
+        nonEmptyString(biome.layout.hub.batchRuleKey, layoutPath .. ".hub.batchRuleKey")
+        if batchRules.lookup[biome.layout.hub.batchRuleKey] == nil then
+            fail(
+                layoutPath .. ".hub.batchRuleKey",
+                "unknown batch rule '" .. biome.layout.hub.batchRuleKey .. "'"
+            )
+        end
+        nonEmptyString(
+            biome.layout.hub.doorCountStateKey,
+            layoutPath .. ".hub.doorCountStateKey"
+        )
+        positiveInteger(
+            biome.layout.hub.visitedTargetCount,
+            layoutPath .. ".hub.visitedTargetCount"
+        )
+        if biome.layout.bounds.maxBatches ~= 1 then
+            fail(layoutPath .. ".bounds.maxBatches", "HubBiome owns exactly one persistent batch")
+        end
     end
-    local pairKeys = {}
-    local depths = {}
-    local pairedRooms = {}
-    for pairIndex, pair in ipairs(biome.deterministicPairs) do
-        local pairPath = path .. ".deterministicPairs[" .. tostring(pairIndex) .. "]"
-        requiredTable(pair, pairPath)
-        s.onlyKeys(pair, { "biomeDepthCache", "key", "roomKeys" }, pairPath)
-        nonEmptyString(pair.key, pairPath .. ".key")
-        if pairKeys[pair.key] then
-            fail(pairPath .. ".key", "duplicate deterministic-pair key '" .. pair.key .. "'")
+end
+
+local function addRoomRole(roles, roomKey, role, path)
+    local roomRoles = roles.lookup[roomKey]
+    if roomRoles == nil then
+        roomRoles = {}
+        roles.lookup[roomKey] = roomRoles
+    end
+    if roomRoles[role] then
+        fail(path, "duplicate room role '" .. role .. "'")
+    end
+    roomRoles[role] = true
+end
+
+local function exactForceDepth(room)
+    if room.force == nil or room.force.kind ~= "depthWindow"
+        or room.force.axis ~= "biomeDepthCache"
+        or room.force.start ~= room.force.deadline
+    then
+        return nil
+    end
+    return room.force.start
+end
+
+local function validateQMinibossOverride(biome, override, overridePath)
+    local targetDepth
+    for targetIndex, targetRoomKey in ipairs(override.targetRoomKeys) do
+        local targetPath = overridePath .. ".targetRoomKeys[" .. tostring(targetIndex) .. "]"
+        local target = biome.rooms.lookup[targetRoomKey]
+        if target.kind ~= "Miniboss" then
+            fail(targetPath, "QMinibossBatch target must be a Miniboss")
         end
-        pairKeys[pair.key] = true
-        positiveInteger(pair.biomeDepthCache, pairPath .. ".biomeDepthCache")
-        if pair.biomeDepthCache > biome.topologyBounds.maxBatches then
-            fail(pairPath .. ".biomeDepthCache", "deterministic-pair depth exceeds biome topology bound")
+        local depth = exactForceDepth(target)
+        if depth == nil or target.eligibility == nil
+            or target.eligibility.kind ~= "CounterRange"
+            or target.eligibility.axis ~= "biomeDepthCache"
+            or target.eligibility.range.exact ~= depth
+        then
+            fail(targetPath, "QMinibossBatch target must be forced and eligible at one exact depth")
         end
-        if depths[pair.biomeDepthCache] then
-            fail(pairPath .. ".biomeDepthCache", "duplicate deterministic-pair depth")
+        if targetDepth ~= nil and targetDepth ~= depth then
+            fail(targetPath, "QMinibossBatch targets must share one exact depth")
         end
-        depths[pair.biomeDepthCache] = true
-        s.stringList(pair.roomKeys, pairPath .. ".roomKeys", true)
-        if #pair.roomKeys ~= 2 then
-            fail(pairPath .. ".roomKeys", "deterministic pair must contain exactly two rooms")
+        targetDepth = depth
+    end
+    if #override.targetRoomKeys ~= 2 then
+        fail(overridePath .. ".targetRoomKeys", "QMinibossBatch requires exactly two targets")
+    end
+    for parentIndex, parentRoomKey in ipairs(override.when.parentRoomKeys) do
+        local parentPath = overridePath .. ".when.parentRoomKeys[" .. tostring(parentIndex) .. "]"
+        local parent = biome.rooms.lookup[parentRoomKey]
+        if #parent.exits ~= #override.targetRoomKeys then
+            fail(parentPath, "override parent exits must match the exact target set")
         end
-        for roomIndex, roomKey in ipairs(pair.roomKeys) do
-            local roomPath = pairPath .. ".roomKeys[" .. tostring(roomIndex) .. "]"
-            local room = biome.rooms.lookup[roomKey]
-            if room == nil then
-                fail(roomPath, "unknown deterministic room '" .. roomKey .. "'")
-            end
-            if room.kind ~= "Miniboss" then
-                fail(roomPath, "deterministic pair room must be a Miniboss")
-            end
-            if room.force == nil or room.force.kind ~= "depthWindow"
-                or room.force.axis ~= "biomeDepthCache"
-                or room.force.start ~= pair.biomeDepthCache
-                or room.force.deadline ~= pair.biomeDepthCache then
-                fail(roomPath, "deterministic pair room must be forced at the declared depth")
-            end
-            if room.eligibility == nil or room.eligibility.kind ~= "CounterRange"
-                or room.eligibility.axis ~= "biomeDepthCache"
-                or room.eligibility.range.exact ~= pair.biomeDepthCache then
-                fail(roomPath, "deterministic pair room must be eligible at exactly the declared depth")
-            end
-            if pairedRooms[roomKey] ~= nil then
-                fail(roomPath, "room is already used by deterministic pair '" .. pairedRooms[roomKey] .. "'")
-            end
-            pairedRooms[roomKey] = pair.key
+        if exactForceDepth(parent) ~= targetDepth - 1 then
+            fail(parentPath, "QMinibossBatch parent must be forced one depth before its targets")
         end
     end
+end
+
+local function validateLayoutReferences(biome, path)
+    local layout = biome.layout
+    local layoutPath = path .. ".layout"
+    local roles = {
+        starts = {},
+        fixedEntries = {},
+        lookup = {},
+        terminalRoomKey = layout.terminal.roomKey,
+    }
+    if layout.kind == "LinearBiome" then
+        for index, roomKey in ipairs(layout.start.roomKeys) do
+            if biome.rooms.lookup[roomKey] == nil then
+                fail(layoutPath .. ".start.roomKeys[" .. tostring(index) .. "]", "unknown start room '" .. roomKey .. "'")
+            end
+            roles.starts[#roles.starts + 1] = roomKey
+            addRoomRole(roles, roomKey, "start", layoutPath .. ".start.roomKeys[" .. tostring(index) .. "]")
+        end
+        for overrideIndex, override in ipairs(layout.continuation.overrides) do
+            local overridePath = layoutPath .. ".continuation.overrides["
+                .. tostring(overrideIndex) .. "]"
+            for parentIndex, roomKey in ipairs(override.when.parentRoomKeys) do
+                if biome.rooms.lookup[roomKey] == nil then
+                    fail(
+                        overridePath .. ".when.parentRoomKeys[" .. tostring(parentIndex) .. "]",
+                        "unknown override parent room '" .. roomKey .. "'"
+                    )
+                end
+            end
+            for targetIndex, roomKey in ipairs(override.targetRoomKeys) do
+                if biome.rooms.lookup[roomKey] == nil then
+                    fail(
+                        overridePath .. ".targetRoomKeys[" .. tostring(targetIndex) .. "]",
+                        "unknown override target room '" .. roomKey .. "'"
+                    )
+                end
+            end
+            if override.batchRuleKey == "QMinibossBatch" then
+                validateQMinibossOverride(biome, override, overridePath)
+            end
+        end
+    else
+        for index, roomKey in ipairs(layout.entry.roomKeys) do
+            if biome.rooms.lookup[roomKey] == nil then
+                fail(layoutPath .. ".entry.roomKeys[" .. tostring(index) .. "]", "unknown entry room '" .. roomKey .. "'")
+            end
+            roles.fixedEntries[#roles.fixedEntries + 1] = roomKey
+            addRoomRole(
+                roles,
+                roomKey,
+                "fixedEntry",
+                layoutPath .. ".entry.roomKeys[" .. tostring(index) .. "]"
+            )
+        end
+        if biome.rooms.lookup[layout.hub.roomKey] == nil then
+            fail(layoutPath .. ".hub.roomKey", "unknown hub room '" .. layout.hub.roomKey .. "'")
+        end
+        if not contains(layout.entry.roomKeys, layout.hub.roomKey) then
+            fail(layoutPath .. ".hub.roomKey", "hub room must belong to the fixed entry sequence")
+        end
+        roles.hubRoomKey = layout.hub.roomKey
+        addRoomRole(roles, layout.hub.roomKey, "hub", layoutPath .. ".hub.roomKey")
+        local doorState = biome.biomeState[layout.hub.doorCountStateKey]
+        if doorState == nil or doorState.authored ~= true then
+            fail(layoutPath .. ".hub.doorCountStateKey", "must reference authored biome state")
+        end
+        if biome.biomeState.visitedTargetCount.value ~= layout.hub.visitedTargetCount then
+            fail(layoutPath .. ".hub.visitedTargetCount", "must match fixed biome state")
+        end
+    end
+
+    local terminal = biome.rooms.lookup[layout.terminal.roomKey]
+    if terminal == nil then
+        fail(layoutPath .. ".terminal.roomKey", "unknown terminal room '" .. layout.terminal.roomKey .. "'")
+    end
+    if terminal.kind ~= "Preboss" then
+        fail(layoutPath .. ".terminal.roomKey", "terminal room must be a preboss")
+    end
+    addRoomRole(roles, terminal.key, "terminal", layoutPath .. ".terminal.roomKey")
+
+    local topologyMaximum = biomeFreeRewardMaximum(biome)
+    local policyKind = layout.terminal.exitPolicy.kind
+    local entryPolicyKind = terminal.entryOfferPolicy.kind
+    if policyKind == "allExitsTerminal" then
+        if entryPolicyKind ~= "shopThenFillRemainingExits" then
+            fail(layoutPath .. ".terminal.exitPolicy.kind", "requires shopThenFillRemainingExits")
+        end
+        if terminal.entryOfferPolicy.maxFreeRewards ~= topologyMaximum then
+            fail(
+                layoutPath .. ".terminal.roomKey",
+                "terminal free-reward capacity must match predecessor maximum of "
+                    .. tostring(topologyMaximum)
+            )
+        end
+        layout.terminal.maxCompanionTargets = 0
+    elseif policyKind == "terminalWithCompanions" then
+        if entryPolicyKind ~= "shopOnly" then
+            fail(layoutPath .. ".terminal.exitPolicy.kind", "requires shopOnly")
+        end
+        layout.terminal.maxCompanionTargets = topologyMaximum
+    else
+        if entryPolicyKind ~= "shopOnly" then
+            fail(layoutPath .. ".terminal.exitPolicy.kind", "requires shopOnly")
+        end
+        layout.terminal.maxCompanionTargets = 0
+    end
+    biome.roomRoles = roles
 end
 
 local function validateSpecializedBiomeConsistency(biome, path)
@@ -1031,32 +1284,33 @@ local function validateSpecializedBiomeConsistency(biome, path)
     if biome.biomeState.visitedTargetCount.value > available.min then
         fail(path .. ".biomeState.visitedTargetCount.value", "visited targets exceed the minimum available hub doors")
     end
-    if available.max > biome.topologyBounds.maxTargets then
-        fail(path .. ".topologyBounds.maxTargets", "cannot contain N_Hub's maximum available door count")
+    if available.max > biome.layout.bounds.maxTargets then
+        fail(path .. ".layout.bounds.maxTargets", "cannot contain N_Hub's maximum available door count")
     end
 end
 
-local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batchRules, encounterProfiles, exitTypes, rewards, requirements)
+local function validateBiomes(
+    rawBiomes,
+    routes,
+    routeTemplates,
+    templates,
+    batchRules,
+    encounterProfiles,
+    exitTypes,
+    rewards,
+    requirements
+)
     local biomes = orderedCatalog(rawBiomes, "biomes")
     local globalRoomKeys = {}
     for biomeIndex, biome in ipairs(biomes.ordered) do
         local path = "biomes[" .. tostring(biomeIndex) .. "]"
         s.onlyKeys(biome, {
-            "batchRuleKey", "biomeState", "biomeStepKey", "canonicalCapacity",
-            "combatAppearancePolicy", "deterministicPairs", "key", "label", "rooms",
-            "root", "routeKey", "specializedBatchRuleKeys", "terminalRoomKeys", "topologyBounds",
+            "biomeState", "biomeStepKey", "canonicalCapacity", "combatAppearancePolicy",
+            "key", "label", "layout", "rooms", "routeKey",
         }, path)
         nonEmptyString(biome.label, path .. ".label")
         nonEmptyString(biome.routeKey, path .. ".routeKey")
         nonEmptyString(biome.biomeStepKey, path .. ".biomeStepKey")
-        nonEmptyString(biome.batchRuleKey, path .. ".batchRuleKey")
-        s.stringList(biome.terminalRoomKeys, path .. ".terminalRoomKeys", true)
-        if #biome.terminalRoomKeys ~= 1 then
-            fail(path .. ".terminalRoomKeys", "supported biomes require exactly one terminal room")
-        end
-        if biome.specializedBatchRuleKeys ~= nil then
-            s.stringList(biome.specializedBatchRuleKeys, path .. ".specializedBatchRuleKeys", true)
-        end
         if biome.combatAppearancePolicy ~= nil then
             s.enum(
                 biome.combatAppearancePolicy,
@@ -1068,31 +1322,7 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
         if routes.lookup[biome.routeKey] == nil then
             fail(path .. ".routeKey", "unknown route '" .. biome.routeKey .. "'")
         end
-        if batchRules.lookup[biome.batchRuleKey] == nil then
-            fail(path .. ".batchRuleKey", "unknown batch rule '" .. tostring(biome.batchRuleKey) .. "'")
-        end
-        for index, batchRuleKey in ipairs(biome.specializedBatchRuleKeys or {}) do
-            if batchRules.lookup[batchRuleKey] == nil then
-                fail(path .. ".specializedBatchRuleKeys[" .. tostring(index) .. "]", "unknown batch rule '" .. batchRuleKey .. "'")
-            end
-        end
-        requiredTable(biome.topologyBounds, path .. ".topologyBounds")
-        s.onlyKeys(
-            biome.topologyBounds,
-            { "maxBatches", "maxLocalChildrenPerRoom", "maxTargets" },
-            path .. ".topologyBounds"
-        )
-        positiveInteger(biome.topologyBounds.maxBatches, path .. ".topologyBounds.maxBatches")
-        positiveInteger(biome.topologyBounds.maxTargets, path .. ".topologyBounds.maxTargets")
-        positiveInteger(biome.topologyBounds.maxLocalChildrenPerRoom, path .. ".topologyBounds.maxLocalChildrenPerRoom", true)
-
-        requiredTable(biome.root, path .. ".root")
-        s.onlyKeys(biome.root, { "mode", "roomKeys" }, path .. ".root")
-        s.enum(biome.root.mode, { "fixed", "oneOf", "fixedSequence" }, path .. ".root.mode")
-        s.stringList(biome.root.roomKeys, path .. ".root.roomKeys", true)
-        if biome.root.mode == "fixed" and #biome.root.roomKeys ~= 1 then
-            fail(path .. ".root.roomKeys", "fixed root must contain exactly one room")
-        end
+        validateLayoutShape(biome, batchRules, path)
 
         biome.rooms = orderedCatalog(biome.rooms, path .. ".rooms")
         local roomsByFamily = {}
@@ -1101,8 +1331,8 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
             local roomPath = path .. ".rooms[" .. tostring(roomIndex) .. "]"
             s.onlyKeys(room, {
                 "canonicalFamily", "caps", "counters", "eligibility", "encounterProfileKey", "exits",
-                "entryOfferPolicy", "fixed", "force", "incomingReward", "key", "kind", "localChildren", "metadata",
-                "tags", "templateKey", "terminal",
+                "entryOfferPolicy", "force", "incomingReward", "key", "kind", "localChildren", "metadata",
+                "tags", "templateKey",
             }, roomPath)
             if string.sub(room.key, 1, 2) ~= biome.key .. "_" then
                 fail(roomPath .. ".key", "room key must be scoped by biome prefix '" .. biome.key .. "_'")
@@ -1126,8 +1356,6 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
             s.onlyKeys(room.caps, {
                 "maxAppearancesThisBiome", "maxCreationsPerRoom", "maxCreationsThisRun",
             }, roomPath .. ".caps")
-            requiredBoolean(room.terminal, roomPath .. ".terminal")
-            requiredBoolean(room.fixed, roomPath .. ".fixed")
             requiredTable(room.localChildren, roomPath .. ".localChildren")
             local template = templates.lookup[room.templateKey]
             if template == nil then
@@ -1219,9 +1447,6 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
             if localSlotCount > template.localChildLimit then
                 fail(roomPath .. ".localChildren", "template limit is " .. tostring(template.localChildLimit))
             end
-            if localSlotCount > biome.topologyBounds.maxLocalChildrenPerRoom then
-                fail(roomPath .. ".localChildren", "biome local-child bound is " .. tostring(biome.topologyBounds.maxLocalChildrenPerRoom))
-            end
             for childIndex, child in ipairs(room.localChildren) do
                 local childPath = roomPath .. ".localChildren[" .. tostring(childIndex) .. "]"
                 requiredTable(child, childPath)
@@ -1280,25 +1505,7 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
             end
         end
 
-        for index, rootKey in ipairs(biome.root.roomKeys or {}) do
-            if biome.rooms.lookup[rootKey] == nil then
-                fail(path .. ".root.roomKeys[" .. tostring(index) .. "]", "unknown root room '" .. rootKey .. "'")
-            end
-        end
-        for index, terminalKey in ipairs(biome.terminalRoomKeys or {}) do
-            local terminal = biome.rooms.lookup[terminalKey]
-            if terminal == nil then
-                fail(path .. ".terminalRoomKeys[" .. tostring(index) .. "]", "unknown terminal room '" .. terminalKey .. "'")
-            end
-            if not terminal.terminal then
-                fail(path .. ".terminalRoomKeys[" .. tostring(index) .. "]", "room is not declared terminal")
-            end
-            if terminal.kind ~= "Preboss" then
-                fail(path .. ".terminalRoomKeys[" .. tostring(index) .. "]", "terminal room must be a preboss")
-            end
-        end
-        validateForkedPrebossTopology(biome, path)
-        validateDeterministicPairs(biome, path)
+        validateLayoutReferences(biome, path)
         validateSpecializedBiomeConsistency(biome, path)
         biome.capacityAudit = validateCapacity(biome, roomsByFamily, requirements, path)
     end
@@ -1341,8 +1548,8 @@ end
 function validator.validate(raw)
     requiredTable(raw, "catalog")
     s.onlyKeys(raw, {
-        "batchRules", "biomes", "encounterProfiles", "exitTypes", "requirements", "rewards",
-        "roomTemplates", "routeTemplates", "routes",
+        "batchRules", "biomes", "encounterProfiles", "exitTypes", "requirements",
+        "rewards", "roomTemplates", "routeTemplates", "routes",
     }, "catalog")
     local routes = orderedCatalog(raw.routes, "routes")
     local routeTemplates = keyedCatalog(raw.routeTemplates, "routeTemplates")

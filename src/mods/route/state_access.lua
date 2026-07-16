@@ -25,6 +25,17 @@ local function readRows(data, root)
     return rows
 end
 
+local function readAllowedScalar(data, root, path)
+    local value = data.read(root.alias)
+    if root.valueLookup ~= nil
+        and value ~= root.storage.default
+        and root.valueLookup[value] ~= true
+    then
+        error(path .. " does not allow value '" .. tostring(value) .. "'", 0)
+    end
+    return value
+end
+
 local function createCommon(surface, catalog, storage)
     local access = {}
 
@@ -48,21 +59,38 @@ local function createCommon(surface, catalog, storage)
         if descriptor == nil then
             error("unknown biome plan '" .. tostring(biomeStepKey) .. "'", 0)
         end
-        local snapshot = {
-            globals = {},
-            batches = readRows(surface.data, descriptor.batches),
-            targets = readRows(surface.data, descriptor.targets),
-        }
-        for _, global in ipairs(descriptor.globals.ordered) do
-            local value = surface.data.read(global.alias)
-            if value ~= 0 and global.valueLookup[value] ~= true then
-                error(
-                    "biome plan '" .. biomeStepKey .. "' authored global '" .. global.semanticKey
-                        .. "' does not allow value '" .. tostring(value) .. "'",
-                    0
+        local snapshot = { layoutKind = descriptor.layoutKind }
+        if descriptor.layoutKind == "LinearBiome" then
+            snapshot.batches = readRows(surface.data, descriptor.batches)
+            snapshot.targets = readRows(surface.data, descriptor.targets)
+            snapshot.terminalTransition = {
+                parentRoomControlKey = surface.data.read(descriptor.terminalTransition.alias),
+            }
+            if descriptor.selectedStart ~= nil then
+                snapshot.selectedStartRoomControlKey = readAllowedScalar(
+                    surface.data,
+                    descriptor.selectedStart,
+                    "biome plan '" .. biomeStepKey .. "' selected start"
                 )
             end
-            snapshot.globals[global.semanticKey] = value
+            if descriptor.companionTargets ~= nil then
+                snapshot.terminalTransition.companionTargets = readRows(
+                    surface.data,
+                    descriptor.companionTargets
+                )
+            end
+        elseif descriptor.layoutKind == "HubBiome" then
+            snapshot.hubTargets = readRows(surface.data, descriptor.hubTargets)
+            snapshot.terminalTransition = surface.data.read(descriptor.terminalTransition.alias)
+        else
+            error("unknown biome layout kind '" .. tostring(descriptor.layoutKind) .. "'", 0)
+        end
+        for _, global in ipairs(descriptor.globals.ordered) do
+            snapshot[global.semanticKey] = readAllowedScalar(
+                surface.data,
+                global,
+                "biome plan '" .. biomeStepKey .. "' authored global '" .. global.semanticKey .. "'"
+            )
         end
         return snapshot
     end

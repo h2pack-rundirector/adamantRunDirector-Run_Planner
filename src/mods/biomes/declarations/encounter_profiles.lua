@@ -74,7 +74,7 @@ return {
                 countsEncounterDepth = true,
                 presence = {
                     kind = "authoredOptional",
-                    eligibilitySnapshot = "room.prepare_encounters",
+                    decisionPhase = "room.prepare_encounters",
                     requirement = {
                         kind = "CounterRange",
                         axis = "biomeEncounterDepth",

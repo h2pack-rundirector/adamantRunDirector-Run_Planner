@@ -528,8 +528,10 @@ topology-facing declaration and storage scaffolds are superseded here.
 - catalog parsing and validation for `layout`, derived room-role indexes,
   ordered topology-only override selectors, and layout-specific topology
   bounds;
-- separate schema/implementation registries for topology layouts, batch rules,
-  and terminal transitions, assembled through system composition;
+- executable implementation registries for topology layouts and terminal
+  transitions, kept separate from declarative batch rules and assembled
+  through system composition; do not add metadata-only registries for the
+  currently closed discriminator sets;
 - separate bounded `LinearBiome` and `HubBiome` authored-state descriptors,
   including only the terminal-companion link capacity admitted by each
   declaration;

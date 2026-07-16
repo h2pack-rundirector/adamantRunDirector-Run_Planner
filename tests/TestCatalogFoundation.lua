@@ -143,7 +143,8 @@ function TestCatalogFoundation.testCoversEverySupportedConcreteRoom()
         lu.assertEquals(catalog.biomes.lookup.H.rooms.lookup.H_Bridge01.templateKey, "Story")
         lu.assertNil(catalog.biomes.lookup.I.rooms.lookup.I_PreBoss01)
         lu.assertNotNil(catalog.biomes.lookup.I.rooms.lookup.I_PreBoss02)
-        lu.assertEquals(catalog.biomes.lookup.I.terminalRoomKeys, { "I_PreBoss02" })
+        lu.assertEquals(catalog.biomes.lookup.I.layout.terminal.roomKey, "I_PreBoss02")
+        lu.assertTrue(catalog.biomes.lookup.I.roomRoles.lookup.I_PreBoss02.terminal)
         lu.assertNil(catalog.biomes.lookup.I.rooms.lookup.I_Shop01)
         lu.assertNil(catalog.biomes.lookup.I.rooms.lookup.I_MiniBoss03)
         lu.assertNil(catalog.biomes.lookup.N.rooms.lookup.N_Shop01)
@@ -183,9 +184,38 @@ function TestCatalogFoundation.testPhysicalExitFactsAndTerminalShapeRemainSepara
         lu.assertEquals(#biomes.Q.rooms.lookup.Q_Combat01.exits, 1)
         lu.assertEquals(#biomes.Q.rooms.lookup.Q_MiniBoss04.exits, 1)
 
-        lu.assertTrue(biomes.P.rooms.lookup.P_PreBoss01.terminal)
+        lu.assertTrue(biomes.P.roomRoles.lookup.P_PreBoss01.terminal)
         lu.assertEquals(biomes.P.rooms.lookup.P_PreBoss01.exits[1].targetMode, "fixedBoss")
-        lu.assertEquals(biomes.P.batchRuleKey, "Standard")
+        lu.assertEquals(biomes.P.layout.continuation.defaultBatchRuleKey, "Standard")
+    end)
+end
+
+function TestCatalogFoundation.testLayoutDeclarationsOwnStructuralAuthority()
+    h.withImport(function()
+        local catalog = loadCatalog()
+        local fBiome = catalog.biomes.lookup.F
+        local iBiome = catalog.biomes.lookup.I
+        local nBiome = catalog.biomes.lookup.N
+
+        lu.assertEquals(fBiome.layout.start, {
+            mode = "oneOf",
+            roomKeys = { "F_Opening01", "F_Opening02", "F_Opening03" },
+        })
+        lu.assertEquals(fBiome.roomRoles.starts, {
+            "F_Opening01", "F_Opening02", "F_Opening03",
+        })
+        lu.assertEquals(fBiome.roomRoles.terminalRoomKey, "F_PreBoss01")
+        lu.assertEquals(iBiome.layout.terminal.maxCompanionTargets, 1)
+        lu.assertEquals(nBiome.roomRoles.fixedEntries, {
+            "N_Opening01", "N_PreHub01", "N_Hub",
+        })
+        lu.assertEquals(nBiome.roomRoles.hubRoomKey, "N_Hub")
+        for _, biome in ipairs(catalog.biomes.ordered) do
+            for _, room in ipairs(biome.rooms.ordered) do
+                lu.assertNil(room.fixed, room.key)
+                lu.assertNil(room.terminal, room.key)
+            end
+        end
     end)
 end
 
@@ -304,16 +334,16 @@ function TestCatalogFoundation.testSpecializedBiomeDeclarationsAreFiniteAndConcr
         local nBiome = catalog.biomes.lookup.N
         local qBiome = catalog.biomes.lookup.Q
 
-        lu.assertEquals(hBiome.batchRuleKey, "FieldsCageBatch")
-        lu.assertEquals(hBiome.topologyBounds.maxLocalChildrenPerRoom, 3)
-        lu.assertEquals(iBiome.batchRuleKey, "ClockworkDoorBatch")
+        lu.assertEquals(hBiome.layout.continuation.defaultBatchRuleKey, "FieldsCageBatch")
+        lu.assertEquals(hBiome.rooms.lookup.H_Combat01.metadata.effectiveMaxCageRewards, 3)
+        lu.assertEquals(iBiome.layout.continuation.defaultBatchRuleKey, "ClockworkDoorBatch")
         lu.assertEquals(iBiome.biomeState.maxNonGoalRewards.values, { 3, 4, 5, 6 })
-        lu.assertEquals(nBiome.batchRuleKey, "EphyraHubBatch")
+        lu.assertEquals(nBiome.layout.hub.batchRuleKey, "EphyraHubBatch")
         lu.assertEquals(nBiome.biomeState.hubDoorCount.values, { 9, 10 })
         lu.assertEquals(nBiome.biomeState.visitedTargetCount.value, 6)
-        lu.assertEquals(qBiome.specializedBatchRuleKeys, { "QMinibossBatch" })
-        lu.assertEquals(qBiome.deterministicPairs[1].roomKeys, { "Q_MiniBoss02", "Q_MiniBoss05" })
-        lu.assertEquals(qBiome.deterministicPairs[2].roomKeys, { "Q_MiniBoss03", "Q_MiniBoss04" })
+        lu.assertEquals(qBiome.layout.continuation.overrides[1].batchRuleKey, "QMinibossBatch")
+        lu.assertEquals(qBiome.layout.continuation.overrides[1].targetRoomKeys, { "Q_MiniBoss02", "Q_MiniBoss05" })
+        lu.assertEquals(qBiome.layout.continuation.overrides[2].targetRoomKeys, { "Q_MiniBoss03", "Q_MiniBoss04" })
     end)
 end
 
@@ -651,8 +681,6 @@ function TestCatalogFoundation.testRejectsMissingExplicitRoomFactsAtCatalogBound
             { key = "encounterProfileKey", error = ".encounterProfileKey: expected a non-empty string" },
             { key = "counters", error = ".counters: expected an explicit table" },
             { key = "caps", error = ".caps: expected an explicit table" },
-            { key = "terminal", error = ".terminal: expected an explicit boolean" },
-            { key = "fixed", error = ".fixed: expected an explicit boolean" },
             { key = "localChildren", error = ".localChildren: expected an explicit table" },
         }
         for _, fact in ipairs(requiredFacts) do
@@ -664,6 +692,46 @@ function TestCatalogFoundation.testRejectsMissingExplicitRoomFactsAtCatalogBound
         local raw = h.rawDeclarations()
         raw.biomes[1].rooms[4].counters.biomeEncounterDepth = 1
         assertFails(function() loadCatalog(raw) end, ".counters.biomeEncounterDepth: unexpected field")
+
+        raw = h.rawDeclarations()
+        raw.biomes[1].rooms[4].terminal = false
+        assertFails(function() loadCatalog(raw) end, ".terminal: unexpected field")
+
+        raw = h.rawDeclarations()
+        raw.biomes[1].rooms[4].fixed = false
+        assertFails(function() loadCatalog(raw) end, ".fixed: unexpected field")
+    end)
+end
+
+function TestCatalogFoundation.testRejectsMalformedLayoutAuthority()
+    h.withImport(function()
+        local raw = h.rawDeclarations()
+        raw.biomes[1].layout.kind = "MissingLayout"
+        assertFails(function() loadCatalog(raw) end, ".layout.kind: unknown value 'MissingLayout'")
+
+        raw = h.rawDeclarations()
+        raw.biomes[1].layout.start.roomKeys[1] = "F_MissingOpening"
+        assertFails(function() loadCatalog(raw) end, "unknown start room 'F_MissingOpening'")
+
+        raw = h.rawDeclarations()
+        raw.biomes[1].layout.terminal.roomKey = "F_Combat01"
+        assertFails(function() loadCatalog(raw) end, "terminal room must be a preboss")
+
+        raw = h.rawDeclarations()
+        raw.biomes[8].layout.continuation.overrides[2].when.parentRoomKeys[1] = "Q_Combat03"
+        assertFails(function() loadCatalog(raw) end, "overlaps override 'Q_Depth3Minibosses'")
+
+        raw = h.rawDeclarations()
+        raw.biomes[5].layout.hub.doorCountStateKey = "visitedTargetCount"
+        assertFails(function() loadCatalog(raw) end, "must reference authored biome state")
+
+        raw = h.rawDeclarations()
+        raw.biomes[1].layout.terminal.transitionRuleKey = "MissingTransition"
+        assertFails(function() loadCatalog(raw) end, ".transitionRuleKey: unknown value 'MissingTransition'")
+
+        raw = h.rawDeclarations()
+        raw.biomes[1].layout.terminal.exitPolicy.kind = "mystery"
+        assertFails(function() loadCatalog(raw) end, ".exitPolicy.kind: unknown value 'mystery'")
     end)
 end
 
@@ -707,7 +775,7 @@ function TestCatalogFoundation.testEncounterProfilesOwnBaselineEncounterDepthEff
             acquisitionTiming = "postCombat",
         })
         lu.assertEquals(ship.phases[3].presence.kind, "authoredOptional")
-        lu.assertEquals(ship.phases[3].presence.eligibilitySnapshot, "room.prepare_encounters")
+        lu.assertEquals(ship.phases[3].presence.decisionPhase, "room.prepare_encounters")
         lu.assertNil(ship.phases[3].presence.requirement.phase)
         lu.assertNil(catalog.biomes.lookup.O.rooms.lookup.O_Combat04.metadata)
     end)
@@ -776,8 +844,8 @@ function TestCatalogFoundation.testRejectsMalformedRequirementsAndRegistryDiscri
         assertFails(function() loadCatalog(raw) end, ".incomingReward.kind: unknown value 'mystery'")
 
         raw = h.rawDeclarations()
-        raw.biomes[1].root.mode = "mystery"
-        assertFails(function() loadCatalog(raw) end, ".root.mode: unknown value 'mystery'")
+        raw.biomes[1].layout.start.mode = "mystery"
+        assertFails(function() loadCatalog(raw) end, ".layout.start.mode: unknown value 'mystery'")
 
         raw = h.rawDeclarations()
         raw.batchRules.Standard.picked = "mystery"
@@ -804,8 +872,8 @@ function TestCatalogFoundation.testRejectsMalformedEncounterProfilesAndLocalChil
         assertFails(function() loadCatalog(raw) end, "unknown encounter-profile kind 'mystery'")
 
         raw = h.rawDeclarations()
-        raw.encounterProfiles.ShipCombat.phases[3].presence.eligibilitySnapshot = "room.encounters"
-        assertFails(function() loadCatalog(raw) end, ".eligibilitySnapshot: unknown value 'room.encounters'")
+        raw.encounterProfiles.ShipCombat.phases[3].presence.decisionPhase = "room.encounters"
+        assertFails(function() loadCatalog(raw) end, ".decisionPhase: unknown value 'room.encounters'")
 
         raw = h.rawDeclarations()
         raw.encounterProfiles.ShipCombat.phases[2].offerPoint.choice.storeKeys = { "MissingStore" }
@@ -897,7 +965,7 @@ function TestCatalogFoundation.testRejectsMalformedNestedRewardsAndSpecializedBi
 
         raw = h.rawDeclarations()
         findRawRoom(raw, "F", "F_PreBoss01").entryOfferPolicy.maxFreeRewards = 2
-        assertFails(function() loadCatalog(raw) end, "must match biome topology maximum of 1")
+        assertFails(function() loadCatalog(raw) end, "must match predecessor maximum of 1")
 
         raw = h.rawDeclarations()
         findRawRoom(raw, "G", "G_PreBoss01").entryOfferPolicy.maxFreeRewards = 3
@@ -928,8 +996,8 @@ function TestCatalogFoundation.testRejectsMalformedNestedRewardsAndSpecializedBi
         assertFails(function() loadCatalog(raw) end, "duplicate physical hub door id")
 
         raw = h.rawDeclarations()
-        raw.biomes[8].deterministicPairs[1].roomKeys[1] = "Q_MissingMiniboss"
-        assertFails(function() loadCatalog(raw) end, "unknown deterministic room 'Q_MissingMiniboss'")
+        raw.biomes[8].layout.continuation.overrides[1].targetRoomKeys[1] = "Q_MissingMiniboss"
+        assertFails(function() loadCatalog(raw) end, "unknown override target room 'Q_MissingMiniboss'")
 
         raw = h.rawDeclarations()
         raw.biomes[2].excludedGameRooms = { "I_Shop01" }

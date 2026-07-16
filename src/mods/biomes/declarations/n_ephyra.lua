@@ -3,11 +3,26 @@ return {
     label = "Ephyra",
     routeKey = "Surface",
     biomeStepKey = "Surface_N",
-    root = { mode = "fixedSequence", roomKeys = { "N_Opening01", "N_PreHub01", "N_Hub" } },
-    terminalRoomKeys = { "N_PreBoss01" },
-    batchRuleKey = "EphyraHubBatch",
+    layout = {
+        kind = "HubBiome",
+        entry = {
+            mode = "fixedSequence",
+            roomKeys = { "N_Opening01", "N_PreHub01", "N_Hub" },
+        },
+        hub = {
+            roomKey = "N_Hub",
+            batchRuleKey = "EphyraHubBatch",
+            doorCountStateKey = "hubDoorCount",
+            visitedTargetCount = 6,
+        },
+        terminal = {
+            roomKey = "N_PreBoss01",
+            transitionRuleKey = "PrebossEntry",
+            exitPolicy = { kind = "singleTerminal" },
+        },
+        bounds = { maxBatches = 1, maxTargets = 10 },
+    },
     combatAppearancePolicy = "physicalHubDoorUnique",
-    topologyBounds = { maxBatches = 1, maxLocalChildrenPerRoom = 3, maxTargets = 10 },
     biomeState = {
         hubDoorCount = { authored = true, values = { 9, 10 } },
         visitedTargetCount = { authored = false, value = 6 },
@@ -23,8 +38,6 @@ return {
             encounterProfileKey = "N_Opening",
             counters = { biomeDepthCache = 0, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
-            terminal = false,
-            fixed = true,
             localChildren = {},
         },
         {
@@ -37,8 +50,6 @@ return {
             encounterProfileKey = "FixedPreHub",
             counters = { biomeDepthCache = 0, roomHistoryOrdinal = 1 },
             caps = {},
-            terminal = false,
-            fixed = true,
             localChildren = {},
         },
         {
@@ -51,8 +62,6 @@ return {
             encounterProfileKey = "None",
             counters = { biomeDepthCache = 0, roomHistoryOrdinal = 0 },
             caps = { maxAppearancesThisBiome = 1 },
-            terminal = false,
-            fixed = true,
             localChildren = {},
             metadata = { availableDoorCount = { max = 10, min = 9 }, physicalDoorKind = "EphyraExitDoor" },
         },
@@ -71,8 +80,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {},
             metadata = { hubDoorId = 617113 },
         },
@@ -91,8 +98,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 558353,
@@ -128,8 +133,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 558353,
@@ -157,8 +160,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 558834,
@@ -194,8 +195,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 558354,
@@ -239,8 +238,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 558378,
@@ -276,8 +273,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {},
             metadata = { hubDoorId = 617138 },
         },
@@ -296,8 +291,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {},
             metadata = { hubDoorId = 560699 },
         },
@@ -316,8 +309,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 566392,
@@ -361,8 +352,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 558352,
@@ -398,8 +387,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 558352,
@@ -427,8 +414,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 558352,
@@ -472,8 +457,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {},
             metadata = { hubDoorId = 616992 },
         },
@@ -492,8 +475,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {},
             metadata = { hubDoorId = 561403 },
         },
@@ -512,8 +493,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 657623,
@@ -541,8 +520,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 558352,
@@ -570,8 +547,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 558352,
@@ -599,8 +574,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 658853,
@@ -628,8 +601,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {},
             metadata = { hubDoorId = 560620 },
         },
@@ -648,8 +619,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 659508,
@@ -677,8 +646,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {},
             metadata = { hubDoorId = 560713 },
         },
@@ -697,8 +664,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 558352,
@@ -734,8 +699,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {
                 {
                     doorId = 755971,
@@ -779,8 +742,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {},
             metadata = { hubDoorId = 617043 },
         },
@@ -799,8 +760,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {},
             metadata = { hubDoorId = 560889 },
         },
@@ -819,8 +778,6 @@ return {
                 roomKeys = { "N_PreHub01" },
                 code = "required_biome_room_not_created",
             },
-            terminal = false,
-            fixed = false,
             localChildren = {},
             metadata = { hubDoorId = 560848 },
         },
@@ -841,8 +798,6 @@ return {
                 value = 6,
                 code = "hub_visit_count_mismatch",
             },
-            terminal = true,
-            fixed = true,
             localChildren = {},
         },
     },

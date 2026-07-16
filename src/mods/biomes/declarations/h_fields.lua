@@ -3,10 +3,17 @@ return {
     label = "Mourning Fields",
     routeKey = "Underworld",
     biomeStepKey = "Underworld_H",
-    root = { mode = "fixed", roomKeys = { "H_Intro" } },
-    terminalRoomKeys = { "H_PreBoss01" },
-    batchRuleKey = "FieldsCageBatch",
-    topologyBounds = { maxBatches = 5, maxLocalChildrenPerRoom = 3, maxTargets = 10 },
+    layout = {
+        kind = "LinearBiome",
+        start = { mode = "fixed", roomKeys = { "H_Intro" } },
+        continuation = { defaultBatchRuleKey = "FieldsCageBatch", overrides = {} },
+        terminal = {
+            roomKey = "H_PreBoss01",
+            transitionRuleKey = "PrebossEntry",
+            exitPolicy = { kind = "allExitsTerminal" },
+        },
+        bounds = { maxBatches = 5, maxTargets = 10 },
+    },
     biomeState = { fieldsMaxDoorsRolled = { derived = true, max = 2, min = 0 } },
     rooms = {
         {
@@ -26,8 +33,6 @@ return {
                 code = "biome_depth_out_of_range",
             },
             force = { axis = "biomeDepthCache", deadline = 1, kind = "depthWindow", start = 0 },
-            terminal = false,
-            fixed = true,
             localChildren = {},
         },
         {
@@ -50,8 +55,6 @@ return {
             encounterProfileKey = "FieldsCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage3",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -89,8 +92,6 @@ return {
                 range = { max = 3 },
                 code = "biome_depth_out_of_range",
             },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage3",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -122,8 +123,6 @@ return {
             encounterProfileKey = "FieldsCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage3",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -155,8 +154,6 @@ return {
             encounterProfileKey = "FieldsCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage3",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -188,8 +185,6 @@ return {
             encounterProfileKey = "FieldsCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage3",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -221,8 +216,6 @@ return {
             encounterProfileKey = "FieldsCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage3",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -254,8 +247,6 @@ return {
             encounterProfileKey = "FieldsCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage3",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -287,8 +278,6 @@ return {
             encounterProfileKey = "FieldsCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage3",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -326,8 +315,6 @@ return {
                 range = { max = 3 },
                 code = "biome_depth_out_of_range",
             },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage2",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -359,8 +346,6 @@ return {
             encounterProfileKey = "FieldsCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage3",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -392,8 +377,6 @@ return {
             encounterProfileKey = "FieldsCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage3",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -425,8 +408,6 @@ return {
             encounterProfileKey = "FieldsCombat",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage3",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -464,8 +445,6 @@ return {
                 range = { max = 3 },
                 code = "biome_depth_out_of_range",
             },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage2",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -503,8 +482,6 @@ return {
                 range = { max = 3 },
                 code = "biome_depth_out_of_range",
             },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage2",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -542,8 +519,6 @@ return {
                 range = { max = 3 },
                 code = "biome_depth_out_of_range",
             },
-            terminal = false,
-            fixed = false,
             canonicalFamily = "H_FieldsCombat_Cage3",
             localChildren = {
                 { key = "cage1", kind = "reward", ordinal = 1 },
@@ -584,8 +559,6 @@ return {
                 },
             },
             force = { axis = "biomeDepthCache", deadline = 4, kind = "depthWindow", start = 2 },
-            terminal = false,
-            fixed = false,
             localChildren = {},
         },
         {
@@ -617,8 +590,6 @@ return {
                 },
             },
             force = { axis = "biomeDepthCache", deadline = 4, kind = "depthWindow", start = 2 },
-            terminal = false,
-            fixed = false,
             localChildren = {},
         },
         {
@@ -641,8 +612,6 @@ return {
                 code = "entered_room_kind_count_out_of_range",
             },
             force = { kind = "always" },
-            terminal = false,
-            fixed = false,
             localChildren = {},
         },
         {
@@ -667,8 +636,6 @@ return {
                 code = "entered_room_kind_count_out_of_range",
             },
             force = { kind = "always" },
-            terminal = true,
-            fixed = true,
             localChildren = {},
         },
     },

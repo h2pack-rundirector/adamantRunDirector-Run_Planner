@@ -71,11 +71,16 @@ function TestManagedPersistence.testBuildsFiniteModuleStorageForEveryBiomePlan()
     h.withImport(function()
         local _, storage = load()
         lu.assertEquals(#storage.biomes.ordered, 8)
-        lu.assertEquals(#storage.moduleStorage, 18)
+        lu.assertEquals(#storage.moduleStorage, 27)
 
         local f = storage.biomes.lookup.Underworld_F
+        lu.assertEquals(f.layoutKind, "LinearBiome")
         lu.assertEquals(f.batches.storage.maxRows, 10)
         lu.assertEquals(f.targets.storage.maxRows, 20)
+        lu.assertNil(f.batches.columns.ruleKey)
+        lu.assertEquals(f.selectedStart.values, {
+            "", "Underworld_F_Opening01", "Underworld_F_Opening02", "Underworld_F_Opening03",
+        })
         lu.assertEquals(#f.globals.ordered, 0)
 
         local hBiome = storage.biomes.lookup.Underworld_H
@@ -85,11 +90,14 @@ function TestManagedPersistence.testBuildsFiniteModuleStorageForEveryBiomePlan()
         local iBiome = storage.biomes.lookup.Underworld_I
         lu.assertEquals(iBiome.globals.lookup.maxNonGoalRewards.storage.default, 0)
         lu.assertEquals(iBiome.globals.lookup.maxNonGoalRewards.values, { 3, 4, 5, 6 })
+        lu.assertEquals(iBiome.companionTargets.storage.maxRows, 1)
 
         local nBiome = storage.biomes.lookup.Surface_N
+        lu.assertEquals(nBiome.layoutKind, "HubBiome")
         lu.assertEquals(nBiome.globals.lookup.hubDoorCount.storage.default, 0)
-        lu.assertEquals(nBiome.targets.columns.visitOrder, "VisitOrder")
-        lu.assertNil(nBiome.targets.columns.picked)
+        lu.assertEquals(nBiome.hubTargets.columns.visitOrder, "VisitOrder")
+        lu.assertNil(nBiome.hubTargets.columns.picked)
+        lu.assertNil(nBiome.targets)
     end)
 end
 
@@ -139,7 +147,7 @@ function TestManagedPersistence.testManagedStateInstallsCompleteDeclarations()
 
         local installed = systems.managedState.install(module)
 
-        lu.assertEquals(#captured.storage, 18)
+        lu.assertEquals(#captured.storage, 27)
         lu.assertEquals(countKeys(captured.templates), 18)
         lu.assertEquals(countKeys(captured.instances), 211)
         lu.assertIs(captured.storage, installed.storage.moduleStorage)
@@ -556,13 +564,24 @@ function TestManagedPersistence.testStateAccessKeepsRuntimeReadOnlyAndValidatesA
             Surface_N_HubDoorCount = 9,
         }
         local tables = {}
-        for _, biome in ipairs(storage.biomes.ordered) do
-            tables[biome.batches.alias] = {}
-            tables[biome.targets.alias] = {}
+        for _, descriptor in ipairs(storage.moduleStorage) do
+            if descriptor.type == "table" then
+                tables[descriptor.alias] = {}
+            elseif values[descriptor.alias] == nil then
+                values[descriptor.alias] = descriptor.default
+            end
         end
         tables.Underworld_F_Batches[1] = {
             ParentRoomControlKey = "Underworld_F_Opening01",
-            RuleKey = "Standard",
+        }
+        tables.Underworld_I_TerminalCompanionTargets[1] = {
+            ExitIndex = 2,
+            RoomControlKey = "Underworld_I_Combat17",
+        }
+        tables.Surface_N_HubTargets[1] = {
+            DoorIndex = 1,
+            RoomControlKey = "Surface_N_Combat01",
+            VisitOrder = 3,
         }
 
         local data = {}
@@ -638,9 +657,27 @@ function TestManagedPersistence.testStateAccessKeepsRuntimeReadOnlyAndValidatesA
         })
         lu.assertEquals(runtime:readBiome("Underworld_F").batches[1], {
             parentRoomControlKey = "Underworld_F_Opening01",
-            ruleKey = "Standard",
         })
-        lu.assertEquals(runtime:readBiome("Underworld_I").globals.maxNonGoalRewards, 4)
+        lu.assertEquals(runtime:readBiome("Underworld_F").layoutKind, "LinearBiome")
+        lu.assertEquals(runtime:readBiome("Underworld_F").selectedStartRoomControlKey, "")
+        lu.assertEquals(runtime:readBiome("Underworld_F").terminalTransition, {
+            parentRoomControlKey = "",
+        })
+        lu.assertEquals(runtime:readBiome("Underworld_I").maxNonGoalRewards, 4)
+        lu.assertEquals(runtime:readBiome("Underworld_I").terminalTransition.companionTargets, {
+            { exitIndex = 2, roomControlKey = "Underworld_I_Combat17" },
+        })
+        lu.assertEquals(runtime:readBiome("Surface_N").layoutKind, "HubBiome")
+        lu.assertEquals(runtime:readBiome("Surface_N").hubTargets, {
+            { doorIndex = 1, roomControlKey = "Surface_N_Combat01", visitOrder = 3 },
+        })
+        lu.assertFalse(runtime:readBiome("Surface_N").terminalTransition)
+
+        values.Underworld_F_SelectedStartRoomControlKey = "Underworld_F_Combat01"
+        lu.assertErrorMsgContains("selected start does not allow value", function()
+            runtime:readBiome("Underworld_F")
+        end)
+        values.Underworld_F_SelectedStartRoomControlKey = ""
 
         values.Underworld_I_MaxNonGoalRewards = 2
         lu.assertErrorMsgContains("does not allow value '2'", function()
