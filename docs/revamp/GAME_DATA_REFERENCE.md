@@ -107,7 +107,8 @@ Entering any of those doors loads the same concrete preboss map. The selected
 copy's `ChosenRewardType` determines whether the map initializes the World Shop
 or spawns its free reward. The number of active free offers is therefore the
 selected leading room's physical exit count minus one. In G this can vary
-between one and two free rewards as the selected predecessor changes.
+up to two free rewards as the selected predecessor changes. F/H/P can expose
+at most one because their declared predecessor topology has at most two exits.
 
 N/O/I/Q have a direct shop-only terminal shape in the supported topology.
 Vanilla selects `I_PreBoss01` before the true ending or for dream runs and

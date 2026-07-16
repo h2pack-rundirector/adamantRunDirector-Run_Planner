@@ -465,9 +465,98 @@ end
 local function validateRoomTemplates(templates)
     for _, template in ipairs(templates.ordered) do
         local path = "roomTemplates." .. template.key
-        s.onlyKeys(template, { "key", "roomKinds", "localChildLimit" }, path)
+        s.onlyKeys(
+            template,
+            { "freeRewardSlotCapacity", "key", "roomKinds", "localChildLimit" },
+            path
+        )
         s.stringList(template.roomKinds, path .. ".roomKinds", true)
         positiveInteger(template.localChildLimit, path .. ".localChildLimit", true)
+        if template.key == "ForkedPreboss" then
+            positiveInteger(template.freeRewardSlotCapacity, path .. ".freeRewardSlotCapacity")
+        elseif template.freeRewardSlotCapacity ~= nil then
+            fail(path .. ".freeRewardSlotCapacity", "only ForkedPreboss owns free-reward slots")
+        end
+    end
+end
+
+local function biomeFreeRewardMaximum(biome)
+    local maxExits = 0
+    for _, candidate in ipairs(biome.rooms.ordered) do
+        if not candidate.terminal and #candidate.exits > maxExits then
+            maxExits = #candidate.exits
+        end
+    end
+    return math.max(0, maxExits - 1)
+end
+
+local function validateEntryOfferPolicy(room, template, rewards, path)
+    local policy = room.entryOfferPolicy
+    local isDirect = room.templateKey == "DirectPreboss"
+    local isForked = room.templateKey == "ForkedPreboss"
+    if not isDirect and not isForked then
+        if policy ~= nil then
+            fail(path .. ".entryOfferPolicy", "only preboss templates may declare an entry-offer policy")
+        end
+        return
+    end
+
+    requiredTable(policy, path .. ".entryOfferPolicy")
+    local shopSurface = rewards.surfaces.lookup[room.rewardSurfaceKey]
+    if shopSurface.kind ~= "shop" then
+        fail(path .. ".rewardSurfaceKey", "preboss primary reward surface must be a shop")
+    end
+
+    if isDirect then
+        s.onlyKeys(policy, { "kind" }, path .. ".entryOfferPolicy")
+        s.enum(policy.kind, { "shopOnly" }, path .. ".entryOfferPolicy.kind")
+        return
+    end
+
+    s.onlyKeys(
+        policy,
+        { "freeRewardSurfaceKey", "kind", "maxFreeRewards" },
+        path .. ".entryOfferPolicy"
+    )
+    s.enum(
+        policy.kind,
+        { "shopThenFillRemainingExits" },
+        path .. ".entryOfferPolicy.kind"
+    )
+    nonEmptyString(policy.freeRewardSurfaceKey, path .. ".entryOfferPolicy.freeRewardSurfaceKey")
+    positiveInteger(policy.maxFreeRewards, path .. ".entryOfferPolicy.maxFreeRewards")
+    if policy.maxFreeRewards > template.freeRewardSlotCapacity then
+        fail(
+            path .. ".entryOfferPolicy.maxFreeRewards",
+            "exceeds ForkedPreboss slot capacity of " .. tostring(template.freeRewardSlotCapacity)
+        )
+    end
+    local freeRewardSurface = rewards.surfaces.lookup[policy.freeRewardSurfaceKey]
+    if freeRewardSurface == nil then
+        fail(
+            path .. ".entryOfferPolicy.freeRewardSurfaceKey",
+            "unknown reward surface '" .. policy.freeRewardSurfaceKey .. "'"
+        )
+    end
+    if freeRewardSurface.kind ~= "storeChoice" then
+        fail(
+            path .. ".entryOfferPolicy.freeRewardSurfaceKey",
+            "forked preboss free rewards require a store-choice surface"
+        )
+    end
+end
+
+local function validateForkedPrebossTopology(biome, path)
+    local topologyMaximum = biomeFreeRewardMaximum(biome)
+    for roomIndex, room in ipairs(biome.rooms.ordered) do
+        if room.templateKey == "ForkedPreboss"
+            and room.entryOfferPolicy.maxFreeRewards ~= topologyMaximum
+        then
+            fail(
+                path .. ".rooms[" .. tostring(roomIndex) .. "].entryOfferPolicy.maxFreeRewards",
+                "must match biome topology maximum of " .. tostring(topologyMaximum)
+            )
+        end
     end
 end
 
@@ -996,6 +1085,9 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
         nonEmptyString(biome.biomeStepKey, path .. ".biomeStepKey")
         nonEmptyString(biome.batchRuleKey, path .. ".batchRuleKey")
         s.stringList(biome.terminalRoomKeys, path .. ".terminalRoomKeys", true)
+        if #biome.terminalRoomKeys ~= 1 then
+            fail(path .. ".terminalRoomKeys", "supported biomes require exactly one terminal room")
+        end
         if biome.specializedBatchRuleKeys ~= nil then
             s.stringList(biome.specializedBatchRuleKeys, path .. ".specializedBatchRuleKeys", true)
         end
@@ -1043,7 +1135,7 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
             local roomPath = path .. ".rooms[" .. tostring(roomIndex) .. "]"
             s.onlyKeys(room, {
                 "canonicalFamily", "caps", "counters", "eligibility", "encounterProfileKey", "exits",
-                "fixed", "force", "key", "kind", "localChildren", "metadata", "rewardSurfaceKey",
+                "entryOfferPolicy", "fixed", "force", "key", "kind", "localChildren", "metadata", "rewardSurfaceKey",
                 "tags", "templateKey", "terminal",
             }, roomPath)
             if string.sub(room.key, 1, 2) ~= biome.key .. "_" then
@@ -1081,6 +1173,7 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
             if rewards.surfaces.lookup[room.rewardSurfaceKey] == nil then
                 fail(roomPath .. ".rewardSurfaceKey", "unknown reward surface '" .. tostring(room.rewardSurfaceKey) .. "'")
             end
+            validateEntryOfferPolicy(room, template, rewards, roomPath)
             local encounterProfile = encounterProfiles.lookup[room.encounterProfileKey]
             if encounterProfile == nil then
                 fail(roomPath .. ".encounterProfileKey", "unknown encounter profile '" .. tostring(room.encounterProfileKey) .. "'")
@@ -1212,7 +1305,11 @@ local function validateBiomes(rawBiomes, routes, routeTemplates, templates, batc
             if not terminal.terminal then
                 fail(path .. ".terminalRoomKeys[" .. tostring(index) .. "]", "room is not declared terminal")
             end
+            if terminal.kind ~= "Preboss" then
+                fail(path .. ".terminalRoomKeys[" .. tostring(index) .. "]", "terminal room must be a preboss")
+            end
         end
+        validateForkedPrebossTopology(biome, path)
         validateDeterministicPairs(biome, path)
         validateSpecializedBiomeConsistency(biome, path)
         biome.capacityAudit = validateCapacity(biome, roomsByFamily, requirements, path)

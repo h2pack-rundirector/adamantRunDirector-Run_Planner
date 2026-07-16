@@ -87,7 +87,7 @@ function TestManagedPersistence.testBuildsStaticControlTaxonomyAndInstances()
             count = count + 1
             lu.assertStrMatches(name, "^[A-Za-z][A-Za-z0-9_]*$")
         end
-        lu.assertEquals(count, 212)
+        lu.assertEquals(count, 211)
         lu.assertNotNil(templates.Route)
         for _, declaration in ipairs(catalog.roomTemplates.ordered) do
             lu.assertNotNil(templates[declaration.key], declaration.key)
@@ -96,7 +96,10 @@ function TestManagedPersistence.testBuildsStaticControlTaxonomyAndInstances()
             "", "Underworld_F", "Underworld_G", "Underworld_H", "Underworld_I",
         })
         lu.assertEquals(instances.Underworld.configuredPrefixValues, { "" })
-        lu.assertEquals(instances.Surface_Q_PreBoss01.template, "Preboss")
+        lu.assertEquals(instances.Surface_Q_PreBoss01.template, "DirectPreboss")
+        lu.assertEquals(instances.Underworld_F_PreBoss01.template, "ForkedPreboss")
+        lu.assertEquals(instances.Underworld_F_PreBoss01.entryOfferPolicy.maxFreeRewards, 1)
+        lu.assertEquals(instances.Underworld_G_PreBoss01.entryOfferPolicy.maxFreeRewards, 2)
     end)
 end
 
@@ -124,7 +127,7 @@ function TestManagedPersistence.testManagedStateInstallsCompleteDeclarations()
 
         lu.assertEquals(#captured.storage, 18)
         lu.assertEquals(countKeys(captured.templates), 18)
-        lu.assertEquals(countKeys(captured.instances), 212)
+        lu.assertEquals(countKeys(captured.instances), 211)
         lu.assertIs(captured.storage, installed.storage.moduleStorage)
     end)
 end

@@ -20,12 +20,10 @@ return {
     WorldShop = { kind = "shop", shopProfileKey = "WorldShop" },
     TartarusShop = { kind = "shop", shopProfileKey = "I_WorldShop" },
     SummitShop = { kind = "shop", shopProfileKey = "Q_WorldShop" },
-    PrebossShopOrFreeReward = {
-        kind = "branch",
-        branches = {
-            { key = "Shop", surfaceKey = "WorldShop" },
-            { key = "FreeReward", storeKeys = { "RunProgress" }, ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" } },
-        },
+    PrebossFreeReward = {
+        kind = "storeChoice",
+        storeKeys = { "RunProgress" },
+        ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" },
     },
     FieldsCages = {
         kind = "localSlots",

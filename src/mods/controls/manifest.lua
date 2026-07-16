@@ -42,6 +42,8 @@ function manifest.build(catalog)
                 biomeStepKey = biome.biomeStepKey,
                 gameRoomKey = room.key,
                 templateKey = room.templateKey,
+                rewardSurfaceKey = room.rewardSurfaceKey,
+                entryOfferPolicy = room.entryOfferPolicy,
                 localSlots = {},
                 state = stateManifest.build(catalog, room),
             }

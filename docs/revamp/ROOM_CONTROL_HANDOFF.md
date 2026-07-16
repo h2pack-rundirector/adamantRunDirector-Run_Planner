@@ -138,9 +138,13 @@ branches while avoiding duplicated shop implementation.
 Every ForkedPreboss control reserves maximum storage for:
 
 - one complete World Shop inventory;
-- `freeRewards[1]`;
-- `freeRewards[2]`;
-- `entryMode = "" | "Shop" | "Reward1" | "Reward2"`.
+- `freeRewards[1..maxFreeRewards]`;
+- an entry mode restricted to the instance's shop and declared reward slots.
+
+The shared template has a two-slot ceiling. F/H/P declare one free-reward slot
+because their predecessor topology has at most two exits. G declares two
+because its topology can have three. The catalog cross-checks those instance
+bounds against the biome declarations.
 
 The selected leading room's concrete physical exit count is immutable context
 and activates:
@@ -178,22 +182,24 @@ DirectPreboss controls need no entry dropdown or predecessor context. I uses
 Clockwork Goal door marker remains execution metadata; it does not create an
 alternate realization.
 
-## Production Code Still To Reconcile
+## Declaration Reconciliation
 
-The design docs now state the intended model, but the declaration/catalog code
-still reflects the pre-review model. Before implementing controls:
+The declaration and catalog layer now reflects the reviewed model:
 
-1. remove `I_PreBoss01` from `i_tartarus.lua`, including terminal keys and
-   catalog coverage;
-2. remove `PrebossShopOrFreeReward` from reward surfaces and replace the
-   F/G/H/P declaration use with explicit ForkedPreboss entry-offer policy;
-3. map `H_Bridge01` to the Story control template and remove the standalone
-   `FieldsBridge` control-template registration;
-4. replace the generic Preboss template registration with `DirectPreboss` and
-   `ForkedPreboss`, then split real control templates into focused modules
-   assembled through the existing control subsystem DI layer;
-5. implement reward components first, then F/G, H/I, N/O, and P/Q templates;
-6. add storage-manifest, typed read/write, dormancy, and profile-capacity tests
+- `I_PreBoss02` is the sole I terminal room and `I_PreBoss01` is excluded;
+- `DirectPreboss` and `ForkedPreboss` replace the generic Preboss template;
+- `PrebossFreeReward` is an ordinary store-choice surface, while each preboss
+  room explicitly declares its entry-offer policy;
+- the catalog rejects missing or mismatched preboss policies and surfaces;
+- `H_Bridge01` uses the Story control template while retaining its bridge
+  encounter profile and topology facts.
+
+The next production work is deliberately narrower:
+
+1. split real control templates into focused modules assembled through the
+   existing control subsystem DI layer;
+2. implement reward components first, then F/G, H/I, N/O, and P/Q templates;
+3. add storage-manifest, typed read/write, dormancy, and profile-capacity tests
    before proceeding to Checkpoint 4 materialization.
 
 Do not add NPC support, runtime fallback interpretation, or candidate/feedback

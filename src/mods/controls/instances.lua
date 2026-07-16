@@ -33,6 +33,8 @@ function instances.build(catalog, activePrefixEnds)
             routeKey = room.routeKey,
             biomeStepKey = room.biomeStepKey,
             gameRoomKey = room.gameRoomKey,
+            rewardSurfaceKey = room.rewardSurfaceKey,
+            entryOfferPolicy = room.entryOfferPolicy,
             state = room.state,
         }
     end

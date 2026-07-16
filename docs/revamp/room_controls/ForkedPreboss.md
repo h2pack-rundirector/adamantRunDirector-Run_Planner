@@ -2,9 +2,10 @@
 
 ## Coverage
 
-| Biome steps | Rooms | Shop profile | Free reward store |
-| --- | --- | --- | --- |
-| `Underworld_F/G/H`, `Surface_P` | `F_PreBoss01`, `G_PreBoss01`, `H_PreBoss01`, `P_PreBoss01` | `WorldShop` | `RunProgress` |
+| Biome steps | Rooms | Shop profile | Free reward store | Maximum free rewards |
+| --- | --- | --- | --- | --- |
+| `Underworld_F/H`, `Surface_P` | `F_PreBoss01`, `H_PreBoss01`, `P_PreBoss01` | `WorldShop` | `RunProgress` | 1 |
+| `Underworld_G` | `G_PreBoss01` | `WorldShop` | `RunProgress` | 2 |
 
 These rooms use one shop realization and fill every other physical door of the
 selected predecessor with a free reward. Devotion and `RoomMoneyDrop` are
@@ -14,10 +15,30 @@ ineligible free rewards.
 preboss-level offer policy combining a shop component with bounded ordinary
 store-choice reward components.
 
+Every covered room declares that composition explicitly:
+
+```lua
+{
+    templateKey = "ForkedPreboss",
+    rewardSurfaceKey = "WorldShop",
+    entryOfferPolicy = {
+        kind = "shopThenFillRemainingExits",
+        freeRewardSurfaceKey = "PrebossFreeReward",
+        maxFreeRewards = 1, -- F/H/P; G declares 2
+    },
+}
+```
+
+`PrebossFreeReward` is an ordinary `storeChoice` surface over `RunProgress`
+with Devotion and `RoomMoneyDrop` excluded. The shared template supports two
+slots, while the catalog requires each instance bound to match its biome's
+maximum declared predecessor exits minus one.
+
 ## Bounded Authored State
 
-Every instance reserves maximum storage for one complete World Shop and two
-free rewards:
+Every instance reserves maximum storage for one complete World Shop and its
+topology-bounded free rewards. The following is the two-slot G shape; F/H/P
+only contain `freeRewards[1]` and do not persist an impossible Reward2:
 
 ```lua
 {
@@ -41,8 +62,9 @@ free rewards:
 }
 ```
 
-The maximum is storage capacity, not a declaration that every predecessor has
-three exits. Inactive values remain persisted and dormant.
+The per-instance maximum is storage capacity, not a declaration that every
+predecessor has that many exits. Inactive values within that bound remain
+persisted and dormant.
 
 ## Incoming Topology Context
 
@@ -81,8 +103,8 @@ selected topology
 ```
 
 Changing the selected predecessor recomputes context without clearing
-persistence. A newly inactive Reward2 remains dormant. An `entryMode` that no
-longer names an active offer becomes invalid and is not silently coerced.
+persistence. A newly inactive reward slot remains dormant. An `entryMode` that
+no longer names an active offer becomes invalid and is not silently coerced.
 
 ## Offer and Acquisition Semantics
 
@@ -104,7 +126,7 @@ Only the selected realization contributes acquisitions:
 
 - Shop acquires shop slots whose `purchased` value is true;
 - Reward1 acquires only `freeRewards[1]`;
-- Reward2 acquires only `freeRewards[2]`.
+- Reward2, available only to G, acquires only `freeRewards[2]`.
 
 Unselected offers remain in offered-reward history but do not contribute
 acquisition. The execution-plan compiler derives acquisition; no second

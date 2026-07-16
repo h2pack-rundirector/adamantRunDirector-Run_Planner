@@ -9,11 +9,15 @@ return {
     EphyraCombat = { roomKinds = { "Combat" }, localChildLimit = 3 },
     ShipCombat = { roomKinds = { "Combat" }, localChildLimit = 2 },
     OlympusCombat = { roomKinds = { "Combat" }, localChildLimit = 0 },
-    Story = { roomKinds = { "Story" }, localChildLimit = 0 },
+    Story = { roomKinds = { "Bridge", "Story" }, localChildLimit = 0 },
     Fountain = { roomKinds = { "Reprieve" }, localChildLimit = 0 },
     Shop = { roomKinds = { "Shop" }, localChildLimit = 0 },
     Miniboss = { roomKinds = { "Miniboss" }, localChildLimit = 0 },
-    FieldsBridge = { roomKinds = { "Bridge" }, localChildLimit = 0 },
     Devotion = { roomKinds = { "Devotion" }, localChildLimit = 0 },
-    Preboss = { roomKinds = { "Preboss" }, localChildLimit = 0 },
+    DirectPreboss = { roomKinds = { "Preboss" }, localChildLimit = 0 },
+    ForkedPreboss = {
+        roomKinds = { "Preboss" },
+        localChildLimit = 0,
+        freeRewardSlotCapacity = 2,
+    },
 }

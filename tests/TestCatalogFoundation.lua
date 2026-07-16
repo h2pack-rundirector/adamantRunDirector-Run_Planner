@@ -98,17 +98,29 @@ function TestCatalogFoundation.testLoadsCompleteRouteAndRoomUniverseHeadlessly()
 
         lu.assertEquals(#catalog.biomes.ordered, 8)
         lu.assertEquals(#catalog.controlManifest.routes.ordered, 2)
-        lu.assertEquals(#catalog.controlManifest.rooms.ordered, 210)
+        lu.assertEquals(#catalog.controlManifest.rooms.ordered, 209)
         lu.assertNotNil(catalog.controlManifest.rooms.lookup.Underworld_F_Combat04)
         lu.assertEquals(catalog.controlManifest.rooms.lookup.Underworld_F_Combat04.gameRoomKey, "F_Combat04")
         lu.assertNotNil(catalog.controlManifest.rooms.lookup.Surface_Q_PreBoss01)
+        lu.assertEquals(
+            catalog.controlManifest.rooms.lookup.Surface_Q_PreBoss01.entryOfferPolicy,
+            { kind = "shopOnly" }
+        )
+        lu.assertEquals(
+            catalog.controlManifest.rooms.lookup.Underworld_F_PreBoss01.entryOfferPolicy,
+            {
+                kind = "shopThenFillRemainingExits",
+                freeRewardSurfaceKey = "PrebossFreeReward",
+                maxFreeRewards = 1,
+            }
+        )
     end)
 end
 
 function TestCatalogFoundation.testCoversEverySupportedConcreteRoom()
     h.withImport(function()
         local catalog = loadCatalog()
-        local expectedCounts = { F = 32, G = 28, H = 20, I = 31, N = 30, O = 23, P = 26, Q = 20 }
+        local expectedCounts = { F = 32, G = 28, H = 20, I = 30, N = 30, O = 23, P = 26, Q = 20 }
         local combatCounts = { F = 22, G = 20, H = 15, I = 24, N = 23, O = 15, P = 19 }
         for biomeKey, expected in pairs(expectedCounts) do
             lu.assertEquals(#catalog.biomes.lookup[biomeKey].rooms.ordered, expected, biomeKey)
@@ -123,6 +135,10 @@ function TestCatalogFoundation.testCoversEverySupportedConcreteRoom()
             lu.assertNotNil(catalog.biomes.lookup.Q.rooms.lookup[key])
         end
         lu.assertNotNil(catalog.biomes.lookup.G.rooms.lookup.G_MiniBoss03)
+        lu.assertEquals(catalog.biomes.lookup.H.rooms.lookup.H_Bridge01.templateKey, "Story")
+        lu.assertNil(catalog.biomes.lookup.I.rooms.lookup.I_PreBoss01)
+        lu.assertNotNil(catalog.biomes.lookup.I.rooms.lookup.I_PreBoss02)
+        lu.assertEquals(catalog.biomes.lookup.I.terminalRoomKeys, { "I_PreBoss02" })
         lu.assertNil(catalog.biomes.lookup.I.rooms.lookup.I_Shop01)
         lu.assertNil(catalog.biomes.lookup.I.rooms.lookup.I_MiniBoss03)
         lu.assertNil(catalog.biomes.lookup.N.rooms.lookup.N_Shop01)
@@ -450,7 +466,7 @@ function TestCatalogFoundation.testRejectsUnknownOrWrongContactRequirementsAtCat
         )
 
         raw = h.rawDeclarations()
-        findRawRoom(raw, "I", "I_PreBoss01").force.requirement = {
+        findRawRoom(raw, "I", "I_PreBoss02").force.requirement = {
             kind = "RequiredNotInStore",
             rewardType = "WeaponUpgradeDrop",
             code = "reward_pending_in_store",
@@ -787,12 +803,28 @@ function TestCatalogFoundation.testRejectsMalformedNestedRewardsAndSpecializedBi
         assertFails(function() loadCatalog(raw) end, "reward primitive 'Boon' is both eligible and ineligible")
 
         raw = h.rawDeclarations()
-        raw.rewards.surfaces.PrebossShopOrFreeReward.branches[2].eligibleRewardTypes = { "ClockworkGoal" }
+        raw.rewards.surfaces.PrebossFreeReward.eligibleRewardTypes = { "ClockworkGoal" }
         assertFails(function() loadCatalog(raw) end, "is not offered by the referenced stores")
 
         raw = h.rawDeclarations()
-        raw.rewards.surfaces.PrebossShopOrFreeReward.branches[2].ineligibleRewardTypes = { "MissingReward" }
+        raw.rewards.surfaces.PrebossFreeReward.ineligibleRewardTypes = { "MissingReward" }
         assertFails(function() loadCatalog(raw) end, "unknown reward primitive 'MissingReward'")
+
+        raw = h.rawDeclarations()
+        findRawRoom(raw, "F", "F_PreBoss01").entryOfferPolicy.freeRewardSurfaceKey = "MissingSurface"
+        assertFails(function() loadCatalog(raw) end, "unknown reward surface 'MissingSurface'")
+
+        raw = h.rawDeclarations()
+        findRawRoom(raw, "F", "F_PreBoss01").entryOfferPolicy.maxFreeRewards = 2
+        assertFails(function() loadCatalog(raw) end, "must match biome topology maximum of 1")
+
+        raw = h.rawDeclarations()
+        findRawRoom(raw, "G", "G_PreBoss01").entryOfferPolicy.maxFreeRewards = 3
+        assertFails(function() loadCatalog(raw) end, "exceeds ForkedPreboss slot capacity of 2")
+
+        raw = h.rawDeclarations()
+        findRawRoom(raw, "Q", "Q_PreBoss01").entryOfferPolicy = nil
+        assertFails(function() loadCatalog(raw) end, ".entryOfferPolicy: expected an explicit table")
 
         raw = h.rawDeclarations()
         raw.rewards.surfaces.ClockworkGoalOrTartarus.kinds[2].storeKeys = { "MissingStore" }

@@ -439,10 +439,11 @@ return {
         {
             key = "Q_PreBoss01",
             kind = "Preboss",
-            templateKey = "Preboss",
+            templateKey = "DirectPreboss",
             tags = {},
             exits = { { index = 1, targetMode = "fixedBoss", type = "FortressMainDoor" } },
             rewardSurfaceKey = "SummitShop",
+            entryOfferPolicy = { kind = "shopOnly" },
             encounterProfileKey = "Preboss",
             counters = { biomeDepthCache = 0, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },

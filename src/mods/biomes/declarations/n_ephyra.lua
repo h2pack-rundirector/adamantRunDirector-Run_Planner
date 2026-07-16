@@ -827,10 +827,11 @@ return {
         {
             key = "N_PreBoss01",
             kind = "Preboss",
-            templateKey = "Preboss",
+            templateKey = "DirectPreboss",
             tags = {},
             exits = { { index = 1, targetMode = "fixedBoss", type = "EphyraExitDoorReturn" } },
             rewardSurfaceKey = "WorldShop",
+            entryOfferPolicy = { kind = "shopOnly" },
             encounterProfileKey = "Preboss",
             counters = { biomeDepthCache = 0, roomHistoryOrdinal = 1 },
             caps = {},

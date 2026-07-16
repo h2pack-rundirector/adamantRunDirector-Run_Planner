@@ -474,7 +474,7 @@ return {
         {
             key = "H_Bridge01",
             kind = "Bridge",
-            templateKey = "FieldsBridge",
+            templateKey = "Story",
             tags = {},
             exits = {
                 { index = 1, targetMode = "generated", type = "FieldsExitDoor" },
@@ -498,10 +498,15 @@ return {
         {
             key = "H_PreBoss01",
             kind = "Preboss",
-            templateKey = "Preboss",
+            templateKey = "ForkedPreboss",
             tags = {},
             exits = { { index = 1, targetMode = "fixedBoss", type = "FieldsExitDoor" } },
-            rewardSurfaceKey = "PrebossShopOrFreeReward",
+            rewardSurfaceKey = "WorldShop",
+            entryOfferPolicy = {
+                kind = "shopThenFillRemainingExits",
+                freeRewardSurfaceKey = "PrebossFreeReward",
+                maxFreeRewards = 1,
+            },
             encounterProfileKey = "Preboss",
             counters = { biomeDepthCache = 0, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1 },
