@@ -83,10 +83,35 @@ local function completeGState()
 end
 
 local function directAccess(state)
+    local function copyRows(rows)
+        local result = {}
+        for index, row in ipairs(rows or {}) do
+            local copy = {}
+            for key, value in pairs(row) do
+                copy[key] = value
+            end
+            result[index] = copy
+        end
+        return result
+    end
     return {
-        readBiome = function(_, biomeStepKey)
-            lu.assertEquals(biomeStepKey, "Underworld_F")
-            return state
+        readScalar = function(_, root)
+            if string.find(root.alias, "SelectedStart", 1, true) then
+                return state.selectedStartRoomControlKey
+            end
+            if string.find(root.alias, "TerminalParent", 1, true) then
+                return state.terminalTransition.parentRoomControlKey
+            end
+            return state[root.semanticKey]
+        end,
+        readRows = function(_, root)
+            if string.find(root.alias, "CompanionTargets", 1, true) then
+                return copyRows(state.terminalTransition.companionTargets)
+            end
+            if string.find(root.alias, "_Batches", 1, true) then
+                return copyRows(state.batches)
+            end
+            return copyRows(state.targets)
         end,
     }
 end

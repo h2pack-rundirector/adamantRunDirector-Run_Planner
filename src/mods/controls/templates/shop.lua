@@ -1,15 +1,12 @@
 local deps = ...
 local shopComponent = deps.shop
 local shops = deps.shops
+local rewardUi = deps.rewardUi
 
 local shopTemplate = {}
 
 local function fail(room, message)
     error("Shop room '" .. room.key .. "' " .. message, 0)
-end
-
-local function unavailableView()
-    error("planner controls have no production draw view before the editor checkpoint", 0)
 end
 
 function shopTemplate.prepare(_, room)
@@ -31,10 +28,10 @@ end
 local Template = {}
 
 function Template.prepare(instance)
-    instance.shop = shopComponent.prepare(
+    instance.shop = rewardUi.prepareShop(shopComponent.prepare(
         shops.profiles.lookup[instance.incomingReward.shopProfileKey],
         "Shop"
-    )
+    ))
     return instance
 end
 
@@ -81,10 +78,19 @@ function Template.createUi(fields, instance)
         shopComponent.writePurchased(fields, instance.shop, slotKey, value, shopContext)
     end
 
+
+    function control.drawShop(_, draw)
+        rewardUi.drawShop(draw, fields, instance.shop)
+    end
+
     return control
 end
 
-Template.views = { default = unavailableView }
+Template.views = {
+    default = function(draw, control)
+        control:drawShop(draw)
+    end,
+}
 shopTemplate.template = Template
 
 return shopTemplate

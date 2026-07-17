@@ -17,6 +17,7 @@ return {
     rooms = {
         {
             key = "G_Intro",
+            label = "Entrance",
             kind = "Intro",
             templateKey = "FixedIntro",
             tags = {},
@@ -36,6 +37,7 @@ return {
         },
         {
             key = "G_Combat01",
+            label = "Combat 01",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -58,6 +60,7 @@ return {
         },
         {
             key = "G_Combat02",
+            label = "Combat 02",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -75,6 +78,7 @@ return {
         },
         {
             key = "G_Combat03",
+            label = "Combat 03",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -98,6 +102,7 @@ return {
         },
         {
             key = "G_Combat04",
+            label = "Combat 04",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -120,6 +125,7 @@ return {
         },
         {
             key = "G_Combat05",
+            label = "Combat 05",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -143,6 +149,7 @@ return {
         },
         {
             key = "G_Combat06",
+            label = "Combat 06",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -165,6 +172,7 @@ return {
         },
         {
             key = "G_Combat07",
+            label = "Combat 07",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -187,6 +195,7 @@ return {
         },
         {
             key = "G_Combat08",
+            label = "Combat 08",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -209,6 +218,7 @@ return {
         },
         {
             key = "G_Combat09",
+            label = "Combat 09",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -232,6 +242,7 @@ return {
         },
         {
             key = "G_Combat10",
+            label = "Combat 10",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -254,6 +265,7 @@ return {
         },
         {
             key = "G_Combat11",
+            label = "Combat 11",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -276,6 +288,7 @@ return {
         },
         {
             key = "G_Combat12",
+            label = "Combat 12",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -298,6 +311,7 @@ return {
         },
         {
             key = "G_Combat13",
+            label = "Combat 13",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -320,6 +334,7 @@ return {
         },
         {
             key = "G_Combat14",
+            label = "Combat 14",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -343,6 +358,7 @@ return {
         },
         {
             key = "G_Combat15",
+            label = "Combat 15",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -366,6 +382,7 @@ return {
         },
         {
             key = "G_Combat16",
+            label = "Combat 16",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -388,6 +405,7 @@ return {
         },
         {
             key = "G_Combat17",
+            label = "Combat 17",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -411,6 +429,7 @@ return {
         },
         {
             key = "G_Combat18",
+            label = "Combat 18",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -445,6 +464,7 @@ return {
         },
         {
             key = "G_Combat19",
+            label = "Combat 19",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -467,6 +487,7 @@ return {
         },
         {
             key = "G_Combat20",
+            label = "Combat 20",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -490,6 +511,7 @@ return {
         },
         {
             key = "G_MiniBoss01",
+            label = "Deep Serpent",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -524,6 +546,7 @@ return {
         },
         {
             key = "G_MiniBoss02",
+            label = "King Vermin",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -555,6 +578,7 @@ return {
         },
         {
             key = "G_MiniBoss03",
+            label = "Hellifish",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -589,6 +613,7 @@ return {
         },
         {
             key = "G_Story01",
+            label = "Narcissus",
             kind = "Story",
             templateKey = "Story",
             tags = {},
@@ -607,6 +632,7 @@ return {
         },
         {
             key = "G_Reprieve01",
+            label = "Fountain",
             kind = "Reprieve",
             templateKey = "Fountain",
             tags = {},
@@ -628,6 +654,7 @@ return {
         },
         {
             key = "G_Shop01",
+            label = "Midshop",
             kind = "Shop",
             templateKey = "Shop",
             tags = {},
@@ -660,6 +687,7 @@ return {
         },
         {
             key = "G_PreBoss01",
+            label = "Preboss",
             kind = "Preboss",
             templateKey = "ForkedPreboss",
             tags = {},

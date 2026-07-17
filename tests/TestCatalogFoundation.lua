@@ -83,6 +83,8 @@ function TestCatalogFoundation.testLoadsCompleteRouteAndRoomUniverseHeadlessly()
         _G.rom = previousRom
 
         lu.assertEquals(#catalog.routes.ordered, 2)
+        lu.assertEquals(catalog.routes.lookup.Underworld.label, "Underworld")
+        lu.assertEquals(catalog.routes.lookup.Surface.label, "Surface")
         lu.assertEquals(catalog.routes.lookup.Underworld.biomeSteps, {
             { key = "Underworld_F", biomeKey = "F" },
             { key = "Underworld_G", biomeKey = "G" },
@@ -97,10 +99,22 @@ function TestCatalogFoundation.testLoadsCompleteRouteAndRoomUniverseHeadlessly()
         })
 
         lu.assertEquals(#catalog.biomes.ordered, 8)
+        for _, biome in ipairs(catalog.biomes.ordered) do
+            for _, room in ipairs(biome.rooms.ordered) do
+                lu.assertEquals(type(room.label), "string", room.key)
+                lu.assertNotEquals(room.label, "", room.key)
+            end
+        end
+        lu.assertEquals(catalog.biomes.lookup.F.rooms.lookup.F_Shop01.label, "Midshop")
+        lu.assertEquals(catalog.biomes.lookup.G.rooms.lookup.G_Shop01.label, "Midshop")
+        lu.assertEquals(catalog.biomes.lookup.O.rooms.lookup.O_Shop01.label, "Midshop")
+        lu.assertEquals(catalog.biomes.lookup.P.rooms.lookup.P_Shop01.label, "Midshop")
         lu.assertEquals(#catalog.controlManifest.routes.ordered, 2)
         lu.assertEquals(#catalog.controlManifest.rooms.ordered, 209)
         lu.assertNotNil(catalog.controlManifest.rooms.lookup.Underworld_F_Combat04)
-        lu.assertEquals(catalog.controlManifest.rooms.lookup.Underworld_F_Combat04.gameRoomKey, "F_Combat04")
+        lu.assertEquals(catalog.controlManifest.rooms.lookup.Underworld_F_Combat04.gameName, "F_Combat04")
+        lu.assertEquals(catalog.controlManifest.rooms.lookup.Underworld_F_Combat04.label, "Combat 04")
+        lu.assertEquals(catalog.controlManifest.rooms.lookup.Underworld_F_MiniBoss01.label, "Root-Stalker")
         lu.assertNotNil(catalog.controlManifest.rooms.lookup.Surface_Q_PreBoss01)
         lu.assertEquals(
             catalog.controlManifest.rooms.lookup.Surface_Q_PreBoss01.entryOfferPolicy,
@@ -581,6 +595,17 @@ function TestCatalogFoundation.testRejectsUnknownOrWrongContactRequirementsAtCat
     end)
 end
 
+function TestCatalogFoundation.testRequiresRoomLabelsAtCatalogBoundary()
+    h.withImport(function()
+        local raw = h.rawDeclarations()
+        findRawRoom(raw, "H", "H_Combat01").label = nil
+        assertFails(
+            function() loadCatalog(raw) end,
+            ".label: expected a non-empty string"
+        )
+    end)
+end
+
 function TestCatalogFoundation.testRejectsUnknownRequirementReferencesAtCatalogBoundary()
     h.withImport(function()
         local raw = h.rawDeclarations()
@@ -930,6 +955,10 @@ function TestCatalogFoundation.testRejectsMalformedNestedRewardsAndSpecializedBi
         raw = h.rawDeclarations()
         raw.rewards.shops.profiles.WorldShop.slots[2].key = "Boon"
         assertFails(function() loadCatalog(raw) end, "duplicate shop slot key 'Boon'")
+
+        raw = h.rawDeclarations()
+        raw.rewards.shops.profiles.WorldShop.slots[1].label = nil
+        assertFails(function() loadCatalog(raw) end, ".WorldShop.slots[1].label: expected a non-empty string")
 
         raw = h.rawDeclarations()
         raw.rewards.shops.profiles.Q_WorldShop.slots[1].uniqueGroup = "MissingGroup"

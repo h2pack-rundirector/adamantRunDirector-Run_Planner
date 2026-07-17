@@ -48,13 +48,13 @@ function counted.create(bags)
                 primitiveLookup = {},
             }
             for _, primitive in ipairs(bag.options) do
-                if included(binding, primitive.key, eligible, ineligible) then
+                if included(binding, primitive.gameName, eligible, ineligible) then
                     store.primitives[#store.primitives + 1] = primitive
-                    store.primitiveLookup[primitive.key] = primitive
-                    if view.primitives.lookup[primitive.key] == nil then
+                    store.primitiveLookup[primitive.gameName] = primitive
+                    if view.primitives.lookup[primitive.gameName] == nil then
                         view.primitives.ordered[#view.primitives.ordered + 1] = primitive
-                        view.primitives.lookup[primitive.key] = primitive
-                        view.rewardTypes[#view.rewardTypes + 1] = primitive.key
+                        view.primitives.lookup[primitive.gameName] = primitive
+                        view.rewardTypes[#view.rewardTypes + 1] = primitive.gameName
                         if primitive.payloadArity > view.maxPayloadArity then
                             view.maxPayloadArity = primitive.payloadArity
                         end

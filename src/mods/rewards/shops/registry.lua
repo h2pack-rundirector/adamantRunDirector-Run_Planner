@@ -11,8 +11,8 @@ local function createOptionSet(declaration, primitives)
     for _, rewardType in ipairs(declaration) do
         local primitive = primitives.lookup[rewardType]
         optionSet.primitives[#optionSet.primitives + 1] = primitive
-        optionSet.primitiveLookup[primitive.key] = primitive
-        optionSet.rewardTypes[#optionSet.rewardTypes + 1] = primitive.key
+        optionSet.primitiveLookup[primitive.gameName] = primitive
+        optionSet.rewardTypes[#optionSet.rewardTypes + 1] = primitive.gameName
         if primitive.payloadArity > optionSet.maxPayloadArity then
             optionSet.maxPayloadArity = primitive.payloadArity
         end
@@ -35,6 +35,7 @@ local function createProfile(declaration, optionSets)
     for _, declarationSlot in ipairs(declaration.slots) do
         local slot = {
             key = declarationSlot.key,
+            label = declarationSlot.label,
             optionSet = optionSets.lookup[declarationSlot.optionSetKey],
             uniqueGroup = declarationSlot.uniqueGroup,
         }

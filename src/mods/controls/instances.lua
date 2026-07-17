@@ -1,5 +1,13 @@
 local instances = {}
 
+local function biomeByStep(catalog, biomeStepKey)
+    for _, biome in ipairs(catalog.biomes.ordered) do
+        if biome.biomeStepKey == biomeStepKey then
+            return biome
+        end
+    end
+end
+
 local function activePrefixes(route, activePrefixEnd)
     local values = { "" }
     local lookup = { [""] = true }
@@ -16,15 +24,27 @@ local function activePrefixes(route, activePrefixEnd)
     error("route '" .. route.key .. "' has no declared prefix ending at '" .. tostring(activePrefixEnd) .. "'", 0)
 end
 
-function instances.build(catalog, activePrefixEnds)
+function instances.build(catalog, routeSupport)
     local result = {}
     for _, route in ipairs(catalog.controlManifest.routes.ordered) do
         local routeDeclaration = catalog.routes.lookup[route.key]
-        local values, lookup = activePrefixes(routeDeclaration, (activePrefixEnds or {})[route.key])
+        local support = routeSupport and routeSupport.lookup[route.key] or nil
+        local values, lookup = activePrefixes(
+            routeDeclaration,
+            support and support.maximumEditablePrefix or nil
+        )
+        local labels = { [""] = "Vanilla" }
+        for _, biomeStepKey in ipairs(values) do
+            if biomeStepKey ~= "" then
+                local biome = biomeByStep(catalog, biomeStepKey)
+                labels[biomeStepKey] = biome.label
+            end
+        end
         result[route.key] = {
             template = route.templateKey,
             configuredPrefixValues = values,
             configuredPrefixLookup = lookup,
+            configuredPrefixLabels = labels,
         }
     end
     for _, room in ipairs(catalog.controlManifest.rooms.ordered) do
@@ -32,7 +52,8 @@ function instances.build(catalog, activePrefixEnds)
             template = room.templateKey,
             routeKey = room.routeKey,
             biomeStepKey = room.biomeStepKey,
-            gameRoomKey = room.gameRoomKey,
+            gameName = room.gameName,
+            label = room.label,
             incomingReward = room.incomingReward,
             entryOfferPolicy = room.entryOfferPolicy,
         }

@@ -43,6 +43,9 @@ local function currentEvidence()
             Underworld_F = true,
             Underworld_G = true,
         },
+        authoredEditor = {
+            Underworld_F = true,
+        },
     }
 end
 
@@ -56,6 +59,8 @@ function TestBiomeSupport.testDeclaresAndVerifiesCurrentBiomeCapabilities()
         lu.assertTrue(support.biomes.lookup.Underworld_G.focusedRoomControls)
         lu.assertTrue(support.biomes.lookup.Underworld_F.topology)
         lu.assertTrue(support.biomes.lookup.Underworld_G.topology)
+        lu.assertTrue(support.biomes.lookup.Underworld_F.authoredEditor)
+        lu.assertFalse(support.biomes.lookup.Underworld_G.authoredEditor)
         for _, biomeStepKey in ipairs({
             "Underworld_H", "Underworld_I", "Surface_N", "Surface_O", "Surface_P", "Surface_Q",
         }) do
@@ -67,6 +72,11 @@ function TestBiomeSupport.testDeclaresAndVerifiesCurrentBiomeCapabilities()
             lu.assertFalse(biome.plannerActive, biomeStepKey)
         end
         lu.assertNil(support.routes.lookup.Underworld.maximumActivePrefix)
+        lu.assertEquals(
+            support.routes.lookup.Underworld.maximumEditablePrefix,
+            "Underworld_F"
+        )
+        lu.assertNil(support.routes.lookup.Surface.maximumEditablePrefix)
         lu.assertNil(support.routes.lookup.Surface.maximumActivePrefix)
 
         local focused = 0
@@ -102,6 +112,7 @@ function TestBiomeSupport.testRejectsClaimsThatDoNotMatchAssembledEvidence()
         end, "room control 'Underworld_H_Combat01' is transitional")
 
         local missingTopologyEvidence = clone(base)
+        record(missingTopologyEvidence, "Underworld_F").authoredEditor = false
         assertFails(function()
             loadAssembly(missingTopologyEvidence).create(
                 systems.catalog,
@@ -111,6 +122,7 @@ function TestBiomeSupport.testRejectsClaimsThatDoNotMatchAssembledEvidence()
 
         local fDenial = clone(base)
         local deniedF = record(fDenial, "Underworld_F")
+        deniedF.authoredEditor = false
         deniedF.focusedRoomControls = false
         deniedF.topology = false
         assertFails(function()
@@ -130,6 +142,7 @@ function TestBiomeSupport.testRejectsMissingDependenciesAndNoncontiguousActivati
 
         local missingDependency = clone(base)
         local missingTopology = record(missingDependency, "Underworld_F")
+        missingTopology.authoredEditor = false
         missingTopology.topology = false
         missingTopology.materialization = true
         assertFails(function()
@@ -143,22 +156,25 @@ function TestBiomeSupport.testRejectsMissingDependenciesAndNoncontiguousActivati
         local noncontiguous = clone(base)
         local f = record(noncontiguous, "Underworld_F")
         local g = record(noncontiguous, "Underworld_G")
+        f.authoredEditor = true
         f.topology = true
         f.materialization = true
         f.headlessPipeline = true
         g.topology = true
+        g.authoredEditor = true
         g.materialization = true
         g.headlessPipeline = true
         g.plannerActive = true
         local evidence = {
             topology = { Underworld_F = true, Underworld_G = true },
+            authoredEditor = { Underworld_F = true, Underworld_G = true },
             materialization = { Underworld_F = true, Underworld_G = true },
             headlessPipeline = { Underworld_F = true, Underworld_G = true },
             plannerActive = { Underworld_G = true },
         }
         assertFails(function()
             loadAssembly(noncontiguous).create(systems.catalog, systems.controls.manifest, evidence)
-        end, "does not form a contiguous active prefix")
+        end, "does not form a contiguous prefix")
     end)
 end
 

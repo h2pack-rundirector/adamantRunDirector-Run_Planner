@@ -25,18 +25,21 @@ local function optionalSource(value, collaborator, context)
     return value
 end
 
-function oneOf.create(declaration)
+function oneOf.create(declaration, valueLabels)
     local values = {}
     local valueLookup = {}
+    local labels = {}
     for index, value in ipairs(declaration.values) do
         values[index] = value
         valueLookup[value] = true
+        labels[value] = valueLabels[value]
     end
     local payload = {
         kind = "oneOf",
         arity = 1,
         values = values,
         valueLookup = valueLookup,
+        valueLabels = labels,
     }
 
     function payload.encode(value, context)

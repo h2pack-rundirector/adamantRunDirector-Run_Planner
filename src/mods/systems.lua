@@ -4,6 +4,7 @@ local catalogAssembly = deps.catalogAssembly or import("mods/catalog/assembly.lu
 local rewardAssembly = deps.rewardAssembly or import("mods/rewards/assembly.lua")
 local routeAssembly = deps.routeAssembly or import("mods/route/assembly.lua")
 local biomeSupportAssembly = deps.biomeSupportAssembly or import("mods/composition/biome_support.lua")
+local uiAssembly = deps.uiAssembly or import("mods/ui/assembly.lua")
 
 local systems = {}
 
@@ -25,6 +26,7 @@ local function createControlTemplates(opts, rewardServices)
         standardCombat = import("mods/controls/templates/standard_combat.lua", nil, {
             countedBindings = rewardServices.countedBindings,
             countedChoice = rewardServices.countedChoice,
+            rewardUi = rewardServices.ui,
         })
     end
     local fixedOpening = opts.fixedOpening or deps.fixedOpening
@@ -32,6 +34,7 @@ local function createControlTemplates(opts, rewardServices)
         fixedOpening = import("mods/controls/templates/fixed_opening.lua", nil, {
             countedBindings = rewardServices.countedBindings,
             countedChoice = rewardServices.countedChoice,
+            rewardUi = rewardServices.ui,
         })
     end
     local fixedIntro = opts.fixedIntro or deps.fixedIntro
@@ -47,6 +50,7 @@ local function createControlTemplates(opts, rewardServices)
         miniboss = import("mods/controls/templates/miniboss.lua", nil, {
             countedBindings = rewardServices.countedBindings,
             countedChoice = rewardServices.countedChoice,
+            rewardUi = rewardServices.ui,
         })
     end
     local fountain = opts.fountain or deps.fountain
@@ -54,6 +58,7 @@ local function createControlTemplates(opts, rewardServices)
         fountain = import("mods/controls/templates/fountain.lua", nil, {
             countedBindings = rewardServices.countedBindings,
             countedChoice = rewardServices.countedChoice,
+            rewardUi = rewardServices.ui,
         })
     end
     local story = opts.story or deps.story
@@ -61,6 +66,7 @@ local function createControlTemplates(opts, rewardServices)
         story = import("mods/controls/templates/story.lua", nil, {
             fixed = rewardServices.fixed,
             primitives = rewardServices.primitives,
+            rewardUi = rewardServices.ui,
         })
     end
     local shopRoom = opts.shopRoom or deps.shopRoom
@@ -68,6 +74,7 @@ local function createControlTemplates(opts, rewardServices)
         shopRoom = import("mods/controls/templates/shop.lua", nil, {
             shop = rewardServices.shop,
             shops = rewardServices.shops,
+            rewardUi = rewardServices.ui,
         })
     end
     local forkedPreboss = opts.forkedPreboss or deps.forkedPreboss
@@ -77,6 +84,7 @@ local function createControlTemplates(opts, rewardServices)
             countedChoice = rewardServices.countedChoice,
             shop = rewardServices.shop,
             shops = rewardServices.shops,
+            rewardUi = rewardServices.ui,
         })
     end
     return import("mods/controls/templates.lua", nil, {
@@ -102,15 +110,53 @@ local function createControlsAssembly(opts, rewardServices)
     })
 end
 
-local function capabilityEvidence(route, supplied)
-    local assembled = route.capabilityEvidence or {}
+local function capabilityEvidence(assembled, supplied)
+    assembled = assembled or {}
     supplied = supplied or {}
     return {
         topology = supplied.topology or assembled.topology,
+        authoredEditor = supplied.authoredEditor or assembled.authoredEditor,
         materialization = supplied.materialization or assembled.materialization,
         headlessPipeline = supplied.headlessPipeline or assembled.headlessPipeline,
         plannerActive = supplied.plannerActive or assembled.plannerActive,
     }
+end
+
+local function mergeCapabilityEvidence(...)
+    local result = {}
+    for index = 1, select("#", ...) do
+        local source = select(index, ...)
+        for capability, evidence in pairs(source or {}) do
+            result[capability] = result[capability] or {}
+            for biomeStepKey, value in pairs(evidence) do
+                result[capability][biomeStepKey] = value
+            end
+        end
+    end
+    return result
+end
+
+local function combinedStorage(routeStorage, uiStorage)
+    local moduleStorage = {}
+    for _, descriptor in ipairs(routeStorage.moduleStorage) do
+        moduleStorage[#moduleStorage + 1] = descriptor
+    end
+    for _, descriptor in ipairs(uiStorage or {}) do
+        moduleStorage[#moduleStorage + 1] = descriptor
+    end
+    return {
+        moduleStorage = moduleStorage,
+        biomes = routeStorage.biomes,
+    }
+end
+
+local function withInstances(controls, instances)
+    local result = {}
+    for key, value in pairs(controls) do
+        result[key] = value
+    end
+    result.instances = instances
+    return result
 end
 
 function systems.create(opts)
@@ -118,23 +164,37 @@ function systems.create(opts)
     local catalog = opts.catalog or catalogAssembly.create(opts.catalogOverrides)
     local rewardServices = opts.rewardServices or rewardAssembly.create(catalog.rewards)
     local controls = opts.controls
+    local controlsAssembly
     if controls == nil then
-        local controlsAssembly = opts.controlsAssembly
+        controlsAssembly = opts.controlsAssembly
             or deps.controlsAssembly
             or createControlsAssembly(opts, rewardServices)
-        controls = controlsAssembly.create(catalog, {
-            activePrefixEnds = opts.activePrefixEnds,
-        })
+        controls = controlsAssembly.prepare(catalog)
     end
     local enrichedCatalog = controls.catalog
     local route = opts.route or routeAssembly.create(enrichedCatalog)
+    local ui = opts.ui or uiAssembly.create(enrichedCatalog, route)
+    local assembledEvidence = mergeCapabilityEvidence(
+        route.capabilityEvidence,
+        ui.capabilityEvidence
+    )
     local biomeSupport = opts.biomeSupport or biomeSupportAssembly.create(
         enrichedCatalog,
         controls.manifest,
-        capabilityEvidence(route, opts.biomeCapabilityEvidence)
+        capabilityEvidence(assembledEvidence, opts.biomeCapabilityEvidence)
     )
+    if controls.instances == nil then
+        if controlsAssembly == nil then
+            error("injected controls must include instances", 0)
+        end
+        controls = withInstances(
+            controls,
+            controlsAssembly.createInstances(controls, biomeSupport.routes)
+        )
+    end
+    local storage = combinedStorage(route.storage, ui.storage)
     local managedState = opts.managedState or import("mods/composition/managed_state.lua", nil, {
-        storage = route.storage,
+        storage = storage,
         templates = controls.templates,
         instances = controls.instances,
     })
@@ -145,6 +205,7 @@ function systems.create(opts)
         controls = controls,
         biomeSupport = biomeSupport,
         route = route,
+        ui = ui,
         managedState = managedState,
     }
 end

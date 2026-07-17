@@ -2,8 +2,13 @@ local deps = ...
 local batchImplementations = deps.batchImplementations
 local commandImplementation = deps.commandImplementation
 local terminalTransitions = deps.terminalTransitions
+local codec = deps.codec or import("mods/route/topology/linear_biome_codec.lua")
 
 local linearBiome = {}
+
+linearBiome.storage = codec.storage
+linearBiome.readAuthored = codec.read
+linearBiome.replaceAuthored = codec.replace
 
 local function supportsImplementation(implementation)
     return type(implementation) == "table"
@@ -130,7 +135,7 @@ local function normalizeStart(context, authored, claims)
     local start = context.biome.layout.start
     local controlKey
     if start.mode == "fixed" then
-        controlKey = context.rooms.byGameRoomKey[start.roomKeys[1]].control.key
+        controlKey = context.rooms.byGameName[start.roomKeys[1]].control.key
     else
         if type(authored.selectedStartRoomControlKey) ~= "string" then
             fail(context, "selectedStartRoomControlKey", "expected a string")

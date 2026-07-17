@@ -30,6 +30,7 @@ return {
     rooms = {
         {
             key = "N_Opening01",
+            label = "Opening",
             kind = "Opening",
             templateKey = "FixedOpening",
             tags = {},
@@ -42,6 +43,7 @@ return {
         },
         {
             key = "N_PreHub01",
+            label = "Pre-Hub",
             kind = "PreHub",
             templateKey = "FixedPreHub",
             tags = {},
@@ -54,6 +56,7 @@ return {
         },
         {
             key = "N_Hub",
+            label = "Ephyra Hub",
             kind = "Hub",
             templateKey = "EphyraHub",
             tags = {},
@@ -67,6 +70,7 @@ return {
         },
         {
             key = "N_Combat01",
+            label = "Combat 01",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -85,6 +89,7 @@ return {
         },
         {
             key = "N_Combat02",
+            label = "Combat 02",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -120,6 +125,7 @@ return {
         },
         {
             key = "N_Combat03",
+            label = "Combat 03",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -147,6 +153,7 @@ return {
         },
         {
             key = "N_Combat04",
+            label = "Combat 04",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -182,6 +189,7 @@ return {
         },
         {
             key = "N_Combat05",
+            label = "Combat 05",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -225,6 +233,7 @@ return {
         },
         {
             key = "N_Combat06",
+            label = "Combat 06",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -260,6 +269,7 @@ return {
         },
         {
             key = "N_Combat07",
+            label = "Combat 07",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -278,6 +288,7 @@ return {
         },
         {
             key = "N_Combat08",
+            label = "Combat 08",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -296,6 +307,7 @@ return {
         },
         {
             key = "N_Combat09",
+            label = "Combat 09",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -339,6 +351,7 @@ return {
         },
         {
             key = "N_Combat10",
+            label = "Combat 10",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -374,6 +387,7 @@ return {
         },
         {
             key = "N_Combat11",
+            label = "Combat 11",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -401,6 +415,7 @@ return {
         },
         {
             key = "N_Combat12",
+            label = "Combat 12",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -444,6 +459,7 @@ return {
         },
         {
             key = "N_Combat13",
+            label = "Combat 13",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -462,6 +478,7 @@ return {
         },
         {
             key = "N_Combat14",
+            label = "Combat 14",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -480,6 +497,7 @@ return {
         },
         {
             key = "N_Combat15",
+            label = "Combat 15",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -507,6 +525,7 @@ return {
         },
         {
             key = "N_Combat16",
+            label = "Combat 16",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -534,6 +553,7 @@ return {
         },
         {
             key = "N_Combat17",
+            label = "Combat 17",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -561,6 +581,7 @@ return {
         },
         {
             key = "N_Combat18",
+            label = "Combat 18",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -588,6 +609,7 @@ return {
         },
         {
             key = "N_Combat19",
+            label = "Combat 19",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -606,6 +628,7 @@ return {
         },
         {
             key = "N_Combat20",
+            label = "Combat 20",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -633,6 +656,7 @@ return {
         },
         {
             key = "N_Combat21",
+            label = "Combat 21",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -651,6 +675,7 @@ return {
         },
         {
             key = "N_Combat22",
+            label = "Combat 22",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -686,6 +711,7 @@ return {
         },
         {
             key = "N_Combat23",
+            label = "Combat 23",
             kind = "Combat",
             templateKey = "EphyraCombat",
             tags = {},
@@ -729,6 +755,7 @@ return {
         },
         {
             key = "N_MiniBoss01",
+            label = "Satyr Champion",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -747,6 +774,7 @@ return {
         },
         {
             key = "N_MiniBoss02",
+            label = "Erymanthian Boar",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -765,6 +793,7 @@ return {
         },
         {
             key = "N_Story01",
+            label = "Medea",
             kind = "Story",
             templateKey = "Story",
             tags = {},
@@ -783,6 +812,7 @@ return {
         },
         {
             key = "N_PreBoss01",
+            label = "Preboss",
             kind = "Preboss",
             templateKey = "DirectPreboss",
             tags = {},

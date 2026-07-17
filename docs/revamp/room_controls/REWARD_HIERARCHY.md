@@ -74,6 +74,13 @@ A payload collaborator owns:
 - payload completeness;
 - later payload candidate translation.
 
+Payload values remain canonical primitive game names such as
+`ApolloUpgrade`. A one-of domain derives its immutable display-label map from
+the referenced primitive declarations during reward assembly. A derived
+domain such as `DevotionPair` reuses that same map. Payload declarations do
+not duplicate labels, and UI code does not infer them by editing game-name
+strings.
+
 It does not know bags, filters, room identity, topology, history, or widgets.
 Empty private strings normalize to absent typed members.
 
@@ -115,6 +122,35 @@ normalized acquisition history, not authored identity or storage.
 System composition may construct immutable payload-free primitive
 collaborators from declarations. Unknown payload domains fail during
 composition.
+
+Every constructed primitive exposes three separate identities:
+
+```lua
+{
+    gameName = "AresUpgrade",
+    label = "Ares",
+    acquiredAs = "AresUpgrade",
+}
+```
+
+The keyed declaration identity is the canonical `gameName`; it is not
+duplicated as another authored field. Persisted `rewardType` values, canonical
+reward fragments, candidate application, and game translation carry that game
+name. `label` is presentation-only and is never persisted. `acquiredAs`
+affects normalized acquisition history only. UI preparation must resolve a
+label from the primitive registry and must not render or transform a game name
+as a fallback label.
+
+Primitive declarations are plain keyed tables. `label` is always explicit;
+`acquiredAs` is authored only when normalization differs from the keyed game
+name, and `payloadDomain` is authored only when the primitive carries a
+payload. Positional declaration constructors are intentionally avoided so
+these exceptional relationships remain readable at the declaration point.
+
+Labels need not be globally unique because game-distinct primitives on
+different producer surfaces may intentionally share player-facing language.
+They must remain unambiguous inside any one rendered option domain; label
+wording can be audited independently without changing persisted identity.
 
 ## Layer 3: Counted Reward Bags
 
@@ -351,6 +387,12 @@ Each shop slot persists one concrete primitive plus `purchased`:
 No shop value contains a counted-bag `storeKey`. Purchase affects acquisition;
 it is not bag consumption. `WorldShop`, `I_WorldShop`, and `Q_WorldShop` remain
 profile-parameterized compositions over declared option sets.
+
+Each declared shop slot has a stable internal `key` and an explicit
+presentation-only `label`. Storage fields, typed values, and semantic APIs use
+the key; the editor renders the label. Labels such as `Offer 1` therefore do
+not expose category-bearing keys such as `Boon` or `MajorNonBoon`, and changing
+label wording does not migrate persisted state.
 
 ## Persistence Composition
 

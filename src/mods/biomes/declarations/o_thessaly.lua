@@ -17,6 +17,7 @@ return {
     rooms = {
         {
             key = "O_Intro",
+            label = "Entrance",
             kind = "Intro",
             templateKey = "FixedIntro",
             tags = {},
@@ -36,6 +37,7 @@ return {
         },
         {
             key = "O_Combat01",
+            label = "Combat 01",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -58,6 +60,7 @@ return {
         },
         {
             key = "O_Combat02",
+            label = "Combat 02",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -80,6 +83,7 @@ return {
         },
         {
             key = "O_Combat03",
+            label = "Combat 03",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -102,6 +106,7 @@ return {
         },
         {
             key = "O_Combat04",
+            label = "Combat 04",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -135,6 +140,7 @@ return {
         },
         {
             key = "O_Combat05",
+            label = "Combat 05",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -157,6 +163,7 @@ return {
         },
         {
             key = "O_Combat06",
+            label = "Combat 06",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -179,6 +186,7 @@ return {
         },
         {
             key = "O_Combat07",
+            label = "Combat 07",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -212,6 +220,7 @@ return {
         },
         {
             key = "O_Combat08",
+            label = "Combat 08",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -234,6 +243,7 @@ return {
         },
         {
             key = "O_Combat09",
+            label = "Combat 09",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -256,6 +266,7 @@ return {
         },
         {
             key = "O_Combat10",
+            label = "Combat 10",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -278,6 +289,7 @@ return {
         },
         {
             key = "O_Combat11",
+            label = "Combat 11",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -311,6 +323,7 @@ return {
         },
         {
             key = "O_Combat12",
+            label = "Combat 12",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -333,6 +346,7 @@ return {
         },
         {
             key = "O_Combat13",
+            label = "Combat 13",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -366,6 +380,7 @@ return {
         },
         {
             key = "O_Combat14",
+            label = "Combat 14",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -388,6 +403,7 @@ return {
         },
         {
             key = "O_Combat15",
+            label = "Combat 15",
             kind = "Combat",
             templateKey = "ShipCombat",
             tags = {},
@@ -421,6 +437,7 @@ return {
         },
         {
             key = "O_Story01",
+            label = "Circe",
             kind = "Story",
             templateKey = "Story",
             tags = {},
@@ -471,6 +488,7 @@ return {
         },
         {
             key = "O_Reprieve01",
+            label = "Fountain",
             kind = "Reprieve",
             templateKey = "Fountain",
             tags = {},
@@ -489,6 +507,7 @@ return {
         },
         {
             key = "O_Shop01",
+            label = "Midshop",
             kind = "Shop",
             templateKey = "Shop",
             tags = {},
@@ -539,6 +558,7 @@ return {
         },
         {
             key = "O_Devotion01",
+            label = "Trial",
             kind = "Devotion",
             templateKey = "Devotion",
             tags = {},
@@ -569,6 +589,7 @@ return {
         },
         {
             key = "O_MiniBoss01",
+            label = "Charybdis",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -599,6 +620,7 @@ return {
         },
         {
             key = "O_MiniBoss02",
+            label = "The Yargonaut",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -629,6 +651,7 @@ return {
         },
         {
             key = "O_PreBoss01",
+            label = "Preboss",
             kind = "Preboss",
             templateKey = "DirectPreboss",
             tags = {},

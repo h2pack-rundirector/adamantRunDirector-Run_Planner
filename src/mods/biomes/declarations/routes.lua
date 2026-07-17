@@ -1,6 +1,7 @@
 return {
     {
         key = "Underworld",
+        label = "Underworld",
         controlTemplateKey = "Route",
         biomeSteps = {
             { key = "Underworld_F", biomeKey = "F" },
@@ -11,6 +12,7 @@ return {
     },
     {
         key = "Surface",
+        label = "Surface",
         controlTemplateKey = "Route",
         biomeSteps = {
             { key = "Surface_N", biomeKey = "N" },

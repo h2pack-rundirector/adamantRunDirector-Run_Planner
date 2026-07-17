@@ -222,8 +222,9 @@ local function validateRewards(raw, requirements)
         for index, slot in ipairs(profile.slots or {}) do
             local slotPath = profilePath .. ".slots[" .. tostring(index) .. "]"
             requiredTable(slot, slotPath)
-            s.onlyKeys(slot, { "key", "optionSetKey", "uniqueGroup" }, slotPath)
+            s.onlyKeys(slot, { "key", "label", "optionSetKey", "uniqueGroup" }, slotPath)
             nonEmptyString(slot.key, slotPath .. ".key")
+            nonEmptyString(slot.label, slotPath .. ".label")
             if slotKeys[slot.key] then
                 fail(slotPath .. ".key", "duplicate shop slot key '" .. slot.key .. "'")
             end
@@ -422,7 +423,8 @@ local function validateRouteRegistries(routes, routeTemplates)
     end
     for _, route in ipairs(routes.ordered) do
         local path = "routes." .. route.key
-        s.onlyKeys(route, { "key", "controlTemplateKey", "biomeSteps" }, path)
+        s.onlyKeys(route, { "key", "label", "controlTemplateKey", "biomeSteps" }, path)
+        nonEmptyString(route.label, path .. ".label")
         nonEmptyString(route.controlTemplateKey, path .. ".controlTemplateKey")
         s.list(route.biomeSteps, path .. ".biomeSteps", true)
         for index, step in ipairs(route.biomeSteps) do
@@ -1331,7 +1333,7 @@ local function validateBiomes(
             local roomPath = path .. ".rooms[" .. tostring(roomIndex) .. "]"
             s.onlyKeys(room, {
                 "canonicalFamily", "caps", "counters", "eligibility", "encounterProfileKey", "exits",
-                "entryOfferPolicy", "force", "incomingReward", "key", "kind", "localChildren", "metadata",
+                "entryOfferPolicy", "force", "incomingReward", "key", "kind", "label", "localChildren", "metadata",
                 "tags", "templateKey",
             }, roomPath)
             if string.sub(room.key, 1, 2) ~= biome.key .. "_" then
@@ -1341,6 +1343,7 @@ local function validateBiomes(
                 fail(roomPath .. ".key", "duplicate game room key '" .. room.key .. "'")
             end
             globalRoomKeys[room.key] = true
+            nonEmptyString(room.label, roomPath .. ".label")
             nonEmptyString(room.kind, roomPath .. ".kind")
             nonEmptyString(room.templateKey, roomPath .. ".templateKey")
             requiredTable(room.tags, roomPath .. ".tags")

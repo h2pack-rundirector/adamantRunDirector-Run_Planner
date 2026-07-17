@@ -11,7 +11,20 @@ local function identify(declaration, collaborator)
     return collaborator
 end
 
-function registry.build(declarations)
+local function valueLabels(declaration, primitives)
+    local labels = {}
+    for _, gameName in ipairs(declaration.values) do
+        local primitive = primitives.lookup[gameName]
+        if primitive == nil then
+            error("payload domain '" .. declaration.key
+                .. "' references unknown primitive '" .. gameName .. "'", 0)
+        end
+        labels[gameName] = primitive.label
+    end
+    return labels
+end
+
+function registry.build(declarations, primitives)
     local result = {
         none = none.create(),
         ordered = {},
@@ -19,7 +32,10 @@ function registry.build(declarations)
     }
     for _, declaration in ipairs(declarations.ordered) do
         if declaration.kind == "oneOf" then
-            result.lookup[declaration.key] = identify(declaration, oneOf.create(declaration))
+            result.lookup[declaration.key] = identify(
+                declaration,
+                oneOf.create(declaration, valueLabels(declaration, primitives))
+            )
         end
     end
     for _, declaration in ipairs(declarations.ordered) do

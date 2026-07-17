@@ -1,69 +1,211 @@
-local function primitive(label, acquiredAs, payloadDomain)
-    return {
-        label = label,
-        acquiredAs = acquiredAs,
-        payloadDomain = payloadDomain,
-    }
-end
-
 return {
-    AphroditeUpgrade = primitive("Aphrodite", nil, "BoonSource"),
-    ApolloUpgrade = primitive("Apollo", nil, "BoonSource"),
-    AresUpgrade = primitive("Ares", nil, "BoonSource"),
-    DemeterUpgrade = primitive("Demeter", nil, "BoonSource"),
-    HephaestusUpgrade = primitive("Hephaestus", nil, "BoonSource"),
-    HeraUpgrade = primitive("Hera", nil, "BoonSource"),
-    HermesUpgrade = primitive("Hermes", "HermesUpgrade"),
-    HestiaUpgrade = primitive("Hestia", nil, "BoonSource"),
-    PoseidonUpgrade = primitive("Poseidon", nil, "BoonSource"),
-    ZeusUpgrade = primitive("Zeus", nil, "BoonSource"),
+    AphroditeUpgrade = {
+        label = "Aphrodite",
+        payloadDomain = "BoonSource",
+    },
+    ApolloUpgrade = {
+        label = "Apollo",
+        payloadDomain = "BoonSource",
+    },
+    AresUpgrade = {
+        label = "Ares",
+        payloadDomain = "BoonSource",
+    },
+    DemeterUpgrade = {
+        label = "Demeter",
+        payloadDomain = "BoonSource",
+    },
+    HephaestusUpgrade = {
+        label = "Hephaestus",
+        payloadDomain = "BoonSource",
+    },
+    HeraUpgrade = {
+        label = "Hera",
+        payloadDomain = "BoonSource",
+    },
+    HermesUpgrade = {
+        label = "Hermes",
+    },
+    HestiaUpgrade = {
+        label = "Hestia",
+        payloadDomain = "BoonSource",
+    },
+    PoseidonUpgrade = {
+        label = "Poseidon",
+        payloadDomain = "BoonSource",
+    },
+    ZeusUpgrade = {
+        label = "Zeus",
+        payloadDomain = "BoonSource",
+    },
 
-    Boon = primitive("Boon", nil, "BoonSource"),
-    Devotion = primitive("Trial", nil, "DevotionPair"),
-    Story = primitive("Story"),
-    ClockworkGoal = primitive("Clockwork Goal"),
-    RandomLoot = primitive("Boon", "Boon", "BoonSource"),
-    BoostedRandomLoot = primitive("Boosted Boon", "Boon", "BoonSource"),
-    BlindBoxLoot = primitive("Mystery Boon", "Boon", "BoonSource"),
-    ShopHermesUpgrade = primitive("Hermes Boon", "HermesUpgrade"),
+    Boon = {
+        label = "Boon",
+        payloadDomain = "BoonSource",
+    },
+    Devotion = {
+        label = "Trial",
+        payloadDomain = "DevotionPair",
+    },
+    Story = {
+        label = "Story",
+    },
+    ClockworkGoal = {
+        label = "Clockwork Goal",
+    },
+    RandomLoot = {
+        label = "Boon",
+        acquiredAs = "Boon",
+        payloadDomain = "BoonSource",
+    },
+    BoostedRandomLoot = {
+        label = "Boosted Boon",
+        acquiredAs = "Boon",
+        payloadDomain = "BoonSource",
+    },
+    BlindBoxLoot = {
+        label = "Mystery Boon",
+        acquiredAs = "Boon",
+        payloadDomain = "BoonSource",
+    },
+    ShopHermesUpgrade = {
+        label = "Hermes Boon",
+        acquiredAs = "HermesUpgrade",
+    },
 
-    WeaponUpgrade = primitive("Hammer", "WeaponUpgrade"),
-    WeaponUpgradeDrop = primitive("Hammer", "WeaponUpgrade"),
-    ChaosWeaponUpgrade = primitive("Anvil", "WeaponUpgrade"),
-    MaxHealthDrop = primitive("Max Health"),
-    MaxHealthDropSmall = primitive("Tiny Max Health", "MaxHealthDrop"),
-    MaxHealthDropBig = primitive("Big Max Health", "MaxHealthDrop"),
-    EmptyMaxHealthSmallDrop = primitive("Empty Max Health", "MaxHealthDrop"),
-    MaxManaDrop = primitive("Max Magick"),
-    MaxManaDropSmall = primitive("Tiny Max Magick", "MaxManaDrop"),
-    MaxManaDropBig = primitive("Big Max Magick", "MaxManaDrop"),
-    StackUpgrade = primitive("Pom of Power"),
-    StackUpgradeBig = primitive("Double Pom", "StackUpgrade"),
-    StackUpgradeTriple = primitive("Triple Pom", "StackUpgrade"),
-    StoreRewardRandomStack = primitive("Pom Slice", "StackUpgrade"),
-    RoomMoneyDrop = primitive("Gold"),
-    RoomMoneyTinyDrop = primitive("Tiny Gold", "RoomMoneyDrop"),
-    RoomMoneyTripleDrop = primitive("Triple Gold", "RoomMoneyDrop"),
-    TalentDrop = primitive("Path of Stars"),
-    MinorTalentDrop = primitive("Tiny Path", "TalentDrop"),
-    TalentBigDrop = primitive("Big Path", "TalentDrop"),
-    SpellDrop = primitive("Selene's Gift"),
-    GiftDrop = primitive("Nectar"),
-    MetaCurrencyDrop = primitive("Bones"),
-    MetaCurrencyBigDrop = primitive("Big Bones", "MetaCurrencyDrop"),
-    MetaCardPointsCommonDrop = primitive("Ashes"),
-    MetaCardPointsCommonBigDrop = primitive("Big Ashes", "MetaCardPointsCommonDrop"),
-    RoomRewardHealDrop = primitive("Heal"),
-    HealBigDrop = primitive("Big Heal", "RoomRewardHealDrop"),
-    ArmorBoost = primitive("Armor"),
-    ArmorBigBoost = primitive("Big Armor", "ArmorBoost"),
-    LastStandDrop = primitive("Kiss of Styx"),
-    WeaponPointsRareDrop = primitive("Nightmare"),
-    CardUpgradePointsDrop = primitive("Moon Dust"),
-    CharonPointsDrop = primitive("Obol Points"),
-    AirBoost = primitive("Air"),
-    EarthBoost = primitive("Earth"),
-    FireBoost = primitive("Fire"),
-    WaterBoost = primitive("Water"),
-    ElementalBoost = primitive("Element"),
+    WeaponUpgrade = {
+        label = "Hammer",
+    },
+    WeaponUpgradeDrop = {
+        label = "Hammer",
+        acquiredAs = "WeaponUpgrade",
+    },
+    ChaosWeaponUpgrade = {
+        label = "Anvil",
+        acquiredAs = "WeaponUpgrade",
+    },
+    MaxHealthDrop = {
+        label = "Max Health",
+    },
+    MaxHealthDropSmall = {
+        label = "Tiny Max Health",
+        acquiredAs = "MaxHealthDrop",
+    },
+    MaxHealthDropBig = {
+        label = "Big Max Health",
+        acquiredAs = "MaxHealthDrop",
+    },
+    EmptyMaxHealthSmallDrop = {
+        label = "Empty Max Health",
+        acquiredAs = "MaxHealthDrop",
+    },
+    MaxManaDrop = {
+        label = "Max Magick",
+    },
+    MaxManaDropSmall = {
+        label = "Tiny Max Magick",
+        acquiredAs = "MaxManaDrop",
+    },
+    MaxManaDropBig = {
+        label = "Big Max Magick",
+        acquiredAs = "MaxManaDrop",
+    },
+    StackUpgrade = {
+        label = "Pom of Power",
+    },
+    StackUpgradeBig = {
+        label = "Double Pom",
+        acquiredAs = "StackUpgrade",
+    },
+    StackUpgradeTriple = {
+        label = "Triple Pom",
+        acquiredAs = "StackUpgrade",
+    },
+    StoreRewardRandomStack = {
+        label = "Pom Slice",
+        acquiredAs = "StackUpgrade",
+    },
+    RoomMoneyDrop = {
+        label = "Gold",
+    },
+    RoomMoneyTinyDrop = {
+        label = "Tiny Gold",
+        acquiredAs = "RoomMoneyDrop",
+    },
+    RoomMoneyTripleDrop = {
+        label = "Triple Gold",
+        acquiredAs = "RoomMoneyDrop",
+    },
+    TalentDrop = {
+        label = "Path of Stars",
+    },
+    MinorTalentDrop = {
+        label = "Tiny Path",
+        acquiredAs = "TalentDrop",
+    },
+    TalentBigDrop = {
+        label = "Big Path",
+        acquiredAs = "TalentDrop",
+    },
+    SpellDrop = {
+        label = "Selene's Gift",
+    },
+    GiftDrop = {
+        label = "Nectar",
+    },
+    MetaCurrencyDrop = {
+        label = "Bones",
+    },
+    MetaCurrencyBigDrop = {
+        label = "Big Bones",
+        acquiredAs = "MetaCurrencyDrop",
+    },
+    MetaCardPointsCommonDrop = {
+        label = "Ashes",
+    },
+    MetaCardPointsCommonBigDrop = {
+        label = "Big Ashes",
+        acquiredAs = "MetaCardPointsCommonDrop",
+    },
+    RoomRewardHealDrop = {
+        label = "Heal",
+    },
+    HealBigDrop = {
+        label = "Big Heal",
+        acquiredAs = "RoomRewardHealDrop",
+    },
+    ArmorBoost = {
+        label = "Armor",
+    },
+    ArmorBigBoost = {
+        label = "Big Armor",
+        acquiredAs = "ArmorBoost",
+    },
+    LastStandDrop = {
+        label = "Kiss of Styx",
+    },
+    WeaponPointsRareDrop = {
+        label = "Nightmare",
+    },
+    CardUpgradePointsDrop = {
+        label = "Moon Dust",
+    },
+    CharonPointsDrop = {
+        label = "Obol Points",
+    },
+    AirBoost = {
+        label = "Air",
+    },
+    EarthBoost = {
+        label = "Earth",
+    },
+    FireBoost = {
+        label = "Fire",
+    },
+    WaterBoost = {
+        label = "Water",
+    },
+    ElementalBoost = {
+        label = "Element",
+    },
 }

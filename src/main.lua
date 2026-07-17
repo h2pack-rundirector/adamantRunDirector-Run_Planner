@@ -17,10 +17,6 @@ local PACK_ID = "run-director"
 local MODULE_ID = "Run_Planner"
 local PLUGIN_GUID = _PLUGIN.guid
 
-local function drawUnavailable(_, ui)
-    ui.draw.widgets.text("Run Planner is being rebuilt from the locked revamp design.")
-end
-
 local function init()
     import_as_fallback(rom.game)
 
@@ -39,7 +35,7 @@ local function init()
     local moduleSystems = import("mods/systems.lua").create()
     moduleSystems.managedState.install(module)
 
-    module.ui.tab(drawUnavailable)
+    moduleSystems.ui.attach(module)
     module.fallbackUi.attachGuiOnce(function(fallbackUi)
         rom.gui.add_imgui(fallbackUi.renderWindow)
         rom.gui.add_to_menu_bar(fallbackUi.addMenuBar)

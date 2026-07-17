@@ -17,6 +17,7 @@ return {
     rooms = {
         {
             key = "F_Opening01",
+            label = "Opening 01",
             kind = "Opening",
             templateKey = "FixedOpening",
             tags = {},
@@ -29,6 +30,7 @@ return {
         },
         {
             key = "F_Opening02",
+            label = "Opening 02",
             kind = "Opening",
             templateKey = "FixedOpening",
             tags = {},
@@ -41,6 +43,7 @@ return {
         },
         {
             key = "F_Opening03",
+            label = "Opening 03",
             kind = "Opening",
             templateKey = "FixedOpening",
             tags = {},
@@ -53,6 +56,7 @@ return {
         },
         {
             key = "F_Combat01",
+            label = "Combat 01",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -72,6 +76,7 @@ return {
         },
         {
             key = "F_Combat02",
+            label = "Combat 02",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -94,6 +99,7 @@ return {
         },
         {
             key = "F_Combat03",
+            label = "Combat 03",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -116,6 +122,7 @@ return {
         },
         {
             key = "F_Combat04",
+            label = "Combat 04",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -138,6 +145,7 @@ return {
         },
         {
             key = "F_Combat05",
+            label = "Combat 05",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -160,6 +168,7 @@ return {
         },
         {
             key = "F_Combat06",
+            label = "Combat 06",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -176,6 +185,7 @@ return {
         },
         {
             key = "F_Combat07",
+            label = "Combat 07",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -192,6 +202,7 @@ return {
         },
         {
             key = "F_Combat08",
+            label = "Combat 08",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -214,6 +225,7 @@ return {
         },
         {
             key = "F_Combat09",
+            label = "Combat 09",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -233,6 +245,7 @@ return {
         },
         {
             key = "F_Combat10",
+            label = "Combat 10",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -252,6 +265,7 @@ return {
         },
         {
             key = "F_Combat11",
+            label = "Combat 11",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -274,6 +288,7 @@ return {
         },
         {
             key = "F_Combat12",
+            label = "Combat 12",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -296,6 +311,7 @@ return {
         },
         {
             key = "F_Combat13",
+            label = "Combat 13",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -312,6 +328,7 @@ return {
         },
         {
             key = "F_Combat14",
+            label = "Combat 14",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -334,6 +351,7 @@ return {
         },
         {
             key = "F_Combat15",
+            label = "Combat 15",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -356,6 +374,7 @@ return {
         },
         {
             key = "F_Combat16",
+            label = "Combat 16",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -378,6 +397,7 @@ return {
         },
         {
             key = "F_Combat17",
+            label = "Combat 17",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -400,6 +420,7 @@ return {
         },
         {
             key = "F_Combat18",
+            label = "Combat 18",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -422,6 +443,7 @@ return {
         },
         {
             key = "F_Combat19",
+            label = "Combat 19",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -444,6 +466,7 @@ return {
         },
         {
             key = "F_Combat20",
+            label = "Combat 20",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -466,6 +489,7 @@ return {
         },
         {
             key = "F_Combat21",
+            label = "Combat 21",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -488,6 +512,7 @@ return {
         },
         {
             key = "F_Combat22",
+            label = "Combat 22",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -510,6 +535,7 @@ return {
         },
         {
             key = "F_MiniBoss01",
+            label = "Root-Stalker",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -541,6 +567,7 @@ return {
         },
         {
             key = "F_MiniBoss02",
+            label = "Shadow-Spiller",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -572,6 +599,7 @@ return {
         },
         {
             key = "F_MiniBoss03",
+            label = "Phantom",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -603,6 +631,7 @@ return {
         },
         {
             key = "F_Story01",
+            label = "Arachne",
             kind = "Story",
             templateKey = "Story",
             tags = {},
@@ -624,6 +653,7 @@ return {
         },
         {
             key = "F_Reprieve01",
+            label = "Fountain",
             kind = "Reprieve",
             templateKey = "Fountain",
             tags = {},
@@ -645,6 +675,7 @@ return {
         },
         {
             key = "F_Shop01",
+            label = "Midshop",
             kind = "Shop",
             templateKey = "Shop",
             tags = {},
@@ -677,6 +708,7 @@ return {
         },
         {
             key = "F_PreBoss01",
+            label = "Preboss",
             kind = "Preboss",
             templateKey = "ForkedPreboss",
             tags = {},

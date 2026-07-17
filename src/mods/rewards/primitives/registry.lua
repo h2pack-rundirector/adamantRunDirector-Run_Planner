@@ -14,7 +14,7 @@ end
 
 local function createPrimitive(declaration, payload)
     local primitive = {
-        key = declaration.key,
+        gameName = declaration.key,
         label = declaration.label,
         acquiredAs = declaration.acquiredAs or declaration.key,
         payload = payload,
@@ -26,14 +26,14 @@ local function createPrimitive(declaration, payload)
             fail(context, "reward must be a table")
         end
         requireOnlyFragmentKeys(value, context)
-        if value.rewardType ~= nil and value.rewardType ~= primitive.key then
-            fail(context, "cannot replace fixed reward type '" .. primitive.key .. "'")
+        if value.rewardType ~= nil and value.rewardType ~= primitive.gameName then
+            fail(context, "cannot replace fixed reward type '" .. primitive.gameName .. "'")
         end
         return primitive.payload.encode(value.payload, context .. ".payload")
     end
 
     function primitive.decode(source1, source2, context)
-        local value = { rewardType = primitive.key }
+        local value = { rewardType = primitive.gameName }
         local decoded = primitive.payload.decode(source1, source2, context .. ".payload")
         if decoded ~= nil then
             value.payload = decoded
@@ -43,7 +43,7 @@ local function createPrimitive(declaration, payload)
 
     function primitive.isComplete(value)
         return type(value) == "table"
-            and value.rewardType == primitive.key
+            and value.rewardType == primitive.gameName
             and primitive.payload.isComplete(value.payload)
     end
 
@@ -59,7 +59,7 @@ function registry.build(declarations, payloadDomains)
         end
         local primitive = createPrimitive(declaration, payload)
         result.ordered[#result.ordered + 1] = primitive
-        result.lookup[primitive.key] = primitive
+        result.lookup[primitive.gameName] = primitive
     end
     return result
 end

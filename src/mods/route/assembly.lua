@@ -22,6 +22,7 @@ local topologyLayouts = deps.topologyLayouts or {
         commandImplementation = linearBiomeCommands,
         terminalTransitions = terminalTransitions,
     }),
+    HubBiome = import("mods/route/topology/hub_biome.lua"),
 }
 local topologyCapabilityBiomeSteps = deps.topologyCapabilityBiomeSteps or {
     "Underworld_F",
@@ -68,7 +69,7 @@ local function topologyCapabilityEvidence(plans, storage)
 end
 
 function assembly.create(catalog)
-    local storage = storageManifest.build(catalog)
+    local storage = storageManifest.build(catalog, topologyLayouts)
     local plans = biomePlans.build(catalog, storage, topologyLayouts)
     return {
         storage = storage,

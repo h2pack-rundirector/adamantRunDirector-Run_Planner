@@ -1,0 +1,531 @@
+-- luacheck: globals TestUiEditor
+
+local lu = require("luaunit")
+local h = dofile("tests/support/import_harness.lua")
+
+TestUiEditor = {}
+
+local function load()
+    return h.testImport("mods/systems.lua").create()
+end
+
+local function directAccess(state)
+    local function copyRows(rows)
+        local result = {}
+        for index, row in ipairs(rows or {}) do
+            local copy = {}
+            for key, value in pairs(row) do
+                copy[key] = value
+            end
+            result[index] = copy
+        end
+        return result
+    end
+    return {
+        readScalar = function(_, root)
+            if string.find(root.alias, "SelectedStart", 1, true) then
+                return state.selectedStartRoomControlKey
+            end
+            if string.find(root.alias, "TerminalParent", 1, true) then
+                return state.terminalTransition.parentRoomControlKey
+            end
+            return state[root.semanticKey]
+        end,
+        readRows = function(_, root)
+            if string.find(root.alias, "CompanionTargets", 1, true) then
+                return copyRows(state.terminalTransition.companionTargets)
+            end
+            if string.find(root.alias, "_Batches", 1, true) then
+                return copyRows(state.batches)
+            end
+            return copyRows(state.targets)
+        end,
+    }
+end
+
+local function completeFState()
+    return {
+        layoutKind = "LinearBiome",
+        selectedStartRoomControlKey = "Underworld_F_Opening02",
+        batches = {
+            { parentRoomControlKey = "Underworld_F_Opening02" },
+            { parentRoomControlKey = "Underworld_F_Combat03" },
+        },
+        targets = {
+            {
+                parentRoomControlKey = "Underworld_F_Opening02",
+                exitIndex = 1,
+                roomControlKey = "Underworld_F_Combat03",
+                picked = true,
+            },
+            {
+                parentRoomControlKey = "Underworld_F_Combat03",
+                exitIndex = 1,
+                roomControlKey = "Underworld_F_Combat04",
+                picked = true,
+            },
+            {
+                parentRoomControlKey = "Underworld_F_Combat03",
+                exitIndex = 2,
+                roomControlKey = "Underworld_F_Combat05",
+                picked = false,
+            },
+        },
+        terminalTransition = {
+            parentRoomControlKey = "Underworld_F_Combat04",
+        },
+    }
+end
+
+local function completeGState()
+    return {
+        layoutKind = "LinearBiome",
+        batches = {
+            { parentRoomControlKey = "Underworld_G_Intro" },
+            { parentRoomControlKey = "Underworld_G_Combat02" },
+        },
+        targets = {
+            {
+                parentRoomControlKey = "Underworld_G_Intro",
+                exitIndex = 1,
+                roomControlKey = "Underworld_G_Combat02",
+                picked = true,
+            },
+            {
+                parentRoomControlKey = "Underworld_G_Combat02",
+                exitIndex = 1,
+                roomControlKey = "Underworld_G_Combat03",
+                picked = true,
+            },
+            {
+                parentRoomControlKey = "Underworld_G_Combat02",
+                exitIndex = 2,
+                roomControlKey = "Underworld_G_Combat04",
+                picked = false,
+            },
+            {
+                parentRoomControlKey = "Underworld_G_Combat02",
+                exitIndex = 3,
+                roomControlKey = "Underworld_G_Combat05",
+                picked = false,
+            },
+        },
+        terminalTransition = {
+            parentRoomControlKey = "Underworld_G_Combat03",
+        },
+    }
+end
+
+local function tableHandle(rows)
+    return {
+        count = function()
+            return #rows
+        end,
+        read = function(_, rowIndex, column)
+            return rows[rowIndex][column]
+        end,
+    }
+end
+
+local function emptyRuntime(systems, configuredUnderworld)
+    local values = {}
+    local tables = {}
+    for _, descriptor in ipairs(systems.route.storage.moduleStorage) do
+        if descriptor.type == "table" then
+            tables[descriptor.alias] = {}
+        else
+            values[descriptor.alias] = descriptor.default
+        end
+    end
+    return {
+        controls = {
+            read = function(routeKey)
+                if routeKey == "Underworld" then
+                    return configuredUnderworld
+                end
+                return ""
+            end,
+        },
+        data = {
+            read = function(alias)
+                return values[alias]
+            end,
+            get = function(alias)
+                return tableHandle(tables[alias])
+            end,
+        },
+    }
+end
+
+local function contains(values, candidate)
+    for _, value in ipairs(values) do
+        if value == candidate then
+            return true
+        end
+    end
+    return false
+end
+
+function TestUiEditor.testPublishesOnlyTheCommittedConfiguredPrefix()
+    h.withImport(function()
+        local systems = load()
+        local published = systems.ui.coordinator:rebuild(
+            emptyRuntime(systems, "Underworld_F")
+        )
+        local underworld = published.routes.lookup.Underworld
+        lu.assertEquals(underworld.label, "Underworld")
+        lu.assertEquals(underworld.configuredPrefix, "Underworld_F")
+        lu.assertEquals(#underworld.biomes.ordered, 1)
+        lu.assertEquals(underworld.navTabs, {
+            { key = "route", label = "Route" },
+            { key = "Underworld_F", label = "Erebus" },
+        })
+        lu.assertEquals(underworld.biomes.lookup.Underworld_F.start.current, "")
+        lu.assertEquals(published.routes.lookup.Surface.navTabs, {
+            { key = "route", label = "Route" },
+        })
+
+        published = systems.ui.coordinator:rebuild(emptyRuntime(systems, ""))
+        lu.assertEquals(published.routes.lookup.Underworld.biomes.ordered, {})
+    end)
+end
+
+function TestUiEditor.testDrawBeforeActivationReportsUnavailable()
+    h.withImport(function()
+        local systems = load()
+        local texts = {}
+        systems.ui.drawTab(nil, {
+            draw = {
+                widgets = {
+                    text = function(value)
+                        texts[#texts + 1] = value
+                    end,
+                },
+            },
+        })
+
+        lu.assertEquals(texts, {
+            "Run Planner authored editor is unavailable.",
+        })
+    end)
+end
+
+function TestUiEditor.testLinearProjectionKeepsPickedAndUnpickedRoomsTogether()
+    h.withImport(function()
+        local systems = load()
+        local plan = systems.route.biomePlans.lookup.Underworld_F
+        local topology = plan:readTopology(directAccess(completeFState()))
+        local view = systems.ui.layouts.LinearBiome:project(
+            plan,
+            topology,
+            systems.ui.selectors.biomes.lookup.Underworld_F
+        )
+
+        lu.assertEquals(view.start.room.roomControlKey, "Underworld_F_Opening02")
+        lu.assertEquals(view.start.room.gameName, "F_Opening02")
+        lu.assertEquals(view.start.room.label, "Opening 02 (1 exit)")
+        lu.assertEquals(#view.batches, 2)
+        lu.assertEquals(view.batches[2].targets[1].room.roomControlKey,
+            "Underworld_F_Combat04")
+        lu.assertTrue(view.batches[2].targets[1].room.picked)
+        lu.assertEquals(view.batches[2].targets[2].room.roomControlKey,
+            "Underworld_F_Combat05")
+        lu.assertFalse(view.batches[2].targets[2].room.picked)
+        lu.assertEquals(view.batches[2].ordinal, 2)
+        lu.assertEquals(view.batches[2].targets[1].category.current, "Combat")
+        lu.assertEquals(view.batches[2].targets[1].category.opts.label, "Exit 1 Type")
+        lu.assertEquals(view.batches[2].targets[1].category.opts.labelWidth, 105)
+        lu.assertEquals(view.batches[2].targets[1].category.opts.values, {
+            "", "Combat", "Miniboss", "Story", "Fountain", "Shop",
+        })
+        lu.assertEquals(
+            view.batches[2].targets[1].roomChoice.optsByCategory.Combat.label,
+            "Room"
+        )
+        lu.assertEquals(
+            view.batches[2].targets[1].roomChoice.optsByCategory.Combat.labelWidth,
+            55
+        )
+        lu.assertTrue(contains(
+            view.batches[2].targets[1].roomChoice.optsByCategory.Combat.values,
+            "Underworld_F_Combat04"
+        ))
+        lu.assertFalse(contains(
+            view.batches[2].targets[1].roomChoice.optsByCategory.Miniboss.values,
+            "Underworld_F_Combat04"
+        ))
+        lu.assertTrue(contains(
+            view.batches[2].targets[1].roomChoice.optsByCategory.Miniboss.values,
+            "Underworld_F_MiniBoss01"
+        ))
+        lu.assertEquals(
+            view.batches[2].targets[1].roomChoice.optsByCategory.Miniboss
+                .displayValues.Underworld_F_MiniBoss01,
+            "Root-Stalker (1 exit)"
+        )
+        lu.assertEquals(view.batches[2].continuation.opts.label, "Next Step")
+        lu.assertEquals(view.tail.current, "terminal")
+        lu.assertEquals(view.terminal.room.roomControlKey, "Underworld_F_PreBoss01")
+        lu.assertEquals(view.terminal.roomContext.activeFreeRewardCount, 1)
+        lu.assertFalse(contains(
+            view.batches[1].targets[1].roomChoice.optsByCategory.Combat.values,
+            "Underworld_F_Combat04"
+        ))
+    end)
+end
+
+function TestUiEditor.testLinearProjectionAlsoConsumesFocusedGTopology()
+    h.withImport(function()
+        local systems = load()
+        local selectorBuilder = h.testImport("mods/ui/selectors.lua")
+        local selectors = selectorBuilder.build(systems.catalog, { "Underworld_G" })
+        local plan = systems.route.biomePlans.lookup.Underworld_G
+        local topology = plan:readTopology(directAccess(completeGState()))
+        local view = systems.ui.layouts.LinearBiome:project(
+            plan,
+            topology,
+            selectors.biomes.lookup.Underworld_G
+        )
+
+        lu.assertEquals(view.start.room.roomControlKey, "Underworld_G_Intro")
+        lu.assertEquals(#view.batches[2].targets, 3)
+        lu.assertEquals(view.batches[2].targets[1].room.roomControlKey,
+            "Underworld_G_Combat03")
+        lu.assertTrue(view.batches[2].targets[1].room.picked)
+        lu.assertEquals(view.terminal.room.roomControlKey, "Underworld_G_PreBoss01")
+        lu.assertEquals(view.terminal.roomContext.activeFreeRewardCount, 2)
+    end)
+end
+
+
+local function fakeField(alias, initial)
+    local value = initial or ""
+    return {
+        alias = alias,
+        controlId = function()
+            return alias
+        end,
+        read = function()
+            return value
+        end,
+        write = function(_, nextValue)
+            value = nextValue
+        end,
+    }
+end
+
+local function fakeDrawUi(changes)
+    local fields = {}
+    local commands = {}
+    local plan = {
+        apply = function(_, command)
+            commands[#commands + 1] = command
+        end,
+        clearTopology = function()
+            commands[#commands + 1] = { kind = "ClearTopology" }
+        end,
+    }
+    local imgui = {
+        AlignTextToFramePadding = function() end,
+        SameLine = function() end,
+        SetCursorPosX = function() end,
+        Spacing = function() end,
+        TextDisabled = function() end,
+    }
+    local ui = {
+        data = {
+            get = function(alias)
+                fields[alias] = fields[alias] or fakeField(alias)
+                return fields[alias]
+            end,
+        },
+        controls = {
+            get = function(key)
+                return key
+            end,
+        },
+        draw = {
+            imgui = imgui,
+            widgets = {
+                text = function() end,
+                separator = function() end,
+                confirmButton = function()
+                    return false
+                end,
+                dropdown = function(field)
+                    local nextValue = changes[field.alias]
+                    if nextValue == nil then
+                        return false
+                    end
+                    changes[field.alias] = nil
+                    field:write(nextValue)
+                    return true
+                end,
+            },
+            control = function() end,
+        },
+    }
+    return ui, plan, commands
+end
+
+local function commandFixture()
+    local opts = { values = {}, displayValues = {} }
+    local categoryOpts = {
+        values = { "", "Combat", "Miniboss" },
+        displayValues = {
+            [""] = "Select...",
+            Combat = "Combat",
+            Miniboss = "Miniboss",
+        },
+        valueLookup = { [""] = true, Combat = true, Miniboss = true },
+    }
+    return {
+        key = "Underworld_F",
+        label = "Erebus",
+        start = {
+            current = "Underworld_F_Opening02",
+            selectorAlias = "start",
+            opts = opts,
+        },
+        batches = {
+            {
+                ordinal = 1,
+                parentRoomControlKey = "Underworld_F_Opening02",
+                parentLabel = "F_Opening02",
+                continuation = {
+                    parentRoomControlKey = "Underworld_F_Opening02",
+                    current = "batch",
+                    selectorAlias = "continuation",
+                    opts = opts,
+                },
+                targets = {
+                    {
+                        exitIndex = 1,
+                        current = "",
+                        category = {
+                            current = nil,
+                            selectorAlias = "category",
+                            opts = categoryOpts,
+                        },
+                        roomChoice = {
+                            selectorAlias = "target",
+                            optsByCategory = {
+                                Combat = opts,
+                                Miniboss = opts,
+                            },
+                        },
+                    },
+                },
+                picked = "",
+                pickedSelectorAlias = "picked",
+                pickedOpts = opts,
+            },
+        },
+    }
+end
+
+function TestUiEditor.testLinearDrawTranslatesSelectorsIntoSemanticCommands()
+    h.withImport(function()
+        local drawer = h.testImport("mods/ui/layouts/linear_biome_draw.lua")
+        local view = commandFixture()
+        local ui, plan, commands = fakeDrawUi({
+            continuation = "terminal",
+        })
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {
+            {
+                kind = "ReplaceWithTerminalTransition",
+                parentRoomControlKey = "Underworld_F_Opening02",
+            },
+        })
+
+        local changes = { category = "Combat" }
+        ui, plan, commands = fakeDrawUi(changes)
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {})
+
+        changes.target = "Underworld_F_Combat03"
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {
+            {
+                kind = "SetTarget",
+                parentRoomControlKey = "Underworld_F_Opening02",
+                exitIndex = 1,
+                roomControlKey = "Underworld_F_Combat03",
+            },
+        })
+
+        view.batches[1].targets[1].current = "Underworld_F_Combat03"
+        view.batches[1].targets[1].category.current = "Combat"
+        ui, plan, commands = fakeDrawUi({ category = "Miniboss" })
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {
+            {
+                kind = "RemoveTarget",
+                parentRoomControlKey = "Underworld_F_Opening02",
+                exitIndex = 1,
+            },
+        })
+    end)
+end
+
+function TestUiEditor.testOuterShellDrawsDeclaredRouteLabels()
+    h.withImport(function()
+        local systems = load()
+        systems.ui.coordinator:rebuild(emptyRuntime(systems, ""))
+        local fields = {}
+        local texts = {}
+        local imgui = {
+            BeginTabBar = function()
+                return true
+            end,
+            BeginTabItem = function()
+                return true
+            end,
+            EndTabItem = function() end,
+            EndTabBar = function() end,
+            BeginChild = function() end,
+            EndChild = function() end,
+            Spacing = function() end,
+        }
+        local ui = {
+            data = {
+                get = function(alias)
+                    fields[alias] = fields[alias] or fakeField(alias, "route")
+                    return fields[alias]
+                end,
+            },
+            controls = {
+                get = function(key)
+                    return key
+                end,
+            },
+            draw = {
+                imgui = imgui,
+                nav = {
+                    verticalTabs = function(opts)
+                        return opts.activeKey
+                    end,
+                },
+                widgets = {
+                    text = function(value)
+                        texts[#texts + 1] = value
+                    end,
+                    separator = function() end,
+                    confirmButton = function()
+                        return false
+                    end,
+                },
+                control = function() end,
+            },
+            resetAll = function() end,
+        }
+
+        systems.ui.drawTab(nil, ui)
+
+        lu.assertTrue(contains(texts, "Underworld Route"))
+        lu.assertTrue(contains(texts, "Surface Route"))
+    end)
+end
+
+return TestUiEditor

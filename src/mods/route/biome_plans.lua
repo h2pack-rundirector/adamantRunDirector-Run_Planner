@@ -4,14 +4,14 @@ local biomePlan = deps.biomePlan
 local biomePlans = {}
 
 local function scopedRooms(catalog, biome)
-    local result = { ordered = {}, lookup = {}, byGameRoomKey = {} }
+    local result = { ordered = {}, lookup = {}, byGameName = {} }
     for _, control in ipairs(catalog.controlManifest.rooms.ordered) do
         if control.biomeStepKey == biome.biomeStepKey then
-            local room = biome.rooms.lookup[control.gameRoomKey]
+            local room = biome.rooms.lookup[control.gameName]
             local record = { control = control, room = room }
             result.ordered[#result.ordered + 1] = record
             result.lookup[control.key] = record
-            result.byGameRoomKey[room.key] = record
+            result.byGameName[room.key] = record
         end
     end
     return result
@@ -39,11 +39,12 @@ function biomePlans.build(catalog, storage, topologyLayouts)
                 rooms = rooms,
                 startRoomLookup = startRoomLookup(biome),
                 storage = storage.biomes.lookup[biome.biomeStepKey],
-                terminal = rooms.byGameRoomKey[biome.layout.terminal.roomKey],
+                terminal = rooms.byGameName[biome.layout.terminal.roomKey],
             }
             local plan = biomePlan.create({
                 biome = biome,
                 context = context,
+                storage = storage.biomes.lookup[biome.biomeStepKey],
                 topologyLayout = topologyLayout,
             })
             result.ordered[#result.ordered + 1] = plan

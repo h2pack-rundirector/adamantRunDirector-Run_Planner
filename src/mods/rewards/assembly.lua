@@ -13,11 +13,12 @@ local shopRegistry = deps.shopRegistry or import("mods/rewards/shops/registry.lu
 local shop = deps.shop or import("mods/rewards/components/shop.lua", nil, {
     primitiveChoice = primitiveChoice,
 })
+local rewardUi = deps.rewardUi or import("mods/rewards/ui.lua")
 
 local assembly = {}
 
 function assembly.create(rewards)
-    local payloadDomains = payloadRegistry.build(rewards.payloadDomains)
+    local payloadDomains = payloadRegistry.build(rewards.payloadDomains, rewards.primitives)
     local primitives = primitiveRegistry.build(rewards.primitives, payloadDomains)
     local bags = bagRegistry.build(rewards.bags, primitives)
     local shops = shopRegistry.build(rewards.shops, primitives)
@@ -32,6 +33,7 @@ function assembly.create(rewards)
         fixed = fixed,
         primitiveChoice = primitiveChoice,
         shop = shop,
+        ui = rewardUi,
     }
 end
 

@@ -106,9 +106,10 @@ local function validateValue(descriptor, value, context)
     end
     if store ~= nil
         and primitive ~= nil
-        and store.primitiveLookup[primitive.key] == nil
+        and store.primitiveLookup[primitive.gameName] == nil
     then
-        fail(context, "rewardType '" .. primitive.key .. "' is not available from store '" .. store.key .. "'")
+        fail(context, "rewardType '" .. primitive.gameName
+            .. "' is not available from store '" .. store.key .. "'")
     end
     if primitive == nil then
         if value.payload ~= nil then
@@ -117,10 +118,10 @@ local function validateValue(descriptor, value, context)
         return storeKey, nil, nil, nil
     end
     local source1, source2 = primitive.encode({
-        rewardType = primitive.key,
+        rewardType = primitive.gameName,
         payload = value.payload,
     }, context)
-    return storeKey, primitive.key, source1, source2
+    return storeKey, primitive.gameName, source1, source2
 end
 
 local function readOptionalField(fields, fieldKey, context)
@@ -188,7 +189,7 @@ function countedChoice.isComplete(descriptor, value)
         or nil
     return store ~= nil
         and primitive ~= nil
-        and store.primitiveLookup[primitive.key] ~= nil
+        and store.primitiveLookup[primitive.gameName] ~= nil
         and primitive.isComplete(value)
 end
 

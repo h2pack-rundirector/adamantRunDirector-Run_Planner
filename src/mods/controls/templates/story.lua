@@ -1,15 +1,12 @@
 local deps = ...
 local fixed = deps.fixed
 local primitives = deps.primitives
+local rewardUi = deps.rewardUi
 
 local story = {}
 
 local function fail(room, message)
     error("Story room '" .. room.key .. "' " .. message, 0)
-end
-
-local function unavailableView()
-    error("planner controls have no production draw view before the editor checkpoint", 0)
 end
 
 function story.prepare(_, room)
@@ -31,7 +28,9 @@ end
 local Template = {}
 
 function Template.prepare(instance)
-    instance.generatedReward = fixed.prepare(primitives.lookup.Story, "Reward")
+    instance.generatedReward = rewardUi.prepareFixed(
+        fixed.prepare(primitives.lookup.Story, "Reward")
+    )
     return instance
 end
 
@@ -67,10 +66,20 @@ function Template.createRuntime(fields, instance)
 end
 
 function Template.createUi(fields, instance)
-    return createRuntime(fields, instance)
+    local control = createRuntime(fields, instance)
+
+    function control.drawGeneratedReward(_, draw)
+        rewardUi.drawFixed(draw, fields, instance.generatedReward)
+    end
+
+    return control
 end
 
-Template.views = { default = unavailableView }
+Template.views = {
+    default = function(draw, control)
+        control:drawGeneratedReward(draw)
+    end,
+}
 story.template = Template
 
 return story

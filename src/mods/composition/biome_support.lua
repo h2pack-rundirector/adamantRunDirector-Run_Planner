@@ -7,6 +7,7 @@ local biomeSupport = {}
 local CAPABILITIES = {
     "focusedRoomControls",
     "topology",
+    "authoredEditor",
     "materialization",
     "headlessPipeline",
     "plannerActive",
@@ -63,6 +64,7 @@ local function implementationEvidence(controlManifest, supplied)
     local evidence = {
         focusedRoomControls = {},
         topology = supplied.topology or {},
+        authoredEditor = supplied.authoredEditor or {},
         materialization = supplied.materialization or {},
         headlessPipeline = supplied.headlessPipeline or {},
         plannerActive = supplied.plannerActive or {},
@@ -100,28 +102,43 @@ local function validateEvidence(record, path, evidence, transitionalByBiome)
     end
 end
 
-local function validateContiguousActivePrefixes(catalog, records)
+local function contiguousPrefix(catalogRoute, records, capability, path)
+    local maximumPrefix = nil
+    local encounteredUnsupported = false
+    for _, biomeStep in ipairs(catalogRoute.biomeSteps) do
+        local record = records[biomeStep.key]
+        if record[capability] then
+            if encounteredUnsupported then
+                fail(
+                    path,
+                    "biome '" .. biomeStep.key .. "' does not form a contiguous prefix"
+                )
+            end
+            maximumPrefix = biomeStep.key
+        else
+            encounteredUnsupported = true
+        end
+    end
+    return maximumPrefix
+end
+
+local function validateContiguousPrefixes(catalog, records)
     local routes = { ordered = {}, lookup = {} }
     for _, route in ipairs(catalog.routes.ordered) do
-        local maximumActivePrefix = nil
-        local encounteredInactive = false
-        for _, biomeStep in ipairs(route.biomeSteps) do
-            local record = records[biomeStep.key]
-            if record.plannerActive then
-                if encounteredInactive then
-                    fail(
-                        "routes." .. route.key .. ".plannerActive",
-                        "biome '" .. biomeStep.key .. "' does not form a contiguous active prefix"
-                    )
-                end
-                maximumActivePrefix = biomeStep.key
-            else
-                encounteredInactive = true
-            end
-        end
         local descriptor = {
             key = route.key,
-            maximumActivePrefix = maximumActivePrefix,
+            maximumEditablePrefix = contiguousPrefix(
+                route,
+                records,
+                "authoredEditor",
+                "routes." .. route.key .. ".authoredEditor"
+            ),
+            maximumActivePrefix = contiguousPrefix(
+                route,
+                records,
+                "plannerActive",
+                "routes." .. route.key .. ".plannerActive"
+            ),
         }
         routes.ordered[#routes.ordered + 1] = descriptor
         routes.lookup[route.key] = descriptor
@@ -164,8 +181,10 @@ function biomeSupport.create(catalog, controlManifest, capabilityEvidence)
             record[capability] = source[capability]
         end
         requireDependency(record, "topology", "focusedRoomControls", path)
+        requireDependency(record, "authoredEditor", "topology", path)
         requireDependency(record, "materialization", "topology", path)
         requireDependency(record, "headlessPipeline", "materialization", path)
+        requireDependency(record, "plannerActive", "authoredEditor", path)
         requireDependency(record, "plannerActive", "headlessPipeline", path)
         validateEvidence(record, path, evidence, transitionalByBiome)
 
@@ -178,7 +197,7 @@ function biomeSupport.create(catalog, controlManifest, capabilityEvidence)
             fail("biomes", "missing declaration for biome '" .. biome.biomeStepKey .. "'")
         end
     end
-    result.routes = validateContiguousActivePrefixes(catalog, result.biomes.lookup)
+    result.routes = validateContiguousPrefixes(catalog, result.biomes.lookup)
     return result
 end
 

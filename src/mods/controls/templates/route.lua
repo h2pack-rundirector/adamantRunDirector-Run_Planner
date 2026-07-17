@@ -1,7 +1,3 @@
-local function unavailableView()
-    error("planner controls have no production draw view before the editor checkpoint", 0)
-end
-
 local function requireAllowed(value, lookup, context)
     if lookup[value] ~= true then
         error(context .. " does not allow value '" .. tostring(value) .. "'", 0)
@@ -9,6 +5,16 @@ local function requireAllowed(value, lookup, context)
 end
 
 local Route = {}
+
+function Route.prepare(instance)
+    instance.configuredPrefixOpts = {
+        label = "Configured Biomes",
+        values = instance.configuredPrefixValues,
+        displayValues = instance.configuredPrefixLabels,
+        controlWidth = 170,
+    }
+    return instance
+end
 
 function Route.storage()
     return {
@@ -49,9 +55,17 @@ function Route.createUi(fields, instance)
         fields.ConfiguredBiomePrefix:write(configuredBiomePrefix)
     end
 
+    function control.drawConfiguredPrefix(_, draw)
+        draw.widgets.dropdown(fields.ConfiguredBiomePrefix, instance.configuredPrefixOpts)
+    end
+
     return control
 end
 
-Route.views = { default = unavailableView }
+Route.views = {
+    default = function(draw, control)
+        control:drawConfiguredPrefix(draw)
+    end,
+}
 
 return Route

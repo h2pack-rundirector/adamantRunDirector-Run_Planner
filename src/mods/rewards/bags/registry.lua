@@ -14,9 +14,9 @@ local function createBag(declaration, primitives)
             primitive = primitive,
             requirementKey = declarationEntry.requirementKey,
         }
-        if bag.optionLookup[primitive.key] == nil then
+        if bag.optionLookup[primitive.gameName] == nil then
             bag.options[#bag.options + 1] = primitive
-            bag.optionLookup[primitive.key] = primitive
+            bag.optionLookup[primitive.gameName] = primitive
         end
     end
     return bag

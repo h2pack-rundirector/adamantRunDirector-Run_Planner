@@ -172,15 +172,36 @@ Route composition now publishes validated `topology = true` evidence for F and
 G, and biome support accepts exactly those two claims. This closes Checkpoint
 3.
 
-Checkpoint 4A next consolidates Biome Plan persistence ownership, mounts the
-thin authored F editor, and expands the Underworld Route Control's
-`maximumEditablePrefix` to F while retaining an empty default. F earns
-`authoredEditor` without claiming materialization, headless-pipeline, or
-planner-active support. Checkpoint 4B then begins canonical materialization
-with F; G retains topology support without claiming authored-editor,
-materialization, or later capabilities. No planner-active semantic editor,
-canonical biome snapshot, route validator, execution compiler, or runtime hook
-is active.
+Checkpoint 4A is now in progress. Its first production slice consolidates
+Biome Plan persistence ownership and mounts the thin authored editor:
+
+- layout codecs own LinearBiome and HubBiome storage descriptors, reads, and
+  replacements; the module manifest only collects their roots and generic
+  state access no longer interprets either physical layout;
+- short-lived runtime and UI plan refs expose the same semantic authored model;
+- control preparation now precedes support composition, while Route Control
+  instances derive their configured-prefix domains afterward from
+  `maximumEditablePrefix`;
+- F earns `authoredEditor = true`, making Underworld configurable as empty or
+  F while Surface remains empty and G remains topology-only;
+- the permanent horizontal route shell and vertical route/biome navigation
+  expose Route and Erebus panels plus Settings;
+- the LinearBiome projector and drawer expose start, batches, physical targets,
+  picked continuations, continuation replacement, terminal entry, clearing,
+  and referenced picked and unpicked Room Controls through semantic Biome Plan
+  commands;
+- focused F Room Controls now draw their integrated reward, payload, shop,
+  purchase, and forked-preboss state through prepared stable option domains;
+- activation, meaningful commit, and setting-changing reload rebuild and
+  atomically publish the committed authored view outside draw.
+
+Focused fake-ImGui coverage proves semantic command translation, committed F
+publication, picked and unpicked projection, and shared LinearBiome projection
+against G. The remaining Checkpoint 4A work is structural and local-completeness
+presentation, lifecycle/reset round-trip coverage, unchanged-draw allocation
+coverage, and the in-game interaction probe. No canonical biome snapshot,
+route validator, execution compiler, runtime hook, or planner-active claim is
+active.
 
 The lifecycle design has also been simplified before its Checkpoint 5
 implementation: activation, meaningful commit, and meaningful reload will call

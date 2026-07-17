@@ -37,6 +37,7 @@ return {
     rooms = {
         {
             key = "Q_Intro",
+            label = "Entrance",
             kind = "Intro",
             templateKey = "FixedIntro",
             tags = {},
@@ -56,6 +57,7 @@ return {
         },
         {
             key = "Q_Combat01",
+            label = "Combat 01",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -75,6 +77,7 @@ return {
         },
         {
             key = "Q_Combat02",
+            label = "Combat 02",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -94,6 +97,7 @@ return {
         },
         {
             key = "Q_Combat03",
+            label = "Combat 03",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -117,6 +121,7 @@ return {
         },
         {
             key = "Q_Combat04",
+            label = "Combat 04",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -136,6 +141,7 @@ return {
         },
         {
             key = "Q_Combat05",
+            label = "Combat 05",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -159,6 +165,7 @@ return {
         },
         {
             key = "Q_Combat06",
+            label = "Combat 06",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -178,6 +185,7 @@ return {
         },
         {
             key = "Q_Combat07",
+            label = "Combat 07",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -197,6 +205,7 @@ return {
         },
         {
             key = "Q_Combat08",
+            label = "Combat 08",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -216,6 +225,7 @@ return {
         },
         {
             key = "Q_Combat09",
+            label = "Combat 09",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -235,6 +245,7 @@ return {
         },
         {
             key = "Q_Combat12",
+            label = "Combat 12",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -258,6 +269,7 @@ return {
         },
         {
             key = "Q_Combat13",
+            label = "Combat 13",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -281,6 +293,7 @@ return {
         },
         {
             key = "Q_Combat14",
+            label = "Combat 14",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -304,6 +317,7 @@ return {
         },
         {
             key = "Q_Combat15",
+            label = "Combat 15",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -327,6 +341,7 @@ return {
         },
         {
             key = "Q_Combat16",
+            label = "Combat 16",
             kind = "Combat",
             templateKey = "StandardCombat",
             tags = {},
@@ -346,6 +361,7 @@ return {
         },
         {
             key = "Q_MiniBoss02",
+            label = "Spawn of Typhon",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -365,6 +381,7 @@ return {
         },
         {
             key = "Q_MiniBoss05",
+            label = "Twins of Typhon",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -384,6 +401,7 @@ return {
         },
         {
             key = "Q_MiniBoss03",
+            label = "Tail of Typhon",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -403,6 +421,7 @@ return {
         },
         {
             key = "Q_MiniBoss04",
+            label = "Eye of Typhon",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = {},
@@ -422,6 +441,7 @@ return {
         },
         {
             key = "Q_PreBoss01",
+            label = "Preboss",
             kind = "Preboss",
             templateKey = "DirectPreboss",
             tags = {},

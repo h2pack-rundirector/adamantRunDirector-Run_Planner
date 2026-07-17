@@ -60,6 +60,7 @@ function distinctPair.create(valueDomain)
         arity = 2,
         values = valueDomain.values,
         valueLookup = valueDomain.valueLookup,
+        valueLabels = valueDomain.valueLabels,
         valueDomain = valueDomain,
     }
 

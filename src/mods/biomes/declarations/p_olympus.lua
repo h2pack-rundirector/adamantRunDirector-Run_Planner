@@ -17,6 +17,7 @@ return {
     rooms = {
         {
             key = "P_Intro",
+            label = "Entrance",
             kind = "Intro",
             templateKey = "FixedIntro",
             tags = { "Outdoor" },
@@ -39,6 +40,7 @@ return {
         },
         {
             key = "P_Combat01",
+            label = "Combat 01",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Outdoor" },
@@ -61,6 +63,7 @@ return {
         },
         {
             key = "P_Combat02",
+            label = "Combat 02",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Indoor" },
@@ -83,6 +86,7 @@ return {
         },
         {
             key = "P_Combat03",
+            label = "Combat 03",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Outdoor" },
@@ -105,6 +109,7 @@ return {
         },
         {
             key = "P_Combat04",
+            label = "Combat 04",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Indoor" },
@@ -127,6 +132,7 @@ return {
         },
         {
             key = "P_Combat05",
+            label = "Combat 05",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Outdoor" },
@@ -143,6 +149,7 @@ return {
         },
         {
             key = "P_Combat06",
+            label = "Combat 06",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Outdoor" },
@@ -159,6 +166,7 @@ return {
         },
         {
             key = "P_Combat07",
+            label = "Combat 07",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Indoor" },
@@ -181,6 +189,7 @@ return {
         },
         {
             key = "P_Combat08",
+            label = "Combat 08",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Indoor" },
@@ -203,6 +212,7 @@ return {
         },
         {
             key = "P_Combat09",
+            label = "Combat 09",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Indoor" },
@@ -225,6 +235,7 @@ return {
         },
         {
             key = "P_Combat10",
+            label = "Combat 10",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Indoor" },
@@ -247,6 +258,7 @@ return {
         },
         {
             key = "P_Combat11",
+            label = "Combat 11",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Outdoor" },
@@ -263,6 +275,7 @@ return {
         },
         {
             key = "P_Combat12",
+            label = "Combat 12",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Indoor" },
@@ -285,6 +298,7 @@ return {
         },
         {
             key = "P_Combat13",
+            label = "Combat 13",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Outdoor" },
@@ -301,6 +315,7 @@ return {
         },
         {
             key = "P_Combat14",
+            label = "Combat 14",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Outdoor" },
@@ -317,6 +332,7 @@ return {
         },
         {
             key = "P_Combat15",
+            label = "Combat 15",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Indoor" },
@@ -339,6 +355,7 @@ return {
         },
         {
             key = "P_Combat16",
+            label = "Combat 16",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Outdoor" },
@@ -355,6 +372,7 @@ return {
         },
         {
             key = "P_Combat17",
+            label = "Combat 17",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Outdoor" },
@@ -377,6 +395,7 @@ return {
         },
         {
             key = "P_Combat18",
+            label = "Combat 18",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Indoor" },
@@ -410,6 +429,7 @@ return {
         },
         {
             key = "P_Combat19",
+            label = "Combat 19",
             kind = "Combat",
             templateKey = "OlympusCombat",
             tags = { "Outdoor" },
@@ -426,6 +446,7 @@ return {
         },
         {
             key = "P_Story01",
+            label = "Dionysus",
             kind = "Story",
             templateKey = "Story",
             tags = { "Indoor" },
@@ -458,6 +479,7 @@ return {
         },
         {
             key = "P_Reprieve01",
+            label = "Fountain",
             kind = "Reprieve",
             templateKey = "Fountain",
             tags = { "Indoor" },
@@ -479,6 +501,7 @@ return {
         },
         {
             key = "P_Shop01",
+            label = "Midshop",
             kind = "Shop",
             templateKey = "Shop",
             tags = { "Outdoor" },
@@ -511,6 +534,7 @@ return {
         },
         {
             key = "P_MiniBoss01",
+            label = "Talos",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = { "Indoor" },
@@ -550,6 +574,7 @@ return {
         },
         {
             key = "P_MiniBoss02",
+            label = "Mega-Dracon",
             kind = "Miniboss",
             templateKey = "Miniboss",
             tags = { "Indoor" },
@@ -586,6 +611,7 @@ return {
         },
         {
             key = "P_PreBoss01",
+            label = "Preboss",
             kind = "Preboss",
             templateKey = "ForkedPreboss",
             tags = {},

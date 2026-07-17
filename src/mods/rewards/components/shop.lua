@@ -25,6 +25,7 @@ function shop.prepare(profile, fieldPrefix)
     for _, profileSlot in ipairs(profile.slots.ordered) do
         local slot = {
             key = profileSlot.key,
+            label = profileSlot.label,
             purchasedField = fieldPrefix .. profileSlot.key .. "Purchased",
             reward = primitiveChoice.prepare(
                 profileSlot.optionSet,

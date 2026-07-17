@@ -46,10 +46,12 @@ before Lib prepares the instance:
 
 ```lua
 {
+    key = "Underworld_F_Combat04",
     template = "StandardCombat",
     routeKey = "Underworld",
     biomeStepKey = "Underworld_F",
-    gameRoomKey = "F_Combat04",
+    gameName = "F_Combat04",
+    label = "Combat 04",
     roomKind = "Combat",
     incomingReward = <validated compiled producer binding>,
     encounterProfile = <validated resolved descriptor>,

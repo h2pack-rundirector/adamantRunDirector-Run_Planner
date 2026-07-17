@@ -1,15 +1,12 @@
 local deps = ...
 local countedBindings = deps.countedBindings
 local countedChoice = deps.countedChoice
+local rewardUi = deps.rewardUi
 
 local miniboss = {}
 
 local function fail(room, message)
     error("Miniboss room '" .. room.key .. "' " .. message, 0)
-end
-
-local function unavailableView()
-    error("planner controls have no production draw view before the editor checkpoint", 0)
 end
 
 function miniboss.prepare(_, room)
@@ -28,10 +25,10 @@ end
 local Template = {}
 
 function Template.prepare(instance)
-    instance.generatedReward = countedChoice.prepare(
+    instance.generatedReward = rewardUi.prepareCounted(countedChoice.prepare(
         countedBindings.compile(instance.incomingReward),
         "Reward"
-    )
+    ))
     return instance
 end
 
@@ -74,10 +71,19 @@ function Template.createUi(fields, instance)
         countedChoice.write(fields, instance.generatedReward, value, rewardContext)
     end
 
+
+    function control.drawGeneratedReward(_, draw)
+        rewardUi.drawCounted(draw, fields, instance.generatedReward)
+    end
+
     return control
 end
 
-Template.views = { default = unavailableView }
+Template.views = {
+    default = function(draw, control)
+        control:drawGeneratedReward(draw)
+    end,
+}
 miniboss.template = Template
 
 return miniboss

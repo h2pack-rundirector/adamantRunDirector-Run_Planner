@@ -5,10 +5,8 @@ local h = dofile("tests/support/import_harness.lua")
 
 TestManagedPersistence = {}
 
-local function load(activePrefixEnds)
-    local systems = h.testImport("mods/systems.lua").create({
-        activePrefixEnds = activePrefixEnds,
-    })
+local function load()
+    local systems = h.testImport("mods/systems.lua").create()
     return systems.catalog, systems.route.storage, systems.controls.instances, systems.controls.templates, systems
 end
 
@@ -117,7 +115,10 @@ function TestManagedPersistence.testBuildsStaticControlTaxonomyAndInstances()
         lu.assertEquals(catalog.controlManifest.routes.lookup.Underworld.configuredPrefixValues, {
             "", "Underworld_F", "Underworld_G", "Underworld_H", "Underworld_I",
         })
-        lu.assertEquals(instances.Underworld.configuredPrefixValues, { "" })
+        lu.assertEquals(instances.Underworld.configuredPrefixValues, {
+            "", "Underworld_F",
+        })
+        lu.assertEquals(instances.Surface.configuredPrefixValues, { "" })
         lu.assertEquals(instances.Surface_Q_PreBoss01.template, "DirectPreboss")
         lu.assertEquals(instances.Underworld_F_PreBoss01.template, "ForkedPreboss")
         lu.assertEquals(instances.Underworld_F_PreBoss01.entryOfferPolicy.maxFreeRewards, 1)
@@ -147,7 +148,7 @@ function TestManagedPersistence.testManagedStateInstallsCompleteDeclarations()
 
         local installed = systems.managedState.install(module)
 
-        lu.assertEquals(#captured.storage, 27)
+        lu.assertEquals(#captured.storage, 91)
         lu.assertEquals(countKeys(captured.templates), 18)
         lu.assertEquals(countKeys(captured.instances), 211)
         lu.assertIs(captured.storage, installed.storage.moduleStorage)
@@ -166,7 +167,16 @@ function TestManagedPersistence.testSystemsComposesInjectedSubsystemsInOrder()
         instances = {},
     }
     local biomeSupport = { key = "biome support" }
-    local route = { storage = {}, stateAccess = {} }
+    local route = {
+        storage = { moduleStorage = {}, biomes = {} },
+        stateAccess = {},
+        capabilityEvidence = { topology = { Underworld_F = true } },
+    }
+    local ui = {
+        key = "ui",
+        storage = {},
+        capabilityEvidence = { authoredEditor = { Underworld_F = true } },
+    }
     local managedState = { install = function() end }
     local calls = {}
     local systemFactory = h.testImport("mods/systems.lua", nil, {
@@ -183,8 +193,8 @@ function TestManagedPersistence.testSystemsComposesInjectedSubsystemsInOrder()
             end,
         },
         controlsAssembly = {
-            create = function(catalog, opts)
-                calls[#calls + 1] = { name = "controls", catalog = catalog, opts = opts }
+            prepare = function(catalog)
+                calls[#calls + 1] = { name = "controls", catalog = catalog }
                 return controls
             end,
         },
@@ -205,12 +215,21 @@ function TestManagedPersistence.testSystemsComposesInjectedSubsystemsInOrder()
                 return route
             end,
         },
+        uiAssembly = {
+            create = function(catalog, assembledRoute)
+                calls[#calls + 1] = {
+                    name = "ui",
+                    catalog = catalog,
+                    route = assembledRoute,
+                }
+                return ui
+            end,
+        },
     })
     local catalogOverrides = { routes = {} }
 
     local result = systemFactory.create({
         catalogOverrides = catalogOverrides,
-        activePrefixEnds = { Underworld = "Underworld_G" },
         biomeCapabilityEvidence = { topology = {} },
         managedState = managedState,
     })
@@ -220,18 +239,86 @@ function TestManagedPersistence.testSystemsComposesInjectedSubsystemsInOrder()
     lu.assertIs(result.controls, controls)
     lu.assertIs(result.biomeSupport, biomeSupport)
     lu.assertIs(result.route, route)
+    lu.assertIs(result.ui, ui)
     lu.assertIs(result.managedState, managedState)
     lu.assertEquals(calls[1], { name = "catalog", value = catalogOverrides })
     lu.assertEquals(calls[2], { name = "rewards", value = rawRewards })
     lu.assertIs(calls[3].catalog, rawCatalog)
-    lu.assertEquals(calls[3].opts.activePrefixEnds, { Underworld = "Underworld_G" })
     lu.assertIs(calls[4].catalog, enrichedCatalog)
     lu.assertEquals(calls[5], {
+        name = "ui",
+        catalog = enrichedCatalog,
+        route = route,
+    })
+    lu.assertEquals(calls[6], {
         name = "biomeSupport",
         catalog = enrichedCatalog,
         manifest = controls.manifest,
-        evidence = { topology = {} },
+        evidence = {
+            topology = {},
+            authoredEditor = { Underworld_F = true },
+        },
     })
+end
+
+function TestManagedPersistence.testSystemsDoNotMutatePreparedControlsWhenAttachingInstances()
+    local rawCatalog = { rewards = {} }
+    local enrichedCatalog = { key = "enriched" }
+    local prepared = {
+        catalog = enrichedCatalog,
+        manifest = {},
+        templates = {},
+    }
+    local instances = { Underworld = {} }
+    local route = {
+        storage = { moduleStorage = {}, biomes = {} },
+        capabilityEvidence = {},
+    }
+    local routeSupport = { lookup = {} }
+    local factory = h.testImport("mods/systems.lua", nil, {
+        catalogAssembly = {
+            create = function()
+                return rawCatalog
+            end,
+        },
+        rewardAssembly = {
+            create = function()
+                return {}
+            end,
+        },
+        controlsAssembly = {
+            prepare = function()
+                return prepared
+            end,
+            createInstances = function(value, support)
+                lu.assertIs(value, prepared)
+                lu.assertIs(support, routeSupport)
+                return instances
+            end,
+        },
+        routeAssembly = {
+            create = function()
+                return route
+            end,
+        },
+        uiAssembly = {
+            create = function()
+                return { storage = {}, capabilityEvidence = {} }
+            end,
+        },
+        biomeSupportAssembly = {
+            create = function()
+                return { routes = routeSupport }
+            end,
+        },
+    })
+
+    local result = factory.create({ managedState = {} })
+
+    lu.assertNil(prepared.instances)
+    lu.assertNotIs(result.controls, prepared)
+    lu.assertIs(result.controls.instances, instances)
+    lu.assertIs(result.controls.catalog, enrichedCatalog)
 end
 
 function TestManagedPersistence.testControlAssemblyDoesNotMutateValidatedCatalog()
@@ -466,7 +553,8 @@ function TestManagedPersistence.testInstanceDeclarationsRejectPreparedCollaborat
                         templateKey = "StandardCombat",
                         routeKey = "Underworld",
                         biomeStepKey = "Underworld_F",
-                        gameRoomKey = "F_Combat01",
+                        gameName = "F_Combat01",
+                        label = "Combat 01",
                         incomingReward = {},
                         prepared = { generatedReward = {} },
                     },
@@ -501,9 +589,7 @@ end
 
 function TestManagedPersistence.testRouteRefsShareReadsButOnlyUiCanWrite()
     h.withImport(function()
-        local _, _, instances, templates = load({
-            Underworld = "Underworld_G",
-        })
+        local _, _, instances, templates = load()
         local instance = namedInstance(instances.Underworld, "Underworld")
         local fields = fieldsFor(templates.Route.storage(instance))
         local runtime = templates.Route.createRuntime(fields, instance)
@@ -512,8 +598,8 @@ function TestManagedPersistence.testRouteRefsShareReadsButOnlyUiCanWrite()
         lu.assertEquals(runtime:read(), "")
         lu.assertEquals(ui:read(), "")
         lu.assertNil(runtime.write)
-        ui:write("Underworld_G")
-        lu.assertEquals(runtime:read(), "Underworld_G")
+        ui:write("Underworld_F")
+        lu.assertEquals(runtime:read(), "Underworld_F")
         lu.assertErrorMsgContains("does not allow value", function()
             ui:write("Surface_Q")
         end)
@@ -655,33 +741,49 @@ function TestManagedPersistence.testStateAccessKeepsRuntimeReadOnlyAndValidatesA
             storeKey = "RunProgress",
             rewardType = "MaxHealthDrop",
         })
-        lu.assertEquals(runtime:readBiome("Underworld_F").batches[1], {
+        local function readAuthored(biomeStepKey)
+            local descriptor = storage.biomes.lookup[biomeStepKey]
+            return systems.route.topologyLayouts[descriptor.layoutKind].readAuthored(
+                runtime,
+                descriptor
+            )
+        end
+        local fAuthored = systems.route.biomePlans.lookup.Underworld_F
+            :bind(runtime):readAuthored()
+        lu.assertEquals(fAuthored.batches[1], {
             parentRoomControlKey = "Underworld_F_Opening01",
         })
-        lu.assertEquals(runtime:readBiome("Underworld_F").layoutKind, "LinearBiome")
-        lu.assertEquals(runtime:readBiome("Underworld_F").selectedStartRoomControlKey, "")
-        lu.assertEquals(runtime:readBiome("Underworld_F").terminalTransition, {
+        lu.assertEquals(fAuthored.layoutKind, "LinearBiome")
+        lu.assertEquals(fAuthored.selectedStartRoomControlKey, "")
+        lu.assertEquals(fAuthored.terminalTransition, {
             parentRoomControlKey = "",
         })
-        lu.assertEquals(runtime:readBiome("Underworld_I").maxNonGoalRewards, 4)
-        lu.assertEquals(runtime:readBiome("Underworld_I").terminalTransition.companionTargets, {
+        local iAuthored = readAuthored("Underworld_I")
+        lu.assertEquals(iAuthored.maxNonGoalRewards, 4)
+        lu.assertEquals(iAuthored.terminalTransition.companionTargets, {
             { exitIndex = 2, roomControlKey = "Underworld_I_Combat17" },
         })
-        lu.assertEquals(runtime:readBiome("Surface_N").layoutKind, "HubBiome")
-        lu.assertEquals(runtime:readBiome("Surface_N").hubTargets, {
+        local nAuthored = readAuthored("Surface_N")
+        lu.assertEquals(nAuthored.layoutKind, "HubBiome")
+        lu.assertEquals(nAuthored.hubTargets, {
             { doorIndex = 1, roomControlKey = "Surface_N_Combat01", visitOrder = 3 },
         })
-        lu.assertFalse(runtime:readBiome("Surface_N").terminalTransition)
+        lu.assertFalse(nAuthored.terminalTransition)
 
         values.Underworld_F_SelectedStartRoomControlKey = "Underworld_F_Combat01"
         lu.assertErrorMsgContains("selected start does not allow value", function()
-            runtime:readBiome("Underworld_F")
+            systems.route.biomePlans.lookup.Underworld_F:bind(runtime):readAuthored()
         end)
         values.Underworld_F_SelectedStartRoomControlKey = ""
 
         values.Underworld_I_MaxNonGoalRewards = 2
         lu.assertErrorMsgContains("does not allow value '2'", function()
-            runtime:readBiome("Underworld_I")
+            readAuthored("Underworld_I")
+        end)
+
+        values.Surface_N_HubDoorCount = 7
+        lu.assertErrorMsgContains("does not allow value '7'", function()
+            readAuthored("Surface_N")
         end)
     end)
 end

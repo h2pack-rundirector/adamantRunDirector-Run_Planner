@@ -25,23 +25,32 @@ local function readRows(data, root)
     return rows
 end
 
-local function readAllowedScalar(data, root, path)
-    local value = data.read(root.alias)
-    if root.valueLookup ~= nil
-        and value ~= root.storage.default
-        and root.valueLookup[value] ~= true
-    then
-        error(path .. " does not allow value '" .. tostring(value) .. "'", 0)
-    end
-    return value
-end
-
 local function preparedRows(root, rows, path)
-    if #rows > root.storage.maxRows then
+    if type(rows) ~= "table" then
+        error(path .. " must be a dense array", 0)
+    end
+    local count = 0
+    local maximum = 0
+    for key, row in pairs(rows) do
+        if type(key) ~= "number"
+            or key ~= math.floor(key)
+            or key < 1
+            or type(row) ~= "table"
+        then
+            error(path .. " must be a dense array of rows", 0)
+        end
+        count = count + 1
+        maximum = math.max(maximum, key)
+    end
+    if count ~= maximum then
+        error(path .. " must be a dense array of rows", 0)
+    end
+    if maximum > root.storage.maxRows then
         error(path .. " exceeds its bounded row capacity", 0)
     end
     local result = {}
-    for rowIndex, row in ipairs(rows) do
+    for rowIndex = 1, maximum do
+        local row = rows[rowIndex]
         local physical = {}
         for semanticKey, physicalKey in pairs(root.columns) do
             physical[physicalKey] = row[semanticKey]
@@ -58,7 +67,7 @@ local function replaceRows(handle, rows)
     end
 end
 
-local function createCommon(surface, catalog, storage)
+local function createCommon(surface, catalog)
     local access = {}
 
     function access.readRoute(_, routeKey)
@@ -76,140 +85,36 @@ local function createCommon(surface, catalog, storage)
         return surface.controls.read(roomControlKey)
     end
 
-    function access.readBiome(_, biomeStepKey)
-        local descriptor = storage.biomes.lookup[biomeStepKey]
-        if descriptor == nil then
-            error("unknown biome plan '" .. tostring(biomeStepKey) .. "'", 0)
-        end
-        local snapshot = { layoutKind = descriptor.layoutKind }
-        if descriptor.layoutKind == "LinearBiome" then
-            snapshot.batches = readRows(surface.data, descriptor.batches)
-            snapshot.targets = readRows(surface.data, descriptor.targets)
-            snapshot.terminalTransition = {
-                parentRoomControlKey = surface.data.read(descriptor.terminalTransition.alias),
-            }
-            if descriptor.selectedStart ~= nil then
-                snapshot.selectedStartRoomControlKey = readAllowedScalar(
-                    surface.data,
-                    descriptor.selectedStart,
-                    "biome plan '" .. biomeStepKey .. "' selected start"
-                )
-            end
-            if descriptor.companionTargets ~= nil then
-                snapshot.terminalTransition.companionTargets = readRows(
-                    surface.data,
-                    descriptor.companionTargets
-                )
-            end
-        elseif descriptor.layoutKind == "HubBiome" then
-            snapshot.hubTargets = readRows(surface.data, descriptor.hubTargets)
-            snapshot.terminalTransition = surface.data.read(descriptor.terminalTransition.alias)
-        else
-            error("unknown biome layout kind '" .. tostring(descriptor.layoutKind) .. "'", 0)
-        end
-        for _, global in ipairs(descriptor.globals.ordered) do
-            snapshot[global.semanticKey] = readAllowedScalar(
-                surface.data,
-                global,
-                "biome plan '" .. biomeStepKey .. "' authored global '" .. global.semanticKey .. "'"
-            )
-        end
-        return snapshot
+    function access.readScalar(_, root)
+        return surface.data.read(root.alias)
+    end
+
+    function access.readRows(_, root)
+        return readRows(surface.data, root)
     end
 
     return access
 end
 
-function stateAccess.createRuntime(runtime, catalog, storage)
-    return createCommon(runtime, catalog, storage)
+function stateAccess.createRuntime(runtime, catalog)
+    return createCommon(runtime, catalog)
 end
 
-function stateAccess.createUi(ui, catalog, storage)
-    local access = createCommon(ui, catalog, storage)
+function stateAccess.createUi(ui, catalog)
+    local access = createCommon(ui, catalog)
 
     function access.writeRoute(_, routeKey, configuredBiomePrefix)
         requireRoute(catalog, routeKey)
         ui.controls.get(routeKey):write(configuredBiomePrefix)
     end
 
-    function access.writeBiomeGlobal(_, biomeStepKey, semanticKey, value)
-        local descriptor = storage.biomes.lookup[biomeStepKey]
-        if descriptor == nil then
-            error("unknown biome plan '" .. tostring(biomeStepKey) .. "'", 0)
-        end
-        local global = descriptor.globals.lookup[semanticKey]
-        if global == nil then
-            error("biome plan '" .. biomeStepKey .. "' has no authored global '" .. tostring(semanticKey) .. "'", 0)
-        end
-        if value ~= 0 and global.valueLookup[value] ~= true then
-            error(
-                "biome plan '" .. biomeStepKey .. "' authored global '" .. semanticKey
-                    .. "' does not allow value '" .. tostring(value) .. "'",
-                0
-            )
-        end
-        ui.data.get(global.alias):write(value)
+    function access.replaceScalar(_, root, value)
+        ui.data.get(root.alias):write(value)
     end
 
-    function access.replaceBiomeTopology(_, biomeStepKey, authored)
-        local descriptor = storage.biomes.lookup[biomeStepKey]
-        if descriptor == nil then
-            error("unknown biome plan '" .. tostring(biomeStepKey) .. "'", 0)
-        end
-        if descriptor.layoutKind ~= "LinearBiome" then
-            error(
-                "biome plan '" .. biomeStepKey
-                    .. "' has no writable topology adapter for '"
-                    .. descriptor.layoutKind .. "'",
-                0
-            )
-        end
-        if authored.layoutKind ~= descriptor.layoutKind then
-            error(
-                "biome plan '" .. biomeStepKey .. "' expected topology layout '"
-                    .. descriptor.layoutKind .. "'",
-                0
-            )
-        end
-
-        local batches = preparedRows(
-            descriptor.batches,
-            authored.batches,
-            "biome plan '" .. biomeStepKey .. "' batches"
-        )
-        local targets = preparedRows(
-            descriptor.targets,
-            authored.targets,
-            "biome plan '" .. biomeStepKey .. "' targets"
-        )
-        local companions
-        if descriptor.companionTargets ~= nil then
-            companions = preparedRows(
-                descriptor.companionTargets,
-                authored.terminalTransition.companionTargets or {},
-                "biome plan '" .. biomeStepKey .. "' terminal companions"
-            )
-        end
-
-        local batchHandle = ui.data.get(descriptor.batches.alias)
-        local targetHandle = ui.data.get(descriptor.targets.alias)
-        local terminalHandle = ui.data.get(descriptor.terminalTransition.alias)
-        local startHandle = descriptor.selectedStart
-            and ui.data.get(descriptor.selectedStart.alias)
-            or nil
-        local companionHandle = descriptor.companionTargets
-            and ui.data.get(descriptor.companionTargets.alias)
-            or nil
-
-        replaceRows(batchHandle, batches)
-        replaceRows(targetHandle, targets)
-        terminalHandle:write(authored.terminalTransition.parentRoomControlKey)
-        if startHandle ~= nil then
-            startHandle:write(authored.selectedStartRoomControlKey)
-        end
-        if companionHandle ~= nil then
-            replaceRows(companionHandle, companions)
-        end
+    function access.replaceRows(_, root, rows)
+        local prepared = preparedRows(root, rows, "storage root '" .. root.alias .. "'")
+        replaceRows(ui.data.get(root.alias), prepared)
     end
 
     function access.resetAll(_)

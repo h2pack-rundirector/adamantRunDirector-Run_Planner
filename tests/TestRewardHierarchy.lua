@@ -37,6 +37,27 @@ local function storageLookup(storage)
     return result
 end
 
+local function alignmentDraw()
+    local textCalls = {}
+    return {
+        imgui = {
+            SameLine = function() end,
+            Spacing = function() end,
+        },
+        widgets = {
+            text = function(value, opts)
+                textCalls[#textCalls + 1] = { value = value, opts = opts }
+            end,
+            dropdown = function()
+                return false
+            end,
+            checkbox = function()
+                return false
+            end,
+        },
+    }, textCalls
+end
+
 function TestRewardHierarchy.testBuildsPayloadPrimitiveAndBagRegistriesBottomUp()
     h.withImport(function()
         local systems = load()
@@ -57,10 +78,25 @@ function TestRewardHierarchy.testBuildsPayloadPrimitiveAndBagRegistriesBottomUp(
         local runProgress = rewards.bags.lookup.RunProgress
         lu.assertEquals(#runProgress.entries, 18)
         lu.assertEquals(#runProgress.options, 10)
-        lu.assertEquals(runProgress.options[1].key, "Boon")
-        lu.assertEquals(runProgress.entries[1].primitive.key, "Boon")
-        lu.assertEquals(runProgress.entries[4].primitive.key, "Boon")
+        lu.assertEquals(runProgress.options[1].gameName, "Boon")
+        lu.assertEquals(runProgress.entries[1].primitive.gameName, "Boon")
+        lu.assertEquals(runProgress.entries[4].primitive.gameName, "Boon")
+        lu.assertEquals(rewards.primitives.lookup.AresUpgrade.gameName, "AresUpgrade")
+        lu.assertEquals(rewards.primitives.lookup.AresUpgrade.label, "Ares")
+        lu.assertEquals(
+            rewards.payloadDomains.lookup.BoonSource.valueLabels.AresUpgrade,
+            "Ares"
+        )
+        lu.assertIs(
+            rewards.payloadDomains.lookup.DevotionPair.valueLabels,
+            rewards.payloadDomains.lookup.BoonSource.valueLabels
+        )
         lu.assertEquals(runProgress.entries[6].requirementKey, "DevotionLootRequirements")
+        lu.assertEquals(rewards.shops.profiles.lookup.WorldShop.slots.ordered[1], {
+            key = "Boon",
+            label = "Offer 1",
+            optionSet = rewards.shops.optionSets.lookup.WorldShopBoon,
+        })
     end)
 end
 
@@ -91,6 +127,92 @@ function TestRewardHierarchy.testCompilesPerStoreMembershipAndStaticPayloadCapac
         lu.assertEquals(boonOnly.fixedRewardType, "Boon")
         lu.assertEquals(boonOnly.rewardTypes, { "Boon" })
         lu.assertEquals(boonOnly.maxPayloadArity, 1)
+    end)
+end
+
+function TestRewardHierarchy.testPreparedPayloadUiUsesPrimitiveLabelsForGameNames()
+    h.withImport(function()
+        local systems = load()
+        local ordinary = systems.rewards.countedBindings.compile(
+            systems.catalog.biomes.lookup.F.rooms.lookup.F_Combat04.incomingReward
+        )
+        local descriptor = systems.rewards.ui.prepareCounted(
+            systems.rewards.countedChoice.prepare(ordinary, "Reward")
+        )
+
+        lu.assertEquals(
+            descriptor.editor.payloads.Boon.opts.displayValues.AresUpgrade,
+            "Ares"
+        )
+        lu.assertEquals(
+            descriptor.editor.payloads.Devotion.first.displayValues.ApolloUpgrade,
+            "Apollo"
+        )
+        lu.assertEquals(
+            descriptor.editor.payloads.Devotion.second.displayValues.ZeusUpgrade,
+            "Zeus"
+        )
+    end)
+end
+
+function TestRewardHierarchy.testInlineRewardTextAlignsOnlyOnFramedRows()
+    h.withImport(function()
+        local rewardUi = h.testImport("mods/rewards/ui.lua")
+        local boon = { gameName = "Boon", label = "Boon" }
+        local draw, textCalls = alignmentDraw()
+        rewardUi.drawCounted(draw, { Source = field("") }, {
+            view = {
+                fixedStoreKey = "RunProgress",
+                fixedRewardType = "Boon",
+                primitives = { lookup = { Boon = boon } },
+            },
+            fields = { source1 = "Source" },
+            editor = {
+                payloads = {
+                    Boon = { kind = "oneOf", opts = {} },
+                },
+            },
+        })
+        lu.assertEquals(textCalls[1].value, "Boon")
+        lu.assertTrue(textCalls[1].opts.alignToFramePadding)
+
+        draw, textCalls = alignmentDraw()
+        rewardUi.drawFixed(draw, {}, {
+            primitive = { label = "Story" },
+            fields = {},
+            editor = { payload = { kind = "none" } },
+        })
+        lu.assertEquals(textCalls, {
+            { value = "Story" },
+        })
+
+        draw, textCalls = alignmentDraw()
+        rewardUi.drawShop(draw, { Purchased = field(false) }, {
+            slots = {
+                ordered = {
+                    {
+                        key = "Boon",
+                        label = "Offer 1",
+                        purchasedField = "Purchased",
+                        reward = {
+                            optionSet = {
+                                fixedRewardType = "Boon",
+                                primitiveLookup = { Boon = boon },
+                            },
+                            fields = {},
+                            editor = {
+                                payloads = { Boon = { kind = "none" } },
+                            },
+                        },
+                        editor = { purchased = {} },
+                    },
+                },
+            },
+        })
+        lu.assertEquals(textCalls[1].value, "Offer 1")
+        lu.assertTrue(textCalls[1].opts.alignToFramePadding)
+        lu.assertEquals(textCalls[2].value, "Boon")
+        lu.assertTrue(textCalls[2].opts.alignToFramePadding)
     end)
 end
 

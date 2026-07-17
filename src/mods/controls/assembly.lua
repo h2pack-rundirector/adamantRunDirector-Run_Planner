@@ -17,16 +17,25 @@ local function attachManifest(catalog, manifest)
     return result
 end
 
-function assembly.create(catalog, opts)
-    opts = opts or {}
+function assembly.prepare(catalog)
     local manifest = manifestBuilder.build(catalog)
     local enrichedCatalog = attachManifest(catalog, manifest)
     return {
         catalog = enrichedCatalog,
         manifest = manifest,
         templates = templateBuilder.build(enrichedCatalog),
-        instances = instanceBuilder.build(enrichedCatalog, opts.activePrefixEnds),
     }
+end
+
+function assembly.createInstances(prepared, routeSupport)
+    return instanceBuilder.build(prepared.catalog, routeSupport)
+end
+
+function assembly.create(catalog, opts)
+    opts = opts or {}
+    local prepared = assembly.prepare(catalog)
+    prepared.instances = assembly.createInstances(prepared, opts.routeSupport)
+    return prepared
 end
 
 return assembly

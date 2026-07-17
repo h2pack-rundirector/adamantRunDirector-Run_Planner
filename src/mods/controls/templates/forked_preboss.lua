@@ -3,6 +3,7 @@ local countedBindings = deps.countedBindings
 local countedChoice = deps.countedChoice
 local shopComponent = deps.shop
 local shops = deps.shops
+local rewardUi = deps.rewardUi
 
 local forkedPreboss = {}
 
@@ -10,10 +11,6 @@ local STRING_MAX = 16
 
 local function fail(room, message)
     error("ForkedPreboss room '" .. room.key .. "' " .. message, 0)
-end
-
-local function unavailableView()
-    error("planner controls have no production draw view before the editor checkpoint", 0)
 end
 
 local function append(target, values)
@@ -55,19 +52,30 @@ function Template.prepare(instance)
         local mode = "Reward" .. tostring(index)
         entryModeValues[#entryModeValues + 1] = mode
         entryModeLookup[mode] = true
-        freeRewards[index] = countedChoice.prepare(
+        freeRewards[index] = rewardUi.prepareCounted(countedChoice.prepare(
             freeView,
             "FreeReward" .. tostring(index)
-        )
+        ))
     end
     instance.entryModeField = "EntryMode"
     instance.entryModeValues = entryModeValues
     instance.entryModeLookup = entryModeLookup
     instance.freeRewards = freeRewards
-    instance.shop = shopComponent.prepare(
+    instance.shop = rewardUi.prepareShop(shopComponent.prepare(
         shops.profiles.lookup[instance.incomingReward.shopProfileKey],
         "Shop"
-    )
+    ))
+    local entryModeLabels = { [""] = "Select...", Shop = "Shop" }
+    for index = 1, policy.maxFreeRewards do
+        entryModeLabels["Reward" .. tostring(index)] = "Free Reward " .. tostring(index)
+    end
+    instance.entryModeOpts = {
+        label = "Entered Through",
+        values = entryModeValues,
+        displayValues = entryModeLabels,
+        visibleValues = {},
+        controlWidth = 170,
+    }
     return instance
 end
 
@@ -216,10 +224,34 @@ function Template.createUi(fields, instance)
         )
     end
 
+
+    function control.drawPreboss(_, draw, topologyContext)
+        local activeCount = activeFreeRewardCount(topologyContext, instance, controlContext)
+        local opts = instance.entryModeOpts
+        for index = #opts.values, 1, -1 do
+            local value = opts.values[index]
+            opts.visibleValues[value] = value == "" or value == "Shop"
+                or tonumber(string.match(value, "^Reward(%d+)$")) <= activeCount
+        end
+        draw.widgets.dropdown(fields[instance.entryModeField], opts)
+        draw.imgui.Spacing()
+        draw.widgets.text("Shop")
+        rewardUi.drawShop(draw, fields, instance.shop)
+        for index = 1, activeCount do
+            draw.imgui.Spacing()
+            draw.widgets.text("Free Reward " .. tostring(index))
+            rewardUi.drawCounted(draw, fields, instance.freeRewards[index])
+        end
+    end
+
     return control
 end
 
-Template.views = { default = unavailableView }
+Template.views = {
+    default = function(draw, control, _, topologyContext)
+        control:drawPreboss(draw, topologyContext)
+    end,
+}
 forkedPreboss.template = Template
 
 return forkedPreboss

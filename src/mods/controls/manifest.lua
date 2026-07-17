@@ -3,12 +3,12 @@ local templates = deps.templates
 
 local manifest = {}
 
-local function roomControlKey(biomeStepKey, gameRoomKey, biomeKey)
+local function roomControlKey(biomeStepKey, gameName, biomeKey)
     local prefix = biomeKey .. "_"
-    if string.sub(gameRoomKey, 1, #prefix) ~= prefix then
-        error("room key '" .. gameRoomKey .. "' does not match biome '" .. biomeKey .. "'", 0)
+    if string.sub(gameName, 1, #prefix) ~= prefix then
+        error("room game name '" .. gameName .. "' does not match biome '" .. biomeKey .. "'", 0)
     end
-    return biomeStepKey .. "_" .. string.sub(gameRoomKey, #prefix + 1)
+    return biomeStepKey .. "_" .. string.sub(gameName, #prefix + 1)
 end
 
 local function preparedDescriptor(prepared)
@@ -47,7 +47,8 @@ function manifest.build(catalog)
                 key = key,
                 routeKey = biome.routeKey,
                 biomeStepKey = biome.biomeStepKey,
-                gameRoomKey = room.key,
+                gameName = room.key,
+                label = room.label,
                 templateKey = room.templateKey,
                 implementationKind = templates.implementationKind(room.templateKey),
                 incomingReward = room.incomingReward,

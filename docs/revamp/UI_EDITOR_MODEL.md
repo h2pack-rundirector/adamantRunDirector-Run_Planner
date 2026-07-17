@@ -324,6 +324,43 @@ When a selector changes, draw translates the selected semantic value into one
 command during the same draw call. It does not persist the selector as a
 second topology authority.
 
+Generated target selection uses a two-stage UI adapter over the same semantic
+room command:
+
+```text
+Exit N Type [Combat / Miniboss / Story / Fountain / Shop]
+       Room [category-filtered Room Control keys]
+```
+
+The category field is bounded transient state only. The persisted target
+remains one `roomControlKey`; normalized topology, snapshots, and history do
+not contain the category. A referenced room derives its category during
+projection. An empty target may retain a transient category for the current UI
+session while the user chooses a room. Changing the category of an existing
+target issues `RemoveTarget`, allowing the Biome Plan to clear incompatible
+downstream topology, and choosing the second dropdown value issues
+`SetTarget`.
+
+Category labels are UI language over room kinds: `Reprieve` is presented as
+`Fountain`, and `Bridge` shares the `Story` category. Start and terminal roles
+remain declaration-impossible target values. Category-specific room arrays are
+prepared during authored publication and reused during draw; the selector does
+not filter or allocate option arrays per frame.
+
+Constructed room descriptors keep three identities separate:
+
+```text
+key       stable route-qualified Room Control identity
+gameName  game RoomData name
+label     player-facing UI name
+```
+
+Biome topology persists `key`, runtime translation consumes `gameName`, and UI
+projection renders `label`. Exit counts and similar context are presentation
+decoration composed around the label rather than stored inside it. The authored
+catalog requires an explicit label for every room declaration, and UI consumers
+never derive display text from either internal identifier.
+
 Room Control widgets use their template-owned private fields and semantic
 component operations. Store, reward-type, and payload changes must clear or
 normalize incompatible subordinate state before the draw call returns.

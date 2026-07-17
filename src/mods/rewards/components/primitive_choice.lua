@@ -85,10 +85,10 @@ local function validateValue(descriptor, value, context)
         return nil, nil, nil
     end
     local source1, source2 = primitive.encode({
-        rewardType = primitive.key,
+        rewardType = primitive.gameName,
         payload = value.payload,
     }, context)
-    return primitive.key, source1, source2
+    return primitive.gameName, source1, source2
 end
 
 local function readOptionalField(fields, fieldKey, context)
