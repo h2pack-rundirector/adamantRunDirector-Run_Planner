@@ -344,7 +344,8 @@ The topology contact boundary rejects malformed persisted state such as:
 - unknown, cross-route, or cross-biome Room Control keys;
 - duplicate control use where the layout requires injectivity;
 - duplicate physical exit or hub-door indexes;
-- target or batch counts outside declared bounds;
+- target or batch counts outside declared bounds, including an exit index above
+  the biome-wide physical-exit capacity;
 - contradictory batch selection or visit-order state;
 - downstream structure owned by an unselected dead leaf;
 - a terminal transition with an unknown or unselected predecessor;
@@ -354,9 +355,12 @@ The topology contact boundary rejects malformed persisted state such as:
 - state not admitted by the registered layout kind.
 
 Incomplete but well-formed authored state remains readable. Examples include
-an unselected `oneOf` start, a missing target, a batch without a picked target,
-fewer than six N visits, or a selected nonterminal continuation with no next
-batch or terminal transition.
+an unselected `oneOf` start, a missing target, a batch without an available
+picked target, a retained target whose exit index exceeds its current parent's
+physical exits but remains inside the biome-wide bound, fewer than six N
+visits, or a selected nonterminal continuation with no next batch or terminal
+transition. The structural checker reports retained unavailable exits; they do
+not reach materialization or the route validator.
 
 Every physical descriptor must preserve stable Room Control keys, physical
 exit or hub-door order, parent-owned batch state, and declaration-proven finite
@@ -414,8 +418,10 @@ Exact names may change. The invariants do not:
 - the registered topology-layout implementation interprets every operation;
 - it validates the complete mutation before staging writes;
 - it maintains injective room-control references;
-- changing a start, selected continuation, or continuation form removes the
-  incompatible downstream topology;
+- changing a start, picked target, or picked exit atomically re-anchors its
+  existing continuation and retains downstream topology;
+- only explicit decision/topology removal, exit-capacity reconciliation, and
+  incompatible continuation-form replacement delete structural references;
 - topology removal does not reset the unlinked room control;
 - room controls never write parent/peer topology.
 
@@ -442,6 +448,7 @@ Representative commands are:
 { kind = "CreateBatch", parentRoomControlKey = ... }
 { kind = "SetTarget", parentRoomControlKey = ..., exitIndex = ..., roomControlKey = ... }
 { kind = "SetPicked", parentRoomControlKey = ..., exitIndex = ... }
+{ kind = "ReconcileExitCapacity", parentRoomControlKey = ... }
 { kind = "RemoveBatch", parentRoomControlKey = ... }
 { kind = "CreateTerminalTransition", parentRoomControlKey = ... }
 { kind = "SetTerminalCompanion", exitIndex = ..., roomControlKey = ... }
@@ -455,13 +462,25 @@ Representative commands are:
 `unspecified -> specified` transition and atomic replacement. Once specified,
 a physical target cannot return to an empty authored value. It can only be
 replaced by another Room Control or removed as part of deleting/replacing its
-complete decision or topology. Selector sentinels never become target-deletion
-commands.
+complete decision or topology, or by explicit exit-capacity reconciliation
+after its physical exit becomes unavailable. Selector sentinels never become
+target-deletion commands.
 
-Changing a selected start clears topology under the previous start. Changing
-the picked target clears topology under the former selected continuation and
-leaves the new continuation incomplete. Room Control persistence remains
-untouched.
+Changing a selected start, replacing a picked target, or choosing a different
+picked exit retains the dependent continuation. The command atomically
+re-anchors its batch and target owner keys or terminal predecessor from the
+former selected Room Control to the replacement. Unpicked peers and Room
+Control persistence remain untouched.
+
+If that replacement reduces the parent's physical exit count, authored targets
+above the new count remain in normalized topology and are structurally
+unavailable. An unavailable picked target retains its continuation until the
+user explicitly picks an available target; `SetPicked` then re-anchors the same
+continuation. `ReconcileExitCapacity` is enabled only after no unavailable
+target is picked and removes only the unavailable target references. It never
+resets their Room Controls. Restoring capacity before reconciliation reactivates
+the retained targets; expansion with no retained target exposes a new
+unspecified exit. No command chooses a surviving exit automatically.
 
 `CreateBatch` and `CreateTerminalTransition` reject a source that already owns
 the opposite continuation form. The two `ReplaceWith...` commands are the

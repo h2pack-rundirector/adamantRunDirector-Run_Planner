@@ -247,6 +247,17 @@ function linearBiome.create(catalog)
         for batchIndex, batch in ipairs(topology.batches) do
             local parent = rooms.lookup[batch.parentRoomControlKey]
             local byExit = targetByExit(batch)
+            local activeExitCount = #parent.room.exits
+            local hasUnavailableTargets = false
+            local unavailablePicked = false
+            for _, target in ipairs(batch.targets) do
+                if target.exitIndex > activeExitCount then
+                    hasUnavailableTargets = true
+                    if target.picked then
+                        unavailablePicked = true
+                    end
+                end
+            end
             local batchView = {
                 ordinal = batchIndex,
                 parentRoomControlKey = batch.parentRoomControlKey,
@@ -257,41 +268,66 @@ function linearBiome.create(catalog)
                     "RemoveBatch",
                     batch.parentRoomControlKey
                 ),
-                singleExit = #parent.room.exits == 1,
+                singleExit = activeExitCount == 1,
+                hasUnavailableTargets = hasUnavailableTargets,
+                canReconcileExitCapacity = hasUnavailableTargets
+                    and not unavailablePicked,
+                reconcileButtonLabel = actionLabel(
+                    "Remove Unavailable Exits",
+                    "ReconcileExitCapacity",
+                    batch.parentRoomControlKey
+                ),
                 targets = {},
             }
-            for exitIndex = 1, #parent.room.exits do
-                local target = byExit[exitIndex]
+            local function appendTarget(exitIndex, target, available)
                 local targetControlKey = target and target.roomControlKey or ""
-                local currentCategory, categoryOpts, roomOptsByCategory =
-                    targetSelectionOptions(
-                        biome,
-                        rooms,
-                        claims,
-                        targetControlKey,
-                        exitIndex
-                    )
-                local targetSelectors = selectors.batches[batchIndex].targets[exitIndex]
-                batchView.targets[exitIndex] = {
+                local targetView = {
                     exitIndex = exitIndex,
+                    available = available,
                     current = targetControlKey,
                     pickedRadioLabel = "Picked##RunPlanner_"
                         .. batch.parentRoomControlKey .. "_Exit" .. tostring(exitIndex),
-                    category = {
-                        current = currentCategory,
-                        selectorAlias = targetSelectors.category,
-                        opts = categoryOpts,
-                    },
-                    roomChoice = {
-                        selectorAlias = targetSelectors.room,
-                        optsByCategory = roomOptsByCategory,
-                    },
                     room = roomOccurrence(
                         rooms,
                         target and target.roomControlKey or nil,
                         target and target.picked
                     ),
                 }
+                if available then
+                    local currentCategory, categoryOpts, roomOptsByCategory =
+                        targetSelectionOptions(
+                            biome,
+                            rooms,
+                            claims,
+                            targetControlKey,
+                            exitIndex
+                        )
+                    local targetSelectors = selectors.batches[batchIndex].targets[exitIndex]
+                    targetView.category = {
+                        current = currentCategory,
+                        selectorAlias = targetSelectors.category,
+                        opts = categoryOpts,
+                    }
+                    targetView.roomChoice = {
+                        selectorAlias = targetSelectors.room,
+                        optsByCategory = roomOptsByCategory,
+                    }
+                else
+                    targetView.unavailableLabel = "Exit " .. tostring(exitIndex)
+                        .. " is unavailable for " .. parent.label
+                    targetView.unavailableDisplayLabel = targetView.unavailableLabel
+                        .. (targetView.room ~= nil and targetView.room.picked
+                            and " [Picked]" or "")
+                end
+                batchView.targets[#batchView.targets + 1] = targetView
+            end
+            for exitIndex = 1, activeExitCount do
+                appendTarget(exitIndex, byExit[exitIndex], true)
+            end
+            for _, target in ipairs(batch.targets) do
+                if target.exitIndex > activeExitCount then
+                    appendTarget(target.exitIndex, target, false)
+                end
             end
             view.batches[batchIndex] = batchView
             local picked = selectedTarget(batch)

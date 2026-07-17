@@ -121,6 +121,34 @@ local function clearAfterBatch(
     clearTerminal(authored)
 end
 
+local function reanchorContinuation(authored, previousParent, nextParent)
+    if previousParent == nextParent then
+        return
+    end
+    local batch = findBatch(authored, previousParent)
+    if batch ~= nil then
+        batch.parentRoomControlKey = nextParent
+        for _, target in ipairs(authored.targets) do
+            if target.parentRoomControlKey == previousParent then
+                target.parentRoomControlKey = nextParent
+            end
+        end
+    end
+    if authored.terminalTransition.parentRoomControlKey == previousParent then
+        authored.terminalTransition.parentRoomControlKey = nextParent
+    end
+end
+
+local function requireAvailableExit(specification, parentRoomControlKey, exitIndex)
+    local exitCount = specification.exitCountForRoomControlKey(parentRoomControlKey)
+    if exitIndex > exitCount then
+        specification.fail(
+            "command.exitIndex",
+            "physical exit is unavailable for the selected source"
+        )
+    end
+end
+
 local function selectStart(specification, authored)
     onlyKeys(specification, { "roomControlKey" })
     if specification.layout.start.mode ~= "oneOf" then
@@ -128,10 +156,11 @@ local function selectStart(specification, authored)
     end
     local roomControlKey = nonEmptyString(specification, "roomControlKey")
     if authored.selectedStartRoomControlKey ~= roomControlKey then
+        local previous = authored.selectedStartRoomControlKey
         authored.selectedStartRoomControlKey = roomControlKey
-        authored.batches = {}
-        authored.targets = {}
-        clearTerminal(authored)
+        if previous ~= "" then
+            reanchorContinuation(authored, previous, roomControlKey)
+        end
     end
 end
 
@@ -152,12 +181,13 @@ local function createBatch(specification, authored)
     }
 end
 
-local function setTarget(specification, authored, topology)
+local function setTarget(specification, authored)
     onlyKeys(specification, { "exitIndex", "parentRoomControlKey", "roomControlKey" })
     local parentRoomControlKey = nonEmptyString(specification, "parentRoomControlKey")
     local exitIndex = positiveInteger(specification, "exitIndex")
     local roomControlKey = nonEmptyString(specification, "roomControlKey")
     requireBatch(specification, authored, parentRoomControlKey)
+    requireAvailableExit(specification, parentRoomControlKey, exitIndex)
     local target = findTarget(authored, parentRoomControlKey, exitIndex)
     if target == nil then
         authored.targets[#authored.targets + 1] = {
@@ -168,23 +198,18 @@ local function setTarget(specification, authored, topology)
         }
     else
         if target.picked and target.roomControlKey ~= roomControlKey then
-            clearAfterBatch(
-                specification,
-                authored,
-                topology,
-                parentRoomControlKey,
-                false
-            )
+            reanchorContinuation(authored, target.roomControlKey, roomControlKey)
         end
         target.roomControlKey = roomControlKey
     end
 end
 
-local function setPicked(specification, authored, topology)
+local function setPicked(specification, authored)
     onlyKeys(specification, { "exitIndex", "parentRoomControlKey" })
     local parentRoomControlKey = nonEmptyString(specification, "parentRoomControlKey")
     local exitIndex = positiveInteger(specification, "exitIndex")
     requireBatch(specification, authored, parentRoomControlKey)
+    requireAvailableExit(specification, parentRoomControlKey, exitIndex)
     local selected = requireTarget(specification, authored, parentRoomControlKey, exitIndex)
     if selected.picked then
         return
@@ -197,16 +222,46 @@ local function setPicked(specification, authored, topology)
         end
     end
     if previous ~= nil then
-        clearAfterBatch(
-            specification,
-            authored,
-            topology,
-            parentRoomControlKey,
-            false
-        )
+        reanchorContinuation(authored, previous.roomControlKey, selected.roomControlKey)
         previous.picked = false
     end
     selected.picked = true
+end
+
+local function reconcileExitCapacity(specification, authored)
+    onlyKeys(specification, { "parentRoomControlKey" })
+    local parentRoomControlKey = nonEmptyString(specification, "parentRoomControlKey")
+    requireBatch(specification, authored, parentRoomControlKey)
+    local exitCount = specification.exitCountForRoomControlKey(parentRoomControlKey)
+    local foundUnavailable = false
+    for _, target in ipairs(authored.targets) do
+        if target.parentRoomControlKey == parentRoomControlKey
+            and target.exitIndex > exitCount
+        then
+            foundUnavailable = true
+            if target.picked then
+                specification.fail(
+                    "command.parentRoomControlKey",
+                    "pick an available target before reconciling exit capacity"
+                )
+            end
+        end
+    end
+    if not foundUnavailable then
+        specification.fail(
+            "command.parentRoomControlKey",
+            "selected source has no unavailable exits to reconcile"
+        )
+    end
+    local retained = {}
+    for _, target in ipairs(authored.targets) do
+        if target.parentRoomControlKey ~= parentRoomControlKey
+            or target.exitIndex <= exitCount
+        then
+            retained[#retained + 1] = target
+        end
+    end
+    authored.targets = retained
 end
 
 local function removeBatch(specification, authored, topology)
@@ -320,6 +375,7 @@ local handlers = {
     CreateBatch = createBatch,
     SetTarget = setTarget,
     SetPicked = setPicked,
+    ReconcileExitCapacity = reconcileExitCapacity,
     RemoveBatch = removeBatch,
     CreateTerminalTransition = createTerminalTransition,
     SetTerminalCompanion = setTerminalCompanion,

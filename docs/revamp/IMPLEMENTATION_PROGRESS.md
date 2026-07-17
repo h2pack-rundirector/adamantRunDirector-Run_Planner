@@ -158,13 +158,13 @@ contact boundary as ordinary reads, and only then stages one bounded semantic
 replacement. Invalid commands and malformed proposals therefore leave staged
 state untouched.
 
-Changing a selected start, picked target, or picked target link removes only
-the incompatible downstream batches, targets, terminal transition, and
-terminal companions. Explicit `ReplaceWithBatch` and
-`ReplaceWithTerminalTransition` commands own continuation-form changes.
-Unlinked Room Control persistence is never reset. Terminal-companion commands
-are restricted to the policy that admits them, while `ClearTopology` clears
-only layout-owned authored state.
+Changing a selected start, picked target, or picked exit retains dependent
+topology and atomically re-anchors its semantic owner keys. Explicit
+`ReplaceWithBatch` and `ReplaceWithTerminalTransition` commands own
+incompatible continuation-form changes, while `RemoveBatch` and
+`ClearTopology` remain explicit destructive operations. Unlinked Room Control
+persistence is never reset. Terminal-companion commands are restricted to the
+policy that admits them.
 
 G additionally proves fixed-start clearing and three-exit Standard batches;
 its force, eligibility, and room-local differences remain outside topology.
@@ -193,7 +193,8 @@ Biome Plan persistence ownership and mounts the thin authored editor:
   selectors and their transient storage have been removed;
 - target selection is monotonic from unspecified to specified: the two-stage
   category selector browses atomic replacements without emptying an existing
-  target, while decision removal owns target deletion;
+  target, while explicit decision removal or unavailable-exit reconciliation
+  owns target deletion;
 - focused F Room Controls now draw their integrated reward, payload, shop,
   purchase, and forked-preboss state through prepared stable option domains;
 - focused reward leaves now start from validated declaration-owned defaults:
@@ -206,6 +207,14 @@ Biome Plan persistence ownership and mounts the thin authored editor:
   retained only as dormant state. The bounded transitional manifests for later
   biomes inherit the same reward defaults without claiming that their deferred
   structural modes, phase counts, or side-room state are implemented;
+- selected-start, picked-room, and picked-exit replacements retain downstream
+  topology by atomically re-anchoring its semantic owner keys; explicit removal
+  and continuation-form replacement remain destructive;
+- exit shrinkage retains bounded overflow targets as structural incompleteness,
+  keeps an unavailable picked continuation attached until the user repicks,
+  and exposes explicit capacity reconciliation that removes only unavailable
+  target references; restoring capacity before reconciliation reactivates the
+  retained targets while genuinely new exits remain unspecified;
 - activation, meaningful commit, and setting-changing reload rebuild and
   atomically publish the committed authored view outside draw.
 

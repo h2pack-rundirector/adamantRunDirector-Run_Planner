@@ -400,7 +400,8 @@ category only browses a replacement domain. The existing target and Room
 Control remain authoritative and drawn until choosing a concrete second-stage
 value issues one atomic `SetTarget` replacement. The blank second-stage value
 means `keep current`, never target deletion. A specified target can leave the
-authored tree only with its complete decision.
+authored tree only with its complete decision or through explicit
+exit-capacity reconciliation after that target becomes unavailable.
 
 Category labels are UI language over room kinds: `Reprieve` is presented as
 `Fountain`, and `Bridge` shares the `Story` category. Start and terminal roles
@@ -428,6 +429,17 @@ default. Store, reward-type, payload, and mode widgets issue concrete atomic
 replacements and never write an empty selection. A parent replacement installs
 the new target's complete declared subordinate defaults before the draw call
 returns; incompatible bounded fields remain dormant rather than being cleared.
+
+Upstream replacements retain their dependent decision tree by semantic
+re-anchoring. When a replacement reduces physical exit capacity, retained
+targets above the new count remain projected in their original decision as
+unavailable. Their Room Controls and any picked continuation remain visible;
+the projector does not reinterpret them as malformed storage or ask the route
+validator to repair them. The user first picks an available exit, which
+re-anchors the existing continuation, then invokes the explicit `Remove
+Unavailable Exits` action. That action issues `ReconcileExitCapacity` and
+deletes only overflow target references. Increasing capacity before that action
+reactivates retained targets; genuinely new exit slots begin unspecified.
 
 ## Candidate Boundaries
 
@@ -577,8 +589,10 @@ Checkpoint 4A is complete when:
   continuations, and one terminal transition;
 - every referenced picked and unpicked F Room Control can edit its local
   persistent state;
-- replacing a selected continuation clears only incompatible downstream
-  topology and preserves unlinked Room Control persistence;
+- replacing a start, picked target, or picked exit retains and re-anchors its
+  dependent continuation while preserving Room Control persistence;
+- exit shrinkage keeps overflow targets visible and unavailable until the user
+  picks an available continuation and explicitly reconciles capacity;
 - continuation form is edited only at the active frontier or terminal header;
   existing decisions contain no repeated `Next Step` selector;
 - terminal presentation derives active free-reward capacity from immutable

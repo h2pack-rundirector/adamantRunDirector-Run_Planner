@@ -10,14 +10,11 @@ function standard.normalize(specification)
         )
     end
     local targets = specification.targets
-    local maximum = math.min(
-        specification.rule.maxTargets,
-        #specification.parent.room.exits
-    )
+    local maximum = specification.rule.maxTargets
     if #targets > maximum then
         specification.fail(
             specification.path .. ".targets",
-            "target count exceeds the parent exit or Standard batch bound"
+            "target count exceeds the Standard batch bound"
         )
     end
     local pickedCount = 0
@@ -43,17 +40,28 @@ end
 function standard.checkStructure(specification)
     local targetByExit = {}
     local pickedCount = 0
+    local availableTargetCount = 0
+    local availableExitCount = #specification.parent.room.exits
     for _, target in ipairs(specification.batch.targets) do
         targetByExit[target.exitIndex] = target
-        if target.picked then
-            pickedCount = pickedCount + 1
+        if target.exitIndex > availableExitCount then
+            specification.reportUnavailableTarget(target, availableExitCount)
+        else
+            availableTargetCount = availableTargetCount + 1
+            if target.picked then
+                pickedCount = pickedCount + 1
+            end
         end
     end
 
-    local requiredTargetCount = #specification.parent.room.exits
+    local requiredTargetCount = availableExitCount
     for exitIndex = 1, requiredTargetCount do
         if targetByExit[exitIndex] == nil then
-            specification.reportMissingTarget(exitIndex, requiredTargetCount)
+            specification.reportMissingTarget(
+                exitIndex,
+                requiredTargetCount,
+                availableTargetCount
+            )
         end
     end
     if pickedCount == 0 then

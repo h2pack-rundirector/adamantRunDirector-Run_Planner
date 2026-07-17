@@ -651,7 +651,7 @@ function TestBiomePlan.testBuildsCompleteFTopologyThroughUiOnlyCommands()
     end)
 end
 
-function TestBiomePlan.testChangingSelectedFLinksClearsOnlyDownstreamTopology()
+function TestBiomePlan.testChangingSelectedFLinksReanchorsDownstreamTopology()
     h.withImport(function()
         local systems = load()
         local plan = systems.route.biomePlans.lookup.Underworld_F
@@ -662,7 +662,10 @@ function TestBiomePlan.testChangingSelectedFLinksClearsOnlyDownstreamTopology()
             parentRoomControlKey = "Underworld_F_Combat03",
             exitIndex = 2,
         })
-        lu.assertNil(topology.terminalTransition)
+        lu.assertEquals(
+            topology.terminalTransition.parentRoomControlKey,
+            "Underworld_F_Combat05"
+        )
         lu.assertEquals(topology.batches[2].targets, {
             {
                 exitIndex = 1,
@@ -676,42 +679,146 @@ function TestBiomePlan.testChangingSelectedFLinksClearsOnlyDownstreamTopology()
             },
         })
 
-        plan:apply(ui, {
-            kind = "CreateBatch",
-            parentRoomControlKey = "Underworld_F_Combat05",
-        })
-        topology = plan:apply(ui, {
-            kind = "RemoveBatch",
-            parentRoomControlKey = "Underworld_F_Combat05",
-        })
-        lu.assertEquals(#topology.batches, 2)
-        lu.assertNil(topology.terminalTransition)
-
         local replacementRuntime, replacementUi = stateAdapters(systems, completeFState())
         topology = plan:apply(replacementUi, {
             kind = "SetTarget",
-            parentRoomControlKey = "Underworld_F_Opening02",
+            parentRoomControlKey = "Underworld_F_Combat03",
             exitIndex = 1,
             roomControlKey = "Underworld_F_Combat06",
         })
-        lu.assertEquals(#topology.batches, 1)
-        lu.assertEquals(topology.batches[1].targets[1].roomControlKey,
+        lu.assertEquals(#topology.batches, 2)
+        lu.assertEquals(topology.batches[2].targets[1].roomControlKey,
             "Underworld_F_Combat06")
-        lu.assertTrue(topology.batches[1].targets[1].picked)
-        lu.assertNil(topology.terminalTransition)
+        lu.assertTrue(topology.batches[2].targets[1].picked)
+        lu.assertEquals(
+            topology.terminalTransition.parentRoomControlKey,
+            "Underworld_F_Combat06"
+        )
 
         topology = plan:apply(replacementUi, {
             kind = "SelectStart",
             roomControlKey = "Underworld_F_Opening03",
         })
         lu.assertEquals(topology.startRoomControlKey, "Underworld_F_Opening03")
-        lu.assertEquals(topology.batches, {})
-        lu.assertNil(topology.terminalTransition)
+        lu.assertEquals(#topology.batches, 2)
+        lu.assertEquals(
+            topology.batches[1].parentRoomControlKey,
+            "Underworld_F_Opening03"
+        )
+        lu.assertEquals(
+            topology.terminalTransition.parentRoomControlKey,
+            "Underworld_F_Combat06"
+        )
 
         topology = plan:clearTopology(replacementUi)
         lu.assertNil(topology.startRoomControlKey)
         lu.assertEquals(topology.batches, {})
         lu.assertEquals(plan:readTopology(replacementRuntime), topology)
+    end)
+end
+
+function TestBiomePlan.testRetainsUnavailableTargetsUntilExplicitReconciliation()
+    h.withImport(function()
+        local systems = load()
+        local plan = systems.route.biomePlans.lookup.Underworld_F
+        local state = completeFState()
+        state.targets[2].picked = true
+        state.targets[3].picked = false
+        state.terminalTransition.parentRoomControlKey = "Underworld_F_Combat05"
+        local runtime, ui = stateAdapters(systems, state)
+
+        local topology = plan:apply(ui, {
+            kind = "SetTarget",
+            parentRoomControlKey = "Underworld_F_Opening02",
+            exitIndex = 1,
+            roomControlKey = "Underworld_F_Combat01",
+        })
+        lu.assertEquals(topology.batches[2].parentRoomControlKey,
+            "Underworld_F_Combat01")
+        lu.assertEquals(#topology.batches[2].targets, 2)
+        lu.assertTrue(topology.batches[2].targets[2].picked)
+        lu.assertEquals(topology.terminalTransition.parentRoomControlKey,
+            "Underworld_F_Combat05")
+
+        local findings = plan:checkStructure(topology)
+        lu.assertEquals({ findings[1].code, findings[2].code }, {
+            "target_exit_unavailable",
+            "picked_target_required",
+        })
+        lu.assertEquals(findings[1].origin.exitIndex, 2)
+        lu.assertEquals(findings[1].evidence, {
+            availableExitCount = 1,
+            picked = true,
+        })
+        lu.assertErrorMsgContains("cannot traverse incomplete topology", function()
+            collectTraversal(plan, topology)
+        end)
+
+        lu.assertErrorMsgContains("pick an available target", function()
+            plan:apply(ui, {
+                kind = "ReconcileExitCapacity",
+                parentRoomControlKey = "Underworld_F_Combat01",
+            })
+        end)
+        lu.assertEquals(plan:readTopology(runtime), topology)
+
+        topology = plan:apply(ui, {
+            kind = "SetPicked",
+            parentRoomControlKey = "Underworld_F_Combat01",
+            exitIndex = 1,
+        })
+        lu.assertTrue(topology.batches[2].targets[1].picked)
+        lu.assertFalse(topology.batches[2].targets[2].picked)
+        lu.assertEquals(topology.terminalTransition.parentRoomControlKey,
+            "Underworld_F_Combat04")
+
+        topology = plan:apply(ui, {
+            kind = "ReconcileExitCapacity",
+            parentRoomControlKey = "Underworld_F_Combat01",
+        })
+        lu.assertEquals(#topology.batches[2].targets, 1)
+        lu.assertEquals(plan:checkStructure(topology), {})
+        lu.assertEquals(plan:readTopology(runtime), topology)
+
+        topology = plan:apply(ui, {
+            kind = "SetTarget",
+            parentRoomControlKey = "Underworld_F_Opening02",
+            exitIndex = 1,
+            roomControlKey = "Underworld_F_Combat03",
+        })
+        lu.assertEquals(#topology.batches[2].targets, 1)
+        local expandedFindings = plan:checkStructure(topology)
+        lu.assertEquals(#expandedFindings, 1)
+        lu.assertEquals(expandedFindings[1].code, "target_room_required")
+        lu.assertEquals(expandedFindings[1].origin.exitIndex, 2)
+    end)
+end
+
+function TestBiomePlan.testReactivatesRetainedTargetsWhenExitCapacityReturns()
+    h.withImport(function()
+        local systems = load()
+        local plan = systems.route.biomePlans.lookup.Underworld_F
+        local _, ui = stateAdapters(systems, completeFState())
+
+        local topology = plan:apply(ui, {
+            kind = "SetTarget",
+            parentRoomControlKey = "Underworld_F_Opening02",
+            exitIndex = 1,
+            roomControlKey = "Underworld_F_Combat01",
+        })
+        lu.assertEquals(plan:checkStructure(topology)[1].code,
+            "target_exit_unavailable")
+
+        topology = plan:apply(ui, {
+            kind = "SetTarget",
+            parentRoomControlKey = "Underworld_F_Opening02",
+            exitIndex = 1,
+            roomControlKey = "Underworld_F_Combat03",
+        })
+        lu.assertEquals(#topology.batches[2].targets, 2)
+        lu.assertEquals(topology.batches[2].targets[2].roomControlKey,
+            "Underworld_F_Combat05")
+        lu.assertEquals(plan:checkStructure(topology), {})
     end)
 end
 
@@ -926,7 +1033,10 @@ function TestBiomePlan.testGUsesTheLinearTopologyContractWithFixedStartAndThreeE
             parentRoomControlKey = "Underworld_G_Combat02",
             exitIndex = 2,
         })
-        lu.assertNil(topology.terminalTransition)
+        lu.assertEquals(
+            topology.terminalTransition.parentRoomControlKey,
+            "Underworld_G_Combat04"
+        )
         lu.assertFalse(topology.batches[2].targets[1].picked)
         lu.assertTrue(topology.batches[2].targets[2].picked)
 
@@ -991,8 +1101,8 @@ function TestBiomePlan.testRejectsMalformedFTopologyAtContactBoundary()
         end)
 
         state = completeFState()
-        state.targets[1].exitIndex = 2
-        lu.assertErrorMsgContains("exit index is outside the parent room", function()
+        state.targets[1].exitIndex = 3
+        lu.assertErrorMsgContains("exceeds the biome physical-exit bound", function()
             plan:readTopology(directAccess(state))
         end)
 

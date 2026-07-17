@@ -124,10 +124,18 @@ local function tableHandle(rows)
         read = function(_, rowIndex, column)
             return rows[rowIndex][column]
         end,
+        clear = function()
+            for index = #rows, 1, -1 do
+                rows[index] = nil
+            end
+        end,
+        append = function(_, row)
+            rows[#rows + 1] = row
+        end,
     }
 end
 
-local function emptyRuntime(systems, configuredUnderworld)
+local function runtimeState(systems, configuredUnderworld, state)
     local values = {}
     local tables = {}
     for _, descriptor in ipairs(systems.route.storage.moduleStorage) do
@@ -135,6 +143,26 @@ local function emptyRuntime(systems, configuredUnderworld)
             tables[descriptor.alias] = {}
         else
             values[descriptor.alias] = descriptor.default
+        end
+    end
+    if state ~= nil then
+        local descriptor = systems.route.storage.biomes.lookup.Underworld_F
+        values[descriptor.selectedStart.alias] = state.selectedStartRoomControlKey
+        values[descriptor.terminalTransition.alias] =
+            state.terminalTransition.parentRoomControlKey
+        for index, batch in ipairs(state.batches) do
+            local row = {}
+            for semanticKey, physicalKey in pairs(descriptor.batches.columns) do
+                row[physicalKey] = batch[semanticKey]
+            end
+            tables[descriptor.batches.alias][index] = row
+        end
+        for index, target in ipairs(state.targets) do
+            local row = {}
+            for semanticKey, physicalKey in pairs(descriptor.targets.columns) do
+                row[physicalKey] = target[semanticKey]
+            end
+            tables[descriptor.targets.alias][index] = row
         end
     end
     return {
@@ -151,10 +179,22 @@ local function emptyRuntime(systems, configuredUnderworld)
                 return values[alias]
             end,
             get = function(alias)
-                return tableHandle(tables[alias])
+                if tables[alias] ~= nil then
+                    return tableHandle(tables[alias])
+                end
+                return {
+                    write = function(_, value)
+                        values[alias] = value
+                    end,
+                }
             end,
         },
+        resetAll = function() end,
     }
+end
+
+local function emptyRuntime(systems, configuredUnderworld)
+    return runtimeState(systems, configuredUnderworld, nil)
 end
 
 local function contains(values, candidate)
@@ -310,6 +350,118 @@ function TestUiEditor.testLinearProjectionAlsoConsumesFocusedGTopology()
         lu.assertTrue(view.batches[2].targets[1].room.picked)
         lu.assertEquals(view.terminal.room.roomControlKey, "Underworld_G_PreBoss01")
         lu.assertEquals(view.terminal.roomContext.activeFreeRewardCount, 2)
+    end)
+end
+
+function TestUiEditor.testLinearProjectionDoesNotInventSparseUnavailableTargets()
+    h.withImport(function()
+        local systems = load()
+        local selectorBuilder = h.testImport("mods/ui/selectors.lua")
+        local selectors = selectorBuilder.build(systems.catalog, { "Underworld_G" })
+        local state = completeGState()
+        table.remove(state.targets, 3)
+        state.targets[1].roomControlKey = "Underworld_G_MiniBoss02"
+        state.batches[2].parentRoomControlKey = "Underworld_G_MiniBoss02"
+        state.targets[2].parentRoomControlKey = "Underworld_G_MiniBoss02"
+        state.targets[3].parentRoomControlKey = "Underworld_G_MiniBoss02"
+        local plan = systems.route.biomePlans.lookup.Underworld_G
+        local topology = plan:readTopology(directAccess(state))
+        local view = systems.ui.layouts.LinearBiome:project(
+            plan,
+            topology,
+            selectors.biomes.lookup.Underworld_G
+        )
+
+        local targets = view.batches[2].targets
+        lu.assertEquals(#targets, 2)
+        lu.assertEquals(targets[1].exitIndex, 1)
+        lu.assertTrue(targets[1].available)
+        lu.assertEquals(targets[2].exitIndex, 3)
+        lu.assertFalse(targets[2].available)
+        lu.assertEquals(
+            targets[2].room.roomControlKey,
+            "Underworld_G_Combat05"
+        )
+    end)
+end
+
+function TestUiEditor.testLinearProjectionKeepsUnavailableTargetsAcrossReloadAndRepair()
+    h.withImport(function()
+        local systems = load()
+        local state = completeFState()
+        state.targets[1].roomControlKey = "Underworld_F_Combat01"
+        state.batches[2].parentRoomControlKey = "Underworld_F_Combat01"
+        state.targets[2].parentRoomControlKey = "Underworld_F_Combat01"
+        state.targets[2].picked = false
+        state.targets[3].parentRoomControlKey = "Underworld_F_Combat01"
+        state.targets[3].picked = true
+        state.terminalTransition.parentRoomControlKey = "Underworld_F_Combat05"
+        local runtime = runtimeState(systems, "Underworld_F", state)
+        local reloadHandler
+        systems.ui.attach({
+            ui = { tab = function() end },
+            onActivate = function() end,
+            onCommit = function() end,
+            onReload = function(callback)
+                reloadHandler = callback
+            end,
+        })
+        reloadHandler(nil, runtime, {
+            hadSettingChanges = function()
+                return true
+            end,
+        })
+        local plan = systems.route.biomePlans.lookup.Underworld_F
+        local view = systems.ui.coordinator:get().routes.lookup.Underworld
+            .biomes.lookup.Underworld_F
+
+        local batch = view.batches[2]
+        lu.assertEquals(#batch.targets, 2)
+        lu.assertTrue(batch.targets[1].available)
+        lu.assertFalse(batch.targets[2].available)
+        lu.assertTrue(batch.targets[2].room.picked)
+        lu.assertEquals(
+            batch.targets[2].unavailableLabel,
+            "Exit 2 is unavailable for Combat 01 (1 exit)"
+        )
+        lu.assertEquals(
+            batch.targets[2].unavailableDisplayLabel,
+            "Exit 2 is unavailable for Combat 01 (1 exit) [Picked]"
+        )
+        lu.assertTrue(batch.hasUnavailableTargets)
+        lu.assertFalse(batch.canReconcileExitCapacity)
+        lu.assertEquals(
+            batch.reconcileButtonLabel,
+            "Remove Unavailable Exits##RunPlanner_ReconcileExitCapacity_"
+                .. "Underworld_F_Combat01"
+        )
+
+        local uiAccess = systems.route.stateAccess.createUi(
+            runtime,
+            systems.catalog,
+            systems.route.storage
+        )
+        local topology = plan:apply(uiAccess, {
+            kind = "SetPicked",
+            parentRoomControlKey = "Underworld_F_Combat01",
+            exitIndex = 1,
+        })
+        lu.assertEquals(
+            topology.terminalTransition.parentRoomControlKey,
+            "Underworld_F_Combat04"
+        )
+        reloadHandler(nil, runtime, {
+            hadSettingChanges = function()
+                return true
+            end,
+        })
+        view = systems.ui.coordinator:get().routes.lookup.Underworld
+            .biomes.lookup.Underworld_F
+        lu.assertTrue(view.batches[2].canReconcileExitCapacity)
+        lu.assertEquals(
+            view.terminal.parentRoomControlKey,
+            "Underworld_F_Combat04"
+        )
     end)
 end
 
@@ -580,6 +732,28 @@ function TestUiEditor.testLinearDrawTranslatesSelectorsIntoSemanticCommands()
     end)
 end
 
+function TestUiEditor.testLinearDrawDoesNotOfferUnavailableTargetSelection()
+    h.withImport(function()
+        local drawer = h.testImport("mods/ui/layouts/linear_biome_draw.lua")
+        local view = commandFixture()
+        local target = view.batches[1].targets[1]
+        target.available = false
+        target.unavailableDisplayLabel = "Exit 1 is unavailable [Picked]"
+        target.room = {
+            picked = true,
+            roomControlKey = "Underworld_F_Combat03",
+        }
+        local ui, plan, commands, drawnControls = fakeDrawUi({
+            [target.pickedRadioLabel] = true,
+        })
+
+        drawer.draw(ui, view, plan)
+
+        lu.assertEquals(commands, {})
+        lu.assertEquals(drawnControls, { "Underworld_F_Combat03" })
+    end)
+end
+
 function TestUiEditor.testLinearDrawTranslatesStructuralButtonsIntoSemanticCommands()
     h.withImport(function()
         local drawer = h.testImport("mods/ui/layouts/linear_biome_draw.lua")
@@ -591,6 +765,21 @@ function TestUiEditor.testLinearDrawTranslatesStructuralButtonsIntoSemanticComma
         lu.assertEquals(commands, {
             {
                 kind = "RemoveBatch",
+                parentRoomControlKey = "Underworld_F_Opening02",
+            },
+        })
+
+        view = commandFixture()
+        view.batches[1].hasUnavailableTargets = true
+        view.batches[1].canReconcileExitCapacity = true
+        view.batches[1].reconcileButtonLabel = "Remove Unavailable Exits##Batch1"
+        ui, plan, commands = fakeDrawUi({
+            ["Remove Unavailable Exits##Batch1"] = true,
+        })
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {
+            {
+                kind = "ReconcileExitCapacity",
                 parentRoomControlKey = "Underworld_F_Opening02",
             },
         })

@@ -79,6 +79,11 @@ local function targetSelectorFields(ui, target)
 end
 
 local function drawTarget(ui, plan, batch, target)
+    if target.available == false then
+        ui.draw.imgui.TextDisabled(target.unavailableDisplayLabel)
+        drawRoom(ui, target.room)
+        return
+    end
     local categoryField, roomField = targetSelectorFields(ui, target)
     local categoryChanged = ui.draw.widgets.dropdown(
         categoryField,
@@ -155,6 +160,22 @@ local function drawBatch(ui, plan, batch)
             ui.draw.imgui.Spacing()
         end
         drawTarget(ui, plan, batch, target)
+    end
+    if batch.hasUnavailableTargets then
+        ui.draw.imgui.Spacing()
+        if batch.canReconcileExitCapacity then
+            if ui.draw.imgui.Button(batch.reconcileButtonLabel) then
+                plan:apply({
+                    kind = "ReconcileExitCapacity",
+                    parentRoomControlKey = batch.parentRoomControlKey,
+                })
+                return true
+            end
+        else
+            ui.draw.imgui.TextDisabled(
+                "Pick an available exit before removing unavailable exits."
+            )
+        end
     end
     return false
 end

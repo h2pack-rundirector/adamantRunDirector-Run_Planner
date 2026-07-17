@@ -154,6 +154,14 @@ local function normalizeStart(context, authored, claims)
     return result
 end
 
+local function maximumPhysicalExitCount(context)
+    local maximum = 0
+    for _, record in ipairs(context.rooms.ordered) do
+        maximum = math.max(maximum, #record.room.exits)
+    end
+    return maximum
+end
+
 local function normalizeBatches(context, authored, claims)
     local bounds = context.biome.layout.bounds
     if denseList(context, authored.batches, "batches") > bounds.maxBatches then
@@ -164,6 +172,7 @@ local function normalizeBatches(context, authored, claims)
     end
 
     local batches = {}
+    local maximumExits = maximumPhysicalExitCount(context)
     for index, source in ipairs(authored.batches) do
         local path = "batches[" .. tostring(index) .. "]"
         if type(source) ~= "table" then
@@ -196,9 +205,15 @@ local function normalizeBatches(context, authored, claims)
         if type(source.exitIndex) ~= "number"
             or source.exitIndex ~= math.floor(source.exitIndex)
             or source.exitIndex < 1
-            or source.exitIndex > #batch.parent.room.exits
         then
-            fail(context, path .. ".exitIndex", "exit index is outside the parent room")
+            fail(context, path .. ".exitIndex", "expected a positive exit index")
+        end
+        if source.exitIndex > maximumExits then
+            fail(
+                context,
+                path .. ".exitIndex",
+                "exit index exceeds the biome physical-exit bound"
+            )
         end
         if type(source.picked) ~= "boolean" then
             fail(context, path .. ".picked", "expected a boolean")
@@ -439,6 +454,9 @@ function linearBiome.apply(context, authored, command)
             fail(context, path, message)
         end,
         layout = context.biome.layout,
+        exitCountForRoomControlKey = function(roomControlKey)
+            return #room(context, roomControlKey, "command.parentRoomControlKey").room.exits
+        end,
         normalize = function(proposed)
             return linearBiome.readTopology(context, proposed)
         end,
@@ -541,7 +559,11 @@ function linearBiome.checkStructure(context, topology)
             batch = batch,
             parent = parent,
             rule = context.catalog.batchRules.lookup[batch.batchRuleKey],
-            reportMissingTarget = function(exitIndex, requiredTargetCount)
+            reportMissingTarget = function(
+                exitIndex,
+                requiredTargetCount,
+                actualTargetCount
+            )
                 add(
                     "target_room_required",
                     {
@@ -552,7 +574,7 @@ function linearBiome.checkStructure(context, topology)
                     "targetRoom",
                     {
                         requiredTargetCount = requiredTargetCount,
-                        actualTargetCount = #batch.targets,
+                        actualTargetCount = actualTargetCount,
                     }
                 )
             end,
@@ -566,6 +588,21 @@ function linearBiome.checkStructure(context, topology)
                     },
                     "pickedTarget",
                     { requiredPickedCount = 1, actualPickedCount = 0 }
+                )
+            end,
+            reportUnavailableTarget = function(target, availableExitCount)
+                add(
+                    "target_exit_unavailable",
+                    {
+                        kind = "batchTarget",
+                        parentRoomControlKey = batch.parentRoomControlKey,
+                        exitIndex = target.exitIndex,
+                    },
+                    "targetRoom",
+                    {
+                        availableExitCount = availableExitCount,
+                        picked = target.picked,
+                    }
                 )
             end,
         })

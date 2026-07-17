@@ -603,8 +603,11 @@ topology-facing declaration and storage scaffolds are superseded here.
   writes;
 - duplicate or cross-biome top-level control use fails at the topology contact
   boundary;
-- changing the selected start or picked target removes incompatible downstream
-  topology while preserving Room Control persistence;
+- changing the selected start, picked target, or picked exit re-anchors and
+  retains downstream topology while preserving Room Control persistence;
+- exit shrinkage retains bounded overflow targets as structural incompleteness
+  until an available exit is picked and explicit reconciliation removes only
+  the unavailable references;
 - a selected LinearBiome source has one generated batch or one terminal
   transition, never both; companion targets owned inside a terminal transition
   do not form a second continuing batch;
@@ -712,8 +715,12 @@ or planner-owned replacement for Lib dropdown widgets.
 - an empty F plan can be authored through one selected start, complete Standard
   batches, picked continuations, and one `PrebossEntry` terminal transition;
 - all physical peers are visible and editable, including unpicked dead leaves;
-- changing the selected start, picked target, or continuation form clears only
-  incompatible downstream topology and preserves Room Control persistence;
+- changing the selected start, picked target, or picked exit retains and
+  re-anchors dependent topology; explicit continuation-form replacement clears
+  only the incompatible form and preserves Room Control persistence;
+- shrinking parent exit capacity projects retained overflow targets as
+  structurally unavailable until an available exit is picked and one explicit
+  reconciliation removes only those target references;
 - forked-preboss presentation exposes only the free-reward capacity admitted
   by immutable predecessor exit context;
 - dormant unreferenced Room Controls are neither drawn nor included in
