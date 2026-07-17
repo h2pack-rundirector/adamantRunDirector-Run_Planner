@@ -86,7 +86,9 @@ local function validateRewards(raw, requirements)
 
     for _, primitive in ipairs(rewards.primitives.ordered) do
         local path = "rewards.primitives." .. primitive.key
-        s.onlyKeys(primitive, { "acquiredAs", "key", "label", "payloadDomain" }, path)
+        s.onlyKeys(primitive, {
+            "acquiredAs", "defaultPayload", "key", "label", "payloadDomain",
+        }, path)
         nonEmptyString(primitive.label, path .. ".label")
         if primitive.payloadDomain ~= nil and rewards.payloadDomains.lookup[primitive.payloadDomain] == nil then
             fail(path .. ".payloadDomain", "unknown payload domain '" .. primitive.payloadDomain .. "'")
@@ -101,17 +103,63 @@ local function validateRewards(raw, requirements)
             s.onlyKeys(domain, { "key", "kind", "values" }, path)
             s.stringList(domain.values, path .. ".values", true)
             for index, rewardType in ipairs(domain.values or {}) do
-                if rewards.primitives.lookup[rewardType] == nil then
+                local primitive = rewards.primitives.lookup[rewardType]
+                if primitive == nil then
                     fail(path .. ".values[" .. tostring(index) .. "]", "unknown reward primitive '" .. tostring(rewardType) .. "'")
+                end
+                if primitive.payloadDomain ~= nil then
+                    fail(
+                        path .. ".values[" .. tostring(index) .. "]",
+                        "payload domain values must be terminal reward primitives"
+                    )
                 end
             end
         elseif domain.kind == "distinctPair" then
             s.onlyKeys(domain, { "key", "kind", "valueDomain" }, path)
-            if rewards.payloadDomains.lookup[domain.valueDomain] == nil then
+            local valueDomain = rewards.payloadDomains.lookup[domain.valueDomain]
+            if valueDomain == nil then
                 fail(path .. ".valueDomain", "unknown payload domain '" .. tostring(domain.valueDomain) .. "'")
+            end
+            if valueDomain.kind ~= "oneOf" then
+                fail(path .. ".valueDomain", "distinct pair requires a oneOf value domain")
             end
         else
             fail(path .. ".kind", "unknown payload-domain kind '" .. tostring(domain.kind) .. "'")
+        end
+    end
+
+    for _, primitive in ipairs(rewards.primitives.ordered) do
+        local path = "rewards.primitives." .. primitive.key
+        if primitive.payloadDomain == nil then
+            if primitive.defaultPayload ~= nil then
+                fail(path .. ".defaultPayload", "reward primitive has no payload domain")
+            end
+        else
+            local payloadPath = path .. ".defaultPayload"
+            requiredTable(primitive.defaultPayload, payloadPath)
+            local domain = rewards.payloadDomains.lookup[primitive.payloadDomain]
+            if domain.kind == "oneOf" then
+                s.onlyKeys(primitive.defaultPayload, { "source" }, payloadPath)
+                nonEmptyString(primitive.defaultPayload.source, payloadPath .. ".source")
+                if not contains(domain.values, primitive.defaultPayload.source) then
+                    fail(payloadPath .. ".source", "must belong to the payload domain")
+                end
+            elseif domain.kind == "distinctPair" then
+                s.onlyKeys(primitive.defaultPayload, { "sources" }, payloadPath)
+                local sourcesPath = payloadPath .. ".sources"
+                if s.stringList(primitive.defaultPayload.sources, sourcesPath, true) ~= 2 then
+                    fail(sourcesPath, "must contain exactly two values")
+                end
+                local valueDomain = rewards.payloadDomains.lookup[domain.valueDomain]
+                for index, value in ipairs(primitive.defaultPayload.sources) do
+                    if not contains(valueDomain.values, value) then
+                        fail(
+                            sourcesPath .. "[" .. tostring(index) .. "]",
+                            "must belong to the referenced value domain"
+                        )
+                    end
+                end
+            end
         end
     end
 
@@ -124,7 +172,8 @@ local function validateRewards(raw, requirements)
     rewards.stores = { ordered = {}, lookup = {} }
     for _, bag in ipairs(rewards.bags.ordered) do
         local bagPath = "rewards.bags." .. bag.key
-        s.onlyKeys(bag, { "entries", "key", "refill" }, bagPath)
+        s.onlyKeys(bag, { "defaultRewardType", "entries", "key", "refill" }, bagPath)
+        nonEmptyString(bag.defaultRewardType, bagPath .. ".defaultRewardType")
         if bag.refill ~= "appendWhenNoEligibleEntry" then
             fail(bagPath .. ".refill", "unknown refill policy '" .. tostring(bag.refill) .. "'")
         end
@@ -152,6 +201,9 @@ local function validateRewards(raw, requirements)
                 )
             end
             addUniqueOption(options, seen, entry.rewardType)
+        end
+        if not seen[bag.defaultRewardType] then
+            fail(bagPath .. ".defaultRewardType", "must be offered by the reward bag")
         end
         local store = { key = bag.key, options = options, bagKey = bag.key }
         rewards.stores.ordered[#rewards.stores.ordered + 1] = store
@@ -222,7 +274,9 @@ local function validateRewards(raw, requirements)
         for index, slot in ipairs(profile.slots or {}) do
             local slotPath = profilePath .. ".slots[" .. tostring(index) .. "]"
             requiredTable(slot, slotPath)
-            s.onlyKeys(slot, { "key", "label", "optionSetKey", "uniqueGroup" }, slotPath)
+            s.onlyKeys(slot, {
+                "defaultRewardType", "key", "label", "optionSetKey", "uniqueGroup",
+            }, slotPath)
             nonEmptyString(slot.key, slotPath .. ".key")
             nonEmptyString(slot.label, slotPath .. ".label")
             if slotKeys[slot.key] then
@@ -232,6 +286,13 @@ local function validateRewards(raw, requirements)
             nonEmptyString(slot.optionSetKey, slotPath .. ".optionSetKey")
             if shops.optionSets.lookup[slot.optionSetKey] == nil then
                 fail(slotPath .. ".optionSetKey", "unknown option set '" .. tostring(slot.optionSetKey) .. "'")
+            end
+            nonEmptyString(slot.defaultRewardType, slotPath .. ".defaultRewardType")
+            if not contains(shops.optionSets.lookup[slot.optionSetKey], slot.defaultRewardType) then
+                fail(
+                    slotPath .. ".defaultRewardType",
+                    "reward primitive is not available from the referenced option set"
+                )
             end
             if slot.uniqueGroup ~= nil then
                 nonEmptyString(slot.uniqueGroup, slotPath .. ".uniqueGroup")
@@ -284,11 +345,25 @@ end
 
 local function validateCountedChoice(binding, rewards, path)
     s.onlyKeys(binding, {
-        "batchConstraint", "eligibleRewardTypes", "ineligibleRewardTypes", "kind", "storeKeys",
+        "batchConstraint", "defaultRewardType", "defaultStoreKey", "eligibleRewardTypes",
+        "ineligibleRewardTypes", "kind", "storeKeys",
     }, path)
     validateStoreKeys(rewards, binding.storeKeys, path .. ".storeKeys")
     validateRewardTypes(rewards, binding.eligibleRewardTypes, path .. ".eligibleRewardTypes")
     validateRewardTypes(rewards, binding.ineligibleRewardTypes, path .. ".ineligibleRewardTypes")
+
+    local defaultStoreKey = binding.defaultStoreKey
+    if #binding.storeKeys == 1 then
+        if defaultStoreKey ~= nil and defaultStoreKey ~= binding.storeKeys[1] then
+            fail(path .. ".defaultStoreKey", "must name the only referenced reward store")
+        end
+        defaultStoreKey = binding.storeKeys[1]
+    else
+        nonEmptyString(defaultStoreKey, path .. ".defaultStoreKey")
+        if not contains(binding.storeKeys, defaultStoreKey) then
+            fail(path .. ".defaultStoreKey", "must name one of the referenced reward stores")
+        end
+    end
 
     local storeOptions = {}
     for _, storeKey in ipairs(binding.storeKeys) do
@@ -336,6 +411,27 @@ local function validateCountedChoice(binding, rewards, path)
             fail(
                 path .. ".storeKeys[" .. tostring(storeIndex) .. "]",
                 "reward store '" .. storeKey .. "' has no allowed reward primitives"
+            )
+        end
+    end
+    if binding.defaultRewardType ~= nil then
+        nonEmptyString(binding.defaultRewardType, path .. ".defaultRewardType")
+        if not contains(rewards.stores.lookup[defaultStoreKey].options, binding.defaultRewardType) then
+            fail(path .. ".defaultRewardType", "is not offered by the default reward store")
+        end
+    end
+    for _, storeKey in ipairs(binding.storeKeys) do
+        local defaultRewardType = storeKey == defaultStoreKey
+            and binding.defaultRewardType
+            or nil
+        defaultRewardType = defaultRewardType
+            or rewards.bags.lookup[storeKey].defaultRewardType
+        if (#binding.eligibleRewardTypes > 0 and not eligible[defaultRewardType])
+            or ineligible[defaultRewardType]
+        then
+            fail(
+                path .. ".defaultRewardType",
+                "store '" .. storeKey .. "' default reward primitive is excluded by this binding"
             )
         end
     end
@@ -490,7 +586,7 @@ local function validateEntryOfferPolicy(room, template, rewards, path)
 
     s.onlyKeys(
         policy,
-        { "freeReward", "kind", "maxFreeRewards" },
+        { "defaultEntryMode", "freeReward", "kind", "maxFreeRewards" },
         path .. ".entryOfferPolicy"
     )
     s.enum(
@@ -498,6 +594,7 @@ local function validateEntryOfferPolicy(room, template, rewards, path)
         { "shopThenFillRemainingExits" },
         path .. ".entryOfferPolicy.kind"
     )
+    s.enum(policy.defaultEntryMode, { "Shop" }, path .. ".entryOfferPolicy.defaultEntryMode")
     positiveInteger(policy.maxFreeRewards, path .. ".entryOfferPolicy.maxFreeRewards")
     if policy.maxFreeRewards > template.freeRewardSlotCapacity then
         fail(

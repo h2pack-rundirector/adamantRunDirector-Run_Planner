@@ -27,8 +27,8 @@ Logical persistence:
 
 ```lua
 {
-    source1 = "",
-    source2 = "",
+    source1 = "ApolloUpgrade",
+    source2 = "ZeusUpgrade",
 }
 ```
 

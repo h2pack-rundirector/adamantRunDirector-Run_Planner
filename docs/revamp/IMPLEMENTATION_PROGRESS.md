@@ -196,6 +196,16 @@ Biome Plan persistence ownership and mounts the thin authored editor:
   target, while decision removal owns target deletion;
 - focused F Room Controls now draw their integrated reward, payload, shop,
   purchase, and forked-preboss state through prepared stable option domains;
+- focused reward leaves now start from validated declaration-owned defaults:
+  reward primitives own complete payload defaults, bags own primitive defaults, multi-store
+  bindings own their initial store and required override, shop slots own their
+  primitive defaults, and forked prebosses default to Shop;
+- focused reward and entry-mode widgets are replacement-only. Store and
+  primitive changes install complete subordinate defaults atomically, active
+  reads reject empty persisted targets, and unused bounded payload capacity is
+  retained only as dormant state. The bounded transitional manifests for later
+  biomes inherit the same reward defaults without claiming that their deferred
+  structural modes, phase counts, or side-room state are implemented;
 - activation, meaningful commit, and setting-changing reload rebuild and
   atomically publish the committed authored view outside draw.
 

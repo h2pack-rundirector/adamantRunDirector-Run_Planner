@@ -423,8 +423,11 @@ catalog requires an explicit label for every room declaration, and UI consumers
 never derive display text from either internal identifier.
 
 Room Control widgets use their template-owned private fields and semantic
-component operations. Store, reward-type, and payload changes must clear or
-normalize incompatible subordinate state before the draw call returns.
+component operations. Every active leaf begins at a complete declaration
+default. Store, reward-type, payload, and mode widgets issue concrete atomic
+replacements and never write an empty selection. A parent replacement installs
+the new target's complete declared subordinate defaults before the draw call
+returns; incompatible bounded fields remain dormant rather than being cleared.
 
 ## Candidate Boundaries
 

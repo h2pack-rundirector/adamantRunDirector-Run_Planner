@@ -13,12 +13,21 @@ local function requireOnlyFragmentKeys(value, context)
 end
 
 local function createPrimitive(declaration, payload)
+    local defaultSource1, defaultSource2 = payload.encode(
+        declaration.defaultPayload,
+        "reward primitive '" .. declaration.key .. "' default"
+    )
+    if not payload.isComplete(declaration.defaultPayload) then
+        fail("reward primitive '" .. declaration.key .. "' default", "payload must be complete")
+    end
     local primitive = {
         gameName = declaration.key,
         label = declaration.label,
         acquiredAs = declaration.acquiredAs or declaration.key,
         payload = payload,
         payloadArity = payload.arity,
+        defaultSource1 = defaultSource1,
+        defaultSource2 = defaultSource2,
     }
 
     function primitive.encode(value, context)

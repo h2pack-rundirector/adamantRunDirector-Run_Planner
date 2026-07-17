@@ -81,8 +81,9 @@ domain such as `DevotionPair` reuses that same map. Payload declarations do
 not duplicate labels, and UI code does not infer them by editing game-name
 strings.
 
-It does not know bags, filters, room identity, topology, history, or widgets.
-Empty private strings normalize to absent typed members.
+It does not know primitive defaults, bags, filters, room identity, topology,
+history, or widgets. It validates concrete payloads supplied by primitives;
+active payload members are never empty.
 
 ## Layer 2: Reward Primitives
 
@@ -115,6 +116,12 @@ The primitive collaborator owns the concrete typed fragment:
 }
 ```
 
+Every payload-bearing primitive declares one complete default payload. This
+makes the hierarchy recursive and terminating: a bag may default to `Boon`,
+and `Boon` defaults its required payload to the terminal source primitive
+`ApolloUpgrade`. Source primitives such as `ApolloUpgrade` have no payload of
+their own. `Devotion` similarly owns its complete two-source default.
+
 Fixed facts consume no persistence. Payload-bearing primitives delegate their
 fields and behavior to the declared payload collaborator. `acquiredAs` affects
 normalized acquisition history, not authored identity or storage.
@@ -143,9 +150,10 @@ as a fallback label.
 
 Primitive declarations are plain keyed tables. `label` is always explicit;
 `acquiredAs` is authored only when normalization differs from the keyed game
-name, and `payloadDomain` is authored only when the primitive carries a
-payload. Positional declaration constructors are intentionally avoided so
-these exceptional relationships remain readable at the declaration point.
+name, while `payloadDomain` and its complete `defaultPayload` are authored only
+when the primitive carries a payload. Positional declaration constructors are
+intentionally avoided so these exceptional relationships remain readable at
+the declaration point.
 
 Labels need not be globally unique because game-distinct primitives on
 different producer surfaces may intentionally share player-facing language.
@@ -168,6 +176,7 @@ primitive registry. Current bags are:
 The bag collaborator owns:
 
 - exact primitive membership and entry multiplicity;
+- one explicit default primitive offered by the bag;
 - ordered, deduplicated authored option enumeration;
 - dispatch from selected `rewardType` to its primitive collaborator;
 - entry requirement metadata;
@@ -214,6 +223,8 @@ The declaration parser validates:
 - dense, duplicate-free store and filter lists;
 - no overlap between positive and negative filters;
 - every eligible primitive belongs to at least one referenced bag;
+- a concrete default store for every multi-store binding and an allowed
+  default primitive for every referenced store;
 - the complete explicit shape required by the producer kind.
 
 The normalized binding contains resolved filters. Room Controls do not follow
@@ -238,6 +249,11 @@ The result is an anonymous immutable descriptor:
     kind = "countedChoice",
     storeKeys = { "TartarusRewards" },
     allowedRewardTypes = { "Boon" },
+    default = {
+        storeKey = "TartarusRewards",
+        rewardType = "Boon",
+        payload = { source = "ApolloUpgrade" },
+    },
     payloadCapacity = { sourceCount = 1 },
 }
 ```
@@ -271,20 +287,23 @@ A counted choice returns one concrete tagged value:
 }
 ```
 
-Logical persistence is minimized from the compiled descriptor:
+Logical persistence is minimized from the compiled descriptor and initialized
+from its complete default:
 
 ```lua
 {
-    storeKey = "",   -- omitted when exactly one store is possible
-    rewardType = "",
-    source1 = "",    -- omitted when no allowed primitive needs it
-    source2 = "",    -- omitted when Devotion is impossible
+    storeKey = "RunProgress", -- omitted when exactly one store is possible
+    rewardType = "Boon",
+    source1 = "ApolloUpgrade", -- omitted when no allowed primitive needs it
+    source2 = "",              -- dormant while the selected primitive needs one source
 }
 ```
 
 This is one tagged reward value, not dormant child selections per store.
-Changing the selected store replaces the active reward atomically. Payload
-capacity required by another allowed primitive remains persisted but dormant.
+Changing the selected store replaces the active reward atomically with that
+store's declared default primitive and complete payload. Changing the primitive
+likewise installs its declared payload default. Payload capacity required by
+another allowed primitive remains persisted but dormant.
 
 The typed value always includes the resolved concrete `storeKey`, even when
 the store is declaration-fixed and consumes no field.
@@ -390,11 +409,11 @@ No shop value contains a counted-bag `storeKey`. Purchase affects acquisition;
 it is not bag consumption. `WorldShop`, `I_WorldShop`, and `Q_WorldShop` remain
 profile-parameterized compositions over declared option sets.
 
-Each declared shop slot has a stable internal `key` and an explicit
-presentation-only `label`. Storage fields, typed values, and semantic APIs use
-the key; the editor renders the label. Labels such as `Offer 1` therefore do
-not expose category-bearing keys such as `Boon` or `MajorNonBoon`, and changing
-label wording does not migrate persisted state.
+Each declared shop slot has a stable internal `key`, an explicit default
+primitive, and an explicit presentation-only `label`. Storage fields, typed
+values, and semantic APIs use the key; the editor renders the label. Labels
+such as `Offer 1` therefore do not expose category-bearing keys such as `Boon`
+or `MajorNonBoon`, and changing label wording does not migrate persisted state.
 
 ## Persistence Composition
 
@@ -435,8 +454,10 @@ Local completeness checks authored shape and compiled declaration membership.
 History-dependent bag availability, requirements, peer constraints, and route
 legality remain validator work after the biome is otherwise complete.
 
-An incomplete typed value preserves every authored member. No layer replaces
-it with `nil`, invents a default, or clears dormant siblings.
+Focused reward components produce total locally complete typed values from
+declaration defaults. Contextual bag availability and peer/history constraints
+may still make those values invalid. No layer invents an option-order default
+or clears dormant siblings.
 
 ## Candidate Composition
 

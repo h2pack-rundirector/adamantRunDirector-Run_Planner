@@ -13,7 +13,10 @@ local shopRegistry = deps.shopRegistry or import("mods/rewards/shops/registry.lu
 local shop = deps.shop or import("mods/rewards/components/shop.lua", nil, {
     primitiveChoice = primitiveChoice,
 })
-local rewardUi = deps.rewardUi or import("mods/rewards/ui.lua")
+local rewardUi = deps.rewardUi or import("mods/rewards/ui.lua", nil, {
+    countedChoice = countedChoice,
+    primitiveChoice = primitiveChoice,
+})
 
 local assembly = {}
 

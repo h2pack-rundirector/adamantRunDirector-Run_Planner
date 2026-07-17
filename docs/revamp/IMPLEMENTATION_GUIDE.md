@@ -652,6 +652,9 @@ reader/writer and the plan-owned codec as competing authorities.
   `persist = false` and `hash = false`;
 - stable declaration-derived room, reward, payload, entry-mode, and structural
   option domains prepared outside draw;
+- declaration-owned complete defaults for every active focused reward leaf and
+  forked-preboss entry mode, with store, primitive, payload, and mode edits
+  expressed as concrete atomic replacements rather than clearable selections;
 - bottom-up reward/payload draw collaborators for one-of payloads, distinct
   pairs, primitive choices, counted choices, shops, and purchase state;
 - permanent Route and focused F Room Control views, including topology-context
@@ -697,6 +700,10 @@ or planner-owned replacement for Lib dropdown widgets.
   semantic Biome Plan commands during the same draw call;
 - specified targets are replacement-only; category browsing and blank
   second-stage sentinels never delete authored targets;
+- active focused reward leaves contain no unspecified store, primitive,
+  payload, or forked-preboss entry mode; fresh profile creation and Lib reset
+  install the same validated declaration defaults, and leaf widgets only
+  replace concrete values;
 - structural continuation actions are direct semantic buttons projected only
   at an existing decision, the active frontier, or the terminal header and do
   not allocate transient selector fields;

@@ -124,6 +124,7 @@ function TestCatalogFoundation.testLoadsCompleteRouteAndRoomUniverseHeadlessly()
             catalog.controlManifest.rooms.lookup.Underworld_F_PreBoss01.entryOfferPolicy,
             {
                 kind = "shopThenFillRemainingExits",
+                defaultEntryMode = "Shop",
                 freeReward = {
                     kind = "countedChoice",
                     storeKeys = { "RunProgress" },
@@ -410,6 +411,7 @@ function TestCatalogFoundation.testRewardCatalogPreservesBagsAndEmbeddedBindings
         })
         lu.assertEquals(rewards.normalizedAcquisitions.WeaponUpgradeDrop, "WeaponUpgrade")
         lu.assertEquals(rewards.primitives.lookup.Devotion.payloadDomain, "DevotionPair")
+        lu.assertNil(rewards.primitives.lookup.ApolloUpgrade.payloadDomain)
         lu.assertNil(rewards.surfaces)
         local biomes = catalog.biomes.lookup
         lu.assertEquals(biomes.H.rooms.lookup.H_Combat01.incomingReward.maxSlots, 3)
@@ -692,6 +694,44 @@ function TestCatalogFoundation.testRejectsMalformedRoomAndRewardFixturesAtCatalo
         assertFails(function() loadCatalog(raw) end, "unknown reward primitive 'MissingReward'")
 
         raw = h.rawDeclarations()
+        raw.rewards.primitives.Boon.defaultPayload = nil
+        assertFails(function() loadCatalog(raw) end, ".defaultPayload: expected an explicit table")
+
+        raw = h.rawDeclarations()
+        raw.rewards.primitives.Devotion.defaultPayload.sources[2] = "ApolloUpgrade"
+        assertFails(function() loadCatalog(raw) end, "duplicate value 'ApolloUpgrade'")
+
+        raw = h.rawDeclarations()
+        raw.rewards.primitives.ApolloUpgrade.defaultPayload = { source = "ApolloUpgrade" }
+        assertFails(function() loadCatalog(raw) end, "reward primitive has no payload domain")
+
+        raw = h.rawDeclarations()
+        raw.rewards.primitives.ApolloUpgrade.payloadDomain = "BoonSource"
+        raw.rewards.primitives.ApolloUpgrade.defaultPayload = { source = "ApolloUpgrade" }
+        assertFails(function() loadCatalog(raw) end, "payload domain values must be terminal")
+
+        raw = h.rawDeclarations()
+        raw.rewards.bags.RunProgress.defaultRewardType = nil
+        assertFails(function() loadCatalog(raw) end, ".defaultRewardType: expected a non-empty string")
+
+        raw = h.rawDeclarations()
+        raw.rewards.shops.profiles.WorldShop.slots[1].defaultRewardType = "MaxHealthDrop"
+        assertFails(function() loadCatalog(raw) end, "is not available from the referenced option set")
+
+        raw = h.rawDeclarations()
+        findRawRoom(raw, "F", "F_Combat02").incomingReward.defaultStoreKey = nil
+        assertFails(function() loadCatalog(raw) end, ".defaultStoreKey: expected a non-empty string")
+
+        raw = h.rawDeclarations()
+        findRawRoom(raw, "I", "I_Combat01").incomingReward.kinds[2]
+            .reward.defaultRewardType = nil
+        assertFails(function() loadCatalog(raw) end, "default reward primitive is excluded")
+
+        raw = h.rawDeclarations()
+        findRawRoom(raw, "F", "F_PreBoss01").entryOfferPolicy.defaultEntryMode = nil
+        assertFails(function() loadCatalog(raw) end, ".defaultEntryMode: expected a non-empty string")
+
+        raw = h.rawDeclarations()
         raw.rewards.normalizedAcquisitions = { WeaponUpgradeDrop = "Boon" }
         assertFails(function() loadCatalog(raw) end, "rewards.normalizedAcquisitions: unexpected field")
     end)
@@ -791,6 +831,7 @@ function TestCatalogFoundation.testEncounterProfilesOwnBaselineEncounterDepthEff
             choice = {
                 kind = "countedChoice",
                 storeKeys = { "RunProgress", "MetaProgress" },
+                defaultStoreKey = "RunProgress",
                 eligibleRewardTypes = {},
                 ineligibleRewardTypes = {},
             },

@@ -31,6 +31,8 @@ function countedChoice.prepare(view, fieldPrefix)
     local descriptor = {
         view = view,
         fields = {},
+        defaultStoreKey = view.defaultStoreKey,
+        defaultPrimitive = view.defaultPrimitive,
     }
     if view.fixedStoreKey == nil then
         descriptor.fields.storeKey = fieldPrefix .. "StoreKey"
@@ -50,7 +52,7 @@ function countedChoice.storage(descriptor)
         storage[#storage + 1] = {
             key = descriptor.fields.storeKey,
             type = "string",
-            default = "",
+            default = descriptor.defaultStoreKey,
             maxLen = STRING_MAX,
         }
     end
@@ -58,7 +60,7 @@ function countedChoice.storage(descriptor)
         storage[#storage + 1] = {
             key = descriptor.fields.rewardType,
             type = "string",
-            default = "",
+            default = descriptor.defaultPrimitive.gameName,
             maxLen = STRING_MAX,
         }
     end
@@ -66,7 +68,7 @@ function countedChoice.storage(descriptor)
         storage[#storage + 1] = {
             key = descriptor.fields["source" .. tostring(index)],
             type = "string",
-            default = "",
+            default = descriptor.defaultPrimitive["defaultSource" .. tostring(index)] or "",
             maxLen = STRING_MAX,
         }
     end
@@ -87,8 +89,11 @@ local function validateValue(descriptor, value, context)
         fail(context, "cannot replace fixed store '" .. view.fixedStoreKey .. "'")
     end
     local storeKey = view.fixedStoreKey or requestedStoreKey
-    local store = storeKey ~= nil and view.stores.lookup[storeKey] or nil
-    if storeKey ~= nil and store == nil then
+    if storeKey == nil then
+        fail(context, "storeKey is required")
+    end
+    local store = view.stores.lookup[storeKey]
+    if store == nil then
         fail(context, "unknown store '" .. storeKey .. "'")
     end
 
@@ -100,8 +105,11 @@ local function validateValue(descriptor, value, context)
         fail(context, "cannot replace fixed reward type '" .. view.fixedRewardType .. "'")
     end
     local rewardType = view.fixedRewardType or requestedRewardType
-    local primitive = rewardType ~= nil and view.primitives.lookup[rewardType] or nil
-    if rewardType ~= nil and primitive == nil then
+    if rewardType == nil then
+        fail(context, "rewardType is required")
+    end
+    local primitive = view.primitives.lookup[rewardType]
+    if primitive == nil then
         fail(context, "rewardType '" .. rewardType .. "' is not available from this binding")
     end
     if store ~= nil
@@ -111,53 +119,48 @@ local function validateValue(descriptor, value, context)
         fail(context, "rewardType '" .. primitive.gameName
             .. "' is not available from store '" .. store.key .. "'")
     end
-    if primitive == nil then
-        if value.payload ~= nil then
-            fail(context, "payload requires a rewardType")
-        end
-        return storeKey, nil, nil, nil
-    end
-    local source1, source2 = primitive.encode({
+    local normalized = {
         rewardType = primitive.gameName,
         payload = value.payload,
-    }, context)
+    }
+    local source1, source2 = primitive.encode(normalized, context)
+    if not primitive.isComplete(normalized) then
+        fail(context, "reward must be complete")
+    end
     return storeKey, primitive.gameName, source1, source2
 end
 
-local function readOptionalField(fields, fieldKey, context)
+local function readRequiredField(fields, fieldKey, context)
+    local value = fields[fieldKey]:read()
+    if type(value) ~= "string" or value == "" then
+        fail(context, "persisted field '" .. fieldKey .. "' must be a non-empty string")
+    end
+    return value
+end
+
+local function readPayloadField(fields, fieldKey, context)
     if fieldKey == nil then
         return nil
     end
-    local value = fields[fieldKey]:read()
-    if type(value) ~= "string" then
-        fail(context, "persisted field '" .. fieldKey .. "' must be a string")
-    end
-    if value == "" then
-        return nil
-    end
-    return value
+    return readRequiredField(fields, fieldKey, context)
 end
 
 function countedChoice.read(fields, descriptor, context)
     local view = descriptor.view
     local storeKey = view.fixedStoreKey
-        or readOptionalField(fields, descriptor.fields.storeKey, context)
+        or readRequiredField(fields, descriptor.fields.storeKey, context)
     local rewardType = view.fixedRewardType
-        or readOptionalField(fields, descriptor.fields.rewardType, context)
-    local source1 = readOptionalField(fields, descriptor.fields.source1, context)
-    local source2 = readOptionalField(fields, descriptor.fields.source2, context)
-    if rewardType == nil then
-        if source1 ~= nil or source2 ~= nil then
-            fail(context, "persisted payload requires a rewardType")
-        end
-        local value = { storeKey = storeKey }
-        validateValue(descriptor, value, context)
-        return value
-    end
+        or readRequiredField(fields, descriptor.fields.rewardType, context)
     local primitive = view.primitives.lookup[rewardType]
     if primitive == nil then
         fail(context, "rewardType '" .. rewardType .. "' is not available from this binding")
     end
+    local source1 = primitive.payloadArity >= 1
+        and readPayloadField(fields, descriptor.fields.source1, context)
+        or nil
+    local source2 = primitive.payloadArity >= 2
+        and readPayloadField(fields, descriptor.fields.source2, context)
+        or nil
     local value = primitive.decode(source1, source2, context)
     value.storeKey = storeKey
     validateValue(descriptor, value, context)
@@ -167,15 +170,49 @@ end
 function countedChoice.write(fields, descriptor, value, context)
     local storeKey, rewardType, source1, source2 = validateValue(descriptor, value, context)
     if descriptor.fields.storeKey ~= nil then
-        fields[descriptor.fields.storeKey]:write(storeKey or "")
+        fields[descriptor.fields.storeKey]:write(storeKey)
     end
     if descriptor.fields.rewardType ~= nil then
-        fields[descriptor.fields.rewardType]:write(rewardType or "")
+        fields[descriptor.fields.rewardType]:write(rewardType)
     end
-    for index = 1, descriptor.view.maxPayloadArity do
+    local primitive = descriptor.view.primitives.lookup[rewardType]
+    for index = 1, primitive.payloadArity do
         local source = index == 1 and source1 or source2
-        fields[descriptor.fields["source" .. tostring(index)]]:write(source or "")
+        fields[descriptor.fields["source" .. tostring(index)]]:write(source)
     end
+end
+
+local function defaultValue(storeKey, primitive)
+    local value = primitive.decode(
+        primitive.defaultSource1,
+        primitive.defaultSource2,
+        "reward default"
+    )
+    value.storeKey = storeKey
+    return value
+end
+
+function countedChoice.replaceStore(fields, descriptor, storeKey, context)
+    local store = descriptor.view.stores.lookup[storeKey]
+    if store == nil then
+        fail(context, "unknown store '" .. tostring(storeKey) .. "'")
+    end
+    countedChoice.write(fields, descriptor, defaultValue(storeKey, store.defaultPrimitive), context)
+end
+
+function countedChoice.replaceReward(fields, descriptor, rewardType, context)
+    local storeKey = descriptor.view.fixedStoreKey
+        or readRequiredField(fields, descriptor.fields.storeKey, context)
+    local store = descriptor.view.stores.lookup[storeKey]
+    local primitive = store and store.primitiveLookup[rewardType] or nil
+    if primitive == nil then
+        fail(
+            context,
+            "rewardType '" .. tostring(rewardType)
+                .. "' is not available from store '" .. tostring(storeKey) .. "'"
+        )
+    end
+    countedChoice.write(fields, descriptor, defaultValue(storeKey, primitive), context)
 end
 
 function countedChoice.isComplete(descriptor, value)

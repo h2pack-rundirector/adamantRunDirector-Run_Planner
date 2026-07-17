@@ -120,7 +120,12 @@ function TestRoomTemplates.testCountedRoomTemplatesUseCompiledPerInstanceShapes(
         lu.assertNotNil(openingStorage.RewardType)
         lu.assertNotNil(openingStorage.RewardPayload1)
         lu.assertNil(openingStorage.RewardPayload2)
-        lu.assertFalse(openingRuntime:isComplete())
+        lu.assertTrue(openingRuntime:isComplete())
+        lu.assertEquals(openingRuntime:read().generatedReward, {
+            storeKey = "RunProgress",
+            rewardType = "Boon",
+            payload = { source = "ApolloUpgrade" },
+        })
         openingUi:setGeneratedReward({
             rewardType = "Boon",
             payload = { source = "ApolloUpgrade" },
@@ -137,7 +142,7 @@ function TestRoomTemplates.testCountedRoomTemplatesUseCompiledPerInstanceShapes(
         lu.assertNil(minibossStorage.RewardStoreKey)
         lu.assertNil(minibossStorage.RewardType)
         lu.assertNotNil(minibossStorage.RewardPayload1)
-        lu.assertFalse(minibossRuntime:isComplete())
+        lu.assertTrue(minibossRuntime:isComplete())
         minibossUi:setGeneratedReward({ payload = { source = "ZeusUpgrade" } })
         lu.assertTrue(minibossRuntime:isComplete())
         lu.assertEquals(minibossRuntime:read().generatedReward.rewardType, "Boon")
@@ -172,7 +177,7 @@ function TestRoomTemplates.testFixedIntroSupportsAbsentAndCountedVariants()
         local qStorage = storageLookup(qTemplate.storage(qInstance))
         lu.assertNotNil(qStorage.RewardType)
         lu.assertNotNil(qStorage.RewardPayload1)
-        lu.assertFalse(qRuntime:isComplete())
+        lu.assertTrue(qRuntime:isComplete())
         qUi:setGeneratedReward({
             rewardType = "Boon",
             payload = { source = "ApolloUpgrade" },
@@ -205,7 +210,11 @@ function TestRoomTemplates.testShopOwnsTypedSlotsAndPurchaseState()
         lu.assertNotNil(storage.ShopBoonPurchased)
         lu.assertNotNil(storage.ShopMajorNonBoonType)
         lu.assertNil(storage.ShopMajorNonBoonPayload1)
-        lu.assertFalse(runtime:isComplete())
+        lu.assertTrue(runtime:isComplete())
+        lu.assertEquals(runtime:read().shop.slots.Boon.reward, {
+            rewardType = "RandomLoot",
+            payload = { source = "ApolloUpgrade" },
+        })
 
         authorWorldShop(ui, false)
         lu.assertTrue(runtime:isComplete())
@@ -264,7 +273,7 @@ function TestRoomTemplates.testForkedPrebossUsesBoundedStateAndTopologyContext()
         local gStorage = storageLookup(gTemplate.storage(gInstance))
         lu.assertNotNil(gStorage.FreeReward1Type)
         lu.assertNotNil(gStorage.FreeReward2Type)
-        lu.assertFalse(gRuntime:isComplete({ activeFreeRewardCount = 0 }))
+        lu.assertTrue(gRuntime:isComplete({ activeFreeRewardCount = 0 }))
 
         authorWorldShop(gUi, true)
         gUi:setEntryMode("Reward2")
@@ -272,7 +281,7 @@ function TestRoomTemplates.testForkedPrebossUsesBoundedStateAndTopologyContext()
             rewardType = "Boon",
             payload = { source = "ApolloUpgrade" },
         })
-        lu.assertFalse(gRuntime:isComplete({ activeFreeRewardCount = 2 }))
+        lu.assertTrue(gRuntime:isComplete({ activeFreeRewardCount = 2 }))
         gUi:setFreeReward(2, { rewardType = "MaxHealthDrop" })
         lu.assertTrue(gRuntime:isComplete({ activeFreeRewardCount = 2 }))
         lu.assertFalse(gRuntime:isComplete({ activeFreeRewardCount = 1 }))

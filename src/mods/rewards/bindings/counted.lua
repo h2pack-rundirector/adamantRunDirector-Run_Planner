@@ -30,6 +30,9 @@ function counted.create(bags)
         end
         local eligible = listLookup(binding.eligibleRewardTypes)
         local ineligible = listLookup(binding.ineligibleRewardTypes)
+        local defaultStoreKey = #binding.storeKeys == 1
+            and binding.storeKeys[1]
+            or binding.defaultStoreKey
         local view = {
             kind = "countedChoice",
             storeKeys = copyList(binding.storeKeys),
@@ -44,6 +47,10 @@ function counted.create(bags)
             local store = {
                 key = storeKey,
                 bag = bag,
+                defaultPrimitive = storeKey == defaultStoreKey
+                    and binding.defaultRewardType ~= nil
+                    and bags.lookup[storeKey].optionLookup[binding.defaultRewardType]
+                    or bag.defaultPrimitive,
                 primitives = {},
                 primitiveLookup = {},
             }
@@ -67,6 +74,8 @@ function counted.create(bags)
         if #view.storeKeys == 1 then
             view.fixedStoreKey = view.storeKeys[1]
         end
+        view.defaultStoreKey = defaultStoreKey
+        view.defaultPrimitive = view.stores.lookup[view.defaultStoreKey].defaultPrimitive
         if #view.rewardTypes == 1 then
             view.fixedRewardType = view.rewardTypes[1]
         end

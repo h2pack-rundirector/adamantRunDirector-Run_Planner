@@ -73,14 +73,15 @@ target was generated and offered.
 
 For a visited pylon:
 
-- empty generation is incomplete;
+- generation starts from the explicit `NotGenerated` default;
 - `NotGenerated` makes order and reward dormant;
 - `Generated` requires a concrete reward;
 - `enteredOrder = 0` means generated but not entered;
 - positive orders must be unique and dense across entered slots.
 
 The cross-slot order rule is template-local. Hub visitation order remains
-batch-owned.
+batch-owned. Once the N template is active, generation may replace
+`NotGenerated` with `Generated` or back again but cannot become unspecified.
 
 ## Candidates and Feedback
 

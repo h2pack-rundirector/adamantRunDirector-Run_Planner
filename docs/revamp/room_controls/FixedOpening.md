@@ -19,8 +19,8 @@ Logical persistence:
 
 ```lua
 {
-    rewardType = "",
-    source = "", -- active only for a Boon payload
+    rewardType = "Boon",
+    source = "ApolloUpgrade", -- active only for a Boon payload
 }
 ```
 
@@ -43,7 +43,7 @@ what follows it.
 
 ## Completeness and Addressing
 
-The referenced control is complete when the reward type and any required
-payload are concrete. Its reward address uses
+The referenced control starts complete and remains complete under local
+replacement. Its reward address uses
 `aspect = "generatedReward"`. Fixed opening encounter identity has no
 candidate or persisted field.

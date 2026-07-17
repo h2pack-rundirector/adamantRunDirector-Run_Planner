@@ -493,7 +493,7 @@ return {
             templateKey = "Fountain",
             tags = {},
             exits = { { index = 1, targetMode = "generated", type = "ShipsExitDoor" } },
-            incomingReward = { kind = "countedChoice", storeKeys = { "RunProgress", "MetaProgress" }, eligibleRewardTypes = {}, ineligibleRewardTypes = { "Devotion" } },
+            incomingReward = { kind = "countedChoice", storeKeys = { "RunProgress", "MetaProgress" }, defaultStoreKey = "RunProgress", eligibleRewardTypes = {}, ineligibleRewardTypes = { "Devotion" } },
             encounterProfileKey = "HealthRestore",
             counters = { biomeDepthCache = 1, roomHistoryOrdinal = 1 },
             caps = { maxAppearancesThisBiome = 1, maxCreationsThisRun = 1 },

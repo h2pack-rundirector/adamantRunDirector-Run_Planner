@@ -46,8 +46,8 @@ function Template.prepare(instance)
     local policy = instance.entryOfferPolicy
     local freeView = countedBindings.compile(policy.freeReward)
     local freeRewards = {}
-    local entryModeValues = { "", "Shop" }
-    local entryModeLookup = { [""] = true, Shop = true }
+    local entryModeValues = { "Shop" }
+    local entryModeLookup = { Shop = true }
     for index = 1, policy.maxFreeRewards do
         local mode = "Reward" .. tostring(index)
         entryModeValues[#entryModeValues + 1] = mode
@@ -58,6 +58,7 @@ function Template.prepare(instance)
         ))
     end
     instance.entryModeField = "EntryMode"
+    instance.defaultEntryMode = policy.defaultEntryMode
     instance.entryModeValues = entryModeValues
     instance.entryModeLookup = entryModeLookup
     instance.freeRewards = freeRewards
@@ -65,7 +66,7 @@ function Template.prepare(instance)
         shops.profiles.lookup[instance.incomingReward.shopProfileKey],
         "Shop"
     ))
-    local entryModeLabels = { [""] = "Select...", Shop = "Shop" }
+    local entryModeLabels = { Shop = "Shop" }
     for index = 1, policy.maxFreeRewards do
         entryModeLabels["Reward" .. tostring(index)] = "Free Reward " .. tostring(index)
     end
@@ -84,7 +85,7 @@ function Template.storage(instance)
         {
             key = instance.entryModeField,
             type = "string",
-            default = "",
+            default = instance.defaultEntryMode,
             maxLen = STRING_MAX,
         },
     }
@@ -230,7 +231,7 @@ function Template.createUi(fields, instance)
         local opts = instance.entryModeOpts
         for index = #opts.values, 1, -1 do
             local value = opts.values[index]
-            opts.visibleValues[value] = value == "" or value == "Shop"
+            opts.visibleValues[value] = value == "Shop"
                 or tonumber(string.match(value, "^Reward(%d+)$")) <= activeCount
         end
         draw.widgets.dropdown(fields[instance.entryModeField], opts)

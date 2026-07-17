@@ -23,8 +23,8 @@ For `Q_Intro` logical persistence is:
 
 ```lua
 {
-    rewardType = "",
-    source = "",
+    rewardType = "Boon",
+    source = "ApolloUpgrade",
 }
 ```
 
@@ -43,6 +43,6 @@ and the typed read is:
 
 ## Completeness and Addressing
 
-The `none` instances are locally complete without persistence. `Q_Intro` is
-complete only when its opening reward is concrete. The control owns no root
+The `none` instances are locally complete without persistence. `Q_Intro`
+starts from its complete opening-reward default. The control owns no root
 selection, outgoing topology, or intro counter effects.

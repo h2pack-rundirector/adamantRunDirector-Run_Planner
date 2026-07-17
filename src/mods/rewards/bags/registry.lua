@@ -7,6 +7,7 @@ local function createBag(declaration, primitives)
         entries = {},
         options = {},
         optionLookup = {},
+        defaultPrimitive = primitives.lookup[declaration.defaultRewardType],
     }
     for index, declarationEntry in ipairs(declaration.entries) do
         local primitive = primitives.lookup[declarationEntry.rewardType]

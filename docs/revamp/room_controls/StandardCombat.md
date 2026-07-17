@@ -35,10 +35,10 @@ Logical persistence:
 
 ```lua
 {
-    storeKey = "",
-    rewardType = "",
-    source1 = "",
-    source2 = "",
+    storeKey = "RunProgress",
+    rewardType = "Boon",
+    source1 = "ApolloUpgrade",
+    source2 = "", -- dormant while Boon is selected
 }
 ```
 
@@ -51,6 +51,7 @@ picked state, eligibility, or canonical combat-family remapping.
 
 ## Completeness and Addressing
 
-The generated reward must be concrete and payload-complete. The semantic owner
+The generated reward starts concrete and payload-complete and may only be
+atomically replaced by another complete target. The semantic owner
 address uses `aspect = "generatedReward"`. Encounter phase `Combat` is a fixed
 profile fact and carries no authored choice.

@@ -7,6 +7,7 @@ end
 
 return {
     RunProgress = {
+        defaultRewardType = "Boon",
         refill = "appendWhenNoEligibleEntry",
         entries = {
             entry("Boon"), entry("Boon"), entry("Boon"), entry("Boon"),
@@ -22,6 +23,7 @@ return {
         },
     },
     MetaProgress = {
+        defaultRewardType = "GiftDrop",
         refill = "appendWhenNoEligibleEntry",
         entries = {
             entry("GiftDrop"),
@@ -32,6 +34,7 @@ return {
         },
     },
     HubRewards = {
+        defaultRewardType = "Boon",
         refill = "appendWhenNoEligibleEntry",
         entries = {
             entry("Boon"), entry("Boon"), entry("Boon"), entry("Boon"), entry("Boon"),
@@ -40,6 +43,7 @@ return {
         },
     },
     SubRoomRewards = {
+        defaultRewardType = "MaxManaDropSmall",
         refill = "appendWhenNoEligibleEntry",
         entries = {
             entry("MaxManaDropSmall"), entry("MaxHealthDropSmall"), entry("EmptyMaxHealthSmallDrop"),
@@ -52,6 +56,7 @@ return {
         },
     },
     SubRoomRewardsHard = {
+        defaultRewardType = "MaxHealthDrop",
         refill = "appendWhenNoEligibleEntry",
         entries = {
             entry("MaxHealthDrop"), entry("MaxHealthDrop"), entry("MaxManaDrop"), entry("MaxManaDrop"),
@@ -59,6 +64,7 @@ return {
         },
     },
     TartarusRewards = {
+        defaultRewardType = "Boon",
         refill = "appendWhenNoEligibleEntry",
         entries = {
             entry("Boon"), entry("Boon"), entry("Boon"),
@@ -69,6 +75,7 @@ return {
         },
     },
     TyphonBossRewards = {
+        defaultRewardType = "Boon",
         refill = "appendWhenNoEligibleEntry",
         entries = {
             entry("Boon"), entry("Boon"), entry("TalentBigDrop"), entry("StackUpgradeTriple"),

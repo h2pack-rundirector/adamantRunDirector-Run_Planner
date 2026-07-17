@@ -1,3 +1,7 @@
+local deps = ... or {}
+local countedChoice = deps.countedChoice
+local primitiveChoice = deps.primitiveChoice
+
 local rewardUi = {}
 
 local FRAME_ALIGNED_TEXT_OPTS = {
@@ -8,16 +12,8 @@ local function hasFramedPayload(editor)
     return editor ~= nil and editor.kind ~= "none"
 end
 
-local function valuesWithEmpty(values)
-    local result = { "" }
-    for _, value in ipairs(values) do
-        result[#result + 1] = value
-    end
-    return result
-end
-
 local function primitiveLabels(primitives)
-    local labels = { [""] = "Select..." }
+    local labels = {}
     for _, primitive in ipairs(primitives) do
         labels[primitive.gameName] = primitive.label
     end
@@ -29,8 +25,8 @@ local function payloadView(primitive)
     if payload.kind == "none" then
         return { kind = "none" }
     end
-    local values = valuesWithEmpty(payload.values)
-    local labels = { [""] = "Select..." }
+    local values = payload.values
+    local labels = {}
     for _, value in ipairs(payload.values) do
         labels[value] = payload.valueLabels[value]
     end
@@ -89,7 +85,7 @@ local function rewardOpts(primitives)
     end
     return {
         label = "Reward",
-        values = valuesWithEmpty(keys),
+        values = keys,
         displayValues = primitiveLabels(primitives),
         controlWidth = 170,
     }
@@ -102,14 +98,14 @@ function rewardUi.prepareCounted(descriptor)
         rewardsByStore = {},
     }
     if view.fixedStoreKey == nil then
-        local labels = { [""] = "Select..." }
+        local labels = {}
         for _, store in ipairs(view.stores.ordered) do
             labels[store.key] = store.key
             editor.rewardsByStore[store.key] = rewardOpts(store.primitives)
         end
         editor.store = {
             label = "Store",
-            values = valuesWithEmpty(view.storeKeys),
+            values = view.storeKeys,
             displayValues = labels,
             controlWidth = 145,
         }
@@ -149,15 +145,6 @@ function rewardUi.prepareShop(descriptor)
     return descriptor
 end
 
-local function resetPayload(fields, mapping)
-    for index = 1, 2 do
-        local fieldKey = mapping["source" .. tostring(index)]
-        if fieldKey ~= nil then
-            fields[fieldKey]:write("")
-        end
-    end
-end
-
 local function drawPayload(draw, fields, mapping, editor)
     if editor == nil or editor.kind == "none" then
         return
@@ -194,7 +181,12 @@ local function drawPrimitiveChoice(draw, fields, descriptor)
     if descriptor.fields.rewardType ~= nil then
         local field = fields[descriptor.fields.rewardType]
         if draw.widgets.dropdown(field, descriptor.editor.reward) then
-            resetPayload(fields, descriptor.fields)
+            primitiveChoice.replaceReward(
+                fields,
+                descriptor,
+                field:read(),
+                "primitive reward editor"
+            )
         end
         rewardType = field:read()
     elseif rewardType ~= nil then
@@ -221,10 +213,12 @@ function rewardUi.drawCounted(draw, fields, descriptor)
     if descriptor.fields.storeKey ~= nil then
         local field = fields[descriptor.fields.storeKey]
         if draw.widgets.dropdown(field, descriptor.editor.store) then
-            if descriptor.fields.rewardType ~= nil then
-                fields[descriptor.fields.rewardType]:write("")
-            end
-            resetPayload(fields, descriptor.fields)
+            countedChoice.replaceStore(
+                fields,
+                descriptor,
+                field:read(),
+                "counted reward editor"
+            )
         end
         storeKey = field:read()
         drewStore = true
@@ -241,7 +235,12 @@ function rewardUi.drawCounted(draw, fields, descriptor)
         end
         local field = fields[descriptor.fields.rewardType]
         if draw.widgets.dropdown(field, opts) then
-            resetPayload(fields, descriptor.fields)
+            countedChoice.replaceReward(
+                fields,
+                descriptor,
+                field:read(),
+                "counted reward editor"
+            )
         end
         rewardType = field:read()
     end

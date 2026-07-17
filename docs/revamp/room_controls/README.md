@@ -179,7 +179,8 @@ Before implementation is accepted:
 - assembly rejects combinations not listed by the owning template;
 - every persisted field contributes to an active authored branch or is
   explicitly documented as dormant;
-- every active choice has an explicit incomplete representation;
+- every active choice has an explicit complete declaration default and a
+  replacement-only semantic edit operation;
 - runtime and UI refs return the same typed authored value;
 - runtime refs expose no write operation;
 - no template owns topology or reads a private alias from another control;

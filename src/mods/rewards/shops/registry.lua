@@ -37,6 +37,8 @@ local function createProfile(declaration, optionSets)
             key = declarationSlot.key,
             label = declarationSlot.label,
             optionSet = optionSets.lookup[declarationSlot.optionSetKey],
+            defaultPrimitive = optionSets.lookup[declarationSlot.optionSetKey]
+                .primitiveLookup[declarationSlot.defaultRewardType],
             uniqueGroup = declarationSlot.uniqueGroup,
         }
         profile.slots.ordered[#profile.slots.ordered + 1] = slot

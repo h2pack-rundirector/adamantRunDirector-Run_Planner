@@ -57,13 +57,13 @@ Logical persistence is bounded:
 
 ```lua
 {
-    encounterCount = 0, -- 0 | 2 | 3; zero is incomplete
+    encounterCount = 2,
     wheel1 = {
-        storeKey = "",
-        offerCount = 0,
-        pickedIndex = 0,
-        offer1 = { rewardType = "", source1 = "" },
-        offer2 = { rewardType = "", source1 = "" },
+        storeKey = "RunProgress",
+        offerCount = 1,
+        pickedIndex = 1,
+        offer1 = { rewardType = "Boon", source1 = "ApolloUpgrade" },
+        offer2 = { rewardType = "MaxHealthDrop", source1 = "" }, -- dormant
     },
     wheel2 = { -- same bounded fields as wheel1
     },
@@ -85,7 +85,8 @@ one picked active index.
 
 The UI exposes one game-language dropdown: two encounters means Intro plus
 Combat1; three encounters means Intro plus Combat1 plus Combat2. Zero is the
-incomplete persisted value. Selecting two makes all `wheel2` state dormant;
+transitional manifest sentinel only; the active O template defaults to two and
+never exposes zero. Selecting two makes all `wheel2` state dormant;
 selecting three activates it with the same completeness rules as `wheel1`.
 Stored wheel2 values survive a switch back to two.
 

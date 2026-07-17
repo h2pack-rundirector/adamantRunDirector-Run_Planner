@@ -538,6 +538,40 @@ translation is likewise template-owned, but its output is written to the
 coordinator's non-persisted route presentation cache rather than into a
 callback-owned control ref or persisted control state.
 
+### Structural and leaf lifecycles
+
+Topology and leaf state intentionally use different edit lifecycles:
+
+```text
+topology target
+  unspecified -> specified -> replaced
+                           -> removed with its owning decision or topology
+
+active leaf value
+  declaration default -> replaced -> replaced ...
+```
+
+An unused bounded topology slot represents absent structure and therefore
+cannot receive a meaningful static default. Creating a decision does not pick
+the first currently eligible room: eligibility and candidate availability are
+route-context facts, and creation must not perform hidden planning.
+
+A Room Control leaf has a declaration-bounded value domain. Every focused
+template therefore supplies a complete deterministic default for each active
+leaf value. Defaults compose from the semantic authority that owns the choice:
+reward primitives own complete payload defaults, bags own their default primitive,
+multi-store bindings own their default store and any required primitive
+override, shop slots own their default primitive, and structural wrappers own
+their mode defaults. Option ordering is never default authority.
+
+Leaf editors expose atomic replacement, not clearing. Replacing a counted
+store also selects that store's declared default primitive; replacing a
+primitive also installs its declared complete payload. Payload fields reserved
+for another primitive and reward slots outside active capacity remain persisted
+and dormant. No intermediate empty reward is committed. Removing topology does
+not reset a Room Control, while Lib reset restores every leaf's declaration
+defaults.
+
 ## UI Composition
 
 `UI_EDITOR_MODEL.md` owns the concrete authored projection, transient selector,

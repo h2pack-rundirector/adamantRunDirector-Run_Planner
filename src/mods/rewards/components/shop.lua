@@ -29,6 +29,7 @@ function shop.prepare(profile, fieldPrefix)
             purchasedField = fieldPrefix .. profileSlot.key .. "Purchased",
             reward = primitiveChoice.prepare(
                 profileSlot.optionSet,
+                profileSlot.defaultPrimitive,
                 fieldPrefix .. profileSlot.key
             ),
         }

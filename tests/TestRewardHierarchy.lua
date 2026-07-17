@@ -58,6 +58,28 @@ local function alignmentDraw()
     }, textCalls
 end
 
+local function replacementDraw(label, value)
+    local replaced = false
+    return {
+        imgui = {
+            SameLine = function() end,
+            Spacing = function() end,
+        },
+        widgets = {
+            text = function() end,
+            checkbox = function() return false end,
+            dropdown = function(target, opts)
+                if opts.label ~= label or replaced then
+                    return false
+                end
+                replaced = true
+                target:write(value)
+                return true
+            end,
+        },
+    }
+end
+
 function TestRewardHierarchy.testBuildsPayloadPrimitiveAndBagRegistriesBottomUp()
     h.withImport(function()
         local systems = load()
@@ -74,11 +96,15 @@ function TestRewardHierarchy.testBuildsPayloadPrimitiveAndBagRegistriesBottomUp(
         )
         lu.assertEquals(rewards.primitives.lookup.RandomLoot.acquiredAs, "Boon")
         lu.assertEquals(rewards.primitives.lookup.Boon.acquiredAs, "Boon")
+        lu.assertEquals(rewards.primitives.lookup.Boon.defaultSource1, "ApolloUpgrade")
+        lu.assertEquals(rewards.primitives.lookup.Devotion.defaultSource2, "ZeusUpgrade")
+        lu.assertEquals(rewards.primitives.lookup.ApolloUpgrade.payloadArity, 0)
 
         local runProgress = rewards.bags.lookup.RunProgress
         lu.assertEquals(#runProgress.entries, 18)
         lu.assertEquals(#runProgress.options, 10)
         lu.assertEquals(runProgress.options[1].gameName, "Boon")
+        lu.assertEquals(runProgress.defaultPrimitive.gameName, "Boon")
         lu.assertEquals(runProgress.entries[1].primitive.gameName, "Boon")
         lu.assertEquals(runProgress.entries[4].primitive.gameName, "Boon")
         lu.assertEquals(rewards.primitives.lookup.AresUpgrade.gameName, "AresUpgrade")
@@ -96,6 +122,7 @@ function TestRewardHierarchy.testBuildsPayloadPrimitiveAndBagRegistriesBottomUp(
             key = "Boon",
             label = "Offer 1",
             optionSet = rewards.shops.optionSets.lookup.WorldShopBoon,
+            defaultPrimitive = rewards.primitives.lookup.RandomLoot,
         })
     end)
 end
@@ -111,6 +138,8 @@ function TestRewardHierarchy.testCompilesPerStoreMembershipAndStaticPayloadCapac
         lu.assertNil(ordinary.fixedStoreKey)
         lu.assertNil(ordinary.fixedRewardType)
         lu.assertEquals(ordinary.storeKeys, { "RunProgress", "MetaProgress" })
+        lu.assertEquals(ordinary.defaultStoreKey, "RunProgress")
+        lu.assertEquals(ordinary.defaultPrimitive.gameName, "Boon")
         lu.assertEquals(ordinary.maxPayloadArity, 2)
         lu.assertNotNil(ordinary.stores.lookup.RunProgress.primitiveLookup.Devotion)
         lu.assertNil(ordinary.stores.lookup.MetaProgress.primitiveLookup.Devotion)
@@ -151,6 +180,74 @@ function TestRewardHierarchy.testPreparedPayloadUiUsesPrimitiveLabelsForGameName
         lu.assertEquals(
             descriptor.editor.payloads.Devotion.second.displayValues.ZeusUpgrade,
             "Zeus"
+        )
+    end)
+end
+
+function TestRewardHierarchy.testCountedUiAtomicallyReplacesTotalRewardTargets()
+    h.withImport(function()
+        local systems = load()
+        local rewards = systems.rewards
+        local view = rewards.countedBindings.compile(
+            systems.catalog.biomes.lookup.F.rooms.lookup.F_Combat04.incomingReward
+        )
+        local descriptor = rewards.ui.prepareCounted(
+            rewards.countedChoice.prepare(view, "Reward")
+        )
+        local fields = fieldsFor(rewards.countedChoice.storage(descriptor))
+
+        lu.assertEquals(descriptor.editor.store.values, { "RunProgress", "MetaProgress" })
+        lu.assertEquals(descriptor.editor.rewardsByStore.RunProgress.values[1], "Boon")
+        lu.assertEquals(descriptor.editor.payloads.Boon.opts.values[1], "AphroditeUpgrade")
+        lu.assertEquals(rewards.countedChoice.read(fields, descriptor, "reward"), {
+            storeKey = "RunProgress",
+            rewardType = "Boon",
+            payload = { source = "ApolloUpgrade" },
+        })
+
+        rewards.ui.drawCounted(replacementDraw("Store", "MetaProgress"), fields, descriptor)
+        lu.assertEquals(rewards.countedChoice.read(fields, descriptor, "reward"), {
+            storeKey = "MetaProgress",
+            rewardType = "GiftDrop",
+        })
+
+        rewards.ui.drawCounted(
+            replacementDraw("Reward", "MetaCurrencyDrop"),
+            fields,
+            descriptor
+        )
+        lu.assertEquals(rewards.countedChoice.read(fields, descriptor, "reward"), {
+            storeKey = "MetaProgress",
+            rewardType = "MetaCurrencyDrop",
+        })
+
+        rewards.ui.drawCounted(replacementDraw("Store", "RunProgress"), fields, descriptor)
+        rewards.ui.drawCounted(replacementDraw("Reward", "Devotion"), fields, descriptor)
+        lu.assertEquals(rewards.countedChoice.read(fields, descriptor, "reward"), {
+            storeKey = "RunProgress",
+            rewardType = "Devotion",
+            payload = { sources = { "ApolloUpgrade", "ZeusUpgrade" } },
+        })
+
+        local shopDescriptor = rewards.ui.prepareShop(rewards.shop.prepare(
+            rewards.shops.profiles.lookup.WorldShop,
+            "Shop"
+        ))
+        local shopFields = fieldsFor(rewards.shop.storage(shopDescriptor))
+        lu.assertEquals(shopDescriptor.slots.lookup.Boon.reward.editor.reward.values, {
+            "RandomLoot", "BlindBoxLoot", "ShopHermesUpgrade",
+        })
+        rewards.ui.drawShop(
+            replacementDraw("Reward", "BlindBoxLoot"),
+            shopFields,
+            shopDescriptor
+        )
+        lu.assertEquals(
+            rewards.shop.read(shopFields, shopDescriptor, "shop").slots.Boon.reward,
+            {
+                rewardType = "BlindBoxLoot",
+                payload = { source = "ApolloUpgrade" },
+            }
         )
     end)
 end
@@ -292,6 +389,28 @@ function TestRewardHierarchy.testPayloadCollaboratorsOwnShapeAndCompleteness()
     end)
 end
 
+function TestRewardHierarchy.testFixedChoiceWritesImplicitRewardTypeWithCompletePayload()
+    h.withImport(function()
+        local rewards = load().rewards
+        local descriptor = rewards.fixed.prepare(rewards.primitives.lookup.Devotion, "Reward")
+        local fields = fieldsFor(rewards.fixed.storage(descriptor))
+
+        rewards.fixed.write(fields, descriptor, {
+            payload = { sources = { "AphroditeUpgrade", "HeraUpgrade" } },
+        }, "devotion")
+        lu.assertEquals(rewards.fixed.read(fields, descriptor, "devotion"), {
+            rewardType = "Devotion",
+            payload = { sources = { "AphroditeUpgrade", "HeraUpgrade" } },
+        })
+
+        lu.assertErrorMsgContains("reward must be complete", function()
+            rewards.fixed.write(fields, descriptor, {
+                payload = { sources = { "AphroditeUpgrade" } },
+            }, "devotion")
+        end)
+    end)
+end
+
 function TestRewardHierarchy.testCountedChoiceElidesFixedFactsAndReportsCompleteness()
     h.withImport(function()
         local systems = load()
@@ -311,8 +430,9 @@ function TestRewardHierarchy.testCountedChoiceElidesFixedFactsAndReportsComplete
         lu.assertEquals(value, {
             storeKey = "RunProgress",
             rewardType = "Boon",
+            payload = { source = "ApolloUpgrade" },
         })
-        lu.assertFalse(rewards.countedChoice.isComplete(descriptor, value))
+        lu.assertTrue(rewards.countedChoice.isComplete(descriptor, value))
 
         rewards.countedChoice.write(fields, descriptor, {
             payload = { source = "ApolloUpgrade" },
@@ -330,13 +450,13 @@ function TestRewardHierarchy.testCountedChoiceElidesFixedFactsAndReportsComplete
             }, "miniboss")
         end)
 
-        lu.assertErrorMsgContains("persisted payload requires a rewardType", function()
+        lu.assertErrorMsgContains("must be a non-empty string", function()
             local ordinary = rewards.countedBindings.compile(
                 systems.catalog.biomes.lookup.F.rooms.lookup.F_Combat02.incomingReward
             )
             local ordinaryDescriptor = rewards.countedChoice.prepare(ordinary, "Ordinary")
             local ordinaryFields = fieldsFor(rewards.countedChoice.storage(ordinaryDescriptor))
-            ordinaryFields.OrdinaryPayload1:write("ApolloUpgrade")
+            ordinaryFields.OrdinaryType:write("")
             rewards.countedChoice.read(ordinaryFields, ordinaryDescriptor, "ordinary")
         end)
     end)

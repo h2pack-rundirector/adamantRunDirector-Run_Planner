@@ -188,6 +188,9 @@ The revamp starts from these decisions:
   picked state.
 - A room control owns its authored `incomingReward` and any rewards produced
   by explicit room-local children or encounter offer points.
+- Topology remains sparse and explicitly authored, while every active focused
+  Room Control leaf starts from complete declaration-owned defaults and may
+  only replace concrete values.
 - Outgoing topology belongs to the Biome Plan, never to a target room control.
 - Terminal exit population is layout-owned and remains separate from the
   terminal Room Control's local entry-offer policy.

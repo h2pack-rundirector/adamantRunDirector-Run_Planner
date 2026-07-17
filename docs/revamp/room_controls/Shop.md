@@ -38,7 +38,8 @@ Every instance owns the three declaration-fixed World Shop slots:
 
 Each slot persists a concrete reward type, any required source payload, and a
 `purchased` boolean. `false` means the offer was not acquired; the reward
-selection itself carries completeness.
+selection itself carries completeness. Each slot declaration owns its complete
+initial reward, and the editor only replaces one concrete offer with another.
 
 The template does not consume counted reward bags for shop offers.
 

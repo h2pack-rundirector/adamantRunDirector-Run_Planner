@@ -60,7 +60,7 @@ return {
                 offerPoint = {
                     kind = "offerPoint",
                     key = "wheel1",
-                    choice = { kind = "countedChoice", storeKeys = { "RunProgress", "MetaProgress" }, eligibleRewardTypes = {}, ineligibleRewardTypes = {} },
+                    choice = { kind = "countedChoice", storeKeys = { "RunProgress", "MetaProgress" }, defaultStoreKey = "RunProgress", eligibleRewardTypes = {}, ineligibleRewardTypes = {} },
                     offerCount = { min = 1, max = 2 },
                     picked = "exactlyOne",
                     offerTiming = "encounterStart",
@@ -85,7 +85,7 @@ return {
                 offerPoint = {
                     kind = "offerPoint",
                     key = "wheel2",
-                    choice = { kind = "countedChoice", storeKeys = { "RunProgress", "MetaProgress" }, eligibleRewardTypes = {}, ineligibleRewardTypes = {} },
+                    choice = { kind = "countedChoice", storeKeys = { "RunProgress", "MetaProgress" }, defaultStoreKey = "RunProgress", eligibleRewardTypes = {}, ineligibleRewardTypes = {} },
                     offerCount = { min = 1, max = 2 },
                     picked = "exactlyOne",
                     offerTiming = "encounterStart",

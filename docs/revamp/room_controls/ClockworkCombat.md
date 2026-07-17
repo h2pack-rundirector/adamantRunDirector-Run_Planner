@@ -42,10 +42,8 @@ Logical persistence:
 
 ```lua
 {
-    incomingKind = "", -- Goal | NonGoal | ""
-    nonGoalRewardType = "",
-    nonGoalSource1 = "",
-    nonGoalSource2 = "",
+    incomingKind = "NonGoal", -- Goal | NonGoal
+    nonGoalRewardType = "StackUpgradeTriple",
 }
 ```
 
@@ -54,8 +52,12 @@ remains persisted but dormant while Goal is selected.
 
 ## Completeness and Ownership
 
-An empty incoming kind is incomplete. Goal is locally complete immediately.
-NonGoal requires a complete reward from its compiled TartarusRewards binding.
+The I declaration must make its initial incoming kind explicit before this
+template becomes active; `NonGoal` is the planned default because it does not
+pre-author every dormant combat room as a Clockwork Goal. Goal is locally
+complete immediately. NonGoal requires a complete reward from its compiled
+TartarusRewards binding and starts from that binding's declared
+`StackUpgradeTriple` default.
 `I_BaseCombat` supplies the Boon exclusion for every supported I combat room;
 Devotion remains valid and retains its two-source payload.
 

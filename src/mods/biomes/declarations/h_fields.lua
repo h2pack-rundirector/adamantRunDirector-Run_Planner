@@ -643,6 +643,7 @@ return {
             incomingReward = { kind = "shop", shopProfileKey = "WorldShop" },
             entryOfferPolicy = {
                 kind = "shopThenFillRemainingExits",
+                defaultEntryMode = "Shop",
                 freeReward = { kind = "countedChoice", storeKeys = { "RunProgress" }, eligibleRewardTypes = {}, ineligibleRewardTypes = { "Devotion", "RoomMoneyDrop" } },
                 maxFreeRewards = 1,
             },

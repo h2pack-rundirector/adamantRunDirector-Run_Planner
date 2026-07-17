@@ -376,8 +376,9 @@ F_Combat04 = {
 }
 ```
 
-Declarations must not own authored values, UI grouping, topology links, picked
-state, or copied reward choices.
+Declarations must not own current authored values, UI grouping, topology links,
+picked state, or copied reward choices. They do own explicit initial leaf
+defaults consumed by fresh profile creation and Lib reset.
 
 Templates own reusable behavior. Each concrete declaration produces a distinct
 room-control instance from its template:

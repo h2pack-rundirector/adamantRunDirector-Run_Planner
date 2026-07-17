@@ -89,13 +89,49 @@ local function rewardTypesPayloadArity(catalog, rewardTypes)
     return maximum
 end
 
+local function defaultPayload(catalog, rewardType)
+    local primitive = catalog.rewards.primitives.lookup[rewardType]
+    if primitive.payloadDomain == nil then
+        return nil, nil
+    end
+    local domain = catalog.rewards.payloadDomains.lookup[primitive.payloadDomain]
+    if domain.kind == "oneOf" then
+        return primitive.defaultPayload.source, nil
+    end
+    if domain.kind == "distinctPair" then
+        return primitive.defaultPayload.sources[1], primitive.defaultPayload.sources[2]
+    end
+    error("unsupported payload domain kind '" .. tostring(domain.kind) .. "'", 0)
+end
+
+local function selectionDefaults(catalog, specification)
+    local storeKey = specification.fixedStoreKey
+    if storeKey == nil and specification.storeKeys ~= nil then
+        storeKey = #specification.storeKeys == 1
+            and specification.storeKeys[1]
+            or specification.defaultStoreKey
+    end
+    local rewardType = specification.fixedRewardType or specification.defaultRewardType
+    if rewardType == nil and storeKey ~= nil then
+        rewardType = catalog.rewards.bags.lookup[storeKey].defaultRewardType
+    end
+    local source1, source2 = defaultPayload(catalog, rewardType)
+    return storeKey, rewardType, source1, source2
+end
+
 local function addSelection(catalog, layout, address, prefix, specification)
     if layout.selections.lookup[address] ~= nil then
         error("duplicate room-state address '" .. address .. "'", 0)
     end
 
+    local defaultStoreKey, defaultRewardType, defaultSource1, defaultSource2 = selectionDefaults(
+        catalog,
+        specification
+    )
     local selection = {
         address = address,
+        defaultStoreKey = defaultStoreKey,
+        defaultRewardType = defaultRewardType,
         fixedStoreKey = specification.fixedStoreKey,
         fixedRewardType = specification.fixedRewardType,
         fields = {},
@@ -107,7 +143,7 @@ local function addSelection(catalog, layout, address, prefix, specification)
         addStorage(layout, {
             key = selection.fields.storeKey,
             type = "string",
-            default = "",
+            default = defaultStoreKey,
             maxLen = STRING_MAX,
         })
     end
@@ -117,7 +153,7 @@ local function addSelection(catalog, layout, address, prefix, specification)
         addStorage(layout, {
             key = selection.fields.rewardType,
             type = "string",
-            default = "",
+            default = defaultRewardType,
             maxLen = STRING_MAX,
         })
     end
@@ -133,7 +169,7 @@ local function addSelection(catalog, layout, address, prefix, specification)
         addStorage(layout, {
             key = fieldKey,
             type = "string",
-            default = "",
+            default = (index == 1 and defaultSource1 or defaultSource2) or "",
             maxLen = STRING_MAX,
         })
     end
@@ -164,6 +200,7 @@ local function addShop(catalog, layout, addressPrefix, fieldPrefix, shopProfileK
     for _, slot in ipairs(profile.slots) do
         local rewardTypes = catalog.rewards.shops.optionSets.lookup[slot.optionSetKey]
         addSelection(catalog, layout, addressPrefix .. "." .. slot.key, fieldPrefix .. title(slot.key), {
+            defaultRewardType = slot.defaultRewardType,
             purchased = true,
             payloadArity = rewardTypesPayloadArity(catalog, rewardTypes),
         })
@@ -182,6 +219,8 @@ local function addReward(catalog, layout, reward, address, fieldPrefix, context)
     end
     if reward.kind == "countedChoice" then
         addSelection(catalog, layout, address, fieldPrefix, {
+            defaultRewardType = reward.defaultRewardType,
+            defaultStoreKey = reward.defaultStoreKey,
             storeKeys = reward.storeKeys,
             eligibleRewardTypes = reward.eligibleRewardTypes,
             ineligibleRewardTypes = reward.ineligibleRewardTypes,

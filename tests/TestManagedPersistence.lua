@@ -349,6 +349,10 @@ function TestManagedPersistence.testRoomSchemasCoverEveryBoundedRewardBinding()
         lu.assertNotNil(f.RewardType)
         lu.assertNotNil(f.RewardPayload1)
         lu.assertNotNil(f.RewardPayload2)
+        lu.assertEquals(f.RewardStoreKey.default, "RunProgress")
+        lu.assertEquals(f.RewardType.default, "Boon")
+        lu.assertEquals(f.RewardPayload1.default, "ApolloUpgrade")
+        lu.assertEquals(f.RewardPayload2.default, "")
         lu.assertNil(standardCombat.state)
         lu.assertNotNil(standardCombat.generatedReward)
 
@@ -382,12 +386,14 @@ function TestManagedPersistence.testRoomSchemasCoverEveryBoundedRewardBinding()
         lu.assertNotNil(fields.Cage1RewardType)
         lu.assertNotNil(fields.Cage3RewardPayload1)
         lu.assertNil(fields.Cage3RewardPayload2)
+        lu.assertEquals(fields.Cage1RewardType.default, "Boon")
 
         local clockwork = storageLookup(
             catalog.controlManifest.rooms.lookup.Underworld_I_Combat01.prepared.state.storage
         )
         lu.assertNotNil(clockwork.RewardIncomingKind)
         lu.assertNotNil(clockwork.RewardNonGoalType)
+        lu.assertEquals(clockwork.RewardNonGoalType.default, "StackUpgradeTriple")
 
         local ephyra = storageLookup(
             catalog.controlManifest.rooms.lookup.Surface_N_Combat02.prepared.state.storage
@@ -403,6 +409,8 @@ function TestManagedPersistence.testRoomSchemasCoverEveryBoundedRewardBinding()
         lu.assertNotNil(ship.Wheel1OfferCount)
         lu.assertNotNil(ship.Wheel1Offer1Type)
         lu.assertNotNil(ship.Wheel2Offer2Payload2)
+        lu.assertEquals(ship.Wheel1Offer1Type.default, "Boon")
+        lu.assertEquals(ship.Wheel1Offer1Payload1.default, "ApolloUpgrade")
 
         local devotion = storageLookup(
             catalog.controlManifest.rooms.lookup.Surface_O_Devotion01.prepared.state.storage
@@ -410,6 +418,8 @@ function TestManagedPersistence.testRoomSchemasCoverEveryBoundedRewardBinding()
         lu.assertNotNil(devotion.RewardPayload1)
         lu.assertNotNil(devotion.RewardPayload2)
         lu.assertNil(devotion.RewardType)
+        lu.assertEquals(devotion.RewardPayload1.default, "ApolloUpgrade")
+        lu.assertEquals(devotion.RewardPayload2.default, "ZeusUpgrade")
 
         local shopInstance = preparedInstance(
             instances,
@@ -420,6 +430,8 @@ function TestManagedPersistence.testRoomSchemasCoverEveryBoundedRewardBinding()
         lu.assertNotNil(shop.ShopBoonType)
         lu.assertNotNil(shop.ShopBoonPurchased)
         lu.assertNotNil(shop.ShopMinorPurchased)
+        lu.assertEquals(shop.ShopBoonType.default, "RandomLoot")
+        lu.assertEquals(shop.ShopBoonPayload1.default, "ApolloUpgrade")
     end)
 end
 
@@ -434,23 +446,24 @@ function TestManagedPersistence.testStandardCombatUsesTypedRewardInterface()
 
         lu.assertEquals(runtime:read(), {
             kind = "StandardCombat",
-            generatedReward = {},
+            generatedReward = {
+                storeKey = "RunProgress",
+                rewardType = "Boon",
+                payload = { source = "ApolloUpgrade" },
+            },
         })
-        lu.assertFalse(runtime:isComplete())
+        lu.assertTrue(runtime:isComplete())
         lu.assertNil(runtime.write)
         lu.assertNil(runtime.setGeneratedReward)
         lu.assertNil(runtime.field)
         lu.assertNil(ui.write)
 
-        ui:setGeneratedReward({
-            storeKey = "RunProgress",
-            rewardType = "Boon",
-        })
-        lu.assertEquals(runtime:read().generatedReward, {
-            storeKey = "RunProgress",
-            rewardType = "Boon",
-        })
-        lu.assertFalse(runtime:isComplete())
+        lu.assertErrorMsgContains("reward must be complete", function()
+            ui:setGeneratedReward({
+                storeKey = "RunProgress",
+                rewardType = "Boon",
+            })
+        end)
 
         ui:setGeneratedReward({
             storeKey = "RunProgress",
@@ -505,12 +518,14 @@ function TestManagedPersistence.testStandardCombatUsesTypedRewardInterface()
             payload = { sources = { "ApolloUpgrade", "ZeusUpgrade" } },
         })
 
-        ui:setGeneratedReward({})
-        lu.assertEquals(runtime:read(), {
-            kind = "StandardCombat",
-            generatedReward = {},
+        lu.assertErrorMsgContains("storeKey is required", function()
+            ui:setGeneratedReward({})
+        end)
+        lu.assertEquals(runtime:read().generatedReward, {
+            storeKey = "RunProgress",
+            rewardType = "Devotion",
+            payload = { sources = { "ApolloUpgrade", "ZeusUpgrade" } },
         })
-        lu.assertFalse(runtime:isComplete())
 
         fields.RewardStoreKey:write("MetaProgress")
         fields.RewardType:write("Boon")
@@ -727,7 +742,11 @@ function TestManagedPersistence.testStateAccessKeepsRuntimeReadOnlyAndValidatesA
         lu.assertEquals(runtime:readRoute("Underworld"), "")
         lu.assertEquals(runtime:readRoom(roomName), {
             kind = "StandardCombat",
-            generatedReward = {},
+            generatedReward = {
+                storeKey = "RunProgress",
+                rewardType = "Boon",
+                payload = { source = "ApolloUpgrade" },
+            },
         })
         lu.assertIs(runtime:getRoom(roomName), runtimeRefs[roomName])
         lu.assertNil(runtime:getRoom(roomName).setGeneratedReward)

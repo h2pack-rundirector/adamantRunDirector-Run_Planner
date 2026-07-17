@@ -1,51 +1,44 @@
 return {
     AphroditeUpgrade = {
         label = "Aphrodite",
-        payloadDomain = "BoonSource",
     },
     ApolloUpgrade = {
         label = "Apollo",
-        payloadDomain = "BoonSource",
     },
     AresUpgrade = {
         label = "Ares",
-        payloadDomain = "BoonSource",
     },
     DemeterUpgrade = {
         label = "Demeter",
-        payloadDomain = "BoonSource",
     },
     HephaestusUpgrade = {
         label = "Hephaestus",
-        payloadDomain = "BoonSource",
     },
     HeraUpgrade = {
         label = "Hera",
-        payloadDomain = "BoonSource",
     },
     HermesUpgrade = {
         label = "Hermes",
     },
     HestiaUpgrade = {
         label = "Hestia",
-        payloadDomain = "BoonSource",
     },
     PoseidonUpgrade = {
         label = "Poseidon",
-        payloadDomain = "BoonSource",
     },
     ZeusUpgrade = {
         label = "Zeus",
-        payloadDomain = "BoonSource",
     },
 
     Boon = {
         label = "Boon",
         payloadDomain = "BoonSource",
+        defaultPayload = { source = "ApolloUpgrade" },
     },
     Devotion = {
         label = "Trial",
         payloadDomain = "DevotionPair",
+        defaultPayload = { sources = { "ApolloUpgrade", "ZeusUpgrade" } },
     },
     Story = {
         label = "Story",
@@ -57,16 +50,19 @@ return {
         label = "Boon",
         acquiredAs = "Boon",
         payloadDomain = "BoonSource",
+        defaultPayload = { source = "ApolloUpgrade" },
     },
     BoostedRandomLoot = {
         label = "Boosted Boon",
         acquiredAs = "Boon",
         payloadDomain = "BoonSource",
+        defaultPayload = { source = "ApolloUpgrade" },
     },
     BlindBoxLoot = {
         label = "Mystery Boon",
         acquiredAs = "Boon",
         payloadDomain = "BoonSource",
+        defaultPayload = { source = "ApolloUpgrade" },
     },
     ShopHermesUpgrade = {
         label = "Hermes Boon",

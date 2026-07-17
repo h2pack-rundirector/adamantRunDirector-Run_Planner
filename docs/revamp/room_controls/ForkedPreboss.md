@@ -50,7 +50,7 @@ only contain `freeRewards[1]` and do not persist an impossible Reward2:
 ```lua
 {
     kind = "ForkedPreboss",
-    entryMode = "Reward1", -- "" | Shop | Reward1 | Reward2
+    entryMode = "Reward1", -- Shop | Reward1 | Reward2
     shop = {
         profileKey = "WorldShop",
         slots = { ... },
@@ -68,6 +68,10 @@ only contain `freeRewards[1]` and do not persist an impossible Reward2:
     },
 }
 ```
+
+Fresh and reset state uses `entryMode = "Shop"`; every shop and free-reward
+slot is also initialized from its declaration defaults. Mode and reward editors
+replace concrete values and never return them to empty.
 
 The per-instance maximum is storage capacity, not a declaration that every
 predecessor has that many exits. Inactive values within that bound remain

@@ -50,12 +50,11 @@ The payload shape follows the primitive's declared domain:
 Private storage may flatten payload members, but `payloadValues`, positional
 storage names, and generated aliases do not escape the component.
 
-Semantic reads normalize private empty-string sentinels to `nil`. An
-incomplete selection returns the same typed shape with unresolved members
-absent; it does not return storage sentinels or discard already authored
-members. For example, a selected Boon without a source reads as
-`{ rewardType = "Boon" }`. Canonical materialization never emits an incomplete
-value.
+Active semantic reads are total. Every component receives explicit defaults
+from its payload domain, bag binding, shop slot, or structural wrapper, and
+active persisted members must be concrete. Empty strings may remain only in
+dormant capacity that the selected discriminator does not read. Canonical
+materialization therefore never needs to repair or default a reward value.
 
 ## `none`
 
@@ -81,8 +80,8 @@ Logical persistence:
 
 -- Devotion
 {
-    source1 = "",
-    source2 = "",
+    source1 = "ApolloUpgrade",
+    source2 = "ZeusUpgrade",
 }
 ```
 
@@ -90,7 +89,8 @@ The component rejects replacement of the fixed reward type. A fixed reward
 without a payload consumes no storage.
 
 Completeness requires every payload member and all domain constraints. A
-Devotion pair must contain two distinct concrete Boon sources.
+Devotion pair starts with two declared distinct sources and may replace either
+with another concrete source.
 
 ## Counted reward choice
 
@@ -102,19 +102,22 @@ Logical persistence:
 
 ```lua
 {
-    storeKey = "",   -- omitted from storage when exactly one store is allowed
-    rewardType = "", -- omitted when exactly one reward type is allowed
-    source1 = "",    -- allocated only when an allowed primitive can need it
-    source2 = "",    -- allocated only when an allowed primitive can need it
+    storeKey = "RunProgress", -- omitted when exactly one store is allowed
+    rewardType = "Boon",      -- omitted when exactly one reward type is allowed
+    source1 = "ApolloUpgrade",
+    source2 = "",             -- dormant while Boon is selected
 }
 ```
 
 The typed read always includes the resolved concrete `storeKey`, including
 when one bag is declaration-fixed and therefore not persisted.
 
-Completeness requires a permitted bag, a concrete reward type available
-from the compiled binding, and the selected primitive's complete payload. Payload
-fields allocated for another reward type are dormant and ignored.
+The compiled binding supplies a complete deterministic initial value.
+Completeness requires a permitted bag, a concrete reward type available from
+the compiled binding, and the selected primitive's complete payload. Payload
+fields allocated for another reward type are dormant and ignored. Store and
+primitive edits atomically replace the active target and install the selected
+target's declared payload defaults; there is no clear operation.
 
 The choice does not validate counted-bag history during read or write.
 Checkpoint 4A exposes its stable authored domain, Checkpoint 4B exports the
@@ -147,16 +150,17 @@ Logical persistence for every slot:
 
 ```lua
 {
-    rewardType = "",
-    source1 = "",
+    rewardType = "RandomLoot",
+    source1 = "ApolloUpgrade",
     source2 = "",
     purchased = false,
 }
 ```
 
-`purchased = false` means the offer was not acquired. Reward selection, rather
-than the boolean, determines whether the slot is complete. Inactive shop
-branches retain their fields but are dormant.
+`purchased = false` means the offer was not acquired. Every slot declaration
+supplies its initial primitive. Reward selection, rather than the boolean,
+determines whether the slot is complete. Inactive shop branches retain their
+fields but are dormant.
 
 The component rejects reward types outside the slot's option set. Cross-slot
 constraints such as Summit primary uniqueness remain validator rules over the
@@ -164,12 +168,12 @@ complete shop fragment.
 
 ## `branch`
 
-A branch surface persists an explicit branch key and the storage for every
-bounded branch:
+A branch surface persists an explicit declaration-defaulted branch key and the
+storage for every bounded branch:
 
 ```lua
 {
-    branch = "", -- for example Goal | NonGoal
+    branch = "NonGoal", -- for example Goal | NonGoal
     Goal = { ... },
     NonGoal = { ... },
 }
@@ -200,15 +204,15 @@ nor owns batch state.
 
 ## `incomingKind`
 
-An incoming-kind surface persists a concrete semantic kind and bounded state
-for every kind:
+An incoming-kind surface persists a declaration-defaulted concrete semantic
+kind and bounded state for every kind:
 
 ```lua
 {
-    kind = "", -- Goal | NonGoal
+    kind = "NonGoal", -- Goal | NonGoal
     Goal = { rewardType = "ClockworkGoal" },
     NonGoal = {
-        reward = { storeKey = "TartarusRewards", rewardType = "", ... },
+        reward = { storeKey = "TartarusRewards", rewardType = "StackUpgradeTriple", ... },
     },
 }
 ```
@@ -224,8 +228,8 @@ flattened into the owning Room Control:
 
 ```lua
 {
-    offerCount = 0, -- incomplete; allowed completed values are 1 or 2
-    pickedIndex = 0,
+    offerCount = 1,
+    pickedIndex = 1,
     offers = {
         [1] = { ... },
         [2] = { ... },
@@ -237,20 +241,19 @@ Only offers `1..offerCount` are active. `pickedIndex` must select exactly one
 active offer. Unused bounded offer storage is dormant. Offer points never
 become nested controls.
 
-## Explicit Decisions Versus Boolean Defaults
+## Explicit Declaration Defaults
 
-When both `true` and `false` are meaningful authored outcomes, a fresh default
-must not silently choose one. Such decisions use an explicit enum with an
-empty incomplete value:
+Every active leaf decision has a concrete declaration-owned default, even when
+multiple outcomes are meaningful. The default is an editable starting proposal,
+not a claim that the player selected it consciously and not proof of contextual
+validity. Clockwork incoming kind is planned to default to `NonGoal`, optional
+phase presence defaults to absent, side generation defaults to disabled, and
+shop purchase defaults to `false`. Option ordering is never used to choose
+these values.
 
-```text
-optional phase:  "" | Present | Absent
-side generation: "" | Generated | NotGenerated
-```
-
-Shop purchase is intentionally different: `false` is the complete semantic
-answer "not purchased," while the authored reward value independently carries
-slot completeness.
+An editor may replace a concrete decision but cannot return it to unspecified.
+Inactive bounded branches and slots retain their values without participating
+in completeness or materialization.
 
 ## Feedback Addresses
 
