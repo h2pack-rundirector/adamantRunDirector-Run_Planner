@@ -356,6 +356,7 @@ end
 local function fakeDrawUi(changes)
     local fields = {}
     local commands = {}
+    local indentDepth = 0
     local plan = {
         apply = function(_, command)
             commands[#commands + 1] = command
@@ -373,6 +374,10 @@ local function fakeDrawUi(changes)
             end
             return false
         end,
+        Indent = function(width)
+            lu.assertEquals(width, 40)
+            indentDepth = indentDepth + width
+        end,
         RadioButton = function(label)
             if changes[label] == true then
                 changes[label] = nil
@@ -381,9 +386,13 @@ local function fakeDrawUi(changes)
             return false
         end,
         SameLine = function() end,
-        SetCursorPosX = function() end,
         Spacing = function() end,
         TextDisabled = function() end,
+        Unindent = function(width)
+            lu.assertEquals(width, 40)
+            lu.assertEquals(indentDepth, width)
+            indentDepth = indentDepth - width
+        end,
     }
     local ui = {
         data = {
@@ -415,7 +424,9 @@ local function fakeDrawUi(changes)
                     return true
                 end,
             },
-            control = function() end,
+            control = function()
+                lu.assertEquals(indentDepth, 40)
+            end,
         },
     }
     return ui, plan, commands

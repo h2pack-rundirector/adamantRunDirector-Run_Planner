@@ -17,8 +17,9 @@ local function drawRoom(ui, room, context)
     if room == nil then
         return
     end
-    ui.draw.imgui.SetCursorPosX(40)
+    ui.draw.imgui.Indent(40)
     ui.draw.control(ui.controls.get(room.roomControlKey), "default", context)
+    ui.draw.imgui.Unindent(40)
 end
 
 local function drawStart(ui, plan, start)
