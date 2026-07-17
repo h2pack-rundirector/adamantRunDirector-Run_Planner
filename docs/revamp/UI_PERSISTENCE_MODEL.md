@@ -442,16 +442,21 @@ Representative commands are:
 { kind = "CreateBatch", parentRoomControlKey = ... }
 { kind = "SetTarget", parentRoomControlKey = ..., exitIndex = ..., roomControlKey = ... }
 { kind = "SetPicked", parentRoomControlKey = ..., exitIndex = ... }
-{ kind = "RemoveTarget", parentRoomControlKey = ..., exitIndex = ... }
 { kind = "RemoveBatch", parentRoomControlKey = ... }
 { kind = "CreateTerminalTransition", parentRoomControlKey = ... }
 { kind = "SetTerminalCompanion", exitIndex = ..., roomControlKey = ... }
-{ kind = "RemoveTerminalCompanion", exitIndex = ... }
 { kind = "RemoveTerminalTransition" }
 { kind = "ReplaceWithBatch", parentRoomControlKey = ... }
 { kind = "ReplaceWithTerminalTransition", parentRoomControlKey = ... }
 { kind = "ClearTopology" }
 ```
+
+`SetTarget` and `SetTerminalCompanion` own both the initial
+`unspecified -> specified` transition and atomic replacement. Once specified,
+a physical target cannot return to an empty authored value. It can only be
+replaced by another Room Control or removed as part of deleting/replacing its
+complete decision or topology. Selector sentinels never become target-deletion
+commands.
 
 Changing a selected start clears topology under the previous start. Changing
 the picked target clears topology under the former selected continuation and
@@ -481,10 +486,10 @@ target occupying the terminal exit is removed only as part of this explicit
 replacement command, never by publication or validation.
 
 Terminal-companion commands exist only when the layout declaration admits
-them. They mutate links inside the terminal transition, never create a second
-continuing batch, and reject the derived terminal exit. Removing the terminal
-transition removes its companion links but does not reset their Room Control
-persistence.
+them. They specify or replace links inside the terminal transition, never
+create a second continuing batch, and reject the derived terminal exit.
+Removing the terminal transition removes its companion links but does not
+reset their Room Control persistence.
 
 ### `HubBiome` Commands
 

@@ -395,10 +395,12 @@ The category field is bounded transient state only. The persisted target
 remains one `roomControlKey`; normalized topology, snapshots, and history do
 not contain the category. A referenced room derives its category during
 projection. An empty target may retain a transient category for the current UI
-session while the user chooses a room. Changing the category of an existing
-target issues `RemoveTarget`, allowing the Biome Plan to clear incompatible
-downstream topology, and choosing the second dropdown value issues
-`SetTarget`.
+session while the user chooses a room. For a specified target, changing the
+category only browses a replacement domain. The existing target and Room
+Control remain authoritative and drawn until choosing a concrete second-stage
+value issues one atomic `SetTarget` replacement. The blank second-stage value
+means `keep current`, never target deletion. A specified target can leave the
+authored tree only with its complete decision.
 
 Category labels are UI language over room kinds: `Reprieve` is presented as
 `Fountain`, and `Bridge` shares the `Story` category. Start and terminal roles

@@ -264,6 +264,11 @@ function TestUiEditor.testLinearProjectionKeepsPickedAndUnpickedRoomsTogether()
             "Root-Stalker (1 exit)"
         )
         lu.assertEquals(
+            view.batches[2].targets[1].roomChoice.optsByCategory.Miniboss
+                .displayValues[""],
+            "Keep Combat 04 (2 exits)"
+        )
+        lu.assertEquals(
             view.batches[2].heading,
             "Decision 2 - From Combat 03 (2 exits)"
         )
@@ -356,6 +361,7 @@ end
 local function fakeDrawUi(changes)
     local fields = {}
     local commands = {}
+    local drawnControls = {}
     local indentDepth = 0
     local plan = {
         apply = function(_, command)
@@ -424,12 +430,13 @@ local function fakeDrawUi(changes)
                     return true
                 end,
             },
-            control = function()
+            control = function(control)
                 lu.assertEquals(indentDepth, 40)
+                drawnControls[#drawnControls + 1] = control
             end,
         },
     }
-    return ui, plan, commands
+    return ui, plan, commands, drawnControls
 end
 
 local function commandFixture()
@@ -505,7 +512,10 @@ function TestUiEditor.testLinearDrawTranslatesSelectorsIntoSemanticCommands()
 
         view.batches[1].targets[1].current = "Underworld_F_Combat03"
         view.batches[1].targets[1].category.current = "Combat"
-        view.batches[1].targets[1].room = { picked = false }
+        view.batches[1].targets[1].room = {
+            picked = false,
+            roomControlKey = "Underworld_F_Combat03",
+        }
         ui, plan, commands = fakeDrawUi({ ["Picked##Target1"] = true })
         drawer.draw(ui, view, plan)
         lu.assertEquals(commands, {
@@ -541,15 +551,30 @@ function TestUiEditor.testLinearDrawTranslatesSelectorsIntoSemanticCommands()
 
         view.batches[1].targets[1].current = "Underworld_F_Combat03"
         view.batches[1].targets[1].category.current = "Combat"
-        view.batches[1].targets[1].room = { picked = true }
+        view.batches[1].targets[1].room = {
+            picked = true,
+            roomControlKey = "Underworld_F_Combat03",
+        }
         view.batches[1].singleExit = false
-        ui, plan, commands = fakeDrawUi({ category = "Miniboss" })
+        changes = { category = "Miniboss" }
+        local drawnControls
+        ui, plan, commands, drawnControls = fakeDrawUi(changes)
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {})
+        lu.assertEquals(drawnControls, { "Underworld_F_Combat03" })
+
+        changes.target = ""
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {})
+
+        changes.target = "Underworld_F_MiniBoss01"
         drawer.draw(ui, view, plan)
         lu.assertEquals(commands, {
             {
-                kind = "RemoveTarget",
+                kind = "SetTarget",
                 parentRoomControlKey = "Underworld_F_Opening02",
                 exitIndex = 1,
+                roomControlKey = "Underworld_F_MiniBoss01",
             },
         })
     end)

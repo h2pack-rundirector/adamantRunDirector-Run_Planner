@@ -43,14 +43,6 @@ local function drawStart(ui, plan, start)
     end
 end
 
-local function removeTarget(plan, batch, target)
-    plan:apply({
-        kind = "RemoveTarget",
-        parentRoomControlKey = batch.parentRoomControlKey,
-        exitIndex = target.exitIndex,
-    })
-end
-
 local function pickTarget(plan, batch, target)
     plan:apply({
         kind = "SetPicked",
@@ -59,30 +51,49 @@ local function pickTarget(plan, batch, target)
     })
 end
 
-local function drawTargetCategory(ui, target)
+local function targetSelectorFields(ui, target)
     local choice = target.category
-    local field = ui.data.get(choice.selectorAlias)
-    if choice.current ~= nil then
-        if field:read() ~= choice.current then
-            field:write(choice.current)
-        end
-    elseif choice.opts.valueLookup[field:read()] ~= true then
-        field:write("")
+    local categoryField = ui.data.get(choice.selectorAlias)
+    local roomField = ui.data.get(target.roomChoice.selectorAlias)
+    local category = categoryField:read()
+    if choice.opts.valueLookup[category] ~= true then
+        category = ""
+        categoryField:write(category)
+        roomField:write("")
     end
-    local changed = ui.draw.widgets.dropdown(field, choice.opts)
-    return changed, field:read()
+    if target.current ~= "" then
+        local browsingReplacement = roomField:read() == ""
+            and category ~= ""
+            and category ~= choice.current
+        if not browsingReplacement then
+            category = choice.current
+            if categoryField:read() ~= category then
+                categoryField:write(category)
+            end
+            if roomField:read() ~= target.current then
+                roomField:write(target.current)
+            end
+        end
+    end
+    return categoryField, roomField
 end
 
 local function drawTarget(ui, plan, batch, target)
-    local categoryChanged, category = drawTargetCategory(ui, target)
-    local roomField = ui.data.get(target.roomChoice.selectorAlias)
+    local categoryField, roomField = targetSelectorFields(ui, target)
+    local categoryChanged = ui.draw.widgets.dropdown(
+        categoryField,
+        target.category.opts
+    )
     if categoryChanged then
-        roomField:write("")
-        if target.current ~= "" then
-            removeTarget(plan, batch, target)
+        local category = categoryField:read()
+        if target.current ~= "" and category == "" then
+            categoryField:write(target.category.current)
+            roomField:write(target.current)
+        else
+            roomField:write("")
         end
-        return
     end
+    local category = categoryField:read()
     if category == "" then
         if roomField:read() ~= "" then
             roomField:write("")
@@ -91,25 +102,25 @@ local function drawTarget(ui, plan, batch, target)
     end
 
     ui.draw.imgui.SameLine()
+    local displayedRoom = ""
+    if category == target.category.current then
+        displayedRoom = target.current
+    end
     local changed, value = syncDropdown(
         ui,
         target.roomChoice.selectorAlias,
-        target.current,
+        displayedRoom,
         target.roomChoice.optsByCategory[category]
     )
-    if changed then
-        if value == "" then
-            removeTarget(plan, batch, target)
-        else
-            plan:apply({
-                kind = "SetTarget",
-                parentRoomControlKey = batch.parentRoomControlKey,
-                exitIndex = target.exitIndex,
-                roomControlKey = value,
-            })
-            if batch.singleExit then
-                pickTarget(plan, batch, target)
-            end
+    if changed and value ~= "" then
+        plan:apply({
+            kind = "SetTarget",
+            parentRoomControlKey = batch.parentRoomControlKey,
+            exitIndex = target.exitIndex,
+            roomControlKey = value,
+        })
+        if batch.singleExit then
+            pickTarget(plan, batch, target)
         end
         return
     end

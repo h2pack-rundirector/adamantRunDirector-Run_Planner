@@ -209,35 +209,6 @@ local function setPicked(specification, authored, topology)
     selected.picked = true
 end
 
-local function removeTarget(specification, authored, topology)
-    onlyKeys(specification, { "exitIndex", "parentRoomControlKey" })
-    local parentRoomControlKey = nonEmptyString(specification, "parentRoomControlKey")
-    local exitIndex = positiveInteger(specification, "exitIndex")
-    requireBatch(specification, authored, parentRoomControlKey)
-    local target, targetIndex = requireTarget(
-        specification,
-        authored,
-        parentRoomControlKey,
-        exitIndex
-    )
-    if target.picked then
-        clearAfterBatch(
-            specification,
-            authored,
-            topology,
-            parentRoomControlKey,
-            false
-        )
-        targetIndex = select(2, requireTarget(
-            specification,
-            authored,
-            parentRoomControlKey,
-            exitIndex
-        ))
-    end
-    table.remove(authored.targets, targetIndex)
-end
-
 local function removeBatch(specification, authored, topology)
     onlyKeys(specification, { "parentRoomControlKey" })
     local parentRoomControlKey = nonEmptyString(specification, "parentRoomControlKey")
@@ -295,21 +266,6 @@ local function setTerminalCompanion(specification, authored)
     }
 end
 
-local function removeTerminalCompanion(specification, authored)
-    onlyKeys(specification, { "exitIndex" })
-    requireCompanionPolicy(specification)
-    requireTerminal(specification, authored)
-    local exitIndex = positiveInteger(specification, "exitIndex")
-    local companions = authored.terminalTransition.companionTargets or {}
-    for index, target in ipairs(companions) do
-        if target.exitIndex == exitIndex then
-            table.remove(companions, index)
-            return
-        end
-    end
-    specification.fail("command.exitIndex", "physical exit has no terminal companion")
-end
-
 local function removeTerminalTransition(specification, authored)
     onlyKeys(specification, {})
     requireTerminal(specification, authored)
@@ -364,11 +320,9 @@ local handlers = {
     CreateBatch = createBatch,
     SetTarget = setTarget,
     SetPicked = setPicked,
-    RemoveTarget = removeTarget,
     RemoveBatch = removeBatch,
     CreateTerminalTransition = createTerminalTransition,
     SetTerminalCompanion = setTerminalCompanion,
-    RemoveTerminalCompanion = removeTerminalCompanion,
     RemoveTerminalTransition = removeTerminalTransition,
     ReplaceWithBatch = replaceWithBatch,
     ReplaceWithTerminalTransition = replaceWithTerminalTransition,

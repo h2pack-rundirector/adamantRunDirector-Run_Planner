@@ -119,12 +119,19 @@ local function targetSelectionOptions(
     currentControlKey,
     exitIndex
 )
+    local currentRoom
+    if currentControlKey ~= "" then
+        currentRoom = rooms.lookup[currentControlKey]
+    end
+    local emptyRoomLabel = currentRoom == nil
+        and "Select..."
+        or "Keep " .. currentRoom.label
     local roomOptsByCategory = {}
     for _, categoryKey in ipairs(TARGET_CATEGORY_ORDER) do
         roomOptsByCategory[categoryKey] = dropdownOpts(
             "Room",
             { "" },
-            { [""] = "Select..." },
+            { [""] = emptyRoomLabel },
             300,
             ROOM_LABEL_WIDTH
         )
@@ -165,10 +172,7 @@ local function targetSelectionOptions(
         140
     )
     categoryOpts.valueLookup = categoryLookup
-    local currentCategory
-    if currentControlKey ~= "" then
-        currentCategory = rooms.lookup[currentControlKey].categoryKey
-    end
+    local currentCategory = currentRoom and currentRoom.categoryKey or nil
     return currentCategory, categoryOpts, roomOptsByCategory
 end
 

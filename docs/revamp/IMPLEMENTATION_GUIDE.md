@@ -695,6 +695,8 @@ or planner-owned replacement for Lib dropdown widgets.
   projects topology;
 - dynamic target selectors write transient fields and translate changes into
   semantic Biome Plan commands during the same draw call;
+- specified targets are replacement-only; category browsing and blank
+  second-stage sentinels never delete authored targets;
 - structural continuation actions are direct semantic buttons projected only
   at an existing decision, the active frontier, or the terminal header and do
   not allocate transient selector fields;

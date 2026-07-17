@@ -687,19 +687,6 @@ function TestBiomePlan.testChangingSelectedFLinksClearsOnlyDownstreamTopology()
         lu.assertEquals(#topology.batches, 2)
         lu.assertNil(topology.terminalTransition)
 
-        topology = plan:apply(ui, {
-            kind = "RemoveTarget",
-            parentRoomControlKey = "Underworld_F_Combat03",
-            exitIndex = 2,
-        })
-        lu.assertEquals(topology.batches[2].targets, {
-            {
-                exitIndex = 1,
-                roomControlKey = "Underworld_F_Combat04",
-                picked = false,
-            },
-        })
-
         local replacementRuntime, replacementUi = stateAdapters(systems, completeFState())
         topology = plan:apply(replacementUi, {
             kind = "SetTarget",
@@ -725,6 +712,36 @@ function TestBiomePlan.testChangingSelectedFLinksClearsOnlyDownstreamTopology()
         lu.assertNil(topology.startRoomControlKey)
         lu.assertEquals(topology.batches, {})
         lu.assertEquals(plan:readTopology(replacementRuntime), topology)
+    end)
+end
+
+function TestBiomePlan.testSpecifiedTargetsCanOnlyBeReplacedOrRemovedWithDecision()
+    h.withImport(function()
+        local systems = load()
+        local plan = systems.route.biomePlans.lookup.Underworld_F
+        local _, ui = stateAdapters(systems, completeFState())
+
+        lu.assertErrorMsgContains("unknown LinearBiome command 'RemoveTarget'", function()
+            plan:apply(ui, {
+                kind = "RemoveTarget",
+                parentRoomControlKey = "Underworld_F_Combat03",
+                exitIndex = 2,
+            })
+        end)
+
+        local topology = plan:apply(ui, {
+            kind = "RemoveBatch",
+            parentRoomControlKey = "Underworld_F_Combat03",
+        })
+        lu.assertEquals(#topology.batches, 1)
+        lu.assertEquals(topology.batches[1].targets, {
+            {
+                exitIndex = 1,
+                roomControlKey = "Underworld_F_Combat03",
+                picked = true,
+            },
+        })
+        lu.assertNil(topology.terminalTransition)
     end)
 end
 
@@ -842,12 +859,23 @@ function TestBiomePlan.testTerminalCompanionCommandsRemainPolicyScoped()
             { exitIndex = 3, roomControlKey = "Underworld_I_Combat14" },
         })
         authored = apply(authored, {
-            kind = "RemoveTerminalCompanion",
+            kind = "SetTerminalCompanion",
             exitIndex = 2,
+            roomControlKey = "Underworld_I_Combat15",
         })
         lu.assertEquals(authored.terminalTransition.companionTargets, {
+            { exitIndex = 2, roomControlKey = "Underworld_I_Combat15" },
             { exitIndex = 3, roomControlKey = "Underworld_I_Combat14" },
         })
+        lu.assertErrorMsgContains(
+            "unknown LinearBiome command 'RemoveTerminalCompanion'",
+            function()
+                apply(authored, {
+                    kind = "RemoveTerminalCompanion",
+                    exitIndex = 2,
+                })
+            end
+        )
 
         local systems = load()
         local plan = systems.route.biomePlans.lookup.Underworld_F

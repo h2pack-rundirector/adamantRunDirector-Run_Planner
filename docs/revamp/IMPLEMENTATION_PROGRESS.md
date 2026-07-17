@@ -191,6 +191,9 @@ Biome Plan persistence ownership and mounts the thin authored editor:
   replacement/removal, clearing, and referenced picked and unpicked Room
   Controls through semantic Biome Plan commands; repeated `Next Step`
   selectors and their transient storage have been removed;
+- target selection is monotonic from unspecified to specified: the two-stage
+  category selector browses atomic replacements without emptying an existing
+  target, while decision removal owns target deletion;
 - focused F Room Controls now draw their integrated reward, payload, shop,
   purchase, and forked-preboss state through prepared stable option domains;
 - activation, meaningful commit, and setting-changing reload rebuild and
