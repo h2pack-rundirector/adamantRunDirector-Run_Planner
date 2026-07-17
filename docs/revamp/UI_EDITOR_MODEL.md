@@ -324,6 +324,15 @@ When a selector changes, draw translates the selected semantic value into one
 command during the same draw call. It does not persist the selector as a
 second topology authority.
 
+Picked continuation is rendered as one inline radio per populated physical
+target. These radios read the projected batch selection and issue `SetPicked`
+directly; they do not allocate transient fields or persist per-radio booleans.
+Their unique ImGui labels are prepared during authored publication. A newly
+selected target from a single-exit parent is picked in the same interaction,
+so completed single-exit rows need no redundant radio. An older incomplete
+single-exit row remains explicitly repairable rather than being mutated during
+an unchanged draw.
+
 Generated target selection uses a two-stage UI adapter over the same semantic
 room command:
 

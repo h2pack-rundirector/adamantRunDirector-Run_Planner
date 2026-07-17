@@ -327,6 +327,13 @@ local function fakeDrawUi(changes)
     }
     local imgui = {
         AlignTextToFramePadding = function() end,
+        RadioButton = function(label)
+            if changes[label] == true then
+                changes[label] = nil
+                return true
+            end
+            return false
+        end,
         SameLine = function() end,
         SetCursorPosX = function() end,
         Spacing = function() end,
@@ -392,6 +399,7 @@ local function commandFixture()
                 ordinal = 1,
                 parentRoomControlKey = "Underworld_F_Opening02",
                 parentLabel = "F_Opening02",
+                singleExit = false,
                 continuation = {
                     parentRoomControlKey = "Underworld_F_Opening02",
                     current = "batch",
@@ -402,6 +410,7 @@ local function commandFixture()
                     {
                         exitIndex = 1,
                         current = "",
+                        pickedRadioLabel = "Picked##Target1",
                         category = {
                             current = nil,
                             selectorAlias = "category",
@@ -416,9 +425,6 @@ local function commandFixture()
                         },
                     },
                 },
-                picked = "",
-                pickedSelectorAlias = "picked",
-                pickedOpts = opts,
             },
         },
     }
@@ -457,6 +463,44 @@ function TestUiEditor.testLinearDrawTranslatesSelectorsIntoSemanticCommands()
 
         view.batches[1].targets[1].current = "Underworld_F_Combat03"
         view.batches[1].targets[1].category.current = "Combat"
+        view.batches[1].targets[1].room = { picked = false }
+        ui, plan, commands = fakeDrawUi({ ["Picked##Target1"] = true })
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {
+            {
+                kind = "SetPicked",
+                parentRoomControlKey = "Underworld_F_Opening02",
+                exitIndex = 1,
+            },
+        })
+
+        view.batches[1].targets[1].current = ""
+        view.batches[1].targets[1].category.current = nil
+        view.batches[1].targets[1].room = nil
+        view.batches[1].singleExit = true
+        changes = { category = "Combat" }
+        ui, plan, commands = fakeDrawUi(changes)
+        drawer.draw(ui, view, plan)
+        changes.target = "Underworld_F_Combat03"
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {
+            {
+                kind = "SetTarget",
+                parentRoomControlKey = "Underworld_F_Opening02",
+                exitIndex = 1,
+                roomControlKey = "Underworld_F_Combat03",
+            },
+            {
+                kind = "SetPicked",
+                parentRoomControlKey = "Underworld_F_Opening02",
+                exitIndex = 1,
+            },
+        })
+
+        view.batches[1].targets[1].current = "Underworld_F_Combat03"
+        view.batches[1].targets[1].category.current = "Combat"
+        view.batches[1].targets[1].room = { picked = true }
+        view.batches[1].singleExit = false
         ui, plan, commands = fakeDrawUi({ category = "Miniboss" })
         drawer.draw(ui, view, plan)
         lu.assertEquals(commands, {

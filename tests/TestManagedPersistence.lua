@@ -148,7 +148,7 @@ function TestManagedPersistence.testManagedStateInstallsCompleteDeclarations()
 
         local installed = systems.managedState.install(module)
 
-        lu.assertEquals(#captured.storage, 91)
+        lu.assertEquals(#captured.storage, 81)
         lu.assertEquals(countKeys(captured.templates), 18)
         lu.assertEquals(countKeys(captured.instances), 211)
         lu.assertIs(captured.storage, installed.storage.moduleStorage)

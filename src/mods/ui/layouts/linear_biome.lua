@@ -172,17 +172,6 @@ local function targetSelectionOptions(
     return currentCategory, categoryOpts, roomOptsByCategory
 end
 
-local function pickedOptions(batch, rooms)
-    local values = { "" }
-    local labels = { [""] = "Select..." }
-    for _, target in ipairs(batch.targets) do
-        local room = rooms.lookup[target.roomControlKey]
-        option(values, labels, target.roomControlKey, "Exit " .. tostring(target.exitIndex)
-            .. " - " .. room.label)
-    end
-    return dropdownOpts("Picked Door", values, labels, 300)
-end
-
 local function continuationOptions(canCreateBatch)
     local values = { "", "batch", "terminal" }
     local labels = {
@@ -271,6 +260,7 @@ function linearBiome.create(catalog)
                 ordinal = batchIndex,
                 parentRoomControlKey = batch.parentRoomControlKey,
                 parentLabel = parent.label,
+                singleExit = #parent.room.exits == 1,
                 targets = {},
                 continuation = continuationView(
                     selectors,
@@ -280,16 +270,10 @@ function linearBiome.create(catalog)
                     "batch",
                     true
                 ),
-                picked = "",
-                pickedSelectorAlias = selectors.batches[batchIndex].picked,
-                pickedOpts = pickedOptions(batch, rooms),
             }
             for exitIndex = 1, #parent.room.exits do
                 local target = byExit[exitIndex]
                 local targetControlKey = target and target.roomControlKey or ""
-                if target and target.picked then
-                    batchView.picked = target.roomControlKey
-                end
                 local currentCategory, categoryOpts, roomOptsByCategory =
                     targetSelectionOptions(
                         biome,
@@ -302,6 +286,8 @@ function linearBiome.create(catalog)
                 batchView.targets[exitIndex] = {
                     exitIndex = exitIndex,
                     current = targetControlKey,
+                    pickedRadioLabel = "Picked##RunPlanner_"
+                        .. batch.parentRoomControlKey .. "_Exit" .. tostring(exitIndex),
                     category = {
                         current = currentCategory,
                         selectorAlias = targetSelectors.category,

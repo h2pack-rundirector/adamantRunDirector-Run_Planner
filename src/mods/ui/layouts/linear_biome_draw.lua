@@ -4,10 +4,6 @@ local CLEAR_OPTS = {
     confirmLabel = "Confirm Clear Biome",
 }
 
-local FRAME_ALIGNED_TEXT_OPTS = {
-    alignToFramePadding = true,
-}
-
 local function syncDropdown(ui, alias, current, opts)
     local field = ui.data.get(alias)
     if field:read() ~= current then
@@ -93,6 +89,14 @@ local function removeTarget(plan, batch, target)
     })
 end
 
+local function pickTarget(plan, batch, target)
+    plan:apply({
+        kind = "SetPicked",
+        parentRoomControlKey = batch.parentRoomControlKey,
+        exitIndex = target.exitIndex,
+    })
+end
+
 local function drawTargetCategory(ui, target)
     local choice = target.category
     local field = ui.data.get(choice.selectorAlias)
@@ -131,10 +135,6 @@ local function drawTarget(ui, plan, batch, target)
         target.current,
         target.roomChoice.optsByCategory[category]
     )
-    if target.room ~= nil and target.room.picked then
-        ui.draw.imgui.SameLine()
-        ui.draw.widgets.text("Picked", FRAME_ALIGNED_TEXT_OPTS)
-    end
     if changed then
         if value == "" then
             removeTarget(plan, batch, target)
@@ -145,33 +145,24 @@ local function drawTarget(ui, plan, batch, target)
                 exitIndex = target.exitIndex,
                 roomControlKey = value,
             })
+            if batch.singleExit then
+                pickTarget(plan, batch, target)
+            end
         end
         return
+    end
+    if target.room ~= nil
+        and (not batch.singleExit or not target.room.picked)
+    then
+        ui.draw.imgui.SameLine()
+        if ui.draw.imgui.RadioButton(
+            target.pickedRadioLabel,
+            target.room.picked
+        ) then
+            pickTarget(plan, batch, target)
+        end
     end
     drawRoom(ui, target.room)
-end
-
-local function drawPicked(ui, plan, batch)
-    local changed, value = syncDropdown(
-        ui,
-        batch.pickedSelectorAlias,
-        batch.picked,
-        batch.pickedOpts
-    )
-    if not changed or value == "" then
-        return
-    end
-    for _, target in ipairs(batch.targets) do
-        if target.current == value then
-            plan:apply({
-                kind = "SetPicked",
-                parentRoomControlKey = batch.parentRoomControlKey,
-                exitIndex = target.exitIndex,
-            })
-            return
-        end
-    end
-    error("picked Room Control is absent from its projected batch", 0)
 end
 
 local function drawBatch(ui, plan, batch)
@@ -187,7 +178,6 @@ local function drawBatch(ui, plan, batch)
         end
         drawTarget(ui, plan, batch, target)
     end
-    drawPicked(ui, plan, batch)
 end
 
 local function drawTerminal(ui, terminal)

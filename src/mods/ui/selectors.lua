@@ -38,10 +38,8 @@ local function buildLinear(storage, biome)
     local maxExits = maximumExitCount(biome)
     for batchIndex = 1, biome.layout.bounds.maxBatches do
         local batch = {
-            picked = prefix .. "_Batch" .. tostring(batchIndex) .. "Picked",
             targets = {},
         }
-        storage[#storage + 1] = transientString(batch.picked)
         for exitIndex = 1, maxExits do
             local targetPrefix = prefix .. "_Batch" .. tostring(batchIndex)
                 .. "Target" .. tostring(exitIndex)
