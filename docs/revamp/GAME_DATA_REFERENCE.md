@@ -123,15 +123,35 @@ generated exit receives the forced preboss while the cap makes it ineligible
 for the second; that remaining exit receives an ordinary real I room with its
 own reward offer.
 
-The planner represents a selected I terminal as one shop-only preboss plus any
-required unpicked ordinary companion target. It does not model skipping that
-offered preboss and continuing through the companion. This is a deliberate
-prescriptive narrowing: every generated companion and its reward remain
-materialized, but the terminal room is the selected continuation.
+The planner distinguishes the two possible selected outcomes without creating
+another `I_PreBoss02` Room Control occurrence:
 
-`AutocompleteSurfaceShopDelivery` is unrelated to this entry split. The
-planner preserves the multi-door behavior as one unique preboss control with
-contextual entry offers rather than duplicating the game room identity.
+- `Go to Preboss` means the preboss was offered, selected, and entered. The
+  topology uses a terminal transition. On a two-exit predecessor, the other
+  exit is one authored ordinary unpicked companion target.
+- `Add Next Decision` means the selected continuation is an ordinary I room.
+  Once the preboss is eligible, a two-exit Clockwork batch derives the fixed preboss
+  offer on the first physical exit and authors only the picked ordinary room
+  on the remaining exit. The derived preboss offer has no editable Room
+  Control state because the shop was not entered.
+
+On a one-exit predecessor, an eligible preboss consumes the only physical
+exit. An authored `Add Next Decision` continuation remains structurally
+expressible so the validator can report the impossible outcome, but it cannot
+be a valid game history. `Go to Preboss` is the valid closing outcome.
+
+`MaxCreationsPerRoom` is local to the current predecessor. Skipping a preboss
+offer therefore does not prevent a later predecessor from offering the same
+terminal room again. Those repeated declined offers are derived physical-door
+facts, not repeated Room Control references. The one terminal control is
+referenced only when the preboss is actually entered.
+
+`AutocompleteSurfaceShopDelivery` is unrelated to this entry split. A
+declined derived offer contributes the fixed Shop door offer and creation
+history needed by simulation, but it does not materialize or expose the
+preboss shop's local configuration. The planner thereby preserves the
+multi-door behavior and one unique preboss control without duplicating the
+game room identity.
 
 ## Requirement Scope Boundary
 
@@ -347,7 +367,8 @@ It must account for:
 
 - actual physical exit count of each possible source room;
 - deterministic generated sets;
-- terminal realizations and I terminal companion targets;
+- terminal realizations, I entered-terminal companion targets, and I declined
+  derived preboss offers;
 - mandatory forced noncombat creations;
 - mutual exclusion and eligibility;
 - depth-local combat eligibility;

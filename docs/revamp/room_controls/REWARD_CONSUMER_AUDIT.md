@@ -210,6 +210,11 @@ supported miniboss rooms inherit the Tartarus store and allow only Boon. The
 store provenance must remain exact even though a Boon payload has the same
 shape in RunProgress and TartarusRewards.
 
+The `I_PreBoss02` consumer row applies only when the preboss is entered and its
+shop initializes. A declined eligible preboss contributes the fixed Shop door
+offer derived by `ClockworkDoorBatch`; it does not instantiate or require a
+complete `I_WorldShop` inventory.
+
 ### N: Ephyra
 
 | Consumer | Kind | Stores/profile or fixed reward | Eligible | Ineligible |

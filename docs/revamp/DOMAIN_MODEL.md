@@ -150,6 +150,14 @@ exceptions.
   bounded unpicked companion targets without becoming an ordinary continuing
   batch.
 
+`Derived Terminal Offer`
+: A deterministic unpicked physical-door offer produced by a registered batch
+  rule from the declared terminal room and committed prefix facts. It is not
+  authored persistence, an ordinary generated target, or another Room Control
+  occurrence. I uses this fact when an eligible preboss is offered beside an
+  ordinary room and the ordinary room is selected. Selecting and entering the
+  preboss is represented instead by the terminal transition.
+
 `Dormant Room Control`
 : A declared room control that is not referenced by the current topology. Its
   state may persist, but it does not participate in completeness,
@@ -252,6 +260,13 @@ This rule has three sources:
 2. rooms with `MaxCreationsThisRun = 1` are creation-unique in the game;
 3. ordinary combat rooms are made creation-unique by planner policy even
    though vanilla permits repeated generation before entry.
+
+A derived terminal offer does not weaken this invariant. It carries the fixed
+game room, physical exit, creation, and incoming-offer facts needed by history,
+but it does not allocate or materialize a top-level Room Control occurrence.
+Several predecessors may therefore derive declined offers of the same
+terminal declaration while the singleton terminal control remains unclaimed
+until one terminal transition enters it.
 
 Injectivity is a planner invariant for every supported top-level target, not an
 inferred vanilla invariant. A noncombat declaration that can legally be
@@ -400,6 +415,14 @@ and never continue traversal. All other unpicked generated targets are likewise
 dead leaves. There is no independent entered-room list that can disagree with
 the selected path.
 
+I preserves these same two continuation forms. Once the preboss is eligible,
+a two-exit generated batch means the ordinary room was selected and the batch
+rule derives an unpicked terminal offer on the other physical exit. A terminal
+transition means the preboss was selected and entered, with the ordinary exit
+represented as an unpicked companion. On a one-exit predecessor, a generated
+batch remains structurally authorable but is invalid because the forced
+preboss must occupy the sole exit.
+
 `HubBiome` models a fixed entry sequence, one persistent hub batch, ordered
 visits selected from that batch, derived returns to the same physical hub, and
 a separate post-visit terminal transition. Its persistent batch and terminal
@@ -413,6 +436,21 @@ structural override. Override selectors may inspect topology-visible
 structural context, but never lifecycle counters or history. Batch and
 transition rule keys are normalized declaration facts, not persisted authored
 choices.
+
+Raw topology normalization remains independent of lifecycle history. A
+registered contextual batch realization may additionally consume committed
+prefix facts to derive non-authored physical offers and the active authored
+slots presented by UI and materialization. Draw never performs that
+resolution. For I, the shared Clockwork realization is the sole authority for
+whether a two-exit continuing batch contains a declined preboss offer.
+
+Contextual realization never overwrites, hides, or silently deactivates an
+authored target link. If an upstream edit makes the preboss eligible while an
+ordinary target already occupies its forced exit, that target remains visible
+and addressable and the batch receives a blocking force finding. The derived
+preboss offer appears only when the forced exit has no authored target. This
+keeps topology mutation explicit and preserves the rule that eligibility and
+force do not rewrite authored choices.
 
 Every supported layout closes through one `PrebossEntry` terminal transition.
 That transition references the single terminal Room Control declared by the
@@ -508,6 +546,12 @@ state. Those remain on the one terminal Room Control, which receives immutable
 predecessor context when materialized. Companion target rewards and local state
 remain owned by their referenced Room Controls.
 
+An I generated batch after terminal eligibility is the opposite selected
+outcome, not a second terminal-transition shape. Its ordinary target continues
+the spine, while the registered Clockwork realization derives the declined
+preboss offer. That derived offer owns no terminal shop state and never becomes
+a Room Control leaf address.
+
 ## Reward Ownership and Timing
 
 The target Room Control owns the authored incoming reward value because the
@@ -591,6 +635,15 @@ state to materialize:
 Only referenced controls participate. A complete biome may still be illegal
 under game rules.
 
+Derived physical offers do not add Room Control completeness requirements. A
+two-exit I batch with one complete picked ordinary target may be structurally
+complete because the shared Clockwork realization fills the other exit with
+the fixed declined preboss offer. A one-exit ordinary continuation may also be
+structurally complete, then fail semantic force validation because no physical
+exit remains for the eligible preboss. A two-exit batch whose forced exit still
+contains an authored ordinary target is likewise complete but invalid; the
+realization does not replace that target behind the user's back.
+
 An incomplete biome produces completeness feedback but no canonical biome
 snapshot and is not validated. A complete biome materializes one canonical
 snapshot, appends its lifecycle events to route history, and is then
@@ -605,11 +658,22 @@ view. Biomes after the first incomplete or invalid one are marked
 but they produce no local completeness, history, validation, contextual
 candidate, or enrichment result.
 
+A narrow committed-prefix projection may run inside the current biome before
+full biome completeness. It walks only the complete selected prefix needed to
+resolve declaration-deterministic batch shape, stops when required prefix facts
+are unknown, and produces no canonical snapshot, validation result, or
+downstream-biome history. I uses this projection to decide whether a two-exit
+Clockwork decision has one authored ordinary slot plus one derived declined
+preboss offer. The same registered realization consumes equivalent prefix facts
+during canonical materialization, preventing UI/history rule duplication.
+
 Materialization produces concrete canonical facts:
 
 - the layout kind and concrete structural roles needed for traversal;
 - selected physical room sequence;
 - every generated peer target;
+- every declaration-derived physical offer that does not allocate a Room
+  Control occurrence;
 - the concrete terminal entry, immutable predecessor context, and any unpicked
   terminal companion targets;
 - every generated reward offer;

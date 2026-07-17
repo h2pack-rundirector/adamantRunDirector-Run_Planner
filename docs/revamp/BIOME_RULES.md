@@ -109,13 +109,19 @@ The terminal layout declaration owns one exit policy:
 | --- | --- | --- |
 | `allExitsTerminal` | F, G, H, P | every predecessor exit realizes the same terminal Room Control through a distinct entry offer |
 | `singleTerminal` | N, O, Q | the structural terminal point has one shop-only terminal realization and no companion target |
-| `terminalWithCompanions` | I | the first active predecessor exit realizes the selected terminal; every remaining exit is an ordinary unpicked companion target |
+| `terminalWithCompanions` | I entered-preboss outcome | the first active predecessor exit realizes the selected terminal; every remaining exit is an ordinary unpicked companion target |
 
 For `terminalWithCompanions`, the terminal declaration also names the batch
 rule governing companion generation. Companion targets are part of the one
 terminal transition, use distinct Room Controls, own complete concrete reward
 state, and are dead leaves. The terminal transition remains mutually exclusive
 with an ordinary continuing batch.
+
+This table describes terminal-transition exit population. I may instead select
+an ordinary continuation from a two-exit Clockwork batch after the preboss is
+eligible. That batch derives the declined preboss offer from committed prefix
+facts; it does not create another terminal exit policy or Room Control
+occurrence.
 
 The terminal Room Declaration owns its `entryOfferPolicy`:
 
@@ -188,7 +194,7 @@ duplicate top-level Room Controls or dynamic occurrence IDs.
 | F | `LinearBiome` | `Standard` | `allExitsTerminal` / `shopThenFillRemainingExits` | 10 / 20 |
 | G | `LinearBiome` | `Standard` | `allExitsTerminal` / `shopThenFillRemainingExits` | 8 / 21 |
 | H | `LinearBiome` | `FieldsCageBatch` | `allExitsTerminal` / `shopThenFillRemainingExits` | 5 / 10 |
-| I | `LinearBiome` | `ClockworkDoorBatch` | `terminalWithCompanions` / `shopOnly` | 12 / 24 |
+| I | `LinearBiome` | `ClockworkDoorBatch` | declined forced offer or `terminalWithCompanions` / `shopOnly` | 12 / 24 |
 | N | `HubBiome` | `EphyraHubBatch` | `singleTerminal` / `shopOnly` | 1 / 10 |
 | O | `LinearBiome` | `Standard` | `singleTerminal` / `shopOnly` | 7 / 7 |
 | P | `LinearBiome` | `Standard` | `allExitsTerminal` / `shopThenFillRemainingExits` | 9 / 18 |
@@ -441,8 +447,10 @@ because the game randomizes it and later force/eligibility depends on it.
 
 ### `ClockworkDoorBatch`
 
-Goal versus non-goal is an incoming reward property, not a room kind. Targets
-remain concrete `I_CombatXX`, story, reprieve, miniboss, or preboss controls.
+Goal versus non-goal is an incoming reward property, not a room kind. Authored
+batch targets remain concrete `I_CombatXX`, story, reprieve, or miniboss Room
+Controls. `I_PreBoss02` remains the singleton terminal control and is never
+allocated as an ordinary generated target.
 
 Before all goals are acquired, each generated Clockwork batch contains exactly
 one `ClockworkGoal` offer. Other target offers use concrete Tartarus reward
@@ -465,10 +473,12 @@ controls.
 I story and miniboss declarations can require another offered I door in the
 same batch. `ClockworkDoorBatch` validates that peer condition directly.
 
-Preboss controls become eligible after remaining goals reaches zero. Once the
-acquired non-goal count reaches `maxNonGoalRewards`, preboss force pressure is
-active. `I_PreBoss02` is the single declared terminal room. Its inherited
-run-local Clockwork and shop rules remain modeled, while its post-true-ending
+The preboss becomes eligible after remaining goals reaches zero. While
+eligible, inherited `AlwaysForceOncePerRoom` forces one preboss offer into the
+current predecessor's door batch; reaching `maxNonGoalRewards` supplies its
+additional force condition. `I_PreBoss02` is the single declared terminal
+room. Its inherited run-local Clockwork and shop rules remain modeled, while
+its post-true-ending
 save requirement is intentionally omitted. `I_PreBoss01` is excluded. Save
 progression does not enter the production requirement registry; the selected
 plan must satisfy the requirements the planner declares.
@@ -476,16 +486,38 @@ plan must satisfy the requirements the planner declares.
 `I_PreBoss02` inherits both `AlwaysForceOncePerRoom` and
 `MaxCreationsPerRoom = 1`. On a two-exit predecessor, it therefore occupies the
 first active exit in physical generation order and the second exit generates
-one ordinary I companion target. The `terminalWithCompanions` exit policy
-authors that companion inside the terminal transition, applies
-`ClockworkDoorBatch` peer rules to the complete physical set, and requires the
-companion's room-local reward state even though it is an unpicked dead leaf.
-The planner always selects the preboss when this terminal transition is
-authored; skipping it and continuing through the companion is outside the
-prescriptive planner surface.
+one ordinary I room. The authored continuation form records which outcome the
+player selected:
 
-Every configured I plan includes its offer kind and concrete reward state.
-There is no reward-optional or structure-only I mode.
+- `Go to Preboss` creates a `PrebossEntry` terminal transition. The preboss is
+  selected and entered, while the ordinary room is an authored unpicked
+  companion governed by `ClockworkDoorBatch`.
+- `Add Next Decision` selects the ordinary room and continues the spine. Once
+  the preboss is eligible, the committed Clockwork batch projection derives the
+  fixed unpicked preboss offer on the first exit and exposes only the remaining
+  ordinary exit for Room Control configuration.
+
+The declined preboss is not persisted as a target, does not claim the terminal
+Room Control, and does not expose the preboss shop configuration. Its concrete
+room name, Shop door offer, physical exit, and creation event are derived from
+the terminal declaration and the committed prefix context. The ordinary room
+retains its normal Room Control, incoming reward, and picked state.
+
+On a one-exit predecessor, `Add Next Decision` can still author a structurally
+complete ordinary continuation. Contextual validation rejects that history
+because the eligible forced preboss must occupy the sole exit. This keeps game
+legality in the validator rather than making draw mutate the continuation
+form.
+
+Because `MaxCreationsPerRoom` is predecessor-local, a later room may derive
+another declined preboss offer. Repeated offers remain topology/history facts;
+they never create repeated terminal controls or weaken injective Room Control
+allocation.
+
+Every authored ordinary I target still includes its offer kind and concrete
+reward state. The entered terminal includes its shop state. A declined derived
+preboss contributes only its fixed Shop door offer because no shop inventory
+was entered or purchased from.
 
 ## N: Ephyra
 
@@ -883,7 +915,9 @@ Focused structural tests must cover:
   compatibility;
 - linear batch/terminal mutual exclusion and HubBiome batch/terminal
   coexistence;
-- I terminal-with-companion behavior for both one- and two-exit predecessors;
+- both I preboss outcomes for one- and two-exit predecessors, including an
+  invalid one-exit `Add Next Decision`, a two-exit declined derived offer, and an
+  entered terminal with an ordinary companion;
 - F/G variable exit counts and force pressure;
 - H cage roll ambiguity, ceiling, and bridge offer/skip behavior;
 - I acquisition-driven Clockwork counters and special peer requirements;

@@ -253,6 +253,43 @@ field: the terminal is selected and every companion is an unpicked dead leaf.
 I predecessors admit at most one companion. Layout target bounds include these
 links even though they do not belong to an ordinary continuing batch.
 
+This terminal record represents I's entered-preboss outcome only. When an
+eligible preboss is declined on a two-exit predecessor, authored persistence
+uses an ordinary generated batch with the remaining ordinary target selected:
+
+```lua
+batches = {
+    { parentRoomControlKey = "Underworld_I_Combat12" },
+}
+
+targets = {
+    {
+        parentRoomControlKey = "Underworld_I_Combat12",
+        exitIndex = 2,
+        roomControlKey = "Underworld_I_Combat17",
+        picked = true,
+    },
+}
+```
+
+There is no persisted terminal-offer flag, duplicate terminal target, or
+second preboss control reference. The registered Clockwork batch realization
+uses committed prefix facts and the terminal declaration to derive the
+unpicked `I_PreBoss02` offer on exit 1. On a one-exit predecessor, an ordinary
+batch target may remain structurally authored and picked, but validation
+rejects it once the forced preboss is eligible because both outcomes cannot
+occupy the sole physical exit. Derived offers do not consume authored target
+capacity even though canonical history processes their physical creation and
+incoming offer.
+
+An upstream edit may make the preboss eligible after an ordinary target was
+already persisted on exit 1. The committed projection must retain and display
+that target as a context-invalid authored link; it must not hide, clear, or
+reinterpret it as dormant capacity. The validator reports the missing forced
+preboss at the physical slot. Once the user explicitly removes the conflicting
+target, the same empty exit projects the derived read-only preboss offer. Room
+Control persistence survives either topology edit.
+
 ### `HubBiome` Authored State
 
 Representative semantic state:
@@ -339,6 +376,7 @@ counter, dynamic control schema, or copied canonical document.
 | Generated batches, terminal transitions, companion targets, and links | Biome Plan | Layout-specific bounded module storage |
 | Picked state / visit order | Biome Plan | Layout-specific bounded module storage |
 | Batch and transition dispatch keys | Biome Layout Declaration and normalized topology | Derived; not persisted |
+| Context-forced declined terminal offer | Biome Layout Declaration plus registered batch realization | Derived; not persisted and no Room Control claim |
 | Room-local fields | Room Control | Room-control private storage |
 | Bounded room-internal child state | Parent Room Control | Parent-control private storage |
 | Optional encounter presence and phase offers | Parent Room Control | Parent-control private storage |
@@ -425,6 +463,23 @@ the opposite continuation form. The two `ReplaceWith...` commands are the
 explicit atomic operations that remove one form and install the other. Force,
 eligibility, normalization, and validation never invoke these mutations.
 
+For I, these existing continuation commands also encode the selected outcome.
+`CreateTerminalTransition` means the offered preboss was selected and entered;
+a completed `CreateBatch` outcome means an ordinary room was selected. Once
+the preboss is eligible, the two-exit batch projection derives its unpicked
+offer without a third command or persisted topology record. The one-exit batch
+alternative is allowed through the structural command boundary and rejected
+later by game validation.
+
+The explicit `ReplaceWith...` operations preserve the compatible ordinary
+exit when switching a clean two-exit I outcome. Replacing the generated batch
+with the terminal transition converts the picked ordinary target into the
+unpicked companion and clears downstream topology from it. Replacing the
+terminal transition with a generated batch converts that companion into the
+picked continuing target and derives the declined preboss offer. Any authored
+target occupying the terminal exit is removed only as part of this explicit
+replacement command, never by publication or validation.
+
 Terminal-companion commands exist only when the layout declaration admits
 them. They mutate links inside the terminal transition, never create a second
 continuing batch, and reject the derived terminal exit. Removing the terminal
@@ -485,11 +540,11 @@ semantic-command, and referenced-leaf draw contracts summarized here.
 
 UI projectors are registered separately from topology implementations. During
 the committed rebuild, `uiLayouts[layoutKind]` combines normalized topology,
-owner-keyed candidate state, owner-keyed feedback, and `processingState` into a
-prepared biome view. One view is prepared for every configured biome after all
-configured topology has passed normalization, including inactive views beyond
-the semantic processing horizon. Draw is then ordinary immediate-mode Lua
-composition:
+committed-prefix structural facts, owner-keyed candidate state, owner-keyed
+feedback, and `processingState` into a prepared biome view. One view is
+prepared for every configured biome after all configured topology has passed
+normalization, including inactive views beyond the semantic processing
+horizon. Draw is then ordinary immediate-mode Lua composition:
 
 ```text
 draw route shell
@@ -506,7 +561,14 @@ not cache `ui.data`, `ui.controls`, `ui.draw`, or writable refs for runtime use.
 The `LinearBiome` projector may present a starting section, one decision row
 per generated batch on the selected path, and a terminal section. That
 terminal section also presents any layout-owned unpicked companion targets and
-their Room Controls. The
+their Room Controls. For I, committed prefix facts also shape a generated
+batch's presentation after the preboss becomes eligible. A two-exit `Add Next
+Decision` view presents the derived preboss exit as read-only and exposes only
+the picked ordinary room for configuration; `Go to Preboss` presents the
+entered terminal control and any ordinary companion. A one-exit `Add Next
+Decision` retains its ordinary target editor so a complete but invalid outcome
+can reach the validator. No declined preboss view draws the terminal Room
+Control. The
 `HubBiome` projector may present a fixed-entry summary, physical hub-door grid,
 ordered visit list, visited pylon panels, and terminal section. UI rows, cards,
 columns, and display ordinals are transient presentation only and never become
@@ -521,9 +583,21 @@ Declaration-time impossible room options may be omitted. Once the current
 biome is complete and contextual validation exists, context-invalid options
 remain visible and receive invalid presentation. Before completeness, the
 stable declaration-derived domain and completeness presentation are the only
-authoritative state. Downstream content after the first incomplete or blocking
-invalid biome is grey/inactive and marked `blockedByEarlierBiome` rather than
-receiving invented local findings. Route status and markers are the common
+authoritative validity state.
+
+Context-dependent batch shape is separate from contextual validity. During
+committed publication, a narrow prefix projection may resolve deterministic
+physical slots from the complete selected prefix even while the biome remains
+incomplete. If required prefix facts are incomplete, the projector retains the
+declaration-bounded ordinary slots and completeness blocks progress; draw never
+guesses. I uses this mechanism to reserve the first exit of an eligible
+two-exit Clockwork batch for the derived declined preboss offer when that exit
+has no conflicting authored target. A conflicting target remains visible and
+invalid until an explicit semantic command removes or replaces the surrounding
+topology. Downstream
+content after the first incomplete or blocking invalid biome is grey/inactive
+and marked `blockedByEarlierBiome` rather than receiving invented local
+findings. Route status and markers are the common
 invalid-reporting path; inline invalid labels are not a second feedback
 language.
 

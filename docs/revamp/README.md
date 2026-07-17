@@ -191,8 +191,9 @@ The revamp starts from these decisions:
 - Outgoing topology belongs to the Biome Plan, never to a target room control.
 - Terminal exit population is layout-owned and remains separate from the
   terminal Room Control's local entry-offer policy.
-- Picked and unpicked generated rooms use the same room-control representation.
-- Unpicked rooms are dead leaves. Their offered rewards remain materialized.
+- Picked and unpicked authored generated rooms use the same room-control
+  representation. Unpicked authored rooms are dead leaves and their offered
+  rewards remain materialized.
 - The planner requires injective room-control use within a biome plan.
 - That injectivity makes the unique Room Control key the top-level occurrence
   identity used by persistence, UI projection, materialization, and feedback;
@@ -200,6 +201,10 @@ The revamp starts from these decisions:
 - For ordinary combat rooms this is deliberately stricter than vanilla:
   repeated unentered combat-map creation is canonicalized to distinct eligible
   combat room keys.
+- I's repeatedly offerable preboss does not relax that rule. A declined
+  eligible preboss is a batch-derived physical offer with fixed creation and
+  Shop door facts, not another Room Control occurrence. The singleton terminal
+  control is referenced only by the entered terminal transition.
 - Game creation caps, appearance caps, force windows, and eligibility remain
   separate declaration facts.
 - Validation uses game-domain facts and semantic control addresses; it does

@@ -1001,11 +1001,32 @@ Reuse `LinearBiome` and `PrebossEntry` with `ClockworkDoorBatch` as the declared
 default. Prove concrete incoming goal/non-goal offers, special peer
 requirements, acquisition-driven goal/non-goal counters, authored
 `maxNonGoalRewards`, preboss eligibility/pressure, and the
-`terminalWithCompanions` / `shopOnly` terminal. Prove both one- and two-exit
-predecessors, the terminal on the first physical exit, at most one ordinary
-unpicked companion governed by `ClockworkDoorBatch`, complete companion reward
-offers, and no companion continuation. The planner does not expose skipping
-the offered preboss. Add I production UI, validate it after the real F/G/H
+`terminalWithCompanions` / `shopOnly` entered terminal. Implement one shared
+committed-prefix Clockwork realization consumed by UI preparation and canonical
+materialization; draw must not count goals or infer active exits.
+
+Prove both selected outcomes after the preboss becomes eligible:
+
+- `Go to Preboss` creates the entered terminal on the first physical exit and,
+  for a two-exit predecessor, one ordinary unpicked companion governed by
+  `ClockworkDoorBatch`;
+- `Add Next Decision` on a two-exit predecessor derives the unpicked preboss
+  creation and fixed Shop door offer on the first exit, authors only the picked
+  ordinary target on the second exit, and continues through that target;
+- `Add Next Decision` on a one-exit predecessor remains structurally complete
+  but receives a blocking force finding because the eligible preboss must
+  occupy the sole exit.
+
+The declined offer must add no persistence field, duplicate target link,
+terminal Room Control claim, shop-local configuration, or new room-leaf
+feedback identity. Prove repeated declined offers on later predecessors while
+preserving injective Room Control allocation. Also prove that an upstream edit
+which makes a previously occupied exit the forced preboss slot retains the
+authored target visibly, reports the collision, and never clears or hides it
+during projection. Prove that explicit replacement between the two clean
+two-exit outcomes preserves the ordinary exit link while changing it between
+picked target and unpicked companion and clearing only its dependent
+downstream topology. Add I production UI, validate it after the real F/G/H
 prefix, and expand both Underworld bounds to all four biomes.
 
 ### 7F: N Implementation and Activation

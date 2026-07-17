@@ -259,7 +259,9 @@ The `LinearBiome` projector produces presentation records for:
 
 - the start choice or fixed start;
 - one decision batch per selected-spine parent;
-- every physical target slot in exit order;
+- every authored target slot in physical exit order;
+- any read-only physical offer derived by the registered contextual batch
+  realization;
 - the picked continuation;
 - every unpicked dead leaf;
 - the continuation-form controls;
@@ -269,6 +271,38 @@ The `LinearBiome` projector produces presentation records for:
 
 The projector must handle incomplete but well-formed topology. It cannot use a
 traversal operation that correctly requires structural completion.
+
+I uses the existing batch/terminal outcome split rather than making the
+preboss an ordinary selectable target. Once committed prefix facts make the
+preboss eligible:
+
+- `Go to Preboss` projects the terminal Room Control because it was selected
+  and entered, plus one ordinary unpicked companion on a two-exit predecessor;
+- `Add Next Decision` on a two-exit predecessor projects a read-only derived
+  preboss offer on the first exit and exactly one configurable picked ordinary
+  target on the remaining exit;
+- `Add Next Decision` on a one-exit predecessor continues to expose one
+  ordinary picked target, allowing the validator to report that the forced
+  preboss should have occupied the sole exit.
+
+The contextual batch realization is prepared during committed publication and
+shared with canonical materialization. Draw does not count Clockwork Goals or
+infer active exits. A declined preboss has no Room Control view, persistent
+target, transient selector, or local shop configuration.
+
+Context changes never cause projection to conceal an authored target. If an
+upstream edit makes the preboss eligible while exit 1 already contains an
+ordinary target, the existing target row remains visible with its structural
+finding and no derived offer is projected into that occupied slot. Removing
+the target through the normal semantic command allows the next committed view
+to replace the now-empty slot with the read-only preboss offer.
+
+Switching between `Add Next Decision` and `Go to Preboss` is an explicit
+outcome replacement. For a clean two-exit I decision, the ordinary room stays
+on its physical exit while its role changes between picked continuation and
+unpicked terminal companion. The replacement clears only downstream topology
+that depended on the former picked continuation; Room Control persistence is
+unchanged.
 
 Rows, cards, columns, and display ordinals are presentation only. They are not
 persisted identities, semantic addresses, or gameplay counters.
@@ -411,6 +445,12 @@ room leaf                     Room Control key + optional local slot
 A target Room Control key directly identifies an existing leaf occurrence. A
 missing target has no leaf identity, so its parent key plus physical exit index
 identifies the empty decision slot.
+
+A derived I preboss offer reuses that physical-slot address for structural
+presentation and findings. It never receives a `room leaf` address because it
+does not allocate or draw the terminal Room Control. Entering the preboss
+changes the continuation form, after which the ordinary terminal-transition
+and terminal-control addresses apply.
 
 Representative target address:
 

@@ -325,12 +325,63 @@ translator. The canonical snapshot does not embed layout implementations or
 UI projection behavior. Derived `batchRuleKey` and `transitionRuleKey` values
 may appear for typed dispatch, but they never become authored persistence.
 
-For I, `terminalEntry.exitPolicyKind = "terminalWithCompanions"` and
+For I, an entered preboss uses
+`terminalEntry.exitPolicyKind = "terminalWithCompanions"` and
 `companionTargets` contains every ordinary room generated on predecessor exits
 after the selected `I_PreBoss02` exit. These records have the same concrete
 room, incoming-offer, source-address, creation, and offer semantics as ordinary
 generated targets, but are always unpicked dead leaves and never continue the
 canonical path.
+
+A declined eligible preboss uses the generated-batch outcome instead. On a
+two-exit predecessor, the Clockwork batch materializer derives an unpicked
+physical offer record for `I_PreBoss02` on exit 1 and materializes the authored
+ordinary picked target on exit 2. The derived record contains its concrete game
+room key, fixed Shop incoming offer, physical source, and creation event, but
+has no `roomControlKey` or room-local fragment. It therefore cannot duplicate
+the singleton terminal control or expose an unentered shop inventory.
+
+Representative batch fragment:
+
+```lua
+{
+    parentRoomControlKey = "Underworld_I_Combat12",
+    batchRuleKey = "ClockworkDoorBatch",
+    derivedOffers = {
+        {
+            kind = "terminalRoomOffer",
+            exitIndex = 1,
+            gameRoomKey = "I_PreBoss02",
+            picked = false,
+            incomingOffer = {
+                kind = "shop",
+                shopProfileKey = "I_WorldShop",
+            },
+            source = {
+                ownerKind = "batchTarget",
+                parentRoomControlKey = "Underworld_I_Combat12",
+                exitIndex = 1,
+                aspect = "derivedTerminalOffer",
+            },
+        },
+    },
+    targets = {
+        {
+            exitIndex = 2,
+            roomControlKey = "Underworld_I_Combat17",
+            gameRoomKey = "I_Combat17",
+            picked = true,
+            roomState = { kind = "ClockworkCombat" },
+            incomingOffer = { ... },
+            source = { ... },
+        },
+    },
+}
+```
+
+`derivedOffers` is canonical output only. It is absent from authored topology
+and persistence, and its source reuses the ordinary physical target-slot
+address rather than creating a room-leaf identity.
 
 `gameRoomKey` is the concrete runtime room name. `roomControlKey` is the
 semantic authored owner. They remain separate even when the current naming
@@ -441,11 +492,20 @@ Registered batch rules interpret only the peer-wide behavior they own:
 
 - `FieldsCageBatch` derives active cage slots from one batch-authored roll;
 - `ClockworkDoorBatch` associates one concrete incoming offer kind with each
-  target;
+  authored target and, from committed prefix facts, derives the fixed declined
+  preboss offer that occupies the first exit of an eligible two-exit
+  continuing batch;
 - `EphyraHubBatch` materializes the one persistent hub peer set, while
   `HubBiome` traversal owns visit order and returns;
 - `QMinibossBatch` materializes the exact distinct pair supplied by the
   resolved layout override.
+
+The contextual Clockwork realization accepts explicit prefix facts rather than
+reading UI state or a partially assembled canonical document. UI preparation
+may supply facts from its narrow committed-prefix projection; canonical
+materialization supplies the equivalent facts from its ordered visitor. Both
+consumers receive the same resolved physical-set description from the same
+registered rule.
 
 `PrebossEntry` interprets the terminal transition. It derives the one terminal
 Room Control, immutable predecessor context, and terminal exit policy from the
@@ -455,6 +515,12 @@ entry-mode state to the terminal control's declared `entryOfferPolicy`.
 selected terminal on the first active physical exit and delegates every
 remaining ordinary target to its declared companion batch rule and referenced
 Room Control. None of these policies creates duplicate terminal controls.
+
+The entered-terminal policy is not used to represent a declined I preboss.
+That outcome remains a generated Clockwork batch whose ordinary target
+continues traversal. Both forms derive the same physical preboss identity from
+the layout, but only the terminal transition resolves and materializes the
+terminal Room Control.
 
 Room-template materializers remain local. `ShipCombat` derives wheel slots
 from its encounter phases, while Olympus controls emit their declared phases
@@ -738,6 +804,20 @@ Authored structural and timing validation checks:
 Every target in a generated batch is processed in physical generation order.
 After each target, its creation event updates the scratch history used by the
 next target. This is required for creation caps and same-batch behavior.
+
+For an eligible two-exit I continuing batch, the derived preboss creation and
+fixed Shop offer are processed first, followed by the authored ordinary picked
+target. The preboss produces no entry, acquisition, shop inventory, or Room
+Control fragment. On a one-exit predecessor, an authored ordinary continuing
+batch contains no hidden second occupant; force validation reports that the
+sole exit should instead have been the eligible preboss.
+
+If a two-exit batch already authors an ordinary target on the forced preboss
+exit, contextual realization does not emit a second occupant or discard the
+target. It materializes the authored physical set and force validation reports
+the absent required preboss offer at that slot. Candidate simulation may show
+the explicit target removal needed to admit the derived offer, but validation
+never performs that mutation.
 
 A `terminalWithCompanions` physical set follows the same sequential rule. The
 terminal creation occupies the first active exit, then each companion creation
@@ -1162,7 +1242,10 @@ The pipeline test suite must cover:
   never rebuilding canonical structure;
 - linear generated-batch/terminal mutual exclusion and HubBiome persistent
   hub-batch/terminal coexistence;
-- I terminal transitions with zero or one unpicked ordinary companion target;
+- both I preboss outcomes: entered terminal transitions with zero or one
+  ordinary companion, declined two-exit derived offers with one picked
+  ordinary target, invalid one-exit ordinary continuations, and retained
+  two-exit target collisions after upstream eligibility changes;
 - injective top-level links and local-child repeated keys;
 - selected linear continuation with complete unpicked dead leaves;
 - target creation and offer events for every generated peer;

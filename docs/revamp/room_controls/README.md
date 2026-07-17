@@ -166,7 +166,9 @@ Preboss template names describe room-local reward behavior, not how a terminal
 transition fills every predecessor exit. The biome layout owns the separate
 terminal exit policy: forked prebosses use `allExitsTerminal`, N/O/Q direct
 prebosses use `singleTerminal`, and I combines the same `DirectPreboss` local
-shop with `terminalWithCompanions`.
+shop with `terminalWithCompanions` when the preboss is entered. A declined I
+preboss is a Clockwork-batch-derived fixed Shop door offer and never draws or
+materializes the `DirectPreboss` control.
 
 ## Cross-Template Acceptance
 

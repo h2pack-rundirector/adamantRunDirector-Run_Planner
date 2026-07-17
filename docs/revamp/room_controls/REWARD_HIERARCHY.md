@@ -356,9 +356,11 @@ does not alter the child reward domain.
 
 Terminal exit population is outside this reward hierarchy. Forked prebosses
 pair this surface with `allExitsTerminal`; I pairs the ordinary direct shop
-surface with `terminalWithCompanions`. Any I companion reward is produced by
-the companion Room Control through the normal Clockwork target path, not by the
-DirectPreboss or shop component.
+surface with `terminalWithCompanions` when the preboss is entered. Any I
+companion reward is produced by the companion Room Control through the normal
+Clockwork target path, not by the DirectPreboss or shop component. When the
+preboss is declined, the Clockwork batch realization emits only the fixed Shop
+door offer; it does not instantiate this shop surface or any purchasable slots.
 
 ## Separate Shop Branch
 

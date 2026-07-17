@@ -51,7 +51,8 @@ The template injects the shared profile-parameterized shop component:
 Every slot owns a concrete option and a `purchased` boolean. Q primary
 uniqueness remains a validator constraint rather than a storage-layout rule.
 The inherited fixed `ClockworkGoal` door marker used by `I_PreBoss02` is
-execution metadata; it does not create an alternate entry realization.
+execution metadata; it does not create an alternate Room Control entry
+surface.
 
 ## Structural Context
 
@@ -67,6 +68,14 @@ The I companion is not state inside this control. Its link belongs to the
 terminal transition, while its reward and local fragment belong to its own Room
 Control. This DirectPreboss instance remains exactly the same shop-only local
 surface in both one- and two-exit contexts.
+
+This control exists in the active topology only when `I_PreBoss02` is selected
+and entered through `Go to Preboss`. If an eligible two-exit Clockwork batch
+selects the ordinary room instead, the batch realization derives an unpicked
+preboss creation and fixed Shop door offer without referencing this control or
+exposing its shop slots. A later predecessor may derive the offer again because
+`MaxCreationsPerRoom` is predecessor-local; those offers never become repeated
+DirectPreboss instances.
 
 ## Completeness and Acquisition
 

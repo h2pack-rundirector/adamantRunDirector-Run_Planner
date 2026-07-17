@@ -63,6 +63,10 @@ Devotion remains valid and retains its two-source payload.
 peer constraints. Goal acquisition counters are derived from picked topology;
 the control owns no remaining-goal or non-goal-acquired counter.
 
+After all goals are acquired, the batch rule may derive a declined preboss
+offer beside the selected ordinary target. That offer is structural Clockwork
+batch output, not state or another instance of this Room Control.
+
 ## Candidates and Feedback
 
 The room exports one semantic incoming-reward provider whose candidates carry
