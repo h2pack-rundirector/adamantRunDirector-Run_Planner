@@ -172,24 +172,6 @@ local function targetSelectionOptions(
     return currentCategory, categoryOpts, roomOptsByCategory
 end
 
-local function continuationOptions(canCreateBatch)
-    local values = { "", "batch", "terminal" }
-    local labels = {
-        [""] = "Select...",
-        batch = "Next Rooms",
-        terminal = "Preboss",
-    }
-    local visible = { [""] = true, batch = canCreateBatch, terminal = true }
-    return {
-        label = "Next Step",
-        values = values,
-        displayValues = labels,
-        visibleValues = visible,
-        controlWidth = 200,
-        labelWidth = STRUCTURAL_LABEL_WIDTH,
-    }
-end
-
 local function selectedTarget(batch)
     for _, target in ipairs(batch.targets) do
         if target.picked then
@@ -212,20 +194,26 @@ local function roomOccurrence(rooms, roomControlKey, picked)
     }
 end
 
-local function continuationView(
-    selectors,
-    depth,
-    parentControlKey,
-    parentLabel,
-    kind,
-    canCreateBatch
-)
+local function actionLabel(label, action, parentControlKey)
+    return label .. "##RunPlanner_" .. action .. "_" .. parentControlKey
+end
+
+local function frontierView(parentControlKey, parentLabel, canCreateBatch)
     return {
         parentRoomControlKey = parentControlKey,
         parentLabel = parentLabel,
-        current = kind or "",
-        selectorAlias = selectors.continuations[depth],
-        opts = continuationOptions(canCreateBatch),
+        heading = "Continue from " .. parentLabel,
+        canCreateBatch = canCreateBatch,
+        addBatchButtonLabel = actionLabel(
+            "Add Next Decision",
+            "CreateBatch",
+            parentControlKey
+        ),
+        prebossButtonLabel = actionLabel(
+            "Go to Preboss",
+            "CreateTerminalTransition",
+            parentControlKey
+        ),
     }
 end
 
@@ -252,7 +240,6 @@ function linearBiome.create(catalog)
         }
 
         local selectedControlKey = topology.startRoomControlKey
-        local depth = 1
         for batchIndex, batch in ipairs(topology.batches) do
             local parent = rooms.lookup[batch.parentRoomControlKey]
             local byExit = targetByExit(batch)
@@ -260,16 +247,14 @@ function linearBiome.create(catalog)
                 ordinal = batchIndex,
                 parentRoomControlKey = batch.parentRoomControlKey,
                 parentLabel = parent.label,
+                heading = "Decision " .. tostring(batchIndex) .. " - From " .. parent.label,
+                removeButtonLabel = actionLabel(
+                    "Remove From Here",
+                    "RemoveBatch",
+                    batch.parentRoomControlKey
+                ),
                 singleExit = #parent.room.exits == 1,
                 targets = {},
-                continuation = continuationView(
-                    selectors,
-                    depth,
-                    batch.parentRoomControlKey,
-                    parent.label,
-                    "batch",
-                    true
-                ),
             }
             for exitIndex = 1, #parent.room.exits do
                 local target = byExit[exitIndex]
@@ -311,23 +296,18 @@ function linearBiome.create(catalog)
                 break
             end
             selectedControlKey = picked.roomControlKey
-            depth = depth + 1
         end
 
         local transition = topology.terminalTransition
         local lastBatch = topology.batches[#topology.batches]
         local lastBatchParent = lastBatch and lastBatch.parentRoomControlKey or nil
-        local needsTail = selectedControlKey ~= nil and selectedControlKey ~= lastBatchParent
-        if transition ~= nil then
-            needsTail = true
-        end
+        local needsTail = transition == nil
+            and selectedControlKey ~= nil
+            and selectedControlKey ~= lastBatchParent
         if needsTail then
-            view.tail = continuationView(
-                selectors,
-                depth,
+            view.tail = frontierView(
                 selectedControlKey,
                 rooms.lookup[selectedControlKey].label,
-                transition and "terminal" or "",
                 #topology.batches < biome.layout.bounds.maxBatches
             )
         end
@@ -337,6 +317,17 @@ function linearBiome.create(catalog)
             local terminal = rooms.lookup[transition.terminalRoomControlKey]
             view.terminal = {
                 parentRoomControlKey = transition.parentRoomControlKey,
+                heading = "Preboss",
+                continueButtonLabel = actionLabel(
+                    "Continue With Rooms",
+                    "ReplaceWithBatch",
+                    transition.parentRoomControlKey
+                ),
+                removeButtonLabel = actionLabel(
+                    "Remove",
+                    "RemoveTerminalTransition",
+                    transition.parentRoomControlKey
+                ),
                 room = roomOccurrence(rooms, terminal.controlKey, true),
                 roomContext = {
                     activeFreeRewardCount = math.max(#parent.room.exits - 1, 0),

@@ -263,9 +263,20 @@ function TestUiEditor.testLinearProjectionKeepsPickedAndUnpickedRoomsTogether()
                 .displayValues.Underworld_F_MiniBoss01,
             "Root-Stalker (1 exit)"
         )
-        lu.assertEquals(view.batches[2].continuation.opts.label, "Next Step")
-        lu.assertEquals(view.tail.current, "terminal")
+        lu.assertEquals(
+            view.batches[2].heading,
+            "Decision 2 - From Combat 03 (2 exits)"
+        )
+        lu.assertEquals(
+            view.batches[2].removeButtonLabel,
+            "Remove From Here##RunPlanner_RemoveBatch_Underworld_F_Combat03"
+        )
+        lu.assertNil(view.tail)
         lu.assertEquals(view.terminal.room.roomControlKey, "Underworld_F_PreBoss01")
+        lu.assertEquals(
+            view.terminal.continueButtonLabel,
+            "Continue With Rooms##RunPlanner_ReplaceWithBatch_Underworld_F_Combat04"
+        )
         lu.assertEquals(view.terminal.roomContext.activeFreeRewardCount, 1)
         lu.assertFalse(contains(
             view.batches[1].targets[1].roomChoice.optsByCategory.Combat.values,
@@ -294,6 +305,34 @@ function TestUiEditor.testLinearProjectionAlsoConsumesFocusedGTopology()
         lu.assertTrue(view.batches[2].targets[1].room.picked)
         lu.assertEquals(view.terminal.room.roomControlKey, "Underworld_G_PreBoss01")
         lu.assertEquals(view.terminal.roomContext.activeFreeRewardCount, 2)
+    end)
+end
+
+function TestUiEditor.testLinearProjectionExposesOnlyTheActiveFrontier()
+    h.withImport(function()
+        local systems = load()
+        local state = completeFState()
+        state.terminalTransition = { parentRoomControlKey = "" }
+        local plan = systems.route.biomePlans.lookup.Underworld_F
+        local topology = plan:readTopology(directAccess(state))
+        local view = systems.ui.layouts.LinearBiome:project(
+            plan,
+            topology,
+            systems.ui.selectors.biomes.lookup.Underworld_F
+        )
+
+        lu.assertNil(view.terminal)
+        lu.assertEquals(view.tail.parentRoomControlKey, "Underworld_F_Combat04")
+        lu.assertEquals(view.tail.heading, "Continue from Combat 04 (2 exits)")
+        lu.assertTrue(view.tail.canCreateBatch)
+        lu.assertEquals(
+            view.tail.addBatchButtonLabel,
+            "Add Next Decision##RunPlanner_CreateBatch_Underworld_F_Combat04"
+        )
+        lu.assertEquals(
+            view.tail.prebossButtonLabel,
+            "Go to Preboss##RunPlanner_CreateTerminalTransition_Underworld_F_Combat04"
+        )
     end)
 end
 
@@ -327,6 +366,13 @@ local function fakeDrawUi(changes)
     }
     local imgui = {
         AlignTextToFramePadding = function() end,
+        Button = function(label)
+            if changes[label] == true then
+                changes[label] = nil
+                return true
+            end
+            return false
+        end,
         RadioButton = function(label)
             if changes[label] == true then
                 changes[label] = nil
@@ -399,13 +445,9 @@ local function commandFixture()
                 ordinal = 1,
                 parentRoomControlKey = "Underworld_F_Opening02",
                 parentLabel = "F_Opening02",
+                heading = "Decision 1 - From F_Opening02",
+                removeButtonLabel = "Remove From Here##Batch1",
                 singleExit = false,
-                continuation = {
-                    parentRoomControlKey = "Underworld_F_Opening02",
-                    current = "batch",
-                    selectorAlias = "continuation",
-                    opts = opts,
-                },
                 targets = {
                     {
                         exitIndex = 1,
@@ -434,19 +476,8 @@ function TestUiEditor.testLinearDrawTranslatesSelectorsIntoSemanticCommands()
     h.withImport(function()
         local drawer = h.testImport("mods/ui/layouts/linear_biome_draw.lua")
         local view = commandFixture()
-        local ui, plan, commands = fakeDrawUi({
-            continuation = "terminal",
-        })
-        drawer.draw(ui, view, plan)
-        lu.assertEquals(commands, {
-            {
-                kind = "ReplaceWithTerminalTransition",
-                parentRoomControlKey = "Underworld_F_Opening02",
-            },
-        })
-
         local changes = { category = "Combat" }
-        ui, plan, commands = fakeDrawUi(changes)
+        local ui, plan, commands = fakeDrawUi(changes)
         drawer.draw(ui, view, plan)
         lu.assertEquals(commands, {})
 
@@ -509,6 +540,82 @@ function TestUiEditor.testLinearDrawTranslatesSelectorsIntoSemanticCommands()
                 parentRoomControlKey = "Underworld_F_Opening02",
                 exitIndex = 1,
             },
+        })
+    end)
+end
+
+function TestUiEditor.testLinearDrawTranslatesStructuralButtonsIntoSemanticCommands()
+    h.withImport(function()
+        local drawer = h.testImport("mods/ui/layouts/linear_biome_draw.lua")
+        local view = commandFixture()
+        local ui, plan, commands = fakeDrawUi({
+            ["Remove From Here##Batch1"] = true,
+        })
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {
+            {
+                kind = "RemoveBatch",
+                parentRoomControlKey = "Underworld_F_Opening02",
+            },
+        })
+
+        view.batches = {}
+        view.tail = {
+            parentRoomControlKey = "Underworld_F_Combat03",
+            heading = "Continue from Combat 03",
+            canCreateBatch = true,
+            addBatchButtonLabel = "Add Next Decision##FrontierBatch",
+            prebossButtonLabel = "Go to Preboss##FrontierPreboss",
+        }
+        ui, plan, commands = fakeDrawUi({
+            ["Add Next Decision##FrontierBatch"] = true,
+        })
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {
+            {
+                kind = "CreateBatch",
+                parentRoomControlKey = "Underworld_F_Combat03",
+            },
+        })
+
+        view.tail.canCreateBatch = false
+        ui, plan, commands = fakeDrawUi({
+            ["Go to Preboss##FrontierPreboss"] = true,
+        })
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {
+            {
+                kind = "CreateTerminalTransition",
+                parentRoomControlKey = "Underworld_F_Combat03",
+            },
+        })
+
+        view.tail = nil
+        view.terminal = {
+            parentRoomControlKey = "Underworld_F_Combat03",
+            heading = "Preboss",
+            continueButtonLabel = "Continue With Rooms##TerminalContinue",
+            removeButtonLabel = "Remove##TerminalRemove",
+            room = { label = "Preboss", roomControlKey = "Underworld_F_PreBoss01" },
+            roomContext = {},
+        }
+        ui, plan, commands = fakeDrawUi({
+            ["Continue With Rooms##TerminalContinue"] = true,
+        })
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {
+            {
+                kind = "ReplaceWithBatch",
+                parentRoomControlKey = "Underworld_F_Combat03",
+            },
+        })
+
+        ui, plan, commands = fakeDrawUi({
+            ["Remove##TerminalRemove"] = true,
+        })
+        drawer.draw(ui, view, plan)
+        lu.assertEquals(commands, {
+            { kind = "RemoveTerminalTransition" },
         })
     end)
 end

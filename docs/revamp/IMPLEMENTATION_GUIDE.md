@@ -648,7 +648,7 @@ reader/writer and the plan-owned codec as competing authorities.
   instance construction so implementation support is composed before Route
   Control option domains; production composition has no independent
   `activePrefixEnds` authority;
-- transient route/biome navigation and bounded semantic-selector fields with
+- transient route/biome navigation and bounded target-selector fields with
   `persist = false` and `hash = false`;
 - stable declaration-derived room, reward, payload, entry-mode, and structural
   option domains prepared outside draw;
@@ -660,9 +660,9 @@ reader/writer and the plan-owned codec as competing authorities.
   topology, with F/G focused fixtures proving the layout implementation is not
   F-specific;
 - route shell and transient navigation over the committed configured views;
-- start, Standard batch, physical target, picked continuation, continuation
-  replacement, terminal, and topology-clearing interactions through semantic
-  Biome Plan commands;
+- start, Standard batch, physical target, picked continuation, active-frontier
+  creation, terminal replacement/removal, and topology-clearing interactions
+  through semantic Biome Plan commands;
 - referenced picked and unpicked Room Control drawing by stable control key;
 - owner-keyed structural and local-completeness presentation without
   contextual legality;
@@ -693,8 +693,11 @@ or planner-owned replacement for Lib dropdown widgets.
   while incomplete but well-formed topology remains projectable;
 - draw consumes one published authored view and never decodes, normalizes, or
   projects topology;
-- dynamic topology selectors write transient fields and translate changes into
+- dynamic target selectors write transient fields and translate changes into
   semantic Biome Plan commands during the same draw call;
+- structural continuation actions are direct semantic buttons projected only
+  at an existing decision, the active frontier, or the terminal header and do
+  not allocate transient selector fields;
 - structural widgets cannot stage a proposal that violates the Biome Plan
   contact boundary;
 - an empty F plan can be authored through one selected start, complete Standard

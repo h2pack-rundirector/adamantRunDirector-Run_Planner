@@ -187,9 +187,10 @@ Biome Plan persistence ownership and mounts the thin authored editor:
 - the permanent horizontal route shell and vertical route/biome navigation
   expose Route and Erebus panels plus Settings;
 - the LinearBiome projector and drawer expose start, batches, physical targets,
-  picked continuations, continuation replacement, terminal entry, clearing,
-  and referenced picked and unpicked Room Controls through semantic Biome Plan
-  commands;
+  picked continuations, one active continuation frontier, terminal
+  replacement/removal, clearing, and referenced picked and unpicked Room
+  Controls through semantic Biome Plan commands; repeated `Next Step`
+  selectors and their transient storage have been removed;
 - focused F Room Controls now draw their integrated reward, payload, shop,
   purchase, and forked-preboss state through prepared stable option domains;
 - activation, meaningful commit, and setting-changing reload rebuild and

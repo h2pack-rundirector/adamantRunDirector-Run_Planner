@@ -264,7 +264,7 @@ The `LinearBiome` projector produces presentation records for:
   realization;
 - the picked continuation;
 - every unpicked dead leaf;
-- the continuation-form controls;
+- the one active continuation frontier or the selected terminal outcome;
 - the terminal transition;
 - terminal companions admitted by the exit policy;
 - the one terminal Room Control and its immutable predecessor context.
@@ -348,7 +348,7 @@ read current authored choices
   -> encode and stage the bounded replacement
 ```
 
-Dynamic topology dropdowns use bounded transient selector fields declared with
+Dynamic target dropdowns use bounded transient selector fields declared with
 `persist = false` and `hash = false`. They are UI-only adapters between Lib's
 field-backed widgets and semantic Biome Plan commands. They may use positional
 presentation slots because they do not survive the UI session and never enter
@@ -357,6 +357,22 @@ the authored or derived domain.
 When a selector changes, draw translates the selected semantic value into one
 command during the same draw call. It does not persist the selector as a
 second topology authority.
+
+Continuation form is not a dropdown and allocates no transient selector. The
+projected editor exposes structural commands only where they are actionable:
+
+- each existing decision header offers `Remove From Here`, which removes that
+  batch and every dependent downstream batch or terminal transition;
+- the single active frontier offers `Add Next Decision` and `Go to Preboss`;
+- `Add Next Decision` is absent when the declared batch bound is exhausted;
+- an entered terminal replaces the frontier and offers `Continue With Rooms`
+  and `Remove`, translating to the existing atomic replacement/removal
+  commands.
+
+These are direct semantic buttons with projection-prepared unique ImGui labels.
+They do not mirror topology into another field. After one stages a structural
+command, draw stops consuming the stale published topology for that frame; the
+next committed publication supplies the replacement view.
 
 Picked continuation is rendered as one inline radio per populated physical
 target. These radios read the projected batch selection and issue `SetPicked`
@@ -558,6 +574,8 @@ Checkpoint 4A is complete when:
   persistent state;
 - replacing a selected continuation clears only incompatible downstream
   topology and preserves unlinked Room Control persistence;
+- continuation form is edited only at the active frontier or terminal header;
+  existing decisions contain no repeated `Next Step` selector;
 - terminal presentation derives active free-reward capacity from immutable
   predecessor exit context;
 - profile load, hash reload, commit, and Lib reset reproduce the same authored

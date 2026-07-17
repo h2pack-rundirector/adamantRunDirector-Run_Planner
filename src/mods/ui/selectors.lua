@@ -32,7 +32,6 @@ local function buildLinear(storage, biome)
     local result = {
         start = prefix .. "_Start",
         batches = {},
-        continuations = {},
     }
     storage[#storage + 1] = transientString(result.start)
     local maxExits = maximumExitCount(biome)
@@ -52,11 +51,6 @@ local function buildLinear(storage, biome)
             storage[#storage + 1] = transientString(target.room)
         end
         result.batches[batchIndex] = batch
-    end
-    for depth = 1, biome.layout.bounds.maxBatches + 1 do
-        local alias = prefix .. "_Continuation" .. tostring(depth)
-        result.continuations[depth] = alias
-        storage[#storage + 1] = transientString(alias, "", 16)
     end
     return result
 end

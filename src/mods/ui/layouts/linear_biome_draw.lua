@@ -42,45 +42,6 @@ local function drawStart(ui, plan, start)
     end
 end
 
-local function applyContinuation(plan, continuation, nextKind)
-    local current = continuation.current
-    local parent = continuation.parentRoomControlKey
-    if nextKind == current then
-        return
-    end
-    if current == "" then
-        if nextKind == "batch" then
-            plan:apply({ kind = "CreateBatch", parentRoomControlKey = parent })
-        elseif nextKind == "terminal" then
-            plan:apply({ kind = "CreateTerminalTransition", parentRoomControlKey = parent })
-        end
-    elseif current == "batch" then
-        if nextKind == "" then
-            plan:apply({ kind = "RemoveBatch", parentRoomControlKey = parent })
-        elseif nextKind == "terminal" then
-            plan:apply({ kind = "ReplaceWithTerminalTransition", parentRoomControlKey = parent })
-        end
-    elseif current == "terminal" then
-        if nextKind == "" then
-            plan:apply({ kind = "RemoveTerminalTransition" })
-        elseif nextKind == "batch" then
-            plan:apply({ kind = "ReplaceWithBatch", parentRoomControlKey = parent })
-        end
-    end
-end
-
-local function drawContinuation(ui, plan, continuation)
-    local changed, value = syncDropdown(
-        ui,
-        continuation.selectorAlias,
-        continuation.current,
-        continuation.opts
-    )
-    if changed then
-        applyContinuation(plan, continuation, value)
-    end
-end
-
 local function removeTarget(plan, batch, target)
     plan:apply({
         kind = "RemoveTarget",
@@ -168,24 +129,68 @@ end
 local function drawBatch(ui, plan, batch)
     ui.draw.imgui.Spacing()
     ui.draw.widgets.separator()
-    ui.draw.widgets.text(
-        "Decision " .. tostring(batch.ordinal) .. " - From " .. batch.parentLabel
-    )
-    drawContinuation(ui, plan, batch.continuation)
+    ui.draw.widgets.text(batch.heading)
+    ui.draw.imgui.SameLine()
+    if ui.draw.imgui.Button(batch.removeButtonLabel) then
+        plan:apply({
+            kind = "RemoveBatch",
+            parentRoomControlKey = batch.parentRoomControlKey,
+        })
+        return true
+    end
     for targetIndex, target in ipairs(batch.targets) do
         if targetIndex > 1 then
             ui.draw.imgui.Spacing()
         end
         drawTarget(ui, plan, batch, target)
     end
+    return false
 end
 
-local function drawTerminal(ui, terminal)
+local function drawFrontier(ui, plan, frontier)
+    ui.draw.imgui.Spacing()
+    ui.draw.widgets.text(frontier.heading)
+    ui.draw.imgui.SameLine()
+    if frontier.canCreateBatch then
+        if ui.draw.imgui.Button(frontier.addBatchButtonLabel) then
+            plan:apply({
+                kind = "CreateBatch",
+                parentRoomControlKey = frontier.parentRoomControlKey,
+            })
+            return true
+        end
+        ui.draw.imgui.SameLine()
+    end
+    if ui.draw.imgui.Button(frontier.prebossButtonLabel) then
+        plan:apply({
+            kind = "CreateTerminalTransition",
+            parentRoomControlKey = frontier.parentRoomControlKey,
+        })
+        return true
+    end
+    return false
+end
+
+local function drawTerminal(ui, plan, terminal)
     ui.draw.imgui.Spacing()
     ui.draw.widgets.separator()
-    ui.draw.widgets.text("Preboss")
+    ui.draw.widgets.text(terminal.heading)
+    ui.draw.imgui.SameLine()
+    if ui.draw.imgui.Button(terminal.continueButtonLabel) then
+        plan:apply({
+            kind = "ReplaceWithBatch",
+            parentRoomControlKey = terminal.parentRoomControlKey,
+        })
+        return true
+    end
+    ui.draw.imgui.SameLine()
+    if ui.draw.imgui.Button(terminal.removeButtonLabel) then
+        plan:apply({ kind = "RemoveTerminalTransition" })
+        return true
+    end
     ui.draw.widgets.text(terminal.room.label)
     drawRoom(ui, terminal.room, terminal.roomContext)
+    return false
 end
 
 function linearBiomeDraw.draw(ui, view, plan)
@@ -194,15 +199,19 @@ function linearBiomeDraw.draw(ui, view, plan)
     ui.draw.imgui.Spacing()
     drawStart(ui, plan, view.start)
     for _, batch in ipairs(view.batches) do
-        drawBatch(ui, plan, batch)
+        if drawBatch(ui, plan, batch) then
+            return
+        end
     end
     if view.tail ~= nil then
-        ui.draw.imgui.Spacing()
-        ui.draw.widgets.text("Continue from " .. view.tail.parentLabel)
-        drawContinuation(ui, plan, view.tail)
+        if drawFrontier(ui, plan, view.tail) then
+            return
+        end
     end
     if view.terminal ~= nil then
-        drawTerminal(ui, view.terminal)
+        if drawTerminal(ui, plan, view.terminal) then
+            return
+        end
     end
     ui.draw.imgui.Spacing()
     ui.draw.widgets.separator()
